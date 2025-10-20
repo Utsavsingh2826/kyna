@@ -3,7 +3,7 @@ import { X, Heart } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import productsData from "@/data/products.json";
 import { FilterGroup, PriceRangeSlider } from "@/components/Engravings";
-import "./Engravings.css";
+import "./JewelleryPage.css";
 
 type ColorOption = "white" | "gold" | "rosegold";
 
@@ -167,9 +167,9 @@ const JewelleryFilterSidebar: React.FC<{
               )}
               {showImages && (
                 <img
-                  src={`/DIAMOND_SHAPES_WEBP/${shape.toLowerCase()}.png`}
+                  src={`/diamond-shapes/${shape.toLowerCase()}.png`}
                   alt={shape}
-                  className="h-6 w-6 mb-1"
+                  className="h-8 w-8 mb-1"
                   onError={(e) => {
                     e.currentTarget.style.display = "none";
                     const placeholder = document.createElement("div");
@@ -743,7 +743,7 @@ export default function JewelleryPage() {
         ? Array.from(new Set([...prevValues, value]))
         : prevValues.filter((v) => v !== value);
 
-      const nextState = { ...prev, [filterKey]: nextValues };
+      const nextState = { ...prev, [filterType]: nextValues };
       const params = buildParamsFromFilters(nextState);
       setSearchParams(params, { replace: true });
       return nextState;

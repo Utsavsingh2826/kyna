@@ -53,6 +53,11 @@ import ShippingPolicy from "./components/terms&conditions/Shipping";
 import CancellationRefund from './components/terms&conditions/Cancellation&Refund'
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
+import BuildYourJewelleryPendants from "./pages/Build_yr_own/BuildYourJewelleryPendants";
+import BuildYourJewelleryBracelets from "./pages/Build_yr_own/BuildYourJewelleryBracelet";
+import BuildYourJewelleryBands from "./pages/Build_yr_own/BuildYourJewelleryBands";
+import BuildYourJewelleryEarrings from "./pages/Build_yr_own/BuildYourJewelleryEarings";
+import BuildYourJewelleryRings from "./pages/Build_yr_own/BuildYourJewelleryRings";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const isAuthenticated = useSelector(
@@ -285,6 +290,26 @@ function App() {
                 <h1 className="text-4xl">Gifting Category</h1>
               </div>
             }
+          />
+          <Route
+            path="/build-your-jewellery/Rings"
+            element={<BuildYourJewelleryRings />}
+          />
+          <Route
+            path="/build-your-jewellery/Pendants"
+            element={<BuildYourJewelleryPendants />}
+          />
+          <Route
+            path="/build-your-jewellery/Bracelets"
+            element={<BuildYourJewelleryBracelets />}
+          />
+          <Route
+            path="/build-your-jewellery/Bands"
+            element={<BuildYourJewelleryBands />}
+          />
+          <Route
+            path="/build-your-jewellery/Earrings"
+            element={<BuildYourJewelleryEarrings />}
           />
           <Route path="/about" element={<AboutPage />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
