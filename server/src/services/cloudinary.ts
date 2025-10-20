@@ -1,11 +1,8 @@
 import { v2 as cloudinary } from 'cloudinary';
+import { isCloudinaryConfigured, CloudinaryConfig } from '../config/cloudinary';
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Note: actual cloudinary.config() is performed in `src/config/cloudinary.ts` to ensure dotenv is loaded early.
+// Here we only validate configuration presence and log status.
 
 interface CloudinaryConfig {
   cloudName: string;
@@ -89,19 +86,12 @@ export const deleteImageFromCloudinary = async (publicId: string): Promise<void>
   }
 };
 
-// Configuration object
-const config: CloudinaryConfig = {
-  cloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
-  apiKey: process.env.CLOUDINARY_API_KEY || '',
-  apiSecret: process.env.CLOUDINARY_API_SECRET || '',
-};
-
 // Validate Cloudinary configuration
-if (!config.cloudName || !config.apiKey || !config.apiSecret) {
+if (!isCloudinaryConfigured) {
   console.warn('⚠️ Cloudinary configuration missing. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET environment variables.');
 } else {
-  console.log('✅ Cloudinary configured successfully for cloud:', config.cloudName);
+  console.log('✅ Cloudinary configured successfully for cloud:', CloudinaryConfig.cloudName);
 }
 
 export default cloudinary;
-export { config };
+export { CloudinaryConfig as config };

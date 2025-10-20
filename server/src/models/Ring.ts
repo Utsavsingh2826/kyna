@@ -98,7 +98,7 @@ const customizationSchema = new Schema<ICustomization>({
   },
   modificationRequest: {
     type: String,
-    minlength: 15
+    minlength: [15, 'Modification request must be at least 15 characters long']
   },
   description: {
     type: String,

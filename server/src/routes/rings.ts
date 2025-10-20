@@ -11,25 +11,42 @@ const router = express.Router();
  */
 router.post('/upload', upload.array('images', 10), async (req: Request, res: Response) => {
   try {
+    console.log('📤 Upload request received');
+    console.log('📋 Request body:', req.body);
+    console.log('📁 Files received:', req.files ? (req.files as Express.Multer.File[]).length : 0);
+    
     const { sameAsImage, modificationRequest, description, userId } = req.body;
     
-    if (!req.files || (req.files as Express.Multer.File[]).length < 2) {
+    if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+      console.log('❌ No files uploaded');
       return res.status(400).json({ 
         success: false, 
-        message: 'At least 2 images are required' 
+        message: 'At least 1 image is required' 
       });
     }
 
     // Generate userId if not provided (for demo purposes)
     const currentUserId = userId || `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    console.log('👤 Using userId:', currentUserId);
 
     // Process uploaded files with user information
-    const imageData = (req.files as Express.Multer.File[]).map(file => ({
-      url: file.path,
-      publicId: file.filename,
-      userId: currentUserId,
-      uploadedAt: new Date()
-    }));
+    const imageData = (req.files as Express.Multer.File[]).map((file, index) => {
+      console.log(`🖼️ Processing file ${index + 1}:`, {
+        originalname: file.originalname,
+        filename: file.filename,
+        path: file.path,
+        size: file.size
+      });
+      
+      return {
+        url: file.path,
+        publicId: file.filename || `file_${Date.now()}_${index}`,
+        userId: currentUserId,
+        uploadedAt: new Date()
+      };
+    });
+
+    console.log('📸 Processed image data:', imageData);
 
     const ringData: any = {
       userId: currentUserId,
@@ -39,29 +56,51 @@ router.post('/upload', upload.array('images', 10), async (req: Request, res: Res
     };
 
     // Add modification request and description if provided
-    if (modificationRequest) {
+    if (modificationRequest && modificationRequest.length >= 15) {
       ringData.customization = {
         modificationRequest,
         description
       };
+    } else if (description) {
+      // If modification request is too short but description exists, use description
+      ringData.customization = {
+        description
+      };
     }
+    // If both are too short or missing, don't add customization
+
+    console.log('💍 Creating ring with data:', {
+      userId: ringData.userId,
+      imagesCount: ringData.images.length,
+      sameAsImage: ringData.sameAsImage,
+      status: ringData.status
+    });
 
     const ring = new Ring(ringData);
     await ring.save();
+    
+    console.log('✅ Ring saved successfully:', ring._id);
+
+    console.log('✅ Ring saved successfully:', ring._id);
+
+    const responseData = {
+      ringId: ring._id,
+      userId: ring.userId,
+      images: ring.images.map(img => img.url), // Return just URLs for frontend compatibility
+      sameAsImage: ring.sameAsImage,
+      status: ring.status
+    };
+    
+    console.log('📤 Sending response:', responseData);
 
     res.status(201).json({
       success: true,
       message: 'Images uploaded successfully',
-      data: {
-        ringId: ring._id,
-        userId: ring.userId,
-        images: ring.images.map(img => img.url), // Return just URLs for frontend compatibility
-        sameAsImage: ring.sameAsImage,
-        status: ring.status
-      }
+      data: responseData
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('❌ Upload error:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     res.status(500).json({ 
       success: false, 
       message: 'Error uploading images',

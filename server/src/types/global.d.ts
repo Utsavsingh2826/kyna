@@ -11,7 +11,6 @@ declare global {
       EMAIL_PASS: string;
       EMAIL_FROM: string;
       EMAIL_SECURE: string;
-      CCAVENUE_MERCHANT_ID: string;
       CCAVENUE_ACCESS_CODE: string;
       CCAVENUE_WORKING_KEY: string;
       CCAVENUE_PAYMENT_URL: string;

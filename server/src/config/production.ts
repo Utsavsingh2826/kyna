@@ -26,15 +26,6 @@ export const productionConfig = {
     FROM: process.env.EMAIL_FROM || 'noreply@kynajewels.com'
   },
 
-  // CCAvenue
-  CCAVENUE: {
-    MERCHANT_ID: process.env.CCAVENUE_MERCHANT_ID || '',
-    ACCESS_CODE: process.env.CCAVENUE_ACCESS_CODE || '',
-    WORKING_KEY: process.env.CCAVENUE_WORKING_KEY || '',
-    REDIRECT_URL: process.env.CCAVENUE_REDIRECT_URL || 'https://kynajewels.com/payment/callback',
-    CANCEL_URL: process.env.CCAVENUE_CANCEL_URL || 'https://kynajewels.com/payment/cancel'
-  },
-
   // Sequel247
   SEQUEL247: {
     TEST_ENDPOINT: process.env.SEQUEL247_TEST_ENDPOINT || '',
@@ -88,19 +79,6 @@ export const validateProductionConfig = (): { isValid: boolean; errors: string[]
   }
 
   if (productionConfig.NODE_ENV === 'production') {
-    // Production-specific validations
-    if (!productionConfig.CCAVENUE.MERCHANT_ID) {
-      errors.push('CCAVENUE_MERCHANT_ID is required for production');
-    }
-
-    if (!productionConfig.CCAVENUE.ACCESS_CODE) {
-      errors.push('CCAVENUE_ACCESS_CODE is required for production');
-    }
-
-    if (!productionConfig.CCAVENUE.WORKING_KEY) {
-      errors.push('CCAVENUE_WORKING_KEY is required for production');
-    }
-
     if (!productionConfig.SEQUEL247.PROD_ENDPOINT) {
       errors.push('SEQUEL247_PROD_ENDPOINT is required for production');
     }

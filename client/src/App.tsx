@@ -51,6 +51,8 @@ import SharedWishlistPage from "./pages/SharedWishlistPage";
 import PrivacyPolicy from "./components/terms&conditions/PrivacyPolicy";
 import ShippingPolicy from "./components/terms&conditions/Shipping";
 import CancellationRefund from './components/terms&conditions/Cancellation&Refund'
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailed from "./pages/PaymentFailed";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const isAuthenticated = useSelector(
@@ -285,6 +287,8 @@ function App() {
             }
           />
           <Route path="/about" element={<AboutPage />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-failed" element={<PaymentFailed />} />
         </Routes>
 
         <Footer />

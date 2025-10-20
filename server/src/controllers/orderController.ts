@@ -129,6 +129,12 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
     await order.save();
     await order.populate('items.product');
 
+    // Ensure orderNumber matches the document _id for uniqueness and external reference
+    if (order._id && order.orderNumber !== String(order._id)) {
+      order.orderNumber = String(order._id);
+      await order.save();
+    }
+
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
@@ -206,6 +212,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     });
 
     await order.save();
+
+    // Ensure orderNumber matches the document _id for uniqueness and external reference
+    if (order._id && order.orderNumber !== String(order._id)) {
+      order.orderNumber = String(order._id);
+      await order.save();
+    }
 
     // Clear cart after successful order
     cart.items = [];

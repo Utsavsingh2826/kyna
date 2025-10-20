@@ -1,4 +1,8 @@
 import dotenv from "dotenv";
+
+// Load environment variables as early as possible so modules that import config get them
+dotenv.config();
+
 import express, { Express, Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -29,7 +33,7 @@ import adminRoutes from "./routes/admin";
 import buildYourJewelryRoutes from "./routes/buildYourJewelry";
 import subProductRoutes from "./routes/subProduct";
 import blogRoutes from "./routes/blog";
-import addressRoutes from "./routes/address";
+// import addressRoutes from "./routes/address";
 
 // Import tracking services
 import { TrackingController } from "./controllers/trackingController";
@@ -50,20 +54,21 @@ import { initializeRedis, closeRedisConnection } from './services/sessionService
 dotenv.config();
 
 // Environment variable validation
-const requiredEnvVars = [
-  'JWT_SECRET',
-  'MONGO_URI',
-  'CCAVENUE_MERCHANT_ID',
-  'CCAVENUE_ACCESS_CODE',
-  'CCAVENUE_WORKING_KEY'
-];
-
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-if (missingVars.length > 0) {
-  console.error('❌ Missing required environment variables:', missingVars);
+// Require core variables; payment provider credentials can be either CCAvenue or Razorpay.
+const requiredCoreVars = ['JWT_SECRET', 'MONGO_URI'];
+const missingCore = requiredCoreVars.filter(v => !process.env[v]);
+if (missingCore.length > 0) {
+  console.error('❌ Missing required environment variables:', missingCore);
   console.error('Please set these variables in your .env file');
   console.error('Current .env file location:', process.cwd() + '/.env');
   process.exit(1);
+}
+
+// Payment provider check: accept either CCAvenue or Razorpay env vars
+const hasCCAvenue = !!(process.env.CCAVENUE_ACCESS_CODE && process.env.CCAVENUE_WORKING_KEY);
+const hasRazorpay = !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+if (!hasCCAvenue && !hasRazorpay) {
+  console.warn('⚠️ No payment provider configured. Set CCAvenue or Razorpay environment variables if you need payment features.');
 }
 
 // Set default environment variables for development only
@@ -379,7 +384,6 @@ app.use("/api/admin", deprecationWarning, adminRoutes);
 app.use("/api/build-your-jewelry", deprecationWarning, buildYourJewelryRoutes);
 app.use("/api/sub-products", deprecationWarning, subProductRoutes);
 app.use("/api/blogs", deprecationWarning, blogRoutes);
-app.use("/api/address", deprecationWarning, addressRoutes);
 
 // Home route
 app.get("/", (req: Request, res: Response) => {

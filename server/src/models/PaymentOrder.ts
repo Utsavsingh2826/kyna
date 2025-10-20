@@ -59,10 +59,100 @@ export interface IPaymentResponse {
 }
 
 /**
+ * Order Details Interface - Contains all user customization data
+ */
+export interface IOrderDetails {
+  // Basic jewelry information
+  jewelryType?: string;
+  description?: string;
+  
+  // Images from all steps
+  images?: Array<{
+    url: string;
+    publicId?: string;
+    source?: string;
+    step?: string; // Which step the image was uploaded in
+    alt?: string;
+    uploadedAt?: string | Date;
+  }>;
+  
+  // Diamond selection details
+  diamond?: {
+    carat?: number;
+    cut?: string;
+    color?: string;
+    clarity?: string;
+    shape?: string;
+    certification?: string;
+    price?: number;
+    imageUrls?: string[];
+  };
+  
+  // Metal and setting details
+  metal?: {
+    type?: string; // gold, platinum, silver
+    karat?: string; // 14k, 18k, 22k
+    color?: string; // yellow, white, rose
+    finish?: string; // polished, matte
+  };
+  
+  // Ring specific details
+  ringDetails?: {
+    size?: string | number;
+    width?: string;
+    setting?: string;
+    prongs?: number;
+    style?: string;
+  };
+  
+  // Customization steps data
+  stepData?: {
+    step1?: any; // Basic info and jewelry type
+    step2?: any; // Diamond selection
+    step3?: any; // Metal and setting
+    step4?: any; // Final customization
+    step5?: any; // Review and images
+  };
+  
+  // Additional customization
+  engraving?: {
+    text?: string;
+    font?: string;
+    position?: string;
+  };
+  
+  // Special requests
+  specialRequests?: string;
+  notes?: string;
+  
+  // Completion status
+  customizationComplete?: boolean;
+  completedSteps?: string[];
+  
+  // Reference IDs
+  backendJewelryId?: string;
+  designId?: string;
+  
+  // Pricing breakdown
+  priceBreakdown?: {
+    basePrice?: number;
+    diamondPrice?: number;
+    metalPrice?: number;
+    customizationFee?: number;
+    engraving?: number;
+    gst?: number;
+    total?: number;
+  };
+}
+
+/**
  * Order Interface
  */
 export interface IOrder extends Document {
   orderId: string;
+  orderNumber: string;
+  orderCategory: 'design-your-own' | 'build-your-own' | 'products';
+  orderType: 'customized' | 'normal';
   userId: string;
   amount: number;
   currency: string;
@@ -80,6 +170,13 @@ export interface IOrder extends Document {
   };
   redirectUrl: string;
   cancelUrl: string;
+  // Order details with all customization data
+  orderDetails?: IOrderDetails;
+  // Razorpay fields
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  paidAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   updateStatus(newStatus: OrderStatus, paymentResponse?: IPaymentResponse): Promise<IOrder>;
@@ -157,6 +254,93 @@ const paymentResponseSchema = new Schema({
 }, { _id: false });
 
 /**
+ * Order Details Schema - Contains all user customization data
+ */
+const orderDetailsSchema = new Schema({
+  // Basic jewelry information
+  jewelryType: { type: String, trim: true },
+  description: { type: String, trim: true },
+  
+  // Images from all steps
+  images: [{
+    url: { type: String, required: true },
+    publicId: { type: String },
+    source: { type: String, default: 'upload' },
+    step: { type: String }, // Which step the image was uploaded in
+    alt: { type: String },
+    uploadedAt: { type: Date, default: Date.now }
+  }],
+  
+  // Diamond selection details
+  diamond: {
+    carat: { type: Number },
+    cut: { type: String },
+    color: { type: String },
+    clarity: { type: String },
+    shape: { type: String },
+    certification: { type: String },
+    price: { type: Number },
+    imageUrls: [{ type: String }]
+  },
+  
+  // Metal and setting details
+  metal: {
+    type: { type: String }, // gold, platinum, silver
+    karat: { type: String }, // 14k, 18k, 22k
+    color: { type: String }, // yellow, white, rose
+    finish: { type: String } // polished, matte
+  },
+  
+  // Ring specific details
+  ringDetails: {
+    size: { type: Schema.Types.Mixed }, // string or number
+    width: { type: String },
+    setting: { type: String },
+    prongs: { type: Number },
+    style: { type: String }
+  },
+  
+  // Customization steps data (flexible schema)
+  stepData: {
+    step1: { type: Schema.Types.Mixed },
+    step2: { type: Schema.Types.Mixed },
+    step3: { type: Schema.Types.Mixed },
+    step4: { type: Schema.Types.Mixed },
+    step5: { type: Schema.Types.Mixed }
+  },
+  
+  // Additional customization
+  engraving: {
+    text: { type: String },
+    font: { type: String },
+    position: { type: String }
+  },
+  
+  // Special requests
+  specialRequests: { type: String },
+  notes: { type: String },
+  
+  // Completion status
+  customizationComplete: { type: Boolean, default: false },
+  completedSteps: [{ type: String }],
+  
+  // Reference IDs
+  backendJewelryId: { type: String },
+  designId: { type: String },
+  
+  // Pricing breakdown
+  priceBreakdown: {
+    basePrice: { type: Number },
+    diamondPrice: { type: Number },
+    metalPrice: { type: Number },
+    customizationFee: { type: Number },
+    engraving: { type: Number },
+    gst: { type: Number },
+    total: { type: Number }
+  }
+}, { _id: false });
+
+/**
  * Order Schema
  */
 const orderSchema = new Schema<IOrder>({
@@ -165,6 +349,24 @@ const orderSchema = new Schema<IOrder>({
     required: true, 
     unique: true, 
     trim: true,
+    index: true
+  },
+  orderNumber: { 
+    type: String, 
+    required: true, 
+    trim: true,
+    index: true
+  },
+  orderCategory: { 
+    type: String, 
+    enum: ['design-your-own', 'build-your-own', 'products'],
+    required: true,
+    index: true
+  },
+  orderType: { 
+    type: String, 
+    enum: ['customized', 'normal'],
+    required: true,
     index: true
   },
   userId: { 
@@ -207,6 +409,28 @@ const orderSchema = new Schema<IOrder>({
     type: String, 
     required: true, 
     trim: true 
+  },
+  // Razorpay fields
+  razorpayOrderId: { 
+    type: String, 
+    trim: true,
+    index: true
+  },
+  razorpayPaymentId: { 
+    type: String, 
+    trim: true 
+  },
+  razorpaySignature: { 
+    type: String, 
+    trim: true 
+  },
+  paidAt: { 
+    type: Date 
+  },
+  // Order details with all customization data
+  orderDetails: { 
+    type: orderDetailsSchema, 
+    default: null 
   }
 }, {
   timestamps: true,

@@ -12,7 +12,6 @@ export interface HealthStatus {
   services: {
     database: ServiceHealth;
     tracking: ServiceHealth;
-    payment: ServiceHealth;
     email: ServiceHealth;
     redis?: ServiceHealth;
   };
@@ -73,10 +72,6 @@ export class HealthService {
     const trackingHealth = await this.checkTrackingService();
     checks.push(trackingHealth);
 
-    // Payment service health check
-    const paymentHealth = await this.checkPaymentService();
-    checks.push(paymentHealth);
-
     // Email service health check
     const emailHealth = await this.checkEmailService();
     checks.push(emailHealth);
@@ -125,7 +120,6 @@ export class HealthService {
       services: {
         database: this.getServiceHealth(dbHealth),
         tracking: this.getServiceHealth(trackingHealth),
-        payment: this.getServiceHealth(paymentHealth),
         email: this.getServiceHealth(emailHealth),
         ...(process.env.REDIS_URL && { redis: this.getServiceHealth(checks.find(c => c.name === 'redis') || trackingHealth) })
       },
@@ -213,46 +207,6 @@ export class HealthService {
         name: 'tracking',
         status: 'fail',
         message: `Tracking service error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        duration: Date.now() - startTime,
-        timestamp: new Date().toISOString()
-      };
-    }
-  }
-
-  /**
-   * Check payment service configuration
-   */
-  private async checkPaymentService(): Promise<HealthCheck> {
-    const startTime = Date.now();
-    
-    try {
-      const hasMerchantId = !!process.env.CCAVENUE_MERCHANT_ID;
-      const hasAccessCode = !!process.env.CCAVENUE_ACCESS_CODE;
-      const hasWorkingKey = !!process.env.CCAVENUE_WORKING_KEY;
-
-      if (!hasMerchantId || !hasAccessCode || !hasWorkingKey) {
-        return {
-          name: 'payment',
-          status: 'warn',
-          message: 'Payment service not fully configured',
-          duration: Date.now() - startTime,
-          timestamp: new Date().toISOString()
-        };
-      }
-
-      return {
-        name: 'payment',
-        status: 'pass',
-        message: 'Payment service configured',
-        duration: Date.now() - startTime,
-        timestamp: new Date().toISOString()
-      };
-
-    } catch (error) {
-      return {
-        name: 'payment',
-        status: 'fail',
-        message: `Payment service error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         duration: Date.now() - startTime,
         timestamp: new Date().toISOString()
       };

@@ -7,7 +7,7 @@ import {
   getUserEngravingImages,
   toggleEngravingAvailability
 } from '../controllers/engravingController';
-import { upload } from '../config/cloudinary';
+import upload from '../middleware/upload';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
