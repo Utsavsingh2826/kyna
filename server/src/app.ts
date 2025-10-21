@@ -1,4 +1,4 @@
-import dotenv from "dotenv";
+  import dotenv from "dotenv";
 
 // Load environment variables as early as possible so modules that import config get them
 dotenv.config();
@@ -33,7 +33,7 @@ import adminRoutes from "./routes/admin";
 import buildYourJewelryRoutes from "./routes/buildYourJewelry";
 import subProductRoutes from "./routes/subProduct";
 import blogRoutes from "./routes/blog";
-// import addressRoutes from "./routes/address";
+import addressRoutes from "./routes/address";
 
 // Import tracking services
 import { TrackingController } from "./controllers/trackingController";
@@ -384,6 +384,7 @@ app.use("/api/admin", deprecationWarning, adminRoutes);
 app.use("/api/build-your-jewelry", deprecationWarning, buildYourJewelryRoutes);
 app.use("/api/sub-products", deprecationWarning, subProductRoutes);
 app.use("/api/blogs", deprecationWarning, blogRoutes);
+app.use("/api/address", deprecationWarning, addressRoutes);
 
 // Home route
 app.get("/", (req: Request, res: Response) => {

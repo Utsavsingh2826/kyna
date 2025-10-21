@@ -153,22 +153,42 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?._id;
-    const { shippingAddress, paymentMethod } = req.body;
+    const { paymentMethod } = req.body;
+
+    console.log('Create order request:', { userId, paymentMethod });
 
     if (!userId) {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    if (!shippingAddress || !paymentMethod) {
+    if (!paymentMethod) {
       return res.status(400).json({
-        message: 'Shipping address and payment method are required'
+        message: 'Payment method is required'
       });
     }
 
     // Get user's cart
     const cart = await Cart.findOne({ user: userId }).populate('items.product');
+    console.log('Cart found:', cart ? `Items: ${cart.items.length}, Total: ${cart.totalAmount}` : 'No cart found');
+    
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ message: 'Cart is empty' });
+    }
+
+    // Get user's saved addresses
+    const user = await User.findById(userId);
+    console.log('User found:', user ? `Has address: ${!!user.address}` : 'No user found');
+    
+    if (!user || !user.address || !user.address.billingAddress || !user.address.shippingAddress) {
+      console.log('Address validation failed:', {
+        hasUser: !!user,
+        hasAddress: !!user?.address,
+        hasBilling: !!user?.address?.billingAddress,
+        hasShipping: !!user?.address?.shippingAddress
+      });
+      return res.status(400).json({ 
+        message: 'Please save your billing and shipping addresses before proceeding' 
+      });
     }
 
     // Calculate totals
@@ -176,6 +196,8 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const gst = calculateGST(subtotal);
     const shippingCharge = subtotal > 5000 ? 0 : 200; // Free shipping above ₹5000
     const totalAmount = subtotal + gst + shippingCharge;
+
+    console.log('Order totals:', { subtotal, gst, shippingCharge, totalAmount });
 
     // Prepare order items
     const orderItems = cart.items.map(item => {
@@ -190,12 +212,15 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       };
     });
 
+    console.log('Order items prepared:', orderItems.length);
+
     // Create order
     const order = new OrderModel({
       user: userId,
       orderNumber: generateOrderNumber(),
       items: orderItems,
-      shippingAddress,
+      billingAddress: user.address.billingAddress,
+      shippingAddress: user.address.shippingAddress,
       paymentMethod,
       paymentStatus: 'pending',
       orderStatus: 'pending',
@@ -212,6 +237,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     });
 
     await order.save();
+    console.log('Order saved successfully:', order._id);
 
     // Ensure orderNumber matches the document _id for uniqueness and external reference
     if (order._id && order.orderNumber !== String(order._id)) {
@@ -223,6 +249,7 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     cart.items = [];
     cart.totalAmount = 0;
     await cart.save();
+    console.log('Cart cleared');
 
     // Populate order for response
     await order.populate('items.product');

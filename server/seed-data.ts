@@ -157,7 +157,25 @@ const sampleUsers = [
     zipCode: '90210',
     isVerified: true,
     role: 'customer' as const,
-    // Addresses moved to Order model
+    address: {
+      billingAddress: {
+        companyName: 'Doe Enterprises',
+        street: '123 Main Street',
+        city: 'Los Angeles',
+        state: 'California',
+        country: 'USA',
+        zipCode: '90210'
+      },
+      shippingAddress: {
+        companyName: 'Doe Enterprises',
+        street: '123 Main Street',
+        city: 'Los Angeles',
+        state: 'California',
+        country: 'USA',
+        zipCode: '90210',
+        sameAsBilling: true
+      }
+    },
     isActive: true,
     availableOffers: 2
   },
@@ -175,7 +193,24 @@ const sampleUsers = [
     zipCode: '10001',
     isVerified: true,
     role: 'customer' as const,
-    // Addresses moved to Order model
+    address: {
+      billingAddress: {
+        companyName: 'Smith & Co',
+        street: '456 Oak Avenue',
+        city: 'New York',
+        state: 'New York',
+        country: 'USA',
+        zipCode: '10001'
+      },
+      shippingAddress: {
+        street: '789 Pine Street',
+        city: 'Brooklyn',
+        state: 'New York',
+        country: 'USA',
+        zipCode: '11201',
+        sameAsBilling: false
+      }
+    },
     isActive: true,
     availableOffers: 1
   },
@@ -193,7 +228,25 @@ const sampleUsers = [
     zipCode: '94105',
     isVerified: true,
     role: 'admin' as const,
-    // Addresses moved to Order model
+    address: {
+      billingAddress: {
+        companyName: 'Kyna Jewels Admin',
+        street: '100 Market Street',
+        city: 'San Francisco',
+        state: 'California',
+        country: 'USA',
+        zipCode: '94105'
+      },
+      shippingAddress: {
+        companyName: 'Kyna Jewels Admin',
+        street: '100 Market Street',
+        city: 'San Francisco',
+        state: 'California',
+        country: 'USA',
+        zipCode: '94105',
+        sameAsBilling: true
+      }
+    },
     isActive: true,
     availableOffers: 0
   }
@@ -229,8 +282,8 @@ async function createUsers() {
   for (const userData of sampleUsers) {
     const user = new User({
       ...userData,
-      passwordHash: userData.password // Let the pre-save hook handle hashing
-      // Don't set password field - let it be undefined
+      password: userData.password, // Let the pre-save hook handle hashing
+      isVerified: true, // Set verified users for testing
     });
     
     const savedUser = await user.save();
@@ -267,13 +320,12 @@ async function createSampleOrders(users: any[], products: any[]) {
         zipCode: '560001'
       },
       shippingAddress: {
-        companyName: 'Doe Enterprises',
+        label: 'Home',
         street: '123 Main Street',
         city: 'Bangalore',
         state: 'Karnataka',
         country: 'India',
-        zipCode: '560001',
-        sameAsBilling: true
+        postalCode: '560001'
       },
       paymentMethod: 'Credit Card',
       paymentStatus: 'paid',
@@ -308,12 +360,12 @@ async function createSampleOrders(users: any[], products: any[]) {
         zipCode: '400001'
       },
       shippingAddress: {
+        label: 'Office',
         street: '789 Pine Street',
         city: 'Delhi',
         state: 'Delhi',
         country: 'India',
-        zipCode: '110001',
-        sameAsBilling: false
+        postalCode: '110001'
       },
       paymentMethod: 'UPI',
       paymentStatus: 'paid',

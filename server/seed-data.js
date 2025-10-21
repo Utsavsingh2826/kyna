@@ -242,11 +242,10 @@ async function createUsers() {
   const createdUsers = [];
   
   for (const userData of sampleUsers) {
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
     const user = new User({
       ...userData,
-      passwordHash: hashedPassword,
-      password: hashedPassword
+      password: userData.password, // Let the pre-save hook handle hashing
+      isVerified: true, // Set verified users for testing
     });
     
     const savedUser = await user.save();

@@ -15,41 +15,33 @@ export interface IUser extends Document {
   city?: string;
   zipCode?: string;
   profileImage?: string;
-  passwordHash: string;
-  password: string; // For compatibility with new auth system
+  password: string; // Contains hashed password for security
   name: string; // For compatibility with new auth system
   isVerified: boolean;
   role: 'customer' | 'admin';
   lastLogin?: Date;
   verificationToken?: string;
   verificationTokenExpiresAt?: Date;
-  // Addresses moved to Order model
-  // addresses: {
-  //   label: string;
-  //   street: string;
-  //   city: string;
-  //   state: string;
-  //   postalCode: string;
-  //   country: string;
-  //   isDefault: boolean;
-  // }[];
-  // billingAddress?: {
-  //   companyName?: string;
-  //   street?: string;
-  //   city?: string;
-  //   state?: string;
-  //   country?: string;
-  //   zipCode?: string;
-  // };
-  // shippingAddress?: {
-  //   companyName?: string;
-  //   street?: string;
-  //   city?: string;
-  //   state?: string;
-  //   country?: string;
-  //   zipCode?: string;
-  //   sameAsBilling?: boolean;
-  // };
+  // Address information
+  address: {
+    billingAddress: {
+      companyName?: string;
+      street: string;
+      city: string;
+      state: string;
+      country: string;
+      zipCode: string;
+    };
+    shippingAddress: {
+      companyName?: string;
+      street: string;
+      city: string;
+      state: string;
+      country: string;
+      zipCode: string;
+      sameAsBilling: boolean;
+    };
+  };
   orders: string[] | IOrder[];
   wishlist: string[] | IProduct[];
   gifts: string[] | IGiftCard[];

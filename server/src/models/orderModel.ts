@@ -19,13 +19,22 @@ export interface IOrder extends Document {
     price: number;
     total: number;
   }[];
-  shippingAddress: {
-    label: string;
+  billingAddress: {
+    companyName?: string;
     street: string;
     city: string;
     state: string;
-    ZipCode: string;
     country: string;
+    zipCode: string;
+  };
+  shippingAddress: {
+    companyName?: string;
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+    sameAsBilling: boolean;
   };
   paymentMethod: "Credit Card" | "Debit Card" | "Net Banking" | "UPI";
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
@@ -81,7 +90,7 @@ export interface IOrder extends Document {
   images?: Array<{
     url: string;
     publicId?: string;
-    uploadedAt?: Date;
+     uploadedAt?: Date;
     source?: string; // e.g., 'cloudinary', 'local'
     alt?: string;
   }>;
@@ -127,14 +136,25 @@ const orderSchema = new Schema<IOrder>(
       },
     ],
 
+    // Billing details
+    billingAddress: {
+      companyName: { type: String, trim: true },
+      street: { type: String, required: true, trim: true },
+      city: { type: String, required: true, trim: true },
+      state: { type: String, required: true, trim: true },
+      country: { type: String, required: true, trim: true },
+      zipCode: { type: String, required: true, trim: true }
+    },
+
     // Shipping details
     shippingAddress: {
-      label: { type: String, default: "Home" },
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      state: { type: String, required: true },
-      postalCode: { type: String, required: true },
-      country: { type: String, required: true },
+      companyName: { type: String, trim: true },
+      street: { type: String, required: true, trim: true },
+      city: { type: String, required: true, trim: true },
+      state: { type: String, required: true, trim: true },
+      country: { type: String, required: true, trim: true },
+      zipCode: { type: String, required: true, trim: true },
+      sameAsBilling: { type: Boolean, default: false }
     },
 
     // Payment info

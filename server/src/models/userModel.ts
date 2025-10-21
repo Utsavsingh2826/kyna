@@ -44,9 +44,8 @@ const userSchema = new Schema<IUserInternal>({
   profileImage: { type: String, trim: true },
 
   // Authentication
-  passwordHash: { type: String, required: true },
-  password: { type: String, required: true }, // For compatibility with new auth system
-  name: { type: String, required: true }, // For compatibility with new auth system
+  password: { type: String, required: true }, // Contains hashed password for security
+  name: { type: String, required: true },
   isVerified: { type: Boolean, default: false },
   role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
   otp: { type: String },
@@ -57,36 +56,26 @@ const userSchema = new Schema<IUserInternal>({
   verificationToken: String,
   verificationTokenExpiresAt: Date,
 
-  // Address book - REMOVED (addresses now stored in Order model)
-  // addresses: [{
-  //   label: { type: String, default: 'Home' },
-  //   street: String,
-  //   city: String,
-  //   state: String,
-  //   postalCode: String,
-  //   country: String,
-  //   isDefault: { type: Boolean, default: false }
-  // }],
-
-  // Billing and Shipping Addresses - MOVED TO ORDER MODEL
-  // billingAddress: {
-  //   companyName: { type: String, trim: true },
-  //   street: { type: String, trim: true },
-  //   city: { type: String, trim: true },
-  //   state: { type: String, trim: true },
-  //   country: { type: String, trim: true },
-  //   zipCode: { type: String, trim: true }
-  // },
-  
-  // shippingAddress: {
-  //   companyName: { type: String, trim: true },
-  //   street: { type: String, trim: true },
-  //   city: { type: String, trim: true },
-  //   state: { type: String, trim: true },
-  //   country: { type: String, trim: true },
-  //   zipCode: { type: String, trim: true },
-  //   sameAsBilling: { type: Boolean, default: false }
-  // },
+  // Address information
+  address: {
+    billingAddress: {
+      companyName: { type: String, trim: true },
+      street: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      country: { type: String, trim: true },
+      zipCode: { type: String, trim: true }
+    },
+    shippingAddress: {
+      companyName: { type: String, trim: true },
+      street: { type: String, trim: true },
+      city: { type: String, trim: true },
+      state: { type: String, trim: true },
+      country: { type: String, trim: true },
+      zipCode: { type: String, trim: true },
+      sameAsBilling: { type: Boolean, default: true }
+    }
+  },
 
   // Orders reference
   orders: [{ type: Schema.Types.ObjectId, ref: 'Order' }],
@@ -135,11 +124,11 @@ userSchema.pre('save', async function(this: IUserInternal, next) {
     return next();
   }
   
-  if (!this.isModified('passwordHash')) return next();
+  if (!this.isModified('password')) return next();
   
   try {
     const salt = await bcrypt.genSalt(10);
-    this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
+    this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (err) {
     next(err as Error);
@@ -170,15 +159,39 @@ userSchema.pre('save', async function(this: IUserInternal, next) {
   next();
 });
 
+// Pre-save: set shipping address same as billing address by default
+userSchema.pre('save', function(this: IUserInternal, next) {
+  // Only process if address object exists and has both billing and shipping addresses
+  if (this.address && 
+      this.address.billingAddress && 
+      this.address.shippingAddress &&
+      // Check if billing address has all required fields
+      this.address.billingAddress.street &&
+      this.address.billingAddress.city &&
+      this.address.billingAddress.state &&
+      this.address.billingAddress.country &&
+      this.address.billingAddress.zipCode) {
+    
+    // If shipping address is set to same as billing, copy billing address to shipping
+    if (this.address.shippingAddress.sameAsBilling) {
+      this.address.shippingAddress = {
+        ...this.address.billingAddress,
+        sameAsBilling: true
+      };
+    }
+  }
+  next();
+});
+
 // Method: check password validity
 userSchema.methods.comparePassword = async function(this: IUser, candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.passwordHash);
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 // Add a static method to set password correctly
 userSchema.statics.setPassword = async function(userId: string, password: string) {
   const hashedPassword = await bcrypt.hash(password, 10);
-  return this.findByIdAndUpdate(userId, { passwordHash: hashedPassword });
+  return this.findByIdAndUpdate(userId, { password: hashedPassword });
 };
 
 // Index for faster email search

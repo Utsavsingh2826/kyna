@@ -13,8 +13,8 @@ const createTransporter = () => {
     port: parseInt(process.env.EMAIL_PORT || '587'),
     secure: false, // true for 465, false for other ports
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: process.env.EMAIL_USER || 'enquiries@kynajewels.com',
+      pass: process.env.EMAIL_PASS || 'qrue wzck rvqw pjzg',
     },
     tls: {
       rejectUnauthorized: false // Allow self-signed certificates

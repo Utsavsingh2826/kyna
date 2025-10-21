@@ -25,7 +25,7 @@ interface UpdateProfileRequest {
   city?: string;
   zipCode?: string;
 }
-// Signup with email verification
+// Signup with OTP verification
 export const signup = async (req: Request, res: Response) => {
   const { email, password, name } = req.body;
 
@@ -41,50 +41,41 @@ export const signup = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "User already exists" });
     }
 
-    const hashedPassword = await bcryptjs.hash(password, 10);
-    const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     // Split name into firstName and lastName
     const nameParts = name.trim().split(' ');
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ') || '';
 
+    // Create user with unverified status
     const user = new User({
       email,
-      password: hashedPassword,
-      passwordHash: hashedPassword, // For compatibility
+      password, // Will be hashed by pre-save hook
       name,
       firstName,
       lastName,
-      verificationToken,
-      verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+      otp,
+      otpExpires,
+      isVerified: false, // User must verify email before login
     });
 
     await user.save();
 
-    // Generate JWT and set cookie
-    const token = generateTokenAndSetCookie(res, user._id);
-
-    // Send verification email
-    await sendVerificationEmail(user.email, verificationToken);
+    // Send OTP email
+    await sendVerificationEmail(user.email, otp);
 
     res.status(201).json({
       success: true,
-      message: "User created successfully",
-      token: token,
+      message: "Registration successful. Please check your email for OTP verification.",
       user: {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        phone: user.phone,
         isVerified: user.isVerified,
-        role: user.role,
-        lastLogin: user.lastLogin,
-        isActive: user.isActive,
-        availableOffers: user.availableOffers,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
       },
     });
   } catch (error) {
@@ -92,24 +83,31 @@ export const signup = async (req: Request, res: Response) => {
   }
 };
 
-// Email verification
+// OTP verification
 export const verifyEmail = async (req: Request, res: Response) => {
-  const { code } = req.body;
+  const { email, otp } = req.body;
   try {
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: "Email and OTP are required" });
+    }
+
     const user = await User.findOne({
-      verificationToken: code,
-      verificationTokenExpiresAt: { $gt: Date.now() },
+      email,
+      otp,
+      otpExpires: { $gt: Date.now() },
     });
 
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid or expired verification code" });
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
     }
 
+    // Verify the user
     user.isVerified = true;
-    user.verificationToken = undefined;
-    user.verificationTokenExpiresAt = undefined;
+    user.otp = undefined;
+    user.otpExpires = undefined;
     await user.save();
 
+    // Send welcome email
     await sendWelcomeEmail(user.email, user.name);
 
     // Generate JWT and set cookie for verified user
@@ -117,7 +115,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
 
     res.status(200).json({
       success: true,
-      message: "Email verified successfully",
+      message: "Email verified successfully. You can now login.",
       token: token,
       user: {
         id: user._id,
@@ -140,7 +138,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
   }
 };
 
-// Login with cookie-based authentication
+// Login with email verification check
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
   try {
@@ -149,11 +147,19 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
     
-    // Check password using passwordHash field
+    // Check password
     const isPasswordValid = await user.comparePassword(password);
       
     if (!isPasswordValid) {
       return res.status(400).json({ success: false, message: "Invalid credentials" });
+    }
+
+    // Check if email is verified
+    if (!user.isVerified) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please verify your email before logging in. Check your email for OTP verification." 
+      });
     }
 
     // Generate JWT and set cookie
@@ -184,6 +190,44 @@ export const login = async (req: Request, res: Response) => {
   } catch (error) {
     console.log("Error in login ", error);
     res.status(400).json({ success: false, message: (error as Error).message });
+  }
+};
+
+// Resend OTP
+export const resendOtp = async (req: Request, res: Response) => {
+  const { email } = req.body;
+  try {
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ success: false, message: "User not found" });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ success: false, message: "Email already verified" });
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    // Send OTP email
+    await sendVerificationEmail(user.email, otp);
+
+    res.status(200).json({
+      success: true,
+      message: "OTP sent successfully. Please check your email.",
+    });
+  } catch (error) {
+    console.log("Error in resendOtp ", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -242,7 +286,6 @@ export const resetPassword = async (req: Request, res: Response) => {
     const hashedPassword = await bcryptjs.hash(password, 10);
 
     user.password = hashedPassword;
-    user.passwordHash = hashedPassword; // For compatibility
     user.resetPasswordToken = undefined;
     user.resetPasswordExpiresAt = undefined;
     user.resetPasswordExpires = undefined; // For compatibility
@@ -281,7 +324,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 // Check authentication status
 export const checkAuth = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById((req as any).userId).select("-password -passwordHash");
+    const user = await User.findById((req as any).userId).select("-password");
     if (!user) {
       return res.status(400).json({ success: false, message: "User not found" });
     }
@@ -296,7 +339,7 @@ export const checkAuth = async (req: Request, res: Response) => {
 // Get current user profile
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById((req as any).userId).select("-password -passwordHash");
+    const user = await User.findById((req as any).userId).select("-password");
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
@@ -338,7 +381,7 @@ export const getProfile = async (
 
     // Get user from database
     const user = await User.findById(userId)
-      .select("-passwordHash -otp -otpExpires -resetPasswordToken -resetPasswordExpires");
+      .select("-password -otp -otpExpires -resetPasswordToken -resetPasswordExpires");
 
     if (!user) {
       res.status(404).json({ message: "User not found." });
@@ -474,7 +517,7 @@ export const updateProfile = async (
       userId,
       updateData,
       { new: true, runValidators: true }
-    ).select("-passwordHash -otp -otpExpires -resetPasswordToken -resetPasswordExpires");
+    ).select("-password -otp -otpExpires -resetPasswordToken -resetPasswordExpires");
 
     console.log("📡 Updated user:", updatedUser ? "success" : "not found");
 
