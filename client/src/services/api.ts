@@ -93,6 +93,13 @@ class ApiService {
     });
   }
 
+  async resendOtp(email: string) {
+    return this.makeRequest("/auth/resend-otp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async forgotPassword(email: string) {
     return this.makeRequest("/auth/forgot-password", {
       method: "POST",
@@ -341,6 +348,14 @@ class ApiService {
   async copyBillingToShipping() {
     return this.makeRequest("/address/copy-billing-to-shipping", {
       method: "POST",
+    });
+  }
+
+  // Order management methods
+  async createOrder(paymentMethod: string, billingAddress?: any, shippingAddress?: any) {
+    return this.makeRequest("/orders", {
+      method: "POST",
+      body: JSON.stringify({ paymentMethod, billingAddress, shippingAddress }),
     });
   }
 }

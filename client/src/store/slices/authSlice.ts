@@ -16,6 +16,27 @@ interface User {
   zipCode?: string;
   state?: string;
   country?: string;
+  city?: string;
+  addresses?: any[]; // For saved addresses
+  address?: {
+    billingAddress?: {
+      companyName?: string;
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      zipCode?: string;
+    };
+    shippingAddress?: {
+      companyName?: string;
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      zipCode?: string;
+      sameAsBilling?: boolean;
+    };
+  };
   // Add other relevant user properties here
 }
 

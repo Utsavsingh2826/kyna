@@ -381,7 +381,7 @@ export class TrackingService {
           line2: '',
           city: order.shippingAddress.city,
           state: order.shippingAddress.state,
-          pincode: order.shippingAddress.ZipCode,
+          pincode: order.shippingAddress.zipCode,
           phone: typeof order.user === 'object' && 'phone' in order.user ? order.user.phone || '' : '',
           email: typeof order.user === 'object' && 'email' in order.user ? order.user.email : ''
         },
@@ -391,7 +391,7 @@ export class TrackingService {
           line2: '',
           city: order.shippingAddress.city,
           state: order.shippingAddress.state,
-          pincode: order.shippingAddress.ZipCode,
+          pincode: order.shippingAddress.zipCode,
           phone: typeof order.user === 'object' && 'phone' in order.user ? order.user.phone || '' : '',
           email: typeof order.user === 'object' && 'email' in order.user ? order.user.email : ''
         }

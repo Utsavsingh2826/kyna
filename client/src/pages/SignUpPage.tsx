@@ -78,8 +78,8 @@ const SignUpPage: React.FC = () => {
     e.preventDefault();
     if (step !== "verifyOtp") return;
 
-    if (!otp || otp.length < 4) {
-      setError("Please enter the OTP sent to your email");
+    if (!otp || otp.length < 6) {
+      setError("Please enter the 6-digit OTP sent to your email");
       return;
     }
 
@@ -106,6 +106,26 @@ const SignUpPage: React.FC = () => {
         setTimeout(() => navigate("/login"), 800);
       } else {
         setError(resp.error || "Invalid or expired OTP.");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const resp = await apiService.resendOtp(formData.email);
+
+      if (resp.success) {
+        setSuccess(resp.message || "OTP sent successfully. Please check your email.");
+      } else {
+        setError(resp.error || "Failed to resend OTP.");
       }
     } catch {
       setError("Network error. Please try again.");
@@ -327,7 +347,7 @@ const SignUpPage: React.FC = () => {
               <button
                 type="button"
                 disabled={isLoading}
-                onClick={handleSubmitDetails}
+                onClick={handleResendOtp}
                 className="px-4 py-2 text-sm font-medium text-[#68C5C0] border border-[#68C5C0] rounded-md hover:bg-[#E6F6F5] disabled:opacity-50"
               >
                 Resend OTP

@@ -1,5 +1,5 @@
 import React from "react";
-import { Ruler, Grid3X3, Radius } from "lucide-react";
+import { Ruler, Grid, Radius } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const RingSizeGuidePage: React.FC = () => {
@@ -64,7 +64,7 @@ const RingSizeGuidePage: React.FC = () => {
               {/* Method 3: Compare with Existing Ring */}
               <div className="text-center">
                 <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Grid3X3 className="w-8 h-8 text-teal-600" />
+                  <Grid className="w-8 h-8 text-teal-600" />
                 </div>
                 <h3 className="text-xl font-medium mb-4 text-gray-800">
                   Compare with Existing Ring

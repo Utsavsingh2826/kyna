@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { getRazorpayInstance, createOrderPayload, verifyWebhookSignature } from '../utils/razorpay';
+import { getRazorpayInstance, createOrderPayload, verifyWebhookSignature, validatePaymentAmount, PAYMENT_METHOD_LIMITS, DEFAULT_MAX_AMOUNT } from '../utils/razorpay';
 import PaymentOrder, { OrderStatus, IPaymentResponse } from '../models/PaymentOrder';
 import OrderModel from '../models/orderModel';
 
@@ -106,6 +106,34 @@ router.post('/initiate', async (req: Request, res: Response) => {
       });
     }
 
+    // Parse and validate amount
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount',
+        message: 'Amount must be a positive number'
+      });
+    }
+
+    // Validate amount using the utility function
+    const amountValidation = validatePaymentAmount(amountNum);
+    if (!amountValidation.isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid payment amount',
+        message: amountValidation.error,
+        amount: amountNum,
+        recommendedPaymentMethods: amountValidation.recommendedMethods || ['netbanking', 'cards'],
+        supportContact: 'support@kynajewels.com'
+      });
+    }
+
+    // Log payment method recommendations if any methods are exceeded
+    if (amountValidation.exceededMethods && amountValidation.exceededMethods.length > 0) {
+      console.warn(`Payment amount ₹${amountNum} exceeds limits for: ${amountValidation.exceededMethods.join(', ')}. Recommended methods: ${amountValidation.recommendedMethods?.join(', ')}`);
+    }
+
     // Validate orderCategory and orderType
     const validCategories = ['design-your-own', 'build-your-own', 'products'];
     const validTypes = ['customized', 'normal'];
@@ -171,7 +199,50 @@ router.post('/initiate', async (req: Request, res: Response) => {
     const razorpay = getRazorpayInstance();
     const payload = createOrderPayload(Number(amount), currency);
 
-    const razorpayOrder = await razorpay.orders.create(payload);
+    let razorpayOrder;
+    try {
+      razorpayOrder = await razorpay.orders.create(payload);
+    } catch (razorpayError: any) {
+      console.error('Razorpay order creation failed:', razorpayError);
+      
+      // Handle specific Razorpay errors
+      if (razorpayError.error) {
+        const errorCode = razorpayError.error.code;
+        const errorDescription = razorpayError.error.description;
+        
+        if (errorCode === 'BAD_REQUEST_ERROR' && errorDescription?.includes('amount')) {
+          return res.status(400).json({
+            success: false,
+            error: 'Invalid payment amount',
+            message: `Payment amount ₹${amountNum} is invalid. ${errorDescription}`,
+            amount: amountNum,
+            razorpayError: errorDescription,
+            recommendedPaymentMethods: ['netbanking', 'cards']
+          });
+        }
+        
+        if (errorCode === 'BAD_REQUEST_ERROR' && errorDescription?.includes('maximum')) {
+          return res.status(400).json({
+            success: false,
+            error: 'Amount exceeds maximum limit',
+            message: `Payment amount ₹${amountNum} exceeds the maximum allowed limit. Please use Net Banking or Card payment for this amount.`,
+            amount: amountNum,
+            razorpayError: errorDescription,
+            recommendedPaymentMethods: ['netbanking', 'cards'],
+            supportContact: 'support@kynajewels.com'
+          });
+        }
+      }
+      
+      // Generic Razorpay error
+      return res.status(500).json({
+        success: false,
+        error: 'Payment gateway error',
+        message: 'Failed to create payment order. Please try again or contact support.',
+        razorpayError: razorpayError.message || 'Unknown Razorpay error',
+        supportContact: 'support@kynajewels.com'
+      });
+    }
 
     // Store razorpay order id in both paymentResponse and dedicated field
     order.paymentResponse = { orderId: razorpayOrder.id, amount: String(amount), currency } as any;

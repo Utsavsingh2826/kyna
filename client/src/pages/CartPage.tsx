@@ -55,6 +55,11 @@ const CartPage = () => {
     }
   };
 
+  // Handle Add Address click - redirect to profile page
+  const handleAddAddress = () => {
+    navigate('/profile');
+  };
+
   // Set default addresses when user data is available
   useEffect(() => {
     if (user?.addresses && user.addresses.length > 0) {
@@ -196,6 +201,21 @@ const CartPage = () => {
 
   // Use dynamic addresses from user data
   const addresses = user?.addresses || [];
+  
+  // Check if user has address information from top-level fields
+  const hasUserAddress = user?.country && user?.state && user?.city && user?.zipCode;
+  
+  // Create address object from user's top-level fields
+  const userAddressFromFields = hasUserAddress ? {
+    _id: 'user-fields',
+    id: 'user-fields',
+    label: 'Default Address',
+    street: '', // We don't have street from top-level fields
+    city: user.city || '',
+    state: user.state || '',
+    postalCode: user.zipCode || '',
+    country: user.country || ''
+  } : null;
 
   const subtotal = cart.totalAmount;
   const promoDiscount = appliedPromo?.discountAmount || 0;
@@ -343,90 +363,6 @@ const CartPage = () => {
               </div>
             </div>
 
-            {/* Billing Address Section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">Billing Address</h2>
-                <button className="text-[#3AAFA9] hover:text-[#2a8a85] text-sm font-medium">
-                  Add Address
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {addresses.length > 0 ? (
-                  addresses.map((address) => (
-                    <div key={address._id || address.id} className="flex items-start space-x-3">
-                    <Checkbox 
-                        id={`billing-${address._id || address.id}`}
-                        checked={selectedBillingAddress === (address._id || address.id)}
-                        onCheckedChange={() => setSelectedBillingAddress(address._id || address.id || '')}
-                    />
-                    <div className="flex-1">
-                      <label 
-                          htmlFor={`billing-${address._id || address.id}`}
-                        className="font-medium text-gray-900 cursor-pointer"
-                      >
-                          {address.label || 'Home'}
-                      </label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {address.street}, {address.city}, {address.state} {address.postalCode}, {address.country}
-                        </p>
-                      <button className="text-[#3AAFA9] hover:text-[#2a8a85] text-sm mt-2">
-                        Edit Address
-                      </button>
-                    </div>
-                  </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 mb-4">No addresses found</p>
-                    <button className="text-[#3AAFA9] hover:text-[#2a8a85] text-sm font-medium">
-                      Add Your First Address
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Shipping Address Section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Shipping Address</h2>
-
-              <div className="space-y-3">
-                {addresses.length > 0 ? (
-                  addresses.map((address) => (
-                    <div key={address._id || address.id} className="flex items-start space-x-3">
-                    <Checkbox 
-                        id={`shipping-${address._id || address.id}`}
-                        checked={selectedShippingAddress === (address._id || address.id)}
-                        onCheckedChange={() => setSelectedShippingAddress(address._id || address.id || '')}
-                    />
-                    <div className="flex-1">
-                      <label 
-                          htmlFor={`shipping-${address._id || address.id}`}
-                        className="font-medium text-gray-900 cursor-pointer"
-                      >
-                          {address.label || 'Home'}
-                      </label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {address.street}, {address.city}, {address.state} {address.postalCode}, {address.country}
-                        </p>
-                      <button className="text-[#3AAFA9] hover:text-[#2a8a85] text-sm mt-2">
-                        Edit Address
-                      </button>
-                    </div>
-                  </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 mb-4">No addresses found</p>
-                    <button className="text-[#3AAFA9] hover:text-[#2a8a85] text-sm font-medium">
-                      Add Your First Address
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Right Column */}

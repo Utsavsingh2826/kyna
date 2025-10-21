@@ -153,9 +153,9 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
 export const createOrder = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user?._id;
-    const { paymentMethod } = req.body;
+    const { paymentMethod, billingAddress, shippingAddress } = req.body;
 
-    console.log('Create order request:', { userId, paymentMethod });
+    console.log('Create order request:', { userId, paymentMethod, hasBilling: !!billingAddress, hasShipping: !!shippingAddress });
 
     if (!userId) {
       return res.status(401).json({ message: 'User not authenticated' });
@@ -173,22 +173,6 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ message: 'Cart is empty' });
-    }
-
-    // Get user's saved addresses
-    const user = await User.findById(userId);
-    console.log('User found:', user ? `Has address: ${!!user.address}` : 'No user found');
-    
-    if (!user || !user.address || !user.address.billingAddress || !user.address.shippingAddress) {
-      console.log('Address validation failed:', {
-        hasUser: !!user,
-        hasAddress: !!user?.address,
-        hasBilling: !!user?.address?.billingAddress,
-        hasShipping: !!user?.address?.shippingAddress
-      });
-      return res.status(400).json({ 
-        message: 'Please save your billing and shipping addresses before proceeding' 
-      });
     }
 
     // Calculate totals
@@ -214,13 +198,28 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
 
     console.log('Order items prepared:', orderItems.length);
 
-    // Create order
+    // Create order with provided addresses or use defaults
     const order = new OrderModel({
       user: userId,
       orderNumber: generateOrderNumber(),
       items: orderItems,
-      billingAddress: user.address.billingAddress,
-      shippingAddress: user.address.shippingAddress,
+      billingAddress: billingAddress || {
+        companyName: '',
+        street: 'Default Street',
+        city: 'Default City',
+        state: 'Default State',
+        country: 'India',
+        zipCode: '000000'
+      },
+      shippingAddress: shippingAddress || {
+        companyName: '',
+        street: 'Default Street',
+        city: 'Default City',
+        state: 'Default State',
+        country: 'India',
+        zipCode: '000000',
+        sameAsBilling: false
+      },
       paymentMethod,
       paymentStatus: 'pending',
       orderStatus: 'pending',

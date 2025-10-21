@@ -151,24 +151,138 @@ class PaymentService {
     paymentData: PaymentInitiateRequest
   ): Promise<PaymentInitiateResponse> {
     try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem('token');
+      
+      console.log('Making payment request to:', `${this.baseUrl}/payment/initiate`);
+      console.log('Request data:', paymentData);
+      console.log('Request data validation:', {
+        hasOrderId: !!paymentData.orderId,
+        hasAmount: !!paymentData.amount,
+        hasBillingInfo: !!paymentData.billingInfo,
+        hasUserId: !!paymentData.userId,
+        hasRedirectUrl: !!paymentData.redirectUrl,
+        hasCancelUrl: !!paymentData.cancelUrl,
+        orderId: paymentData.orderId,
+        amount: paymentData.amount,
+        userId: paymentData.userId,
+        billingInfoKeys: paymentData.billingInfo ? Object.keys(paymentData.billingInfo) : 'no billing info'
+      });
+      
+      console.log('Starting fetch request...');
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch(`${this.baseUrl}/payment/initiate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
         },
         body: JSON.stringify(paymentData),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      console.log('Fetch request completed');
+
+      console.log('Raw response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries())
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('JSON parsing error:', jsonError);
+        const textResponse = await response.text();
+        console.error('Raw response text:', textResponse);
+        throw new Error(`Server returned invalid JSON: ${textResponse}`);
+      }
+
+      console.log('Server response:', {
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        data: data
+      });
 
       if (!response.ok) {
-        throw new Error(data.message || "Payment initiation failed");
+        console.error("Payment initiation failed:", {
+          status: response.status,
+          statusText: response.statusText,
+          data: data,
+          url: `${this.baseUrl}/payment/initiate`,
+          dataType: typeof data,
+          dataKeys: data ? Object.keys(data) : 'no data'
+        });
+        
+        // Handle specific error types
+        if (data.error === 'Amount exceeds maximum limit') {
+          throw new Error(`Payment amount ₹${data.amount} exceeds the maximum allowed limit of ₹${data.maxAmount}. Please use Net Banking or Card payment for this amount. Contact support at ${data.supportContact} to increase your transaction limit.`);
+        }
+        
+        if (data.error === 'Invalid payment amount') {
+          throw new Error(`Payment amount ₹${data.amount} is invalid. ${data.razorpayError || data.message}. Please try using Net Banking or Card payment.`);
+        }
+        
+        if (data.error === 'Payment gateway error') {
+          throw new Error(`Payment gateway error: ${data.razorpayError || data.message}. Please try again or contact support at ${data.supportContact}.`);
+        }
+        
+        // Try to extract error message from different possible fields
+        let errorMessage = "Payment initiation failed";
+        if (data.message) {
+          errorMessage = data.message;
+        } else if (data.error) {
+          errorMessage = data.error;
+        } else if (data.errorMessage) {
+          errorMessage = data.errorMessage;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        } else if (data.details) {
+          errorMessage = data.details;
+        } else if (data.msg) {
+          errorMessage = data.msg;
+        } else if (data.description) {
+          errorMessage = data.description;
+        } else {
+          errorMessage = `Server error: ${response.status} ${response.statusText}`;
+        }
+        
+        console.log('Extracted error message:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Payment initiation error:", error);
-      throw error;
+
+      // Handle different types of errors with clearer messages
+      if (error && typeof error === 'object' && 'name' in error && (error as any).name === 'AbortError') {
+        throw new Error("Request timeout: Payment service took too long to respond");
+      }
+
+      if (error instanceof TypeError && error.message && error.message.includes('fetch')) {
+        throw new Error("Network error: Unable to connect to payment service");
+      }
+
+      if (error instanceof SyntaxError) {
+        throw new Error("Server response error: Invalid response format");
+      }
+
+      // If error has a message, rethrow preserving it. Otherwise stringify the error object.
+      const errMsg = error && error.message ? error.message : (error ? JSON.stringify(error) : null);
+      if (errMsg) {
+        throw new Error(errMsg);
+      }
+
+      throw new Error("Unknown error occurred during payment initiation");
     }
   }
 
@@ -246,10 +360,14 @@ class PaymentService {
     orderId: string;
   }) {
     try {
+      // Get auth token from localStorage
+      const token = localStorage.getItem('token');
+      
       const response = await fetch(`${this.baseUrl}/payment/verify`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token && { "Authorization": `Bearer ${token}` })
         },
         body: JSON.stringify(verificationData),
       });

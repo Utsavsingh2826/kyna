@@ -1,9 +1,137 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { XCircle, ArrowLeft, Home } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { XCircle, ArrowLeft, Home, CreditCard, Smartphone, AlertTriangle } from "lucide-react";
 import { Button } from "../components/ui/button";
 
 const PaymentCancel: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const error = searchParams.get('error');
+  const amount = searchParams.get('amount');
+  const maxAmount = searchParams.get('maxAmount');
+  const recommendedMethods = searchParams.get('recommendedMethods');
+
+  // Check if this is an amount limit error
+  const isAmountLimitError = error === 'amount_limit_exceeded' || 
+                            error?.includes('maximum') || 
+                            error?.includes('exceeds');
+
+  const getRecommendedMethods = () => {
+    if (recommendedMethods) {
+      return recommendedMethods.split(',');
+    }
+    return ['netbanking', 'cards'];
+  };
+
+  const getPaymentMethodInfo = (method: string) => {
+    const methodInfo = {
+      netbanking: {
+        name: 'Net Banking',
+        icon: <CreditCard className="w-5 h-5" />,
+        limit: '₹5,00,000',
+        description: 'Direct bank transfer with higher limits'
+      },
+      cards: {
+        name: 'Credit/Debit Cards',
+        icon: <CreditCard className="w-5 h-5" />,
+        limit: 'No limit',
+        description: 'Credit or debit card payments'
+      },
+      upi: {
+        name: 'UPI',
+        icon: <Smartphone className="w-5 h-5" />,
+        limit: '₹1,00,000',
+        description: 'UPI payments via apps like PhonePe, Google Pay'
+      }
+    };
+    return methodInfo[method as keyof typeof methodInfo] || methodInfo.cards;
+  };
+
+  if (isAmountLimitError) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-2xl mx-auto px-4">
+          <div className="bg-white rounded-lg shadow-lg p-8 text-center">
+            {/* Icon */}
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertTriangle className="w-10 h-10 text-red-600" />
+            </div>
+
+            {/* Title */}
+            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+              Payment Amount Limit Exceeded
+            </h1>
+
+            {/* Description */}
+            <p className="text-lg text-gray-600 mb-8">
+              {amount && maxAmount 
+                ? `Your payment amount of ₹${amount} exceeds the maximum allowed limit of ₹${maxAmount}.`
+                : 'Your payment amount exceeds the maximum allowed limit for this payment method.'
+              }
+            </p>
+
+            {/* Recommended Payment Methods */}
+            <div className="bg-blue-50 rounded-lg p-6 mb-8 text-left">
+              <h2 className="text-lg font-semibold text-blue-800 mb-4">
+                Recommended Payment Methods:
+              </h2>
+              <div className="space-y-3">
+                {getRecommendedMethods().map((method) => {
+                  const info = getPaymentMethodInfo(method);
+                  return (
+                    <div key={method} className="flex items-center gap-3 p-3 bg-white rounded-lg">
+                      <div className="text-blue-600">
+                        {info.icon}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{info.name}</div>
+                        <div className="text-sm text-gray-600">{info.description}</div>
+                      </div>
+                      <div className="text-sm font-medium text-blue-600">
+                        Limit: {info.limit}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={() => window.history.back()}
+                className="bg-[#328F94] hover:bg-[#328F94]/90 flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Try Different Payment Method
+              </Button>
+
+              <Link to="/">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <Home className="w-4 h-4" />
+                  Continue Shopping
+                </Button>
+              </Link>
+            </div>
+
+            {/* Help */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <p className="text-sm text-gray-500">
+                Need help? Contact our support team at{" "}
+                <a
+                  href="mailto:support@kynajewels.com"
+                  className="text-[#328F94] hover:underline"
+                >
+                  support@kynajewels.com
+                </a>{" "}
+                to increase your transaction limit.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-2xl mx-auto px-4">
