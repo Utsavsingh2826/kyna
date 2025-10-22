@@ -26,6 +26,13 @@ interface PaymentFormProps {
       source?: string;
       alt?: string;
     }>;
+    orderDetails?: {
+      jewelryType?: string;
+      description?: string;
+      estimatedDelivery?: string | null;
+      estimatedDeliveryDay?: string | null;
+      [key: string]: unknown;
+    };
   };
   userInfo: {
     userId: string;
@@ -127,6 +134,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       Array.isArray(orderData.images)
     );
 
+    // Debug: Check EDD data in orderData
+    console.log('📦 [EDD] PaymentForm - EDD data check:', {
+      hasOrderDetails: !!orderData.orderDetails,
+      estimatedDelivery: orderData.orderDetails?.estimatedDelivery,
+      estimatedDeliveryDay: orderData.orderDetails?.estimatedDeliveryDay,
+      fullOrderDetails: JSON.stringify(orderData.orderDetails, null, 2)
+    });
+    
+    if (orderData.orderDetails?.estimatedDelivery) {
+      console.log('✅ [EDD] PaymentForm - EDD data found, will be sent to backend');
+    } else {
+      console.warn('⚠️ [EDD] PaymentForm - No EDD data found in orderDetails');
+    }
+
     try {
       const paymentData: PaymentInitiateRequest = {
         orderId: orderData.orderId,
@@ -144,6 +165,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         orderDetails: orderData.orderDetails,
         // jewelryId: orderData.jewelryId, // Include jewelryId if available
         images: orderData.images || [],
+        // Extract EDD from orderDetails and add to root level for backend validation
+        estimatedDelivery: orderData.orderDetails?.estimatedDelivery || null,
+        estimatedDeliveryDay: orderData.orderDetails?.estimatedDeliveryDay || null,
       };
 
       console.log("💳 Initiating payment with images:", paymentData.images);

@@ -48,12 +48,23 @@ router.post('/upload', upload.array('images', 10), async (req: Request, res: Res
 
     console.log('📸 Processed image data:', imageData);
 
+    // Pick up estimated delivery info if client passed it
+    const { estimatedDelivery, estimatedDeliveryDay } = req.body;
+
     const ringData: any = {
       userId: currentUserId,
       images: imageData,
       sameAsImage: sameAsImage === 'true',
       status: sameAsImage === 'true' ? RingStatus.PAYMENT_PENDING : RingStatus.CUSTOMIZED
     };
+
+    // Attach EDD if provided
+    if (estimatedDelivery) {
+      ringData.estimatedDelivery = estimatedDelivery;
+    }
+    if (estimatedDeliveryDay) {
+      ringData.estimatedDeliveryDay = estimatedDeliveryDay;
+    }
 
     // Add modification request and description if provided
     if (modificationRequest && modificationRequest.length >= 15) {

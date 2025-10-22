@@ -44,6 +44,8 @@ export interface IRing extends Document {
   userId: string;
   images: IImage[];
   sameAsImage: boolean;
+  estimatedDelivery?: string | null;
+  estimatedDeliveryDay?: string | null;
   customization?: ICustomization;
   status: RingStatus;
   createdAt: Date;
@@ -113,6 +115,15 @@ const ringSchema = new Schema<IRing>({
     index: true
   },
   images: [imageSchema],
+  // Estimated delivery information (optional) provided by courier
+  estimatedDelivery: {
+    type: String,
+    default: null
+  },
+  estimatedDeliveryDay: {
+    type: String,
+    default: null
+  },
   sameAsImage: {
     type: Boolean,
     default: false

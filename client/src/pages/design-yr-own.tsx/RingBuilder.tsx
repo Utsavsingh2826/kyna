@@ -88,6 +88,8 @@ export default function RingBuilder() {
   const [orderData, setOrderData] = useState<PaymentOrderType>(null);
   const [createdOrderId, setCreatedOrderId] = useState<string>("");
   const [Loading, setLoading] = useState<boolean>(false);
+  const [serviceabilityStatus, setServiceabilityStatus] = useState<'idle' | 'checking' | 'serviceable' | 'not-serviceable'>('idle');
+  const [serviceabilityMessage, setServiceabilityMessage] = useState<string>('');
   const [formData, setFormData] = useState({
     // API matching fields - Use getUserId for consistent userId
     userId: "",
@@ -1181,10 +1183,21 @@ export default function RingBuilder() {
                       <label className="text-sm">Zip Code *</label>
                       <Input
                         value={formData.zipCode}
-                        onChange={(e) =>
-                          setFormData({ ...formData, zipCode: e.target.value })
-                        }
+                        onChange={(e) => handleZipCodeChange(e.target.value)}
+                        placeholder="Enter 6-digit pincode"
+                        maxLength={6}
+                        pattern="\d{6}"
                       />
+                      {serviceabilityMessage && (
+                        <div className={`text-xs mt-1 ${
+                          serviceabilityStatus === 'serviceable' ? 'text-green-600' : 
+                          serviceabilityStatus === 'not-serviceable' ? 'text-red-600' : 
+                          serviceabilityStatus === 'checking' ? 'text-blue-600' : 
+                          'text-gray-600'
+                        }`}>
+                          {serviceabilityMessage}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1250,9 +1263,15 @@ export default function RingBuilder() {
 
               <Button
                 onClick={createOrder}
-                className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white"
+                className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={Loading || !formData.zipCode || serviceabilityStatus !== 'serviceable'}
               >
-                {!Loading ? "Create Order →" : "Creating Order..."}
+                {Loading ? "Creating Order..." : 
+                 !formData.zipCode ? "Enter Pincode First" :
+                 serviceabilityStatus === 'checking' ? "Checking Area..." :
+                 serviceabilityStatus === 'not-serviceable' ? "Area Not Serviceable" :
+                 serviceabilityStatus !== 'serviceable' ? "Check Pincode Serviceability" :
+                 "Create Order →"}
               </Button>
 
               <div className="text-xs text-muted-foreground space-y-1">
@@ -1382,6 +1401,67 @@ export default function RingBuilder() {
     setShowEngravingPopup(false);
   };
 
+  // Function to check serviceability using Sequel247 API
+  const checkServiceability = async (pinCode: string): Promise<boolean> => {
+    if (!pinCode || pinCode.length !== 6 || !/^\d{6}$/.test(pinCode)) {
+      setServiceabilityStatus('idle');
+      setServiceabilityMessage('');
+      return false;
+    }
+
+    try {
+      setServiceabilityStatus('checking');
+      setServiceabilityMessage('Checking serviceability...');
+      console.log("🚀 Checking serviceability for pincode:", pinCode);
+      
+      const response = await fetch("https://test.sequel247.com/api/checkServiceability", {
+        method: "POST",
+        body: JSON.stringify({
+          token: "b228a27399f07927985d57c0f7d94ce8",
+          pin_code: pinCode,
+        }),
+      });
+
+      const result = await response.json();
+      console.log("📍 Serviceability check result:", result);
+
+      // Handle API returning boolean true or string variants like 'true', 'True', '1'
+      const statusRaw = result?.status;
+      console.debug('🔎 Raw serviceability status from API:', statusRaw, typeof statusRaw);
+      const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
+      const isServiceableApi =
+        statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
+
+      if (isServiceableApi) {
+        setServiceabilityStatus('serviceable');
+        setServiceabilityMessage('✅ Great! This area is serviceable for delivery.');
+        return true;
+      } else {
+        setServiceabilityStatus('not-serviceable');
+        setServiceabilityMessage('❌ Sorry, this area is not serviceable for delivery.');
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error checking serviceability:", error);
+      setServiceabilityStatus('idle');
+      setServiceabilityMessage('⚠️ Unable to check serviceability. Please try again.');
+      return false;
+    }
+  };
+
+  // Handle zip code change with real-time serviceability check
+  const handleZipCodeChange = async (value: string) => {
+    setFormData({ ...formData, zipCode: value });
+    
+    // Check serviceability when user enters a valid 6-digit pincode
+    if (value.length === 6 && /^\d{6}$/.test(value)) {
+      await checkServiceability(value);
+    } else if (value.length < 6) {
+      setServiceabilityStatus('idle');
+      setServiceabilityMessage('');
+    }
+  };
+
   const createOrder = async () => {
     try {
       setLoading(true);
@@ -1395,8 +1475,91 @@ export default function RingBuilder() {
         return;
       }
 
+      // Check if zip code is provided and valid
+      if (!formData.zipCode) {
+        alert("Please enter your zip code before creating the order.");
+        setLoading(false);
+        return;
+      }
+
+      if (formData.zipCode.length !== 6 || !/^\d{6}$/.test(formData.zipCode)) {
+        alert("Please enter a valid 6-digit pincode.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if serviceability has been verified
+      if (serviceabilityStatus !== 'serviceable') {
+        if (serviceabilityStatus === 'not-serviceable') {
+          alert("❌ Sorry, we cannot process orders to your area as it is not serviceable. Please contact customer support for more information.");
+          setLoading(false);
+          return;
+        } else if (serviceabilityStatus === 'checking') {
+          alert("Please wait while we check if your area is serviceable.");
+          setLoading(false);
+          return;
+        } else {
+          // Status is 'idle' - need to check serviceability
+          console.log("📍 Checking serviceability for pincode:", formData.zipCode);
+          const isServiceable = await checkServiceability(formData.zipCode);
+          
+          if (!isServiceable) {
+            alert("❌ Sorry, we cannot process orders to your area as it is not serviceable. Please contact customer support for more information.");
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      console.log("✅ Area is serviceable, proceeding with order creation...");
+      
+
       // Update formData with current userId
       const updatedFormData = { ...formData, userId: currentUserId };
+
+      // Calculate Estimated Delivery Date (EDD) via Sequel247 before sending order
+      let eddResult: { estimated_delivery?: string; estimated_day?: string } | null = null;
+      try {
+        const pickupDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        console.log('📦 [EDD] Requesting EDD from Sequel247', { origin: '400097', destination: updatedFormData.zipCode, pickupDate });
+
+        if (updatedFormData.zipCode && /^\d{6}$/.test(updatedFormData.zipCode)) {
+          const eddResp = await fetch('https://test.sequel247.com/api/shipment/calculateEDD', {
+            method: 'POST',
+            body: JSON.stringify({
+              token: 'b228a27399f07927985d57c0f7d94ce8',
+              origin_pincode: '400097',
+              destination_pincode: updatedFormData.zipCode,
+              pickup_date: pickupDate,
+            }),
+          });
+
+          const eddJson = await eddResp.json();
+          console.log('📦 [EDD] Raw API response:', JSON.stringify(eddJson, null, 2));
+          const statusRaw = eddJson?.status;
+          const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
+          const ok = statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
+          
+          if (ok && eddJson?.data?.estimated_delivery) {
+            // API returns estimated_delivery in dd-mm-yyyy (example). Keep as-is and also attempt to convert to ISO.
+            eddResult = {
+              estimated_delivery: eddJson.data.estimated_delivery,
+              estimated_day: eddJson.data.estimated_day,
+            };
+            console.log('✅ [EDD] Successfully parsed EDD data:', eddResult);
+            console.log('✅ [EDD] Will append to FormData and payment payload');
+          } else {
+            console.warn('⚠️ [EDD] EDD not available from API or not serviceable', { status: statusRaw, data: eddJson?.data });
+            alert('⚠️ Unable to fetch estimated delivery date. Order creation will continue without EDD.');
+          }
+        } else {
+          console.warn('⚠️ [EDD] Skipping EDD request - invalid destination pincode', updatedFormData.zipCode);
+          alert('⚠️ Invalid pincode format for EDD calculation. Please check your zip code.');
+        }
+      } catch (eddError) {
+        console.error('❌ [EDD] Error fetching EDD:', eddError);
+        alert('⚠️ Failed to fetch estimated delivery date. Order will be created without EDD.');
+      }
 
       // Prepare the complete payload for upload-you-own API
       const formDataPayload = new FormData();
@@ -1404,6 +1567,20 @@ export default function RingBuilder() {
       // Add basic information with ensured userId
       formDataPayload.append("userId", currentUserId);
       formDataPayload.append("jewelryType", updatedFormData.jewelryType);
+      // Attach estimated delivery info (if available)
+      if (eddResult?.estimated_delivery) {
+        formDataPayload.append('estimatedDelivery', eddResult.estimated_delivery);
+        console.log('📦 [EDD] Added estimatedDelivery to FormData:', eddResult.estimated_delivery);
+      } else {
+        console.warn('⚠️ [EDD] No estimatedDelivery to append to FormData');
+      }
+      
+      if (eddResult?.estimated_day) {
+        formDataPayload.append('estimatedDeliveryDay', eddResult.estimated_day);
+        console.log('📦 [EDD] Added estimatedDeliveryDay to FormData:', eddResult.estimated_day);
+      } else {
+        console.warn('⚠️ [EDD] No estimatedDeliveryDay to append to FormData');
+      }
 
       // Add uploaded files (original images)
       if (uploadedFiles.length > 0) {
@@ -1676,6 +1853,10 @@ export default function RingBuilder() {
               region: formData.region,
               phoneNumber: formData.phoneNumber
             },
+
+            // Estimated Delivery Date from courier API
+            estimatedDelivery: eddResult?.estimated_delivery || null,
+            estimatedDeliveryDay: eddResult?.estimated_day || null,
             
             // Completion status
             customizationComplete: true,
@@ -1702,13 +1883,20 @@ export default function RingBuilder() {
         };
 
         console.log(
-          "💳 PAYMENT ORDER DATA IMAGES:",
+          "💳 [PAYMENT] PAYMENT ORDER DATA IMAGES:",
           JSON.stringify(paymentOrderData.images)
         );
         console.log(
-          "💳 PAYMENT ORDER DATA IMAGES COUNT:",
+          "💳 [PAYMENT] PAYMENT ORDER DATA IMAGES COUNT:",
           paymentOrderData.images?.length || 0
         );
+        
+        // Log EDD data being included in payment order
+        console.log('📦 [EDD] EDD data in payment order:', {
+          estimatedDelivery: paymentOrderData.orderDetails?.estimatedDelivery,
+          estimatedDeliveryDay: paymentOrderData.orderDetails?.estimatedDeliveryDay,
+          hasEddData: !!(paymentOrderData.orderDetails?.estimatedDelivery)
+        });
 
         if (!paymentOrderData.images || paymentOrderData.images.length === 0) {
           console.error("❌ CRITICAL: paymentOrderData.images is empty!");
@@ -1718,12 +1906,15 @@ export default function RingBuilder() {
           );
         }
 
-        // ALERT TO CONFIRM IMAGES ARE SET
+        // Enhanced alert to show EDD info
         alert(
           `RINGBUILDER: Setting orderData with ${
             paymentOrderData.images?.length || 0
-          } images`
+          } images and EDD: ${paymentOrderData.orderDetails?.estimatedDelivery || 'No EDD'}`
         );
+
+        // Log complete payment order data structure before setting
+        console.log('💳 [PAYMENT] Complete payment order data structure:', JSON.stringify(paymentOrderData, null, 2));
 
         setOrderData(paymentOrderData as PaymentOrderType);
         setShowPaymentForm(true);
@@ -1731,11 +1922,23 @@ export default function RingBuilder() {
         // Automatically navigate to step 3 to show the PaymentForm
         setCurrentStep(3);
 
+        const eddInfo = eddResult?.estimated_delivery ? 
+          `EDD: ${eddResult.estimated_delivery} (${eddResult.estimated_day || 'N/A'})` : 
+          'No EDD';
+          
         alert(
           `Order created successfully! ${
             jewelryId ? `Jewelry ID: ${jewelryId}` : "Ready for payment"
-          }`
+          } | ${eddInfo}`
         );
+        
+        console.log('📦 [EDD] Final order creation summary:', {
+          orderCreated: true,
+          jewelryId: jewelryId,
+          eddIncluded: !!(eddResult?.estimated_delivery),
+          eddData: eddResult,
+          paymentFormReady: true
+        });
         setLoading(false);
       } else {
         console.error("❌ Order creation failed:", result.message);

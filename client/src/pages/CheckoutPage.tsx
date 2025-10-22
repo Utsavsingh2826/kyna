@@ -48,6 +48,10 @@ const CheckoutPage = () => {
   const [isSavingBilling, setIsSavingBilling] = useState(false);
   const [isSavingShipping, setIsSavingShipping] = useState(false);
   const [hasExistingAddresses, setHasExistingAddresses] = useState(false);
+  const [billingServiceabilityStatus, setBillingServiceabilityStatus] = useState<'idle' | 'checking' | 'serviceable' | 'not-serviceable'>('idle');
+  const [billingServiceabilityMessage, setBillingServiceabilityMessage] = useState<string>('');
+  const [shippingServiceabilityStatus, setShippingServiceabilityStatus] = useState<'idle' | 'checking' | 'serviceable' | 'not-serviceable'>('idle');
+  const [shippingServiceabilityMessage, setShippingServiceabilityMessage] = useState<string>('');
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
 
   // Redirect to login if not authenticated
@@ -335,6 +339,105 @@ const CheckoutPage = () => {
     }
   };
 
+  // Function to check serviceability using Sequel247 API
+  const checkServiceability = async (
+    pinCode: string, 
+    type: 'billing' | 'shipping'
+  ): Promise<boolean> => {
+    if (!pinCode || pinCode.length !== 6 || !/^\d{6}$/.test(pinCode)) {
+      if (type === 'billing') {
+        setBillingServiceabilityStatus('idle');
+        setBillingServiceabilityMessage('');
+      } else {
+        setShippingServiceabilityStatus('idle');
+        setShippingServiceabilityMessage('');
+      }
+      return false;
+    }
+
+    try {
+      if (type === 'billing') {
+        setBillingServiceabilityStatus('checking');
+        setBillingServiceabilityMessage('Checking serviceability...');
+      } else {
+        setShippingServiceabilityStatus('checking');
+        setShippingServiceabilityMessage('Checking serviceability...');
+      }
+
+      console.log("🚀 Checking serviceability for pincode:", pinCode);
+      
+      const response = await fetch("https://test.sequel247.com/api/checkServiceability", {
+        method: "POST",
+        body: JSON.stringify({
+          token: "b228a27399f07927985d57c0f7d94ce8",
+          pin_code: pinCode,
+        }),
+      });
+
+      const result = await response.json();
+      console.log("📍 Serviceability check result:", result);
+
+      const statusRaw = result?.status;
+      console.debug('🔎 Raw serviceability status from API (checkout):', statusRaw, typeof statusRaw);
+      const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
+      const isServiceableApi =
+        statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
+
+      if (isServiceableApi) {
+        if (type === 'billing') {
+          setBillingServiceabilityStatus('serviceable');
+          setBillingServiceabilityMessage('✅ Great! This area is serviceable for delivery.');
+        } else {
+          setShippingServiceabilityStatus('serviceable');
+          setShippingServiceabilityMessage('✅ Great! This area is serviceable for delivery.');
+        }
+        return true;
+      } else {
+        if (type === 'billing') {
+          setBillingServiceabilityStatus('not-serviceable');
+          setBillingServiceabilityMessage('❌ Sorry, this area is not serviceable for delivery.');
+        } else {
+          setShippingServiceabilityStatus('not-serviceable');
+          setShippingServiceabilityMessage('❌ Sorry, this area is not serviceable for delivery.');
+        }
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error checking serviceability:", error);
+      if (type === 'billing') {
+        setBillingServiceabilityStatus('idle');
+        setBillingServiceabilityMessage('⚠️ Unable to check serviceability. Please try again.');
+      } else {
+        setShippingServiceabilityStatus('idle');
+        setShippingServiceabilityMessage('⚠️ Unable to check serviceability. Please try again.');
+      }
+      return false;
+    }
+  };
+
+  // Handle zip code changes with real-time serviceability check
+  const handleBillingZipCodeChange = async (value: string) => {
+    setFormData({ ...formData, zipCode: value });
+    
+    if (value.length === 6 && /^\d{6}$/.test(value)) {
+      await checkServiceability(value, 'billing');
+    } else if (value.length < 6) {
+      setBillingServiceabilityStatus('idle');
+      setBillingServiceabilityMessage('');
+    }
+  };
+
+  const handleShippingZipCodeChange = async (value: string) => {
+    setFormData({ ...formData, shippingZipCode: value });
+    
+    if (value.length === 6 && /^\d{6}$/.test(value)) {
+      await checkServiceability(value, 'shipping');
+    } else if (value.length < 6) {
+      setShippingServiceabilityStatus('idle');
+      setShippingServiceabilityMessage('');
+    }
+  };
+
   // Handle proceed to checkout with Razorpay
   const handleProceedToCheckout = async () => {
     // Check if billing address form is filled
@@ -342,6 +445,61 @@ const CheckoutPage = () => {
       alert('Please fill in all billing address fields before proceeding');
       return;
     }
+
+    // Check if billing zip code is valid
+    if (formData.zipCode.length !== 6 || !/^\d{6}$/.test(formData.zipCode)) {
+      alert("Please enter a valid 6-digit pincode for billing address.");
+      return;
+    }
+
+    // Check if billing serviceability has been verified
+    if (billingServiceabilityStatus !== 'serviceable') {
+      if (billingServiceabilityStatus === 'not-serviceable') {
+        alert("❌ Sorry, we cannot process orders to your billing address area as it is not serviceable. Please contact customer support for more information.");
+        return;
+      } else if (billingServiceabilityStatus === 'checking') {
+        alert("Please wait while we check if your billing area is serviceable.");
+        return;
+      } else {
+        // Status is 'idle' - need to check serviceability
+        console.log("📍 Checking serviceability for billing pincode:", formData.zipCode);
+        const isBillingServiceable = await checkServiceability(formData.zipCode, 'billing');
+        
+        if (!isBillingServiceable) {
+          alert("❌ Sorry, we cannot process orders to your billing address area as it is not serviceable. Please contact customer support for more information.");
+          return;
+        }
+      }
+    }
+
+    // Check shipping address serviceability if different from billing
+    if (!formData.shipToBilling && formData.shippingZipCode) {
+      if (formData.shippingZipCode.length !== 6 || !/^\d{6}$/.test(formData.shippingZipCode)) {
+        alert("Please enter a valid 6-digit pincode for shipping address.");
+        return;
+      }
+
+      if (shippingServiceabilityStatus !== 'serviceable') {
+        if (shippingServiceabilityStatus === 'not-serviceable') {
+          alert("❌ Sorry, we cannot process orders to your shipping address area as it is not serviceable. Please contact customer support for more information.");
+          return;
+        } else if (shippingServiceabilityStatus === 'checking') {
+          alert("Please wait while we check if your shipping area is serviceable.");
+          return;
+        } else {
+          console.log("📍 Checking serviceability for shipping pincode:", formData.shippingZipCode);
+          const isShippingServiceable = await checkServiceability(formData.shippingZipCode, 'shipping');
+          
+          if (!isShippingServiceable) {
+            alert("❌ Sorry, we cannot process orders to your shipping address area as it is not serviceable. Please contact customer support for more information.");
+            return;
+          }
+        }
+      }
+    }
+
+    console.log("✅ Both billing and shipping areas are serviceable, proceeding with checkout...");
+    
 
     // Check if shipping address is filled (if not using ship to billing)
     if (!formData.shipToBilling) {

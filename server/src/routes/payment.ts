@@ -118,6 +118,15 @@ router.post('/initiate', async (req: Request, res: Response) => {
       });
     }
 
+    // Require estimated delivery (fetched from courier API) — do not allow storing orders without it
+    if (!req.body.estimatedDelivery) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing estimatedDelivery',
+        message: 'Estimated delivery date is required to create orders. Please fetch EDD before initiating payment.'
+      });
+    }
+
     // Parse and validate amount
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
@@ -203,7 +212,10 @@ router.post('/initiate', async (req: Request, res: Response) => {
       billingInfo,
       redirectUrl,
       cancelUrl,
-      orderDetails: orderDetails || null
+        orderDetails: orderDetails || null,
+        // Accept estimated delivery information if frontend provided it
+        estimatedDelivery: req.body.estimatedDelivery || null,
+        estimatedDeliveryDay: req.body.estimatedDeliveryDay || null
     });
 
     await order.save();

@@ -172,6 +172,9 @@ export interface IOrder extends Document {
   cancelUrl: string;
   // Order details with all customization data
   orderDetails?: IOrderDetails;
+  // Estimated delivery information (optional)
+  estimatedDelivery?: string | null;
+  estimatedDeliveryDay?: string | null;
   // Razorpay fields
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
@@ -427,6 +430,10 @@ const orderSchema = new Schema<IOrder>({
   paidAt: { 
     type: Date 
   },
+  // Estimated delivery information (required) from courier API
+  estimatedDelivery: { type: String, required: true },
+  // Day label for the estimated delivery (optional)
+  estimatedDeliveryDay: { type: String, default: null },
   // Order details with all customization data
   orderDetails: { 
     type: orderDetailsSchema, 

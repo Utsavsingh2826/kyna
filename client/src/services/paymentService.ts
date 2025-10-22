@@ -69,6 +69,9 @@ export interface PaymentInitiateRequest {
   orderCategory?: 'design-your-own' | 'build-your-own' | 'products';
   orderType?: 'customized' | 'normal';
   jewelryId?: string; // Add optional jewelryId
+  // Estimated delivery fields (required by backend at root level)
+  estimatedDelivery?: string | null;
+  estimatedDeliveryDay?: string | null;
   // Additional data for smart detection
   customData?: any;
   items?: any[];
@@ -96,6 +99,9 @@ export interface PaymentInitiateRequest {
     backendJewelryId?: string;
     designId?: string;
     priceBreakdown?: Record<string, unknown>;
+    // Estimated delivery information from courier API
+    estimatedDelivery?: string | null;
+    estimatedDeliveryDay?: string | null;
   };
   images?: Array<{
     url: string;
@@ -168,6 +174,25 @@ class PaymentService {
         userId: paymentData.userId,
         billingInfoKeys: paymentData.billingInfo ? Object.keys(paymentData.billingInfo) : 'no billing info'
       });
+
+      // Log EDD data being sent to backend (both root level and orderDetails)
+      console.log('📦 [EDD] PaymentService - EDD data in payment request:', {
+        // Root level EDD (required by backend)
+        rootEstimatedDelivery: paymentData.estimatedDelivery,
+        rootEstimatedDeliveryDay: paymentData.estimatedDeliveryDay,
+        // OrderDetails EDD (for reference)
+        orderDetailsEstimatedDelivery: paymentData.orderDetails?.estimatedDelivery,
+        hasRootEddData: !!(paymentData.estimatedDelivery)
+      });
+      
+      if (paymentData.estimatedDelivery) {
+        console.log('✅ [EDD] PaymentService - Sending EDD to backend at ROOT LEVEL:', {
+          estimatedDelivery: paymentData.estimatedDelivery,
+          estimatedDeliveryDay: paymentData.estimatedDeliveryDay
+        });
+      } else {
+        console.warn('⚠️ [EDD] PaymentService - No EDD data found at ROOT LEVEL - backend will reject this');
+      }
       
       console.log('Starting fetch request...');
       
