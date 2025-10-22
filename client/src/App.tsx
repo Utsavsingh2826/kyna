@@ -29,7 +29,8 @@ import { useSelector } from "react-redux";
 import type { RootState } from "./store";
 import { initializeAuth } from "./store/slices/authSlice";
 import RingSizeEducation from "./pages/Education/RingSizeEducation";
-import Gifting from "./pages/Gifting";
+import JewelleryPage from "./pages/JewelleryPage";
+import Gifting from "./pages/Gifting/GiftCards";
 import RingBuilder from "./pages/design-yr-own.tsx/RingBuilder";
 import PendantBuilder from "./pages/design-yr-own.tsx/PendantDisplay";
 import BangleBuilder from "./pages/design-yr-own.tsx/BangelBuilder";
@@ -58,6 +59,7 @@ import BuildYourJewelleryBracelets from "./pages/Build_yr_own/BuildYourJewellery
 import BuildYourJewelleryBands from "./pages/Build_yr_own/BuildYourJewelleryBands";
 import BuildYourJewelleryEarrings from "./pages/Build_yr_own/BuildYourJewelleryEarings";
 import BuildYourJewelleryRings from "./pages/Build_yr_own/BuildYourJewelleryRings";
+import Giftings from "./pages/Gifting/Giftings";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const isAuthenticated = useSelector(
@@ -228,12 +230,8 @@ function App() {
             element={<EarringBuilder />}
           />
           <Route
-            path="/jewellery"
-            element={
-              <div className="min-h-screen flex items-center justify-center">
-                <h1 className="text-4xl">Jewellery Page</h1>
-              </div>
-            }
+            path="/jewellery" 
+            element={<JewelleryPage />}
           />
           <Route
             path="/jewellery/:category"
@@ -277,11 +275,11 @@ function App() {
           />
           <Route
             path="/gifting"
-            element={
-              <div className="min-h-screen flex items-center justify-center">
-                <h1 className="text-4xl">Gifting Page</h1>
-              </div>
-            }
+            element={<Giftings />}
+          />
+          <Route
+            path="/gifting/:priceRange"
+            element={<Giftings />}
           />
           <Route
             path="/gifting/:category"

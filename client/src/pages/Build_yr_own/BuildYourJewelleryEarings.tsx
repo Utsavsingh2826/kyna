@@ -31,137 +31,30 @@ import {
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
-const sampleStyleAndDesign = [
-  {
-    name: "DANGLE EARINGS",
-    substyles: [
-      {
-        img: "/build_yr_own/ER31-RD-100-WG-BV.png",
-        name: "ER31-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER58-RD-100-WG-BV.png",
-        name: "ER58-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER61-RD-100-WG-BV.png",
-        name: "ER61-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER96-PRS-100-WG-BV.png",
-        name: "ER96-PRS-100-WG-BV",
-        price: "5,224",
-      },
-    ],
-  },
-  {
-    name: "CLASSIC STUDS",
-    substyles: [
-      {
-        img: "/build_yr_own/ER42-RD-100-WG-BV.png",
-        name: "ER42-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER43-RD-100-WG-BV.png",
-        name: "ER43-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER44-RD-100-WG-BV.png",
-        name: "ER44-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER45-RD-100-WG-BV.png",
-        name: "ER45-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER66-RD-100-WG-BV.png",
-        name: "ER66-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER324-RD-100-WG-BV.png",
-        name: "ER324-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER325-RD-100-WG-BV.png",
-        name: "ER325-RD-100-WG-BV",
-        price: "5,224",
-      },
-    ],
-  },
-  {
-    name: "CLUSTER EARINGS",
-    substyles: [
-      {
-        img: "/build_yr_own/ER46-EM-100-WG-BV.png",
-        name: "ER46-EM-100-WG-BV",
-        price: "5,224",
-      },
-    ],
-  },
-  {
-    name: "HOOP EARINGS",
-    substyles: [
-      {
-        img: "/build_yr_own/ER53-RD-100-WG-BV.png",
-        name: "ER53-RD-100-WG-BV",
-        price: "5,224",
-      },
-    ],
-  },
-  {
-    name: "HALO EARINGS",
-    substyles: [
-      {
-        img: "/build_yr_own/ER59-RD-100-WG-BV.png",
-        name: "ER59-RD-100-WG-BV",
-        price: "5,224",
-      },
-    ],
-  },
-  {
-    name: "SINGLE STUDS",
-    substyles: [
-      {
-        img: "/build_yr_own/ER329-RD-100-WG-BV.png",
-        name: "ER329-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER330-RD-100-WG-BV.png",
-        name: "ER330-RD-100-WG-BV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/ER331-RD-100-WG-BV.png",
-        name: "ER331-RD-100-WG-BV",
-        price: "5,224",
-      },
-    ],
-  },
-];
+// type ApiVariant = {
+//   variantId: string;
+//   stylingName: string;
+//   builderImage: string;
+//   basePrice: number;
+// };
 
-const diamondShapes = {
-  shapes: [
-    { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
-    { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
-    { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
-    { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
-    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
-    { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
-    { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
-    { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
-    { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
-    { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
-  ],
+type StyleGroup = {
+  name: string;
+  substyles: { img: string; name: string; price: string }[];
+};
+
+// Map diamond shape codes to display names and images
+const diamondShapeMapping: { [key: string]: { name: string; img: string } } = {
+  'RD': { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
+  'PR': { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
+  'EM': { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
+  'AS': { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
+  'RA': { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
+  'CU': { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
+  'OV': { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
+  'PE': { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
+  'MQ': { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
+  'HE': { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
 };
 const GLBViewer = ({
   modelUrl,
@@ -480,13 +373,68 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedClarity, setSelectedClarity] = useState("");
 
-  // Default to "Most Popular" and first substyle
-  const [selectedStyleCategory, setSelectedStyleCategory] = useState(
-    sampleStyleAndDesign[0].name
-  );
-  const [selectedRingStyle, setSelectedRingStyle] = useState(
-    sampleStyleAndDesign[0].substyles[0].name
-  );
+  // API-driven styles and variant data
+  const [styleData, setStyleData] = useState<StyleGroup[]>([]);
+  const [allVariants, setAllVariants] = useState<any[]>([]);
+  const [selectedVariant, setSelectedVariant] = useState<any>(null);
+  const [selectedStyleCategory, setSelectedStyleCategory] = useState("");
+  const [selectedRingStyle, setSelectedRingStyle] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchVariants = async () => {
+      try {
+        const res = await fetch("/api/build-your-jewelry/categories/EARRINGS");
+        const json = await res.json();
+        const variants: any[] = json?.data?.variants || [];
+        console.log("Fetched variants:", variants);
+        
+        // Store all variants for later use
+        setAllVariants(variants);
+        
+        const groupsMap = new Map<string, StyleGroup>();
+        variants.forEach((v) => {
+          const key = (v.stylingName || "OTHER").toUpperCase();
+          const sub = {
+            img: `/build_yr_own/${v.builderImage}.png`,
+            name: v.builderImage,
+            price: new Intl.NumberFormat("en-IN").format(v.basePrice || 0),
+          };
+          if (!groupsMap.has(key)) {
+            groupsMap.set(key, { name: key, substyles: [sub] });
+          } else {
+            groupsMap.get(key)!.substyles.push(sub);
+          }
+        });
+        const groups = Array.from(groupsMap.values());
+        if (!isMounted) return;
+        setStyleData(groups);
+        if (groups.length > 0) {
+          setSelectedStyleCategory(groups[0].name);
+          if (groups[0].substyles.length > 0) {
+            setSelectedRingStyle(groups[0].substyles[0].name);
+            // Set the first variant as selected by default
+            const firstVariant = variants.find(v => v.builderImage === groups[0].substyles[0].name);
+            setSelectedVariant(firstVariant);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch earrings variants", e);
+      }
+    };
+    fetchVariants();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Update selected variant when ring style changes
+  useEffect(() => {
+    if (allVariants.length > 0 && selectedRingStyle) {
+      const variant = allVariants.find(v => v.builderImage === selectedRingStyle);
+      setSelectedVariant(variant);
+    }
+  }, [selectedRingStyle, allVariants]);
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
@@ -545,7 +493,7 @@ const ProductDetail = () => {
   };
 
   // Get current category's substyles and selected style data
-  const currentCategory = sampleStyleAndDesign.find(
+  const currentCategory = styleData.find(
     (cat) => cat.name === selectedStyleCategory
   );
   const currentSubstyles = currentCategory?.substyles || [];
@@ -569,22 +517,51 @@ const ProductDetail = () => {
     "10",
   ];
 
-  const metalColors = [
-    { name: "White Gold", img: "/colors/white.png" },
-    { name: "Yellow Gold", img: "/colors/gold.png" },
-    { name: "Rose Gold", img: "/colors/rosegold.png" },
-    { name: "Silver", img: "/colors/white.png" },
-    { name: "Platinum", img: "/colors/white.png" },
-    { name: "14K White Gold", img: "/colors/white.png" },
-    { name: "14K Yellow Gold", img: "/colors/gold.png" },
-    { name: "14K Rose Gold", img: "/colors/rosegold.png" },
-    { name: "18K White Gold", img: "/colors/white.png" },
-    { name: "18K Yellow Gold", img: "/colors/gold.png" },
-    { name: "18K Rose Gold", img: "/colors/rosegold.png" },
-    { name: "22K Gold", img: "/colors/gold.png" },
-    { name: "Palladium", img: "/colors/white.png" },
-    { name: "Titanium", img: "/colors/white.png" },
-  ];
+  // Dynamic metal colors from selected variant
+  const metalColors = selectedVariant?.availableMetalColors?.map((color: string) => ({
+    name: color,
+    img: color.toLowerCase().includes('gold') 
+      ? (color.toLowerCase().includes('rose') ? "/colors/rosegold.png" 
+         : color.toLowerCase().includes('yellow') ? "/colors/gold.png"
+         : "/colors/white.png")
+      : "/colors/white.png"
+  })) || [];
+
+  // Dynamic diamond shapes from selected variant
+  const diamondShapes = {
+    shapes: selectedVariant?.availableDiamondShapes?.map((shapeCode: string) => 
+      diamondShapeMapping[shapeCode] || { name: shapeCode, img: "/DIAMOND_SHAPES_WEBP/round.webp" }
+    ) || []
+  };
+
+  // // Dynamic diamond sizes from selected variant
+  // const diamondSizes = selectedVariant?.availableDiamondSizes || [];
+
+  // // Dynamic diamond colors from selected variant  
+  // const diamondColors = selectedVariant?.availableDiamondColors || [];
+
+  // // Dynamic diamond clarity from selected variant
+  // const diamondClarity = selectedVariant?.availableDiamondClarity || [];
+
+  // // Dynamic diamond origins from selected variant
+  // const diamondOrigins = selectedVariant?.availableDiamondOrigins || ["Natural Diamond", "Lab Grown Diamond"];
+
+  // // Dynamic metal types from selected variant
+  // const metalTypes = selectedVariant?.availableMetalTypes || [];
+
+  // // Dynamic metal kt options from selected variant
+  // const metalKtOptions = selectedVariant?.availableMetalKt || [];
+
+  // // Dynamic jewelry sizes from selected variant
+  // const jewelrySizes = selectedVariant?.availableSizes || [];
+
+  // // Dynamic gallery images from selected variant
+  // const galleryImages = selectedVariant?.galleryImages || [
+  //   "/product_detail/display.png",
+  //   "/product_detail/glb.glb", 
+  //   "/product_detail/display.png",
+  //   "/about/2.jpg"
+  // ];
 
   // Add state for showing more colors on mobile
   const [showAllColors, setShowAllColors] = useState(false);
@@ -871,7 +848,7 @@ const ProductDetail = () => {
                         ref={styleCategoryRef}
                         className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
                       >
-                        {sampleStyleAndDesign.map((category, index) => (
+                        {styleData.map((category, index) => (
                           <button
                             key={`${category.name}-${index}`}
                             onClick={() => {
@@ -1012,26 +989,32 @@ const ProductDetail = () => {
                     </span>
                   </h3>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 w-full">
-                    {diamondShapes.shapes.map((diamond, index) => (
-                      <button
-                        key={`${diamond.name}-${index}`}
-                        onClick={() => setSelectedDiamondShape(diamond.name)}
-                        className={`group relative aspect-square border rounded-lg flex flex-col items-center justify-center text-xs p-2 ${
-                          selectedDiamondShape === diamond.name
-                            ? "border-primary bg-primary/5"
-                            : "border-neutral-300"
-                        }`}
-                      >
-                        <img
-                          className="w-8 sm:w-12 md:w-16 lg:w-20 max-w-full h-auto"
-                          src={diamond.img}
-                          alt={diamond.name}
-                        />
-                        <span className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-10 whitespace-nowrap">
-                          <p className="text-xs">{diamond.name}</p>
-                        </span>
-                      </button>
-                    ))}
+                    {(() => {
+                      interface DiamondShape {
+                        name: string;
+                        img: string;
+                      }
+                      return diamondShapes.shapes.map((diamond: DiamondShape, index: number) => (
+                        <button
+                          key={`${diamond.name}-${index}`}
+                          onClick={() => setSelectedDiamondShape(diamond.name)}
+                          className={`group relative aspect-square border rounded-lg flex flex-col items-center justify-center text-xs p-2 ${
+                            selectedDiamondShape === diamond.name
+                              ? "border-primary bg-primary/5"
+                              : "border-neutral-300"
+                          }`}
+                        >
+                          <img
+                            className="w-8 sm:w-12 md:w-16 lg:w-20 max-w-full h-auto"
+                            src={diamond.img}
+                            alt={diamond.name}
+                          />
+                          <span className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-10 whitespace-nowrap">
+                            <p className="text-xs">{diamond.name}</p>
+                          </span>
+                        </button>
+                      ));
+                    })()}
                   </div>
                 </div>
 
@@ -1134,39 +1117,17 @@ const ProductDetail = () => {
 
                   {/* Desktop View - 7 columns, 2 rows */}
                   <div className="hidden md:grid grid-cols-7 gap-3">
-                    {metalColors.map((colorOption, index) => (
-                      <button
-                        key={`${colorOption.name}-${index}`}
-                        onClick={() => setSelectedMetalColor(colorOption.name)}
-                        className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
-                          selectedMetalColor === colorOption.name
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-300 hover:border-neutral-400"
-                        }`}
-                        title={colorOption.name}
-                      >
-                        <img
-                          className="w-full h-full object-cover rounded-full"
-                          src={colorOption.img}
-                          alt={colorOption.name}
-                        />
-                      </button>
-                    ))}
-                  </div>
+                    {(() => {
+                      interface MetalColor {
+                        name: string;
+                        img: string;
+                      }
 
-                  {/* Mobile View - 5 columns with show more */}
-                  <div className="md:hidden w-full">
-                    <div className="grid grid-cols-5 gap-2 sm:gap-3">
-                      {(showAllColors
-                        ? metalColors
-                        : metalColors.slice(0, 10)
-                      ).map((colorOption, index) => (
+                      return metalColors.map((colorOption: MetalColor, index: number) => (
                         <button
                           key={`${colorOption.name}-${index}`}
-                          onClick={() =>
-                            setSelectedMetalColor(colorOption.name)
-                          }
-                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                          onClick={() => setSelectedMetalColor(colorOption.name)}
+                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
                             selectedMetalColor === colorOption.name
                               ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                               : "border-neutral-300 hover:border-neutral-400"
@@ -1179,7 +1140,42 @@ const ProductDetail = () => {
                             alt={colorOption.name}
                           />
                         </button>
-                      ))}
+                      ));
+                    })()}
+                  </div>
+
+                  {/* Mobile View - 5 columns with show more */}
+                  <div className="md:hidden w-full">
+                    <div className="grid grid-cols-5 gap-2 sm:gap-3">
+                      {(() => {
+                        interface MetalColor {
+                          name: string;
+                          img: string;
+                        }
+
+                        const visibleColors: MetalColor[] = (showAllColors
+                          ? metalColors
+                          : metalColors.slice(0, 10)) as MetalColor[];
+
+                        return visibleColors.map((colorOption: MetalColor, index: number) => (
+                          <button
+                            key={`${colorOption.name}-${index}`}
+                            onClick={() => setSelectedMetalColor(colorOption.name)}
+                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                              selectedMetalColor === colorOption.name
+                                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                                : "border-neutral-300 hover:border-neutral-400"
+                            }`}
+                            title={colorOption.name}
+                          >
+                            <img
+                              className="w-full h-full object-cover rounded-full"
+                              src={colorOption.img}
+                              alt={colorOption.name}
+                            />
+                          </button>
+                        ));
+                      })()}
                     </div>
 
                     {/* Show More/Less buttons */}

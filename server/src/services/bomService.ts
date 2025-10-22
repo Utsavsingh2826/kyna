@@ -145,6 +145,7 @@ export class BOMService {
           builderView: bomEntry.uniqueVariantId,
           viewType: viewType,
           hasDiamond: hasDiamond,
+          builderImage: bomEntry.uniqueVariantId,
           mainImage: this.generateImageUrl(bomEntry.uniqueVariantId, 'main'),
           thumbnailImages: this.generateThumbnailImages(bomEntry.uniqueVariantId),
           variantImages: this.generateVariantImages(bomEntry.uniqueVariantId),
@@ -174,7 +175,13 @@ export class BOMService {
         }
       }
 
-      console.log('Product variants created successfully');
+      // Backfill builderImage for existing variants missing the field
+      await ProductVariant.updateMany(
+        { $or: [ { builderImage: { $exists: false } }, { builderImage: { $eq: '' } } ] },
+        [ { $set: { builderImage: { $ifNull: ['$bomVariantId', '$builderView'] } } } ]
+      );
+
+      console.log('Product variants created and backfilled successfully');
     } catch (error) {
       console.error('Error creating product variants from BOM:', error);
       throw new Error('Failed to create product variants');

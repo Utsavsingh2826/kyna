@@ -32,6 +32,7 @@ export class BuildYourJewelryController {
               $push: {
                 variantId: '$variantId',
                 stylingName: '$stylingName',
+                builderImage: '$builderImage',
                 mainImage: '$mainImage',
                 basePrice: '$basePrice',
                 viewType: '$viewType'
@@ -80,8 +81,11 @@ export class BuildYourJewelryController {
         isActive: true 
       };
 
-      // Special handling for gents rings
-      if (category.toLowerCase() === 'gents rings' || category.toLowerCase() === 'rings') {
+      // Special handling for gents rings and wedding bands
+      if (category.toLowerCase() === 'gents rings' || 
+          category.toLowerCase() === 'rings' || 
+          category.toLowerCase() === 'wedding_bands' || 
+          category.toLowerCase() === 'wedding bands') {
         if (withDiamond === 'true') {
           query.hasDiamond = true;
         } else if (withDiamond === 'false') {
@@ -93,9 +97,12 @@ export class BuildYourJewelryController {
         }
       }
 
+      // Find variants in ProductVariant model - return all customization fields
       const variants = await ProductVariant.find(query)
-        .select('variantId stylingName mainImage thumbnailImages basePrice priceRange viewType hasDiamond')
+        .select('variantId stylingName builderImage mainImage thumbnailImages basePrice priceRange viewType hasDiamond availableDiamondShapes availableDiamondSizes availableDiamondColors availableDiamondClarity availableDiamondOrigins availableMetalTypes availableMetalKt availableMetalColors availableSizes galleryImages modelUrl')
         .sort({ variantId: 1 });
+
+      console.log(`Found ${variants.length} ${category.toLowerCase()} variants in ProductVariant model`);
 
       res.json({
         success: true,

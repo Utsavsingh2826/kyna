@@ -219,12 +219,12 @@ class ApiService {
   }
 
   // Order APIs
-  async createOrder(orderData: any) {
-    return this.makeRequest("/orders", {
-      method: "POST",
-      body: JSON.stringify(orderData),
-    });
-  }
+  // async createOrder(orderData: any) {
+  //   return this.makeRequest("/orders", {
+  //     method: "POST",
+  //     body: JSON.stringify(orderData),
+  //   });
+  // }
 
   async getOrders() {
     return this.makeRequest("/orders");

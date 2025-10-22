@@ -8,9 +8,6 @@ import {
   MessageCircle,
   Share2,
 } from "lucide-react";
-import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
@@ -31,147 +28,20 @@ import {
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
-const sampleStyleAndDesign = [
-  {
-    name: "PAPPER CLIP",
-    substyles: [
-      {
-        img: "/build_yr_own/BR1-RD-025-WG-TRV.png",
-        name: "BR1-RD-025-WG-TRV",
-        price: "5,224",
-      },
-    ],
-  },
-  {
-    name: "TENNIS BRACELET",
-    substyles: [
-      {
-        img: "/build_yr_own/BR2-EM-025-WG-TRV.png",
-        name: "BR2-EM-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR3-EM-025-WG-TRV.png",
-        name: "BR3-EM-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR4-RD-025-WG-TRV.png",
-        name: "BR4-RD-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR5-OV-025-WG-TRV.png",
-        name: "BR5-OV-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR6-PRN-025-WG-TRV.png",
-        name: "BR6-PRN-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR7-MQ-025-WG-TRV.png",
-        name: "BR7-MQ-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR18-OV-025-WG-TRV.png",
-        name: "BR18-OV-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR19-RD-025-WG-TRV.png",
-        name: "BR19-RD-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR60-OV-025-WG-TRV.png",
-        name: "BR60-OV-025-WG-TRV",
-        price: "5,224",
-      },
-    ],
-  },
-  {
-    name: "MULTI SHAPE",
-    substyles: [
-      {
-        img: "/build_yr_own/BR8-MIX-025-WG-TRV",
-        name: "BR8-MIX-025-WG-TRV",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/BR15-EMMQ-025-WG-TRV.png",
-        name: "BR15-EMMQ-025-WG-TRV",
-        price: "5,224",
-      },
-    ],
-  },
-  // {
-  //   name: "Designer",
-  //   substyles: [
-  //     { img: "/build_yr_own/sample1.png", name: "Infinity", price: "5,224" },
-  //     {
-  //       img: "/build_yr_own/sample1.png",
-  //       name: "Nature Inspired",
-  //       price: "5,224",
-  //     },
-  //     { img: "/build_yr_own/sample1.png", name: "Geometric", price: "5,224" },
-  //     { img: "/build_yr_own/sample1.png", name: "Celtic", price: "5,224" },
-  //     { img: "/build_yr_own/sample1.png", name: "Art Nouveau", price: "5,224" },
-  //   ],
-  // },
-  // {
-  //   name: "Contemporary",
-  //   substyles: [
-  //     { img: "/build_yr_own/sample1.png", name: "Minimalist", price: "5,224" },
-  //     {
-  //       img: "/build_yr_own/sample1.png",
-  //       name: "Bold Statement",
-  //       price: "5,224",
-  //     },
-  //     { img: "/build_yr_own/sample1.png", name: "Stackable", price: "5,224" },
-  //     { img: "/build_yr_own/sample1.png", name: "Asymmetric", price: "5,224" },
-  //     { img: "/build_yr_own/sample1.png", name: "Mixed Metal", price: "5,224" },
-  //   ],
-  // },
-  // {
-  //   name: "Luxury",
-  //   substyles: [
-  //     { img: "/build_yr_own/sample1.png", name: "Eternity", price: "8,224" },
-  //     { img: "/build_yr_own/sample1.png", name: "Multi-Stone", price: "7,224" },
-  //     { img: "/build_yr_own/sample1.png", name: "Cocktail", price: "9,224" },
-  //     {
-  //       img: "/build_yr_own/sample1.png",
-  //       name: "Statement Halo",
-  //       price: "6,224",
-  //     },
-  //     { img: "/build_yr_own/sample1.png", name: "Double Band", price: "7,224" },
-  //   ],
-  // },
-  // {
-  //   name: "Classic",
-  //   substyles: [
-  //     { img: "/build_yr_own/sample1.png", name: "Simple Band", price: "3,224" },
-  //     {
-  //       img: "/build_yr_own/sample1.png",
-  //       name: "Princess Cut",
-  //       price: "4,224",
-  //     },
-  //     {
-  //       img: "/build_yr_own/sample1.png",
-  //       name: "Round Brilliant",
-  //       price: "5,224",
-  //     },
-  //     { img: "/build_yr_own/sample1.png", name: "Emerald Cut", price: "4,724" },
-  //     {
-  //       img: "/build_yr_own/sample1.png",
-  //       name: "Oval Classic",
-  //       price: "4,524",
-  //     },
-  //   ],
-  // },
-];
+
+type ApiVariant = {
+  variantId: string;
+  stylingName: string;
+  builderImage: string;
+  basePrice: number;
+};
+
+type StyleGroup = {
+  name: string;
+  substyles: { img: string; name: string; price: string }[];
+};
+
+// removed duplicate type declarations
 const diamondShapes = {
   shapes: [
     { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
@@ -186,313 +56,8 @@ const diamondShapes = {
     { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
   ],
 };
-const GLBViewer = ({
-  modelUrl,
-  className,
-  isMain = false,
-}: {
-  modelUrl: string;
-  className?: string;
-  isMain?: boolean;
-}) => {
-  const mountRef = useRef<HTMLDivElement | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const modelRef = useRef<THREE.Group | null>(null);
-  const animationIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!mountRef.current) return;
-
-    const initThreeJS = () => {
-      if (!mountRef.current) return;
-
-      // Scene setup
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf5f5f5);
-      sceneRef.current = scene;
-
-      // Camera setup
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        mountRef.current.clientWidth / mountRef.current.clientHeight,
-        0.1,
-        1000
-      );
-      camera.position.set(0, 0, 5);
-
-      // Renderer setup
-      const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true,
-      });
-      renderer.setSize(
-        mountRef.current.clientWidth,
-        mountRef.current.clientHeight
-      );
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      mountRef.current.appendChild(renderer.domElement);
-      rendererRef.current = renderer;
-
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(10, 10, 5);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-
-      const pointLight = new THREE.PointLight(0xffffff, 0.3);
-      pointLight.position.set(-10, -10, -5);
-      scene.add(pointLight);
-
-      let diamond: THREE.Mesh | null = null;
-
-      function createPlaceholderModel() {
-        const group = new THREE.Group();
-
-        // Ring band
-        const ringGeometry = new THREE.TorusGeometry(1.2, 0.15, 8, 32);
-        const ringMaterial = new THREE.MeshStandardMaterial({
-          color: 0xffd700,
-          metalness: 0.9,
-          roughness: 0.1,
-        });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.castShadow = true;
-        group.add(ring);
-
-        // Center diamond (simplified)
-        const diamondGeometry = new THREE.OctahedronGeometry(0.3);
-        const diamondMaterial = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.9,
-          roughness: 0,
-          metalness: 0,
-          reflectivity: 1,
-          clearcoat: 1,
-          clearcoatRoughness: 0,
-        });
-        diamond = new THREE.Mesh(diamondGeometry, diamondMaterial);
-        diamond.position.y = 0.2;
-        diamond.castShadow = true;
-        group.add(diamond);
-
-        // Small accent diamonds
-        for (let i = 0; i < 8; i++) {
-          const angle = (i / 8) * Math.PI * 2;
-          const smallDiamondGeometry = new THREE.OctahedronGeometry(0.08);
-          const smallDiamond = new THREE.Mesh(
-            smallDiamondGeometry,
-            diamondMaterial
-          );
-          smallDiamond.position.set(
-            Math.cos(angle) * 1.3,
-            0.1,
-            Math.sin(angle) * 1.3
-          );
-          smallDiamond.scale.set(0.7, 0.7, 0.7);
-          group.add(smallDiamond);
-        }
-
-        scene.add(group);
-        modelRef.current = group;
-      }
-
-      // Load GLB Model
-      if (modelUrl && modelUrl.endsWith(".glb")) {
-        console.log("Attempting to load GLB model:", modelUrl);
-
-        const loader = new GLTFLoader();
-
-        // Setup DRACO loader for compressed models
-        const dracoLoader = new DRACOLoader();
-        // Use CDN for DRACO decoder files
-        dracoLoader.setDecoderPath(
-          "https://www.gstatic.com/draco/versioned/decoders/1.5.6/"
-        );
-        dracoLoader.preload();
-        loader.setDRACOLoader(dracoLoader);
-
-        loader.load(
-          modelUrl,
-          (gltf) => {
-            console.log("Successfully loaded GLB model:", modelUrl, gltf);
-            const model = gltf.scene;
-
-            // Clear any existing models
-            if (modelRef.current) {
-              scene.remove(modelRef.current);
-            }
-
-            // Auto-scale the model to fit the scene
-            const box = new THREE.Box3().setFromObject(model);
-            const size = box.getSize(new THREE.Vector3()).length();
-            const center = box.getCenter(new THREE.Vector3());
-
-            // Scale the model to fit in the view
-            const scale = isMain ? 2 / size : 1.6 / size;
-            model.scale.setScalar(scale);
-
-            // Center the model
-            model.position.copy(center).multiplyScalar(-scale);
-
-            scene.add(model);
-            modelRef.current = model;
-            console.log("GLB model added to scene successfully");
-
-            // Dispose of the DRACO loader after use
-            dracoLoader.dispose();
-          },
-          (progress) => {
-            const progressPercent = (progress.loaded / progress.total) * 100;
-            console.log(
-              "Loading progress for",
-              modelUrl,
-              ":",
-              progressPercent + "%"
-            );
-          },
-          (error) => {
-            console.error("Error loading GLB model:", modelUrl, error);
-            console.log("Falling back to placeholder model");
-            dracoLoader.dispose();
-            createPlaceholderModel();
-          }
-        );
-      } else {
-        console.log("No valid GLB URL provided, using placeholder model");
-        createPlaceholderModel();
-      }
-
-      // Controls for main viewer (mouse interaction)
-      let isDragging = false;
-      let previousMousePosition = { x: 0, y: 0 };
-
-      const handleMouseDown = (event: MouseEvent) => {
-        if (!isMain) return;
-        isDragging = true;
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-        renderer.domElement.style.cursor = "grabbing";
-      };
-
-      const handleMouseMove = (event: MouseEvent) => {
-        if (!isDragging || !isMain || !modelRef.current) return;
-
-        const deltaMove = {
-          x: event.clientX - previousMousePosition.x,
-          y: event.clientY - previousMousePosition.y,
-        };
-
-        const deltaRotationQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(deltaMove.y * 0.01, deltaMove.x * 0.01, 0, "XYZ")
-        );
-
-        modelRef.current.quaternion.multiplyQuaternions(
-          deltaRotationQuaternion,
-          modelRef.current.quaternion
-        );
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-      };
-
-      const handleMouseUp = () => {
-        isDragging = false;
-        if (rendererRef.current) {
-          rendererRef.current.domElement.style.cursor = isMain
-            ? "grab"
-            : "pointer";
-        }
-      };
-
-      const handleWheel = (event: WheelEvent) => {
-        if (!isMain) return;
-        event.preventDefault();
-        camera.position.z += event.deltaY * 0.01;
-        camera.position.z = Math.max(2, Math.min(10, camera.position.z));
-      };
-
-      if (isMain) {
-        renderer.domElement.style.cursor = "grab";
-        renderer.domElement.addEventListener("mousedown", handleMouseDown);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
-        renderer.domElement.addEventListener("wheel", handleWheel);
-      }
-
-      // Animation loop
-      const animate = () => {
-        animationIdRef.current = requestAnimationFrame(animate);
-
-        // Auto-rotate for thumbnail
-        if (!isMain && modelRef.current) {
-          modelRef.current.rotation.y += 0.01;
-        }
-
-        // Sparkle effect for diamond
-        if (diamond) {
-          diamond.rotation.y += 0.02;
-        }
-
-        renderer.render(scene, camera);
-      };
-      animate();
-
-      // Handle resize
-      const handleResize = () => {
-        if (!mountRef.current || !camera || !renderer) return;
-        camera.aspect =
-          mountRef.current.clientWidth / mountRef.current.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(
-          mountRef.current.clientWidth,
-          mountRef.current.clientHeight
-        );
-      };
-
-      window.addEventListener("resize", handleResize);
-
-      // Store cleanup functions
-      const cleanup = () => {
-        if (animationIdRef.current) {
-          cancelAnimationFrame(animationIdRef.current);
-        }
-        if (isMain) {
-          renderer.domElement.removeEventListener("mousedown", handleMouseDown);
-          window.removeEventListener("mousemove", handleMouseMove);
-          window.removeEventListener("mouseup", handleMouseUp);
-          renderer.domElement.removeEventListener("wheel", handleWheel);
-        }
-        window.removeEventListener("resize", handleResize);
-        if (
-          mountRef.current &&
-          renderer.domElement &&
-          mountRef.current.contains(renderer.domElement)
-        ) {
-          mountRef.current.removeChild(renderer.domElement);
-        }
-        renderer.dispose();
-      };
-
-      return cleanup;
-    };
-
-    const cleanup = initThreeJS();
-
-    // Cleanup on unmount
-    return () => {
-      if (cleanup) {
-        cleanup();
-      }
-    };
-  }, [modelUrl, isMain]);
-
-  return <div ref={mountRef} className={className} />;
-};
-
 const ProductDetail = () => {
+  const [styleData, setStyleData] = useState<StyleGroup[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const [showEngraveModal, setShowEngraveModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -504,12 +69,49 @@ const ProductDetail = () => {
   const [selectedClarity, setSelectedClarity] = useState("");
 
   // Default to "Most Popular" and first substyle
-  const [selectedStyleCategory, setSelectedStyleCategory] = useState(
-    sampleStyleAndDesign[0].name
-  );
-  const [selectedRingStyle, setSelectedRingStyle] = useState(
-    sampleStyleAndDesign[0].substyles[0].name
-  );
+  const [selectedStyleCategory, setSelectedStyleCategory] = useState("");
+  const [selectedRingStyle, setSelectedRingStyle] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchVariants = async () => {
+      try {
+        const res = await fetch("/api/build-your-jewelry/categories/BRACELET");
+        const json = await res.json();
+        const variants: ApiVariant[] = json?.data?.variants || [];
+
+        const groupsMap = new Map<string, StyleGroup>();
+        variants.forEach((v) => {
+          const key = (v.stylingName || "OTHER").toUpperCase();
+          const sub = {
+            img: `/build_yr_own/${v.builderImage}.png`,
+            name: v.builderImage,
+            price: new Intl.NumberFormat("en-IN").format(v.basePrice || 0),
+          };
+          if (!groupsMap.has(key)) {
+            groupsMap.set(key, { name: key, substyles: [sub] });
+          } else {
+            groupsMap.get(key)!.substyles.push(sub);
+          }
+        });
+        const groups = Array.from(groupsMap.values());
+        if (!isMounted) return;
+        setStyleData(groups);
+        if (groups.length > 0) {
+          setSelectedStyleCategory(groups[0].name);
+          if (groups[0].substyles.length > 0) {
+            setSelectedRingStyle(groups[0].substyles[0].name);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch bracelet variants", e);
+      }
+    };
+    fetchVariants();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
@@ -568,7 +170,7 @@ const ProductDetail = () => {
   };
 
   // Get current category's substyles and selected style data
-  const currentCategory = sampleStyleAndDesign.find(
+  const currentCategory = styleData.find(
     (cat) => cat.name === selectedStyleCategory
   );
   const currentSubstyles = currentCategory?.substyles || [];
@@ -722,11 +324,6 @@ const ProductDetail = () => {
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <GLBViewer
-                              modelUrl={image}
-                              className="w-full h-full"
-                              isMain={false}
-                            />
                             <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                               3D
                             </div>
@@ -758,11 +355,7 @@ const ProductDetail = () => {
                       selectedImage
                     ) ? (
                       <div className="relative w-full h-full">
-                        <GLBViewer
-                          modelUrl={thumbnailImages[selectedImage]}
-                          className="w-full h-full"
-                          isMain={true}
-                        />
+                        <h1>3D</h1>
                         <div className="absolute bottom-16 left-4 bg-gradient-to-r from-[#328F94] to-[#2a7a7e] text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
                           🔄 Interactive 3D Model
                         </div>
@@ -820,11 +413,7 @@ const ProductDetail = () => {
                         >
                           {is3DModel(image, index) ? (
                             <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                              <GLBViewer
-                                modelUrl={image}
-                                className="w-full h-full"
-                                isMain={false}
-                              />
+                              <h1>3D</h1>
                               <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                                 3D
                               </div>
@@ -856,7 +445,7 @@ const ProductDetail = () => {
                           Ring Style & Design
                         </p>
                         <h2 className="text-xl md:text-2xl font-medium leading-tight truncate">
-                          {selectedStyleData?.name}
+                          {selectedStyleData?.name || selectedRingStyle || ""}
                         </h2>
                       </div>
                       <div className="text-left sm:text-right flex-shrink-0">
@@ -894,7 +483,7 @@ const ProductDetail = () => {
                         ref={styleCategoryRef}
                         className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
                       >
-                        {sampleStyleAndDesign.map((category, index) => (
+                        {styleData.map((category, index) => (
                           <button
                             key={`${category.name}-${index}`}
                             onClick={() => {

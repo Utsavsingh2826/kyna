@@ -41,7 +41,7 @@ const giftCards = [
   },
 ];
 
-const Gifting = () => {
+const GiftingCards = () => {
   return (
     <>
       <SEO
@@ -56,7 +56,7 @@ const Gifting = () => {
               Home
             </Link>
             <span className="mx-2">-</span>
-            <span className="text-gray-800">User Account</span>
+            <span className="text-gray-800">Gift-Cards</span>
           </nav>
         </div>
       </div>
@@ -151,4 +151,4 @@ const Gifting = () => {
   );
 };
 
-export default Gifting;
+export default GiftingCards

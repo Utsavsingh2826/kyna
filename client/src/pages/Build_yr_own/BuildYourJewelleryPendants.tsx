@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
-const sampleStyleAndDesign = [
+/* Deprecated: local placeholder, will be replaced by API data */
+/* const sampleStyleAndDesign = [
   {
     name: "SOLITAIRE",
     substyles: [
@@ -112,7 +113,7 @@ const sampleStyleAndDesign = [
       },
     ],
   },
-];
+]; */
 
 const diamondShapes = {
   shapes: [
@@ -445,18 +446,104 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedClarity, setSelectedClarity] = useState("");
 
-  // Default to "Most Popular" and first substyle
-  const [selectedStyleCategory, setSelectedStyleCategory] = useState(
-    sampleStyleAndDesign[0].name
-  );
-  const [selectedRingStyle, setSelectedRingStyle] = useState(
-    sampleStyleAndDesign[0].substyles[0].name
-  );
+  // API data states
+  const [styleAndDesign, setStyleAndDesign] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [metalColors, setMetalColors] = useState<any[]>([]);
+
+  // Default to first category and substyle (will be set after API load)
+  const [selectedStyleCategory, setSelectedStyleCategory] = useState("");
+  const [selectedRingStyle, setSelectedRingStyle] = useState("");
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
   const styleCategoryRef = useRef<HTMLDivElement>(null);
   const ringStylesRef = useRef<HTMLDivElement>(null);
+
+  // Fetch pendant variants from API
+  useEffect(() => {
+    const fetchPendantVariants = async () => {
+      try {
+        const res = await fetch("/api/build-your-jewelry/categories/PENDANTS");
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        
+        if (!data.success) {
+          throw new Error(data.message || "Failed to fetch pendant variants");
+        }
+
+        // Group variants by styling name
+        const groupedVariants = data.data.variants.reduce((acc: any, variant: any) => {
+          const category = variant.stylingName;
+          if (!acc[category]) {
+            acc[category] = [];
+          }
+          acc[category].push({
+            img: variant.mainImage,
+            name: variant.builderImage,
+            price: variant.basePrice.toLocaleString(),
+            variantId: variant.variantId,
+            variant: variant
+          });
+          return acc;
+        }, {});
+
+        // Convert to array format expected by UI
+        const formattedData = Object.keys(groupedVariants).map(categoryName => ({
+          name: categoryName,
+          substyles: groupedVariants[categoryName]
+        }));
+
+        setStyleAndDesign(formattedData);
+        
+        // Set defaults to first category and style
+        if (formattedData.length > 0) {
+          setSelectedStyleCategory(formattedData[0].name);
+          if (formattedData[0].substyles.length > 0) {
+            setSelectedRingStyle(formattedData[0].substyles[0].name);
+          }
+        }
+
+        // Extract unique metal colors from all variants
+        const allMetalColors = new Set<string>();
+        data.data.variants.forEach((variant: any) => {
+          variant.availableMetalColors?.forEach((color: string) => {
+            allMetalColors.add(color);
+          });
+        });
+
+        // Convert to format expected by UI
+        const metalColorsData = Array.from(allMetalColors).map(color => ({
+          name: color,
+          img: color.toLowerCase().includes('gold') 
+            ? (color.toLowerCase().includes('rose') ? "/colors/rosegold.png" 
+               : color.toLowerCase().includes('yellow') ? "/colors/gold.png"
+               : "/colors/white.png")
+            : "/colors/white.png"
+        }));
+
+        setMetalColors(metalColorsData);
+        
+        // Set default metal color
+        if (metalColorsData.length > 0) {
+          setSelectedMetalColor(metalColorsData[0].name);
+        }
+
+        setLoading(false);
+      } catch (e) {
+        console.error("Failed to fetch pendant variants", e);
+        setError(e instanceof Error ? e.message : "Unknown error occurred");
+        setLoading(false);
+      }
+    };
+
+    fetchPendantVariants();
+  }, []);
 
   // Thumbnail scroll handlers
   const scrollThumbnailsUp = () => {
@@ -510,7 +597,7 @@ const ProductDetail = () => {
   };
 
   // Get current category's substyles and selected style data
-  const currentCategory = sampleStyleAndDesign.find(
+  const currentCategory = styleAndDesign.find(
     (cat) => cat.name === selectedStyleCategory
   );
   const currentSubstyles = currentCategory?.substyles || [];
@@ -532,23 +619,6 @@ const ProductDetail = () => {
     "9",
     "9.5",
     "10",
-  ];
-
-  const metalColors = [
-    { name: "White Gold", img: "/colors/white.png" },
-    { name: "Yellow Gold", img: "/colors/gold.png" },
-    { name: "Rose Gold", img: "/colors/rosegold.png" },
-    { name: "Silver", img: "/colors/white.png" },
-    { name: "Platinum", img: "/colors/white.png" },
-    { name: "14K White Gold", img: "/colors/white.png" },
-    { name: "14K Yellow Gold", img: "/colors/gold.png" },
-    { name: "14K Rose Gold", img: "/colors/rosegold.png" },
-    { name: "18K White Gold", img: "/colors/white.png" },
-    { name: "18K Yellow Gold", img: "/colors/gold.png" },
-    { name: "18K Rose Gold", img: "/colors/rosegold.png" },
-    { name: "22K Gold", img: "/colors/gold.png" },
-    { name: "Palladium", img: "/colors/white.png" },
-    { name: "Titanium", img: "/colors/white.png" },
   ];
 
   // Add state for showing more colors on mobile
@@ -618,8 +688,36 @@ const ProductDetail = () => {
         canonical="/build-your-jewellery/Pendants"
       />
       <main className="min-h-screen w-full max-w-6xl bg-background overflow-x-hidden">
-        {/* Breadcrumb */}
-        <div className="container mx-auto px-4 py-4">
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+              <p className="mt-4 text-muted-foreground">Loading pendant variants...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">Error loading pendant data: {error}</p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Main Content */}
+        {!loading && !error && (
+          <>
+            {/* Breadcrumb */}
+            <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center gap-2 text-sm text-muted-foreground">
             <Link to="/" className="hover:text-foreground">
               Home
@@ -836,7 +934,7 @@ const ProductDetail = () => {
                         ref={styleCategoryRef}
                         className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
                       >
-                        {sampleStyleAndDesign.map((category, index) => (
+                        {styleAndDesign.map((category, index) => (
                           <button
                             key={`${category.name}-${index}`}
                             onClick={() => {
@@ -1349,6 +1447,8 @@ const ProductDetail = () => {
               <Engrave onClose={() => setShowEngraveModal(false)} />
             </div>
           </div>
+        )}
+          </>
         )}
       </main>
     </div>

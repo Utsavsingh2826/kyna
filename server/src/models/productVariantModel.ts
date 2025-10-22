@@ -19,6 +19,7 @@ export interface IProductVariant extends Document {
   hasDiamond: boolean;                  // For gents rings - derived from band width
   
   // Images
+  builderImage: string;                 // File name used to build image path e.g., "BR15-EMMQ-025-WG-TRV"
   mainImage: string;                    // Main product image URL
   thumbnailImages: string[];            // Array of thumbnail image URLs
   variantImages: string[];              // Additional variant images
@@ -27,9 +28,16 @@ export interface IProductVariant extends Document {
   availableDiamondShapes: string[];     // Available diamond shapes for this variant
   availableDiamondSizes: number[];      // Available diamond sizes in carats
   availableDiamondColors: string[];     // Available diamond colors
+  availableDiamondClarity: string[];    // Available diamond clarity options
+  availableDiamondOrigins: string[];    // Available diamond origins (Natural/Lab Grown)
   availableMetalTypes: string[];        // Available metal types
   availableMetalKt: string[];          // Available metal karats
   availableMetalColors: string[];       // Available metal colors
+  availableSizes: string[];            // Available ring/jewelry sizes
+  
+  // Gallery & 3D
+  galleryImages: string[];             // Additional gallery images
+  modelUrl?: string;                   // 3D GLB model URL
   
   // Pricing
   basePrice: number;                    // Base price for this variant
@@ -96,6 +104,12 @@ const productVariantSchema = new Schema<IProductVariant>({
     default: false,
     index: true
   },
+  builderImage: {
+    type: String,
+    required: true,
+    trim: true,
+    index: true
+  },
   mainImage: {
     type: String,
     required: true,
@@ -133,6 +147,26 @@ const productVariantSchema = new Schema<IProductVariant>({
     type: String,
     trim: true
   }],
+  availableDiamondClarity: [{
+    type: String,
+    trim: true
+  }],
+  availableDiamondOrigins: [{
+    type: String,
+    trim: true
+  }],
+  availableSizes: [{
+    type: String,
+    trim: true
+  }],
+  galleryImages: [{
+    type: String,
+    trim: true
+  }],
+  modelUrl: {
+    type: String,
+    trim: true
+  },
   basePrice: {
     type: Number,
     required: true,

@@ -348,7 +348,7 @@ const Navigation: React.FC = () => {
                             Solitaire Pendants
                           </span>
                         </a>
-                        <a
+                        {/* <a
                           href="/build-your-jewellery/Necklaces"
                           className="flex flex-col items-center"
                         >
@@ -358,9 +358,9 @@ const Navigation: React.FC = () => {
                             className="h-40 object-cover rounded"
                           />
                           <span className="mt-2 text-sm">Tennis Necklaces</span>
-                        </a>
+                        </a> */}
                         <a
-                          href="/build-your-jewellery/Bangles"
+                          href="/build-your-jewellery/Bands"
                           className="flex flex-col items-center"
                         >
                           <img
@@ -389,7 +389,7 @@ const Navigation: React.FC = () => {
               <div className="absolute top-full left-0 bg-white shadow-lg border rounded-md w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-2">
                   {[
-                    ["under-25000", "Under Rs. 25,000/-"],
+                    ["0-25000", "Under 25,000/-"],
                     ["25000-50000", "Rs. 25,000/- to 50,000/-"],
                     ["gift-card", "Gift Card"],
                   ].map(([path, label]) => (
