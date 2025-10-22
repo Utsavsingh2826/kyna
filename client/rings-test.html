@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rings Builder - Scrollable Categories Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .categories {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        .category-btn {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            white-space: nowrap;
+            min-width: fit-content;
+        }
+        .category-btn.active {
+            border-color: #328F94;
+            background: rgba(50, 143, 148, 0.1);
+            color: #328F94;
+        }
+        .variants {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 15px 0;
+        }
+        .variant-card {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 120px;
+            text-align: center;
+            cursor: pointer;
+            background: white;
+        }
+        .variant-card.active {
+            border-color: #328F94;
+            background: rgba(50, 143, 148, 0.05);
+        }
+        .variant-img {
+            width: 80px;
+            height: 80px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        .variant-name {
+            font-weight: 500;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        .variant-price {
+            color: #328F94;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .selected-info {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .scroll-indicator {
+            text-align: center;
+            color: #666;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Build Your Jewelry - Rings</h1>
+        <p>Scrollable Category & Variant Selection (like Wedding Bands & Bracelets)</p>
+        
+        <div class="scroll-indicator">← Scroll categories horizontally →</div>
+        <div class="categories" id="categories"></div>
+        
+        <div class="scroll-indicator">← Scroll ring variants horizontally →</div>
+        <div class="variants" id="variants"></div>
+        
+        <div class="selected-info" id="selectedInfo">
+            <strong>Selected:</strong> <span id="selectedText">Loading...</span>
+        </div>
+    </div>
+
+    <script>
+        // Simulate the ring data from our API
+        const ringData = {
+            categories: ["CLASSIC", "VINTAGE", "FLORAL INSPIRED", "ART DECO", "CLUSTER", "HIDDEN HALO", "NATURE INSPIRED"],
+            variants: [
+                { variantId: "SR21", stylingCategory: "CLASSIC", price: "18,500" },
+                { variantId: "SR13", stylingCategory: "CLASSIC", price: "17,200" },
+                { variantId: "SR15", stylingCategory: "CLASSIC", price: "16,800" },
+                { variantId: "ENG4", stylingCategory: "CLASSIC", price: "19,800" },
+                { variantId: "SR11", stylingCategory: "VINTAGE", price: "15,600" },
+                { variantId: "SR16", stylingCategory: "FLORAL INSPIRED", price: "21,500" },
+                { variantId: "ENG1", stylingCategory: "FLORAL INSPIRED", price: "22,800" },
+                { variantId: "SR19", stylingCategory: "ART DECO", price: "18,900" },
+                { variantId: "ENG2", stylingCategory: "CLUSTER", price: "16,500" },
+                { variantId: "ENG3", stylingCategory: "HIDDEN HALO", price: "24,500" },
+                { variantId: "ENG5", stylingCategory: "NATURE INSPIRED", price: "20,300" },
+                { variantId: "ENG6", stylingCategory: "NATURE INSPIRED", price: "21,700" }
+            ]
+        };
+
+        let selectedCategory = ringData.categories[0];
+        let selectedVariant = ringData.variants.find(v => v.stylingCategory === selectedCategory);
+
+        function renderCategories() {
+            const categoriesContainer = document.getElementById('categories');
+            categoriesContainer.innerHTML = '';
+            
+            ringData.categories.forEach(category => {
+                const btn = document.createElement('button');
+                btn.className = `category-btn ${category === selectedCategory ? 'active' : ''}`;
+                btn.textContent = category;
+                btn.onclick = () => selectCategory(category);
+                categoriesContainer.appendChild(btn);
+            });
+        }
+
+        function renderVariants() {
+            const variantsContainer = document.getElementById('variants');
+            variantsContainer.innerHTML = '';
+            
+            const categoryVariants = ringData.variants.filter(v => v.stylingCategory === selectedCategory);
+            
+            categoryVariants.forEach(variant => {
+                const card = document.createElement('div');
+                card.className = `variant-card ${variant.variantId === selectedVariant?.variantId ? 'active' : ''}`;
+                card.innerHTML = `
+                    <div class="variant-img">${variant.variantId}</div>
+                    <div class="variant-name">${variant.variantId}</div>
+                    <div class="variant-price">₹${variant.price}</div>
+                `;
+                card.onclick = () => selectVariant(variant);
+                variantsContainer.appendChild(card);
+            });
+        }
+
+        function selectCategory(category) {
+            selectedCategory = category;
+            const categoryVariants = ringData.variants.filter(v => v.stylingCategory === category);
+            selectedVariant = categoryVariants[0];
+            renderCategories();
+            renderVariants();
+            updateSelectedInfo();
+        }
+
+        function selectVariant(variant) {
+            selectedVariant = variant;
+            renderVariants();
+            updateSelectedInfo();
+        }
+
+        function updateSelectedInfo() {
+            const selectedText = document.getElementById('selectedText');
+            selectedText.textContent = `${selectedCategory} > ${selectedVariant?.variantId} - ₹${selectedVariant?.price}`;
+        }
+
+        // Initialize
+        renderCategories();
+        renderVariants();
+        updateSelectedInfo();
+    </script>
+</body>
+</html>

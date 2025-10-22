@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diamond Shape Mapping Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .variant-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        .shapes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .shape-item {
+            text-align: center;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .shape-code {
+            color: #666;
+            font-weight: bold;
+        }
+        .shape-name {
+            color: #328F94;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💎 Diamond Shape Mapping Test</h1>
+        <p>Testing the mapping of backend shape codes to display names for rings.</p>
+        
+        <div id="variantsContainer"></div>
+    </div>
+
+    <script>
+        // Backend shape codes mapping (same as frontend)
+        const diamondShapeMapping = {
+            'RD': { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
+            'PR': { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
+            'EM': { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
+            'AS': { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
+            'RA': { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
+            'CU': { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
+            'OV': { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
+            'PE': { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
+            'MQ': { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
+            'HT': { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
+        };
+
+        // Sample backend data (from our test results)
+        const ringVariants = [
+            {
+                variantId: "SR21",
+                stylingName: "CLASSIC",
+                availableDiamondShapes: ["RD", "PR", "EM", "OV", "AS", "CU", "PE", "MQ", "HT"]
+            },
+            {
+                variantId: "SR11", 
+                stylingName: "VINTAGE",
+                availableDiamondShapes: ["RD", "EM", "AS", "OV", "CU"]
+            },
+            {
+                variantId: "SR16",
+                stylingName: "FLORAL INSPIRED", 
+                availableDiamondShapes: ["RD", "OV", "PE", "MQ", "HT"]
+            },
+            {
+                variantId: "ENG2",
+                stylingName: "CLUSTER",
+                availableDiamondShapes: ["RD", "PR", "OV", "CU"]
+            }
+        ];
+
+        function mapShapeCodes(shapeCodes) {
+            return shapeCodes.map(shapeCode => {
+                const shapeData = diamondShapeMapping[shapeCode];
+                if (shapeData) {
+                    return shapeData;
+                }
+                return {
+                    name: shapeCode,
+                    img: "/DIAMOND_SHAPES_WEBP/round.webp"
+                };
+            });
+        }
+
+        function renderVariants() {
+            const container = document.getElementById('variantsContainer');
+            
+            ringVariants.forEach(variant => {
+                const mappedShapes = mapShapeCodes(variant.availableDiamondShapes);
+                
+                const section = document.createElement('div');
+                section.className = 'variant-section';
+                
+                section.innerHTML = `
+                    <h3>${variant.variantId} - ${variant.stylingName}</h3>
+                    <p><strong>Backend Codes:</strong> ${variant.availableDiamondShapes.join(', ')}</p>
+                    <p><strong>Mapped Shapes:</strong></p>
+                    <div class="shapes-grid">
+                        ${mappedShapes.map(shape => `
+                            <div class="shape-item">
+                                <div class="shape-code">${variant.availableDiamondShapes.find(code => diamondShapeMapping[code]?.name === shape.name) || 'N/A'}</div>
+                                <div class="shape-name">${shape.name}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                container.appendChild(section);
+            });
+        }
+
+        // Initialize
+        renderVariants();
+    </script>
+</body>
+</html>
