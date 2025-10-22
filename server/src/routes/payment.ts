@@ -7,6 +7,17 @@ import User from '../models/userModel';
 const router = express.Router();
 
 /**
+ * Generate short order number (14 characters total)
+ * Format: KYNA + 6-digit timestamp + 4 random chars
+ * Example: KYNA567698F0SK
+ */
+function generateShortOrderNumber(): string {
+  const timestamp = Date.now().toString().slice(-6);
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `KYNA${timestamp}${random}`;
+}
+
+/**
  * Utility function to detect order category and type based on order data
  */
 function detectOrderCategoryAndType(orderData: any): { category: string; type: string } {
@@ -179,9 +190,10 @@ router.post('/initiate', async (req: Request, res: Response) => {
     }
 
       // Create order in database
+    const shortOrderNumber = generateShortOrderNumber();
     const order = new PaymentOrder({
       orderId,
-      orderNumber: orderId, // Set orderNumber same as orderId
+      orderNumber: shortOrderNumber, // Generate short 14-char order number
       orderCategory: finalOrderCategory,
       orderType: finalOrderType,
       userId,
@@ -250,7 +262,7 @@ router.post('/initiate', async (req: Request, res: Response) => {
     order.razorpayOrderId = razorpayOrder.id;
     await order.save();
 
-    // Ensure a main OrderModel exists with orderNumber === orderId to avoid duplicate-null unique index errors
+    // Ensure a main OrderModel exists with orderNumber === shortOrderNumber to avoid duplicate-null unique index errors
     try {
       const shippingAddress = {
         label: 'Billing',
@@ -262,11 +274,11 @@ router.post('/initiate', async (req: Request, res: Response) => {
       };
 
       await OrderModel.findOneAndUpdate(
-        { orderNumber: orderId },
+        { orderNumber: shortOrderNumber },
         {
           $setOnInsert: {
             user: userId,
-            orderNumber: orderId,
+            orderNumber: shortOrderNumber,
             items: [],
             shippingAddress,
             paymentMethod: 'UPI',
