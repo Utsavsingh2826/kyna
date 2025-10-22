@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   ChevronUp,
   ChevronDown,
@@ -31,141 +31,91 @@ import {
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
-const sampleStyleAndDesign = [
-  {
-    name: "Most Popular",
-    substyles: [
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Traditional Solitaire",
-        price: "5,224",
-      },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Classic Solitaire",
-        price: "5,224",
-      },
-      { img: "/build_yr_own/sample1.png", name: "Modern Halo", price: "5,224" },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Vintage Art Deco",
-        price: "5,224",
-      },
-      { img: "/build_yr_own/sample1.png", name: "Three Stone", price: "5,224" },
-    ],
-  },
-  {
-    name: "Timeless",
-    substyles: [
-      { img: "/build_yr_own/sample1.png", name: "Three Stone", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Pavé Band", price: "5,224" },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Twisted Band",
-        price: "5,224",
-      },
-      { img: "/build_yr_own/sample1.png", name: "Channel Set", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Bezel Set", price: "5,224" },
-    ],
-  },
-  {
-    name: "Modern",
-    substyles: [
-      { img: "/build_yr_own/sample1.png", name: "Cathedral", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Tension Set", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Split Shank", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "East West", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Side Stones", price: "5,224" },
-    ],
-  },
-  {
-    name: "Vintage",
-    substyles: [
-      { img: "/build_yr_own/sample1.png", name: "Art Deco", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Victorian", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Edwardian", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Retro", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Filigree", price: "5,224" },
-    ],
-  },
-  {
-    name: "Designer",
-    substyles: [
-      { img: "/build_yr_own/sample1.png", name: "Infinity", price: "5,224" },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Nature Inspired",
-        price: "5,224",
-      },
-      { img: "/build_yr_own/sample1.png", name: "Geometric", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Celtic", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Art Nouveau", price: "5,224" },
-    ],
-  },
-  {
-    name: "Contemporary",
-    substyles: [
-      { img: "/build_yr_own/sample1.png", name: "Minimalist", price: "5,224" },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Bold Statement",
-        price: "5,224",
-      },
-      { img: "/build_yr_own/sample1.png", name: "Stackable", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Asymmetric", price: "5,224" },
-      { img: "/build_yr_own/sample1.png", name: "Mixed Metal", price: "5,224" },
-    ],
-  },
-  {
-    name: "Luxury",
-    substyles: [
-      { img: "/build_yr_own/sample1.png", name: "Eternity", price: "8,224" },
-      { img: "/build_yr_own/sample1.png", name: "Multi-Stone", price: "7,224" },
-      { img: "/build_yr_own/sample1.png", name: "Cocktail", price: "9,224" },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Statement Halo",
-        price: "6,224",
-      },
-      { img: "/build_yr_own/sample1.png", name: "Double Band", price: "7,224" },
-    ],
-  },
-  {
-    name: "Classic",
-    substyles: [
-      { img: "/build_yr_own/sample1.png", name: "Simple Band", price: "3,224" },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Princess Cut",
-        price: "4,224",
-      },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Round Brilliant",
-        price: "5,224",
-      },
-      { img: "/build_yr_own/sample1.png", name: "Emerald Cut", price: "4,724" },
-      {
-        img: "/build_yr_own/sample1.png",
-        name: "Oval Classic",
-        price: "4,524",
-      },
-    ],
-  },
-];
-const diamondShapes = {
-  shapes: [
-    { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
-    { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
-    { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
-    { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
-    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
-    { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
-    { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
-    { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
-    { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
-    { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
-  ],
+// API Types
+interface ProductVariant {
+  _id: string;
+  name: string;
+  productCode: string;
+  category: string;
+  stylingCategory?: string;
+  metalTypes: string[];
+  withDiamond: boolean;
+  images: string[];
+  basePrice: number;
+  customizationOptions: {
+    metalColors: string[];
+    sizes: string[];
+    diamondOptions?: {
+      shapes: string[];
+      clarities: string[];
+      colors: string[];
+      origins: string[];
+    };
+  };
+}
+
+// interface ApiResponse {
+//   success: boolean;
+//   data: {
+//     categories: string[];
+//     variants: ProductVariant[];
+//   };
+//   message: string;
+// }
+
+// API fetch function
+const fetchRingVariants = async (): Promise<ProductVariant[]> => {
+  try {
+    const response = await fetch('/api/build-your-jewelry/categories/RINGS');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    
+    // Map database fields to expected interface
+    const variants = result.data?.variants?.map((variant: any) => ({
+      _id: variant._id,
+      name: variant.variantId, // Use variantId as name
+      productCode: variant.variantId,
+      category: variant.category,
+      stylingCategory: variant.stylingName, // Map stylingName to stylingCategory
+      stylingName: variant.stylingName,
+      variantId: variant.variantId,
+      metalTypes: variant.availableMetalTypes || [],
+      withDiamond: variant.hasDiamond,
+      images: variant.variantImages?.length > 0 ? variant.variantImages : [variant.mainImage],
+      mainImage: variant.mainImage,
+      basePrice: variant.basePrice,
+      customizationOptions: {
+        metalColors: variant.availableMetalColors || [],
+        sizes: variant.availableSizes || [],
+        diamondOptions: {
+          shapes: variant.availableDiamondShapes || [], // These are shape codes like ["RD", "PR", "EM"]
+          clarities: variant.availableDiamondClarity || [],
+          colors: variant.availableDiamondColors || [],
+          origins: variant.availableDiamondOrigins || []
+        }
+      }
+    })) || [];
+    
+    return variants;
+  } catch (error) {
+    console.error('Error fetching ring variants:', error);
+    return [];
+  }
+};
+// Map diamond shape codes from backend to display names and images
+const diamondShapeMapping: { [key: string]: { name: string; img: string } } = {
+  'RD': { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
+  'PR': { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
+  'EM': { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
+  'AS': { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
+  'RA': { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
+  'CU': { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
+  'OV': { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
+  'PE': { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
+  'MQ': { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
+  'HT': { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
 };
 const GLBViewer = ({
   modelUrl,
@@ -474,6 +424,12 @@ const GLBViewer = ({
 };
 
 const ProductDetail = () => {
+  // API State
+  const [ringVariants, setRingVariants] = useState<ProductVariant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // UI State
   const [showTooltip, setShowTooltip] = useState(false);
   const [showEngraveModal, setShowEngraveModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -484,13 +440,36 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedClarity, setSelectedClarity] = useState("");
 
-  // Default to "Most Popular" and first substyle
-  const [selectedStyleCategory, setSelectedStyleCategory] = useState(
-    sampleStyleAndDesign[0].name
-  );
-  const [selectedRingStyle, setSelectedRingStyle] = useState(
-    sampleStyleAndDesign[0].substyles[0].name
-  );
+  // Ring variant selection state
+  const [selectedStyleCategory, setSelectedStyleCategory] = useState("");
+  const [selectedRingStyle, setSelectedRingStyle] = useState("");
+
+  // Load ring variants on component mount
+  useEffect(() => {
+    const loadRingVariants = async () => {
+      try {
+        setLoading(true);
+        const variants = await fetchRingVariants();
+        setRingVariants(variants);
+        
+        // Group variants by styling category and set initial selections
+        const categories = Array.from(new Set(variants.map(v => v.stylingCategory || v.stylingName).filter(Boolean)));
+        if (categories.length > 0) {
+          const firstCategory = categories[0];
+          const firstVariant = variants.find(v => (v.stylingCategory || v.stylingName) === firstCategory);
+          setSelectedStyleCategory(firstCategory ?? "");
+          setSelectedRingStyle(firstVariant?.name ?? firstVariant?.variantId ?? "");
+        }
+      } catch (err) {
+        setError('Failed to load ring variants');
+        console.error('Error loading ring variants:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRingVariants();
+  }, []);
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
@@ -548,46 +527,59 @@ const ProductDetail = () => {
     }
   };
 
-  // Get current category's substyles and selected style data
-  const currentCategory = sampleStyleAndDesign.find(
-    (cat) => cat.name === selectedStyleCategory
-  );
+  // Process API data for display - use stylingName as category and variantId as name
+  const categories = Array.from(new Set(ringVariants.map(v => v.stylingName).filter(Boolean)));
+  const currentVariants = ringVariants.filter(v => v.stylingName === selectedStyleCategory);
+  const selectedVariant = ringVariants.find(v => v.productCode === selectedRingStyle || v.variantId === selectedRingStyle) || currentVariants[0];
+
+  // Transform API data to match component expectations
+  const styleAndDesignData = categories.map(category => ({
+    name: category,
+    substyles: ringVariants
+      .filter(v => v.stylingName === category)
+      .map(variant => ({
+        img: variant.images?.[0] || variant.mainImage || "/build_yr_own/sample1.png",
+        name: variant.productCode || variant.variantId,
+        price: variant.basePrice?.toLocaleString() || "0",
+        variant: variant
+      }))
+  }));
+
+  const currentCategory = styleAndDesignData.find(cat => cat.name === selectedStyleCategory);
   const currentSubstyles = currentCategory?.substyles || [];
-  const selectedStyleData =
-    currentSubstyles.find((style) => style.name === selectedRingStyle) ||
-    currentSubstyles[0];
+  const selectedStyleData = currentSubstyles.find(style => style.name === selectedRingStyle) || currentSubstyles[0];
 
-  const ringSizes = [
-    "4",
-    "4.5",
-    "5",
-    "5.5",
-    "6",
-    "6.5",
-    "7",
-    "7.5",
-    "8",
-    "8.5",
-    "9",
-    "9.5",
-    "10",
-  ];
+  // Use sizes from API or fallback to default
+  const ringSizes = availableSizes;
 
-  const metalColors = [
+  // Get metal colors from API data or use defaults
+  const metalColors = selectedVariant?.customizationOptions?.metalColors?.map(colorName => {
+    const colorMap: Record<string, string> = {
+      "White Gold": "/colors/white.png",
+      "Yellow Gold": "/colors/gold.png", 
+      "Rose Gold": "/colors/rosegold.png",
+      "Silver": "/colors/white.png",
+      "Platinum": "/colors/white.png",
+      "14K White Gold": "/colors/white.png",
+      "14K Yellow Gold": "/colors/gold.png",
+      "14K Rose Gold": "/colors/rosegold.png",
+      "18K White Gold": "/colors/white.png",
+      "18K Yellow Gold": "/colors/gold.png",
+      "18K Rose Gold": "/colors/rosegold.png",
+      "22K Gold": "/colors/gold.png",
+      "Palladium": "/colors/white.png",
+      "Titanium": "/colors/white.png",
+    };
+    return {
+      name: colorName,
+      img: colorMap[colorName] || "/colors/white.png"
+    };
+  }) || [
     { name: "White Gold", img: "/colors/white.png" },
     { name: "Yellow Gold", img: "/colors/gold.png" },
     { name: "Rose Gold", img: "/colors/rosegold.png" },
     { name: "Silver", img: "/colors/white.png" },
     { name: "Platinum", img: "/colors/white.png" },
-    { name: "14K White Gold", img: "/colors/white.png" },
-    { name: "14K Yellow Gold", img: "/colors/gold.png" },
-    { name: "14K Rose Gold", img: "/colors/rosegold.png" },
-    { name: "18K White Gold", img: "/colors/white.png" },
-    { name: "18K Yellow Gold", img: "/colors/gold.png" },
-    { name: "18K Rose Gold", img: "/colors/rosegold.png" },
-    { name: "22K Gold", img: "/colors/gold.png" },
-    { name: "Palladium", img: "/colors/white.png" },
-    { name: "Titanium", img: "/colors/white.png" },
   ];
 
   // Add state for showing more colors on mobile
@@ -611,28 +603,67 @@ const ProductDetail = () => {
     return isGLB || imagePath.endsWith(".glb");
   };
 
-  // Sample product data for metal types
-  const sampleProduct = {
-    metalTypes: [
-      "14K White Gold",
-      "14K Yellow Gold",
-      "14K Rose Gold",
-      "18K White Gold",
-      "18K Yellow Gold",
-      "18K Rose Gold",
-      "22K Gold",
-      "Platinum",
-      "Palladium",
-      "Titanium",
-      "Silver",
-    ],
-  };
+  // Get metal types from selected variant or default fallback
+  const availableMetalTypes = selectedVariant?.metalTypes || selectedVariant?.variant?.metalTypes || [
+    "14K White Gold",
+    "14K Yellow Gold", 
+    "14K Rose Gold",
+    "18K White Gold",
+    "18K Yellow Gold",
+    "18K Rose Gold",
+    "22K Gold",
+    "Platinum",
+    "Palladium",
+    "Titanium",
+    "Silver",
+  ];
 
   // Ref for metal types scroll container
   const metalTypesRef = useRef<HTMLDivElement>(null);
-  const [selectedMetalType, setSelectedMetalType] = useState(
-    sampleProduct.metalTypes[0]
-  );
+  const [selectedMetalType, setSelectedMetalType] = useState("");
+
+  // Update selected metal type when variant changes
+  useEffect(() => {
+    if (selectedVariant && selectedVariant.metalTypes.length > 0) {
+      setSelectedMetalType(selectedVariant.metalTypes[0]);
+    }
+  }, [selectedVariant]);
+
+  // Debug: Log diamond shapes when variant changes
+  useEffect(() => {
+    if (selectedVariant?.customizationOptions?.diamondOptions?.shapes) {
+      console.log('Backend diamond shape codes:', selectedVariant.customizationOptions.diamondOptions.shapes);
+      console.log('Mapped diamond shapes:', availableDiamondShapes);
+    }
+  }, [selectedVariant, availableDiamondShapes]);
+
+  // Get available sizes from selected variant
+  const availableSizes = selectedVariant?.customizationOptions?.sizes || [
+    "4", "4.5", "5", "5.5", "6", "6.5", "7", "7.5", "8", "8.5", "9", "9.5", "10"
+  ];
+
+  // Get available diamond shapes from API - map codes to display objects
+  const availableDiamondShapes = useMemo(() => {
+    return selectedVariant?.customizationOptions?.diamondOptions?.shapes?.map((shapeCode: string) => {
+      // Use the mapping to convert backend codes (RD, PR, etc.) to display objects
+      const shapeData = diamondShapeMapping[shapeCode];
+      if (shapeData) {
+        return shapeData;
+      }
+      // Fallback: treat as display name if not found in mapping
+      return {
+        name: shapeCode,
+        img: "/DIAMOND_SHAPES_WEBP/round.webp"
+      };
+    }).filter(Boolean) || [
+      // Default fallback if no variant selected or no shapes available
+      { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
+      { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
+      { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
+    ];
+  }, [selectedVariant?.customizationOptions?.diamondOptions?.shapes]);
+
+  const diamondShapes = { shapes: availableDiamondShapes };
 
   function scrollMetalTypesLeft(): void {
     if (metalTypesRef.current) {
@@ -875,22 +906,28 @@ const ProductDetail = () => {
                         ref={styleCategoryRef}
                         className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
                       >
-                        {sampleStyleAndDesign.map((category, index) => (
-                          <button
-                            key={`${category.name}-${index}`}
-                            onClick={() => {
-                              setSelectedStyleCategory(category.name);
-                              setSelectedRingStyle(category.substyles[0].name);
-                            }}
-                            className={`px-3 md:px-4 py-2 md:py-2.5 rounded-lg border text-xs md:text-sm font-medium min-w-max whitespace-nowrap transition-all capitalize flex-shrink-0 ${
-                              selectedStyleCategory === category.name
-                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94] shadow-sm"
-                                : "border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:bg-gray-50"
-                            }`}
-                          >
-                            {category.name}
-                          </button>
-                        ))}
+                        {loading ? (
+                          <div className="text-sm text-gray-500">Loading categories...</div>
+                        ) : error ? (
+                          <div className="text-sm text-red-500">{error}</div>
+                        ) : (
+                          styleAndDesignData.map((category, index) => (
+                            <button
+                              key={`${category.name}-${index}`}
+                              onClick={() => {
+                                setSelectedStyleCategory(category.name);
+                                setSelectedRingStyle(category.substyles[0]?.name ?? "");
+                              }}
+                              className={`px-3 md:px-4 py-2 md:py-2.5 rounded-lg border text-xs md:text-sm font-medium min-w-max whitespace-nowrap transition-all capitalize flex-shrink-0 ${
+                                selectedStyleCategory === category.name
+                                  ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94] shadow-sm"
+                                  : "border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:bg-gray-50"
+                              }`}
+                            >
+                              {category.name}
+                            </button>
+                          ))
+                        )}
                       </div>
                       <button
                         onClick={scrollStyleCategoryRight}
@@ -1083,7 +1120,7 @@ const ProductDetail = () => {
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
                       <SelectContent className="bg-white">
-                        {sampleProduct.metalTypes.map((type, index) => (
+                        {availableMetalTypes.map((type, index) => (
                           <SelectItem key={index} value={type}>
                             {type}
                           </SelectItem>
@@ -1105,7 +1142,7 @@ const ProductDetail = () => {
                         ref={metalTypesRef}
                         className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
                       >
-                        {sampleProduct.metalTypes.map((type) => (
+                        {availableMetalTypes.map((type) => (
                           <button
                             key={type}
                             onClick={() => setSelectedMetalType(type)}
