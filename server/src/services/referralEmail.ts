@@ -70,7 +70,7 @@ export const sendReferralInvitation = async (
               </ul>
               
               <div class="referral-code">
-                Your Referral Code: ${referral.referFrdId}
+                Your Referral Code: ${referrer.referralCode}
               </div>
               
               <div style="text-align: center;">
