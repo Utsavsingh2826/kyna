@@ -9,6 +9,7 @@ import type { RootState, AppDispatch } from '@/store';
 import { fetchCart, updateCartItem, removeFromCart } from '@/store/slices/cartSlice';
 import { updateUser } from '@/store/slices/authSlice';
 import apiService from '@/services/api';
+import ReferralPromoSection from '@/components/ReferralPromoSection';
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -20,12 +21,8 @@ const CartPage = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Promo and referral code states
-  const [promoCode, setPromoCode] = useState('');
-  const [referralCode, setReferralCode] = useState('');
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [appliedReferral, setAppliedReferral] = useState<any>(null);
-  const [promoError, setPromoError] = useState('');
-  const [referralError, setReferralError] = useState('');
   const [wishlistItems, setWishlistItems] = useState<string[]>([]);
 
   // Redirect to login if not authenticated
@@ -103,63 +100,6 @@ const CartPage = () => {
     // TODO: Implement edit functionality
   };
 
-  const handleApplyPromoCode = async () => {
-    if (!promoCode.trim()) return;
-    
-    try {
-      setPromoError('');
-      const response = await apiService.applyPromoCode(promoCode, cart?.totalAmount || 0);
-      
-      if (response.success) {
-        setAppliedPromo(response.data);
-        setPromoCode('');
-        
-        // Refresh user data to get updated wallet amount
-        const userResponse = await apiService.getProfile();
-        if (userResponse.success) {
-          dispatch(updateUser(userResponse.data));
-        }
-      } else {
-        setPromoError(response.error || 'Invalid promo code');
-      }
-    } catch (error) {
-      setPromoError('Failed to apply promo code');
-    }
-  };
-
-  const handleApplyReferralCode = async () => {
-    if (!referralCode.trim()) return;
-    
-    try {
-      setReferralError('');
-      const response = await apiService.applyReferralCode(referralCode, cart?.totalAmount || 0);
-      
-      if (response.success) {
-        setAppliedReferral(response.data);
-        setReferralCode('');
-        
-        // Refresh user data to get updated wallet amount
-        const userResponse = await apiService.getProfile();
-        if (userResponse.success) {
-          dispatch(updateUser(userResponse.data));
-        }
-      } else {
-        setReferralError(response.error || 'Invalid referral code');
-      }
-    } catch (error) {
-      setReferralError('Failed to apply referral code');
-    }
-  };
-
-  const removePromoCode = () => {
-    setAppliedPromo(null);
-    setPromoError('');
-  };
-
-  const removeReferralCode = () => {
-    setAppliedReferral(null);
-    setReferralError('');
-  };
 
   if (loading) {
     return (
@@ -367,91 +307,16 @@ const CartPage = () => {
 
           {/* Right Column */}
           <div className="space-y-6">
-            {/* Promo Code Section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Promo Code</h3>
-              {appliedPromo ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-green-800">{appliedPromo.code}</p>
-                      <p className="text-xs text-green-600">{appliedPromo.description}</p>
-                    </div>
-                    <button 
-                      onClick={removePromoCode}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <p className="text-sm text-green-600">
-                    Discount: ₹{appliedPromo.discountAmount}
-                  </p>
-                </div>
-              ) : (
-              <div className="space-y-3">
-                <Input 
-                    placeholder="Enter promo code"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                  className="w-full"
-                />
-                  {promoError && (
-                    <p className="text-sm text-red-600">{promoError}</p>
-                  )}
-                <Button 
-                    onClick={handleApplyPromoCode}
-                    disabled={!promoCode.trim()}
-                  className="w-full bg-[#3AAFA9] hover:bg-[#2a8a85] text-white"
-                >
-                    Apply Promo Code
-                </Button>
-              </div>
-              )}
-            </div>
-
-            {/* Referral Code Section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Referral Code</h3>
-              {appliedReferral ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-blue-800">{appliedReferral.code}</p>
-                      <p className="text-xs text-blue-600">Referral from {appliedReferral.referrerName}</p>
-                    </div>
-                    <button 
-                      onClick={removeReferralCode}
-                      className="text-red-500 hover:text-red-700 text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                  <p className="text-sm text-blue-600">
-                    Bonus: ₹{appliedReferral.discountAmount}
-                  </p>
-                </div>
-              ) : (
-              <div className="space-y-3">
-                <Input 
-                    placeholder="Enter referral code"
-                    value={referralCode}
-                    onChange={(e) => setReferralCode(e.target.value)}
-                  className="w-full"
-                />
-                  {referralError && (
-                    <p className="text-sm text-red-600">{referralError}</p>
-                  )}
-                <Button 
-                    onClick={handleApplyReferralCode}
-                    disabled={!referralCode.trim()}
-                    className="w-full bg-[#3AAFA9] hover:bg-[#2a8a85] text-white"
-                >
-                    Apply Referral Code
-                </Button>
-                </div>
-              )}
-            </div>
+            {/* Promo & Referral Code Section */}
+            <ReferralPromoSection
+              subtotal={cart?.totalAmount || 0}
+              onPromoApplied={setAppliedPromo}
+              onReferralApplied={setAppliedReferral}
+              onPromoRemoved={() => setAppliedPromo(null)}
+              onReferralRemoved={() => setAppliedReferral(null)}
+              appliedPromo={appliedPromo}
+              appliedReferral={appliedReferral}
+            />
 
 
             {/* Cart Price Details Section */}

@@ -27,7 +27,7 @@ interface UpdateProfileRequest {
 }
 // Signup with OTP verification
 export const signup = async (req: Request, res: Response) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, referralCode } = req.body;
 
   try {
     if (!email || !password || !name) {
@@ -51,7 +51,7 @@ export const signup = async (req: Request, res: Response) => {
     const lastName = nameParts.slice(1).join(' ') || '';
 
     // Create user with unverified status
-    const user = new User({
+    const userData: any = {
       email,
       password, // Will be hashed by pre-save hook
       name,
@@ -60,7 +60,13 @@ export const signup = async (req: Request, res: Response) => {
       otp,
       otpExpires,
       isVerified: false, // User must verify email before login
-    });
+    };
+    if (referralCode) {
+      userData.referredBy = referralCode;
+      userData.refDiscount = 5; // reserve 5% discount for referred user
+    }
+
+    const user = new User(userData);
 
     await user.save();
 
