@@ -93,8 +93,8 @@ export const RATE_LIMITS = {
 export const VALIDATION_RULES = {
   ORDER_NUMBER: {
     minLength: 8,
-    maxLength: 20,
-    pattern: /^[A-Z0-9]+$/
+    maxLength: 30,
+    pattern: /^[A-Z0-9\-]+$/i  // Allow hyphens and case-insensitive
   },
   EMAIL: {
     pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/

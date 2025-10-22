@@ -6,6 +6,7 @@ export interface IOrder extends Document {
   user: Schema.Types.ObjectId | IUser;
   orderNumber?: string; // Made optional to avoid unique constraint issues
   estimatedDeliveryDate?: Date;
+  orderType: 'normal' | 'customized'; // Order type for cancellation policy
   statusHistory?: {
     status: string;
     date: Date;
@@ -109,6 +110,12 @@ const orderSchema = new Schema<IOrder>(
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
     orderNumber: { type: String, default: function() { return this._id.toString(); } }, // Default to _id to avoid null values
     estimatedDeliveryDate: { type: Date }, // ✅ Added
+    orderType: { 
+      type: String, 
+      enum: ['normal', 'customized'],
+      default: 'normal',
+      required: true
+    }, // Order type for cancellation policy
     statusHistory: [
       {
         status: { type: String, required: true },

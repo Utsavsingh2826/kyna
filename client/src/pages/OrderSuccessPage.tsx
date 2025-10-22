@@ -199,10 +199,15 @@ const OrderSuccessPage = () => {
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              <Button 
-                onClick={() => navigate('/orders')} 
-                className="w-full bg-[#3AAFA9] hover:bg-[#2a8a85] text-white"
-              >
+                <Button 
+                 onClick={() => navigate('/track-order', { 
+                   state: { 
+                     orderNumber: order?.orderNumber || orderNumber,
+                     email: order?.billingInfo?.email 
+                   }
+                 })} 
+                  className="w-full bg-[#3AAFA9] hover:bg-[#2a8a85] text-white"
+                >
                 <Truck className="w-4 h-4 mr-2" />
                 Track Your Order
               </Button>

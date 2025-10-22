@@ -350,14 +350,6 @@ class ApiService {
       method: "POST",
     });
   }
-
-  // Order management methods
-  async createOrder(paymentMethod: string, billingAddress?: any, shippingAddress?: any) {
-    return this.makeRequest("/orders", {
-      method: "POST",
-      body: JSON.stringify({ paymentMethod, billingAddress, shippingAddress }),
-    });
-  }
 }
 
 export const apiService = new ApiService();

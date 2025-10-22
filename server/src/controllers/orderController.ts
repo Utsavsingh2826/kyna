@@ -44,12 +44,15 @@ export const trackOrder = async (req: Request, res: Response): Promise<Response>
   }
 };
 
-// Generate unique order number
+// Generate unique order number (shorter format)
 const generateOrderNumber = (): string => {
-  const timestamp = Date.now().toString();
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-  return `ORD${timestamp.slice(-6)}${random}`;
+  // Use last 6 digits of timestamp for uniqueness
+  const timestamp = Date.now().toString().slice(-6);
+  // Add 4 random alphanumeric characters
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `KYNA${timestamp}${random}`;
 };
+// Example output: KYNA123456AB7C (14 characters total)
 
 // Calculate GST (18% for jewelry in India)
 const calculateGST = (subtotal: number): number => {
@@ -129,10 +132,39 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
     await order.save();
     await order.populate('items.product');
 
-    // Ensure orderNumber matches the document _id for uniqueness and external reference
-    if (order._id && order.orderNumber !== String(order._id)) {
-      order.orderNumber = String(order._id);
-      await order.save();
+    // Add order to user's orders array
+    await User.findByIdAndUpdate(
+      userId,
+      { $push: { orders: order._id } }
+    );
+    console.log(`Order ${order._id} added to user ${userId} orders array`);
+
+    // Create TrackingOrder for this order
+    try {
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      const { OrderStatus } = await import('../types/tracking');
+      
+      const trackingOrder = new TrackingOrder({
+        userId: userId,
+        orderModel: 'Order', // Specify model type for polymorphic reference
+        order: order._id,
+        orderNumber: order.orderNumber,
+        orderType: 'normal', // Direct orders are always normal products
+        customerEmail: req.user?.email || '',
+        status: OrderStatus.ORDER_PLACED,
+        trackingHistory: [{
+          status: OrderStatus.ORDER_PLACED,
+          description: 'Order placed successfully',
+          timestamp: new Date(),
+          code: OrderStatus.ORDER_PLACED
+        }]
+      });
+
+      await trackingOrder.save();
+      console.log(`✅ TrackingOrder created for order ${order._id}`);
+    } catch (trackingError) {
+      console.error('❌ Failed to create TrackingOrder:', trackingError);
+      // Don't fail the order creation if tracking creation fails
     }
 
     res.status(201).json({
@@ -238,10 +270,39 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     await order.save();
     console.log('Order saved successfully:', order._id);
 
-    // Ensure orderNumber matches the document _id for uniqueness and external reference
-    if (order._id && order.orderNumber !== String(order._id)) {
-      order.orderNumber = String(order._id);
-      await order.save();
+    // Add order to user's orders array
+    await User.findByIdAndUpdate(
+      userId,
+      { $push: { orders: order._id } }
+    );
+    console.log(`Order ${order._id} added to user ${userId} orders array`);
+
+    // Create TrackingOrder for this order
+    try {
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      const { OrderStatus } = await import('../types/tracking');
+      
+      const trackingOrder = new TrackingOrder({
+        userId: userId,
+        orderModel: 'Order', // Specify model type for polymorphic reference
+        order: order._id,
+        orderNumber: order.orderNumber,
+        orderType: 'normal', // Cart orders are normal products
+        customerEmail: req.user?.email || '',
+        status: OrderStatus.ORDER_PLACED,
+        trackingHistory: [{
+          status: OrderStatus.ORDER_PLACED,
+          description: 'Order placed from cart',
+          timestamp: new Date(),
+          code: OrderStatus.ORDER_PLACED
+        }]
+      });
+
+      await trackingOrder.save();
+      console.log(`✅ TrackingOrder created for order ${order._id}`);
+    } catch (trackingError) {
+      console.error('❌ Failed to create TrackingOrder:', trackingError);
+      // Don't fail the order creation if tracking creation fails
     }
 
     // Clear cart after successful order
@@ -609,27 +670,24 @@ export const shipOrder = async (req: AuthRequest, res: Response) => {
 
     // Create tracking record
     try {
-      // Import TrackingService dynamically to avoid circular dependency
-      const { TrackingService } = await import('../services/TrackingService');
-      const { createSequel247Service } = await import('../services/Sequel247Service');
-      const trackingTypes = await import('../types/tracking');
-
-      // Create Sequel247 service instance
-      const sequelConfig: any = {
-        endpoint: process.env.NODE_ENV === "production"
-          ? process.env.SEQUEL247_PROD_ENDPOINT || "https://sequel247.com/"
-          : process.env.SEQUEL247_TEST_ENDPOINT || "https://test.sequel247.com/",
-        token: process.env.NODE_ENV === "production"
-          ? process.env.SEQUEL247_PROD_TOKEN || ""
-          : process.env.SEQUEL247_TEST_TOKEN || "",
-        storeCode: process.env.SEQUEL247_STORE_CODE || "BLRAK",
-      };
-
-      const sequelService = createSequel247Service(sequelConfig);
-      const trackingService = new TrackingService(sequelService);
-
-      // Create tracking record
-      const trackingOrder = await trackingService.createTrackingFromOrder(orderId, docketNumber);
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      const { OrderStatus } = await import('../types/tracking');
+      
+      const trackingOrder = new TrackingOrder({
+        userId: order.user,
+        order: order._id,
+        status: OrderStatus.ORDER_PLACED,
+        orderType: order.orderType || 'normal', // Copy orderType from order
+        docketNumber: docketNumber,
+        trackingHistory: [{
+          status: OrderStatus.ORDER_PLACED,
+          description: 'Order shipped',
+          timestamp: new Date(),
+          code: OrderStatus.ORDER_PLACED
+        }]
+      });
+      
+      await trackingOrder.save();
 
       // Log audit trail for shipping
       try {
@@ -758,24 +816,24 @@ export const bulkShipOrders = async (req: AuthRequest, res: Response) => {
 
         // Create tracking record
         try {
-          const { TrackingService } = await import('../services/TrackingService');
-          const { createSequel247Service } = await import('../services/Sequel247Service');
-          const trackingTypes = await import('../types/tracking');
-
-          const sequelConfig: any = {
-            endpoint: process.env.NODE_ENV === "production"
-              ? process.env.SEQUEL247_PROD_ENDPOINT || "https://sequel247.com/"
-              : process.env.SEQUEL247_TEST_ENDPOINT || "https://test.sequel247.com/",
-            token: process.env.NODE_ENV === "production"
-              ? process.env.SEQUEL247_PROD_TOKEN || ""
-              : process.env.SEQUEL247_TEST_TOKEN || "",
-            storeCode: process.env.SEQUEL247_STORE_CODE || "BLRAK",
-          };
-
-          const sequelService = createSequel247Service(sequelConfig);
-          const trackingService = new TrackingService(sequelService);
-
-          const trackingOrder = await trackingService.createTrackingFromOrder(orderId, docketNumber);
+          const { TrackingOrder } = await import('../models/TrackingOrder');
+          const { OrderStatus } = await import('../types/tracking');
+          
+          const trackingOrder = new TrackingOrder({
+            userId: order.user,
+            order: order._id,
+            status: OrderStatus.ORDER_PLACED,
+            orderType: order.orderType || 'normal', // Copy orderType from order
+            docketNumber: docketNumber,
+            trackingHistory: [{
+              status: OrderStatus.ORDER_PLACED,
+              description: 'Order shipped',
+              timestamp: new Date(),
+              code: OrderStatus.ORDER_PLACED
+            }]
+          });
+          
+          await trackingOrder.save();
 
           results.push({
             orderId,

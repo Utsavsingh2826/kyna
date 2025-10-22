@@ -2,6 +2,7 @@ import express, { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { TrackingController } from '../controllers/trackingController';
 import { RATE_LIMITS } from '../constants/tracking';
+import { authenticateToken } from '../middleware/auth';
 
 const router: Router = express.Router();
 
@@ -113,11 +114,11 @@ router.put('/status/:orderNumber', (req, res) => {
   }
 });
 
-// Webhook endpoints
-router.get('/webhook/config', (req, res) => {
+// Cancel shipment endpoint
+router.post('/cancel-shipment', trackingRateLimit, (req, res) => {
   try {
     const controller = getController();
-    controller.getWebhookConfig(req, res, () => {});
+    controller.cancelShipment(req, res, () => {});
   } catch (error) {
     res.status(503).json({
       success: false,
@@ -126,10 +127,11 @@ router.get('/webhook/config', (req, res) => {
   }
 });
 
-router.post('/webhook/test', (req, res) => {
+// Get all test orders endpoint - Protected route (user must be logged in)
+router.get('/test-orders', authenticateToken, generalRateLimit, (req, res) => {
   try {
     const controller = getController();
-    controller.testWebhook(req, res, () => {});
+    controller.getAllTestOrders(req, res, () => {});
   } catch (error) {
     res.status(503).json({
       success: false,
@@ -138,11 +140,11 @@ router.post('/webhook/test', (req, res) => {
   }
 });
 
-// Audit endpoints
-router.get('/audit/order/:orderNumber', (req, res) => {
+// Get user-specific orders endpoint - NEW ENDPOINT to bypass any caching issues
+router.get('/my-orders', authenticateToken, generalRateLimit, (req, res) => {
   try {
     const controller = getController();
-    controller.getOrderAuditTrail(req, res, () => {});
+    controller.getAllTestOrders(req, res, () => {});
   } catch (error) {
     res.status(503).json({
       success: false,
@@ -151,22 +153,11 @@ router.get('/audit/order/:orderNumber', (req, res) => {
   }
 });
 
-router.get('/audit/search', (req, res) => {
+// Download Proof of Delivery endpoint
+router.post('/download-pod', trackingRateLimit, (req, res) => {
   try {
     const controller = getController();
-    controller.searchAuditLogs(req, res, () => {});
-  } catch (error) {
-    res.status(503).json({
-      success: false,
-      error: 'Tracking service not initialized'
-    });
-  }
-});
-
-router.get('/audit/stats', (req, res) => {
-  try {
-    const controller = getController();
-    controller.getAuditStats(req, res, () => {});
+    controller.downloadProofOfDelivery(req, res, () => {});
   } catch (error) {
     res.status(503).json({
       success: false,

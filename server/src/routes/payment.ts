@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { getRazorpayInstance, createOrderPayload, verifyWebhookSignature, validatePaymentAmount, PAYMENT_METHOD_LIMITS, DEFAULT_MAX_AMOUNT } from '../utils/razorpay';
 import PaymentOrder, { OrderStatus, IPaymentResponse } from '../models/PaymentOrder';
 import OrderModel from '../models/orderModel';
+import User from '../models/userModel';
 
 const router = express.Router();
 
@@ -575,6 +576,63 @@ router.post('/verify', async (req: Request, res: Response) => {
     paymentOrder.paidAt = new Date();
     
     await paymentOrder.save();
+
+    // Add order to user's orders array
+    try {
+      await User.findByIdAndUpdate(
+        paymentOrder.userId,
+        { $push: { orders: paymentOrder._id } }
+      );
+      console.log(`Payment order ${paymentOrder._id} added to user ${paymentOrder.userId} orders array`);
+    } catch (userUpdateError) {
+      console.warn('Failed to update user orders array:', userUpdateError);
+      // Don't fail the verification if user update fails
+    }
+
+    // Create TrackingOrder for this payment order
+    try {
+      console.log('\n🔍 Creating TrackingOrder for payment order...');
+      console.log('   Payment Order ID:', paymentOrder._id);
+      console.log('   Order Number:', paymentOrder.orderNumber);
+      console.log('   Order Type:', paymentOrder.orderType);
+      console.log('   Customer Email:', paymentOrder.billingInfo?.email);
+      
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      const { OrderStatus: TrackingOrderStatus } = await import('../types/tracking');
+      
+      // Check if TrackingOrder already exists
+      const existingTracking = await TrackingOrder.findOne({ order: paymentOrder._id });
+      if (existingTracking) {
+        console.log('   ⚠️ TrackingOrder already exists:', existingTracking._id);
+      } else {
+        const trackingOrder = new TrackingOrder({
+          userId: paymentOrder.userId,
+          orderModel: 'PaymentOrder', // Specify model type for polymorphic reference
+          order: paymentOrder._id,
+          orderNumber: paymentOrder.orderNumber,
+          orderType: paymentOrder.orderType || 'customized', // PaymentOrders are usually customized
+          customerEmail: paymentOrder.billingInfo?.email || '',
+          status: TrackingOrderStatus.ORDER_PLACED,
+          trackingHistory: [{
+            status: TrackingOrderStatus.ORDER_PLACED,
+            description: 'Payment completed - Order placed',
+            timestamp: new Date(),
+            code: TrackingOrderStatus.ORDER_PLACED
+          }]
+        });
+
+        await trackingOrder.save();
+        console.log('   ✅ TrackingOrder created successfully!');
+        console.log('   TrackingOrder ID:', trackingOrder._id);
+        console.log('   Status:', trackingOrder.status);
+      }
+    } catch (trackingError) {
+      console.error('   ❌ Failed to create TrackingOrder:');
+      console.error('   Error:', trackingError);
+      console.error('   Error message:', (trackingError as Error).message);
+      console.error('   Stack:', (trackingError as Error).stack);
+      // Don't fail the verification if tracking creation fails
+    }
 
     // Update the main order if it exists
     try {
