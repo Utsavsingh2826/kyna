@@ -1,10 +1,11 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { loginSucceeded } from "../store/slices/authSlice";
 import { setAccessToken } from "@/lib/authToken";
 import apiService from "@/services/api";
+import { toast } from "sonner";
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -14,8 +15,19 @@ const LoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
+
+  // Handle referral code from URL
+  useEffect(() => {
+    const referralParam = searchParams.get("referral");
+    if (referralParam) {
+      setReferralCode(referralParam);
+      toast.info(`Referral code detected: ${referralParam}. You'll get rewards after login!`);
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -55,6 +67,21 @@ const LoginPage: React.FC = () => {
 
         console.log("Login successful. User payload:", response.data?.user || null);
         console.log("Redux auth state should be updated now");
+
+        // Apply referral code if present
+        if (referralCode) {
+          try {
+            const referralResponse = await apiService.applyReferralCode(referralCode, 0);
+            if (referralResponse.success) {
+              toast.success(`Referral code applied! You and your friend both got ₹${referralResponse.data.discountAmount} rewards!`);
+            } else {
+              toast.warning(`Referral code couldn't be applied: ${referralResponse.error}`);
+            }
+          } catch (error) {
+            console.error("Error applying referral code:", error);
+            toast.warning("Referral code couldn't be applied, but you can try again later.");
+          }
+        }
 
         // Navigate to profile page
         navigate("/profile", {

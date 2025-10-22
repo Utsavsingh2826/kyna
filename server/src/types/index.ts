@@ -53,6 +53,8 @@ export interface IUser extends Document {
   otpExpires?: Date;
   availableOffers: number;
   referralCode?: string;
+  referredBy?: string | null; // public referral code of the referrer stored at signup
+  refDiscount?: number; // percentage discount available to user (e.g., 5 for 5%)
   referralCount: number;
   totalReferralEarnings: number;
   usedPromoCodes: string[];
