@@ -2,6 +2,7 @@ import express from "express";
 import {
   createReferral,
   redeemPromoCode,
+  applySimpleReferral,
   getUserReferrals,
   getReferralDetails,
   triggerReminderEmails,
@@ -15,6 +16,9 @@ router.post("/", authenticateToken, createReferral);
 
 // Redeem promo code (requires authentication)
 router.post("/promos/redeem", authenticateToken, redeemPromoCode);
+
+// Apply simple referral discount saved on user's account
+router.post('/apply-simple', authenticateToken, applySimpleReferral);
 
 // Get user's referrals (requires authentication)
 router.get("/my-referrals", authenticateToken, getUserReferrals);

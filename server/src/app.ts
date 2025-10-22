@@ -38,17 +38,6 @@ import addressRoutes from "./routes/address";
 // Import tracking services
 import { TrackingController } from "./controllers/trackingController";
 import { TrackingService } from "./services/TrackingService";
-import { createSequel247Service } from "./services/Sequel247Service";
-import { Sequel247Config } from "./types/tracking";
-import { seedTrackingData } from "./utils/seedTrackingData";
-import { startCronJobs, startTrackingCronJob } from './services/cronService';
-import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorHandler';
-import { healthService } from './services/healthService';
-import { validateProductionConfig } from './config/production';
-import { dynamicSizeLimit } from './middleware/requestLimits';
-import { apiVersioning, getVersionInfo, deprecationWarning } from './middleware/apiVersioning';
-import { monitoringMiddleware } from './services/advancedMonitoring';
-import { initializeRedis, closeRedisConnection } from './services/sessionService';
 
 // Load environment variables FIRST
 dotenv.config();
@@ -172,15 +161,6 @@ const limiter = rateLimit({
 // Apply rate limiting to all routes
 app.use(limiter);
 
-// Apply request size limits
-app.use(dynamicSizeLimit);
-
-// Apply API versioning
-app.use('/api', apiVersioning);
-
-// Apply monitoring middleware
-app.use(monitoringMiddleware);
-
 // Stricter rate limiting for auth routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -215,7 +195,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.on('finish', () => {
     const duration = Date.now() - startTime;
     const success = res.statusCode < 400;
-    healthService.recordRequest(success, duration);
+    // Simplified: just log request duration
+    if (duration > 1000) {
+      console.log(`Slow request: ${req.method} ${req.path} - ${duration}ms`);
+    }
   });
   
   next();
@@ -224,30 +207,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Initialize tracking services
 const initializeTrackingServices = () => {
   try {
-    // Sequel247 configuration
-    const sequelConfig: Sequel247Config = {
-      endpoint:
-        process.env.NODE_ENV === "production"
-          ? process.env.SEQUEL247_PROD_ENDPOINT || "https://sequel247.com/"
-          : process.env.SEQUEL247_TEST_ENDPOINT ||
-            "https://test.sequel247.com/",
-      token:
-        process.env.NODE_ENV === "production"
-          ? process.env.SEQUEL247_PROD_TOKEN || ""
-          : process.env.SEQUEL247_TEST_TOKEN || "",
-      storeCode: process.env.SEQUEL247_STORE_CODE || "BLRAK",
-    };
-
-    // Initialize services
-    const sequelService = createSequel247Service(sequelConfig);
-    const trackingService = new TrackingService(sequelService);
+    // Initialize services (simplified version without Sequel247)
+    const trackingService = new TrackingService();
     const trackingController = new TrackingController(trackingService);
 
     // Set controller in routes
     setTrackingController(trackingController);
-
-    // Start automatic tracking updates cron job
-    startTrackingCronJob(trackingService);
 
     console.log("✅ Tracking services initialized successfully");
   } catch (error) {
@@ -258,26 +223,16 @@ const initializeTrackingServices = () => {
 // Initialize tracking services
 initializeTrackingServices();
 
-// Initialize Redis (optional)
-if (process.env.REDIS_HOST) {
-  try {
-    initializeRedis();
-    console.log('✅ Redis initialized for session storage');
-  } catch (error) {
-    console.warn('⚠️ Redis not available, using memory storage');
-  }
-}
-
 // Startup validation
 const validateStartup = () => {
   console.log('🔍 Validating startup configuration...');
   
-  // Use production config validation
-  const validation = validateProductionConfig();
+  // Check required environment variables
+  const requiredVars = ['JWT_SECRET', 'MONGO_URI'];
+  const missing = requiredVars.filter(v => !process.env[v]);
   
-  if (!validation.isValid) {
-    console.error('❌ Configuration validation failed:');
-    validation.errors.forEach(error => console.error(`  - ${error}`));
+  if (missing.length > 0) {
+    console.error('❌ Missing required environment variables:', missing.join(', '));
     process.exit(1);
   }
   
@@ -293,16 +248,23 @@ app.get("/api/test", (req: Request, res: Response) => {
 });
 
 // Comprehensive health check endpoint
-app.get("/api/health", asyncHandler(async (req: Request, res: Response) => {
-  const health = await healthService.getHealthStatus();
-  res.json(health);
-}));
+app.get("/api/health", async (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
 
 // Simple health check endpoint for load balancers
-app.get("/api/health/simple", asyncHandler(async (req: Request, res: Response) => {
-  const health = await healthService.getSimpleHealth();
-  res.json(health);
-}));
+app.get("/api/health/simple", async (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // API Documentation endpoint
 app.get("/api", (req: Request, res: Response) => {
@@ -334,57 +296,37 @@ app.get("/api", (req: Request, res: Response) => {
 });
 
 // API Version info endpoint
-app.get("/api/version", getVersionInfo);
+app.get("/api/version", (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 
-// Advanced monitoring endpoints
-app.get("/api/monitoring/health", asyncHandler(async (req: Request, res: Response) => {
-  const { advancedMonitoring } = await import('./services/advancedMonitoring');
-  const health = await advancedMonitoring.getSystemHealth();
-  res.json(health);
-}));
-
-app.get("/api/monitoring/metrics", asyncHandler(async (req: Request, res: Response) => {
-  const { advancedMonitoring } = await import('./services/advancedMonitoring');
-  const metrics = advancedMonitoring.getMetrics();
-  res.json({ success: true, metrics });
-}));
-
-app.get("/api/monitoring/alerts", asyncHandler(async (req: Request, res: Response) => {
-  const { advancedMonitoring } = await import('./services/advancedMonitoring');
-  const alerts = advancedMonitoring.getAlerts();
-  res.json({ success: true, alerts });
-}));
-
-app.get("/api/monitoring/trends", asyncHandler(async (req: Request, res: Response) => {
-  const { advancedMonitoring } = await import('./services/advancedMonitoring');
-  const hours = parseInt(req.query.hours as string) || 1;
-  const trends = advancedMonitoring.getPerformanceTrends(hours);
-  res.json({ success: true, trends });
-}));
-
-// Routes with deprecation warnings
-app.use("/api/auth", deprecationWarning, authRoutes);
-app.use("/api/products", deprecationWarning, productRoutes);
-app.use("/api/cart", deprecationWarning, cartRoutes);
-app.use("/api/orders", deprecationWarning, orderRoutes);
-app.use("/api/tracking", deprecationWarning, trackingRoutes);
-app.use("/api/gift-cards", deprecationWarning, giftCardRoutes);
-app.use("/api/wishlist", deprecationWarning, wishlistRoutes);
-app.use("/api/wishlist-share", deprecationWarning, wishlistShareRoutes);
-app.use("/api/referrals", deprecationWarning, referralRoutes);
-app.use("/api/settings", deprecationWarning, settingsRoutes);
-app.use("/api/reviews", deprecationWarning, reviewRoutes);
-app.use("/api/gifting", deprecationWarning, giftingRoutes);
-app.use("/api/engraving", deprecationWarning, engravingRoutes);
-app.use("/api/payment", deprecationWarning, paymentRoutes);
-app.use("/api/rings", deprecationWarning, ringsRoutes);
-app.use("/api/promo-code", deprecationWarning, promoCodeRoutes);
-app.use("/api/referral-code", deprecationWarning, referralCodeRoutes);
-app.use("/api/admin", deprecationWarning, adminRoutes);
-app.use("/api/build-your-jewelry", deprecationWarning, buildYourJewelryRoutes);
-app.use("/api/sub-products", deprecationWarning, subProductRoutes);
-app.use("/api/blogs", deprecationWarning, blogRoutes);
-app.use("/api/address", deprecationWarning, addressRoutes);
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
+app.use("/api/tracking", trackingRoutes);
+app.use("/api/gift-cards", giftCardRoutes);
+app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/wishlist-share", wishlistShareRoutes);
+app.use("/api/referrals", referralRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/gifting", giftingRoutes);
+app.use("/api/engraving", engravingRoutes);
+app.use("/api/payment", paymentRoutes);
+app.use("/api/rings", ringsRoutes);
+app.use("/api/promo-code", promoCodeRoutes);
+app.use("/api/referral-code", referralCodeRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/build-your-jewelry", buildYourJewelryRoutes);
+app.use("/api/sub-products", subProductRoutes);
+app.use("/api/blogs", blogRoutes);
+app.use("/api/address", addressRoutes);
 
 // Home route
 app.get("/", (req: Request, res: Response) => {
@@ -447,48 +389,23 @@ app.get('/api/system/health', async (req: Request, res: Response) => {
   }
 });
 
-// Manual tracking update endpoint (for testing)
-app.post('/api/tracking/manual-update', async (req: Request, res: Response) => {
-  try {
-    // Get tracking service from the global scope
-    const { runTrackingUpdateJob } = await import('./services/cronService');
-    
-    // We need to create a tracking service instance
-    const sequelConfig: Sequel247Config = {
-      endpoint: process.env.NODE_ENV === "production"
-        ? process.env.SEQUEL247_PROD_ENDPOINT || "https://sequel247.com/"
-        : process.env.SEQUEL247_TEST_ENDPOINT || "https://test.sequel247.com/",
-      token: process.env.NODE_ENV === "production"
-        ? process.env.SEQUEL247_PROD_TOKEN || ""
-        : process.env.SEQUEL247_TEST_TOKEN || "",
-      storeCode: process.env.SEQUEL247_STORE_CODE || "BLRAK",
-    };
-    
-    const sequelService = createSequel247Service(sequelConfig);
-    const trackingService = new TrackingService(sequelService);
-    
-    const result = await runTrackingUpdateJob(trackingService);
-    
-    res.json({
-      success: true,
-      message: 'Manual tracking update completed',
-      data: result
-    });
-  } catch (error) {
-    console.error('Manual tracking update error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to run manual tracking update',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
+// 404 handler for undefined routes
+app.use('*', (req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    error: 'Endpoint not found'
+  });
 });
 
-// 404 handler for undefined routes
-app.use('*', notFoundHandler);
-
 // Global error handling middleware
-app.use(errorHandler);
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  console.error('Global error:', err);
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
+});
 
 // Port setup
 const PORT: number = parseInt(process.env.PORT || "5000", 10);
@@ -512,18 +429,14 @@ mongoose.connection.on('reconnected', () => {
 process.on('SIGINT', async () => {
   console.log('\n🛑 Received SIGINT. Graceful shutdown...');
   await mongoose.connection.close();
-  await closeRedisConnection();
   console.log('✅ MongoDB connection closed');
-  console.log('✅ Redis connection closed');
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('\n🛑 Received SIGTERM. Graceful shutdown...');
   await mongoose.connection.close();
-  await closeRedisConnection();
   console.log('✅ MongoDB connection closed');
-  console.log('✅ Redis connection closed');
   process.exit(0);
 });
 
@@ -533,11 +446,6 @@ mongoose
   .then(async () => {
     console.log(process.env.Mongo_URI);
     console.log("✅ MongoDB connected");
-
-    // Seed sample tracking data in development
-    if (process.env.NODE_ENV === "development") {
-      await seedTrackingData();
-    }
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

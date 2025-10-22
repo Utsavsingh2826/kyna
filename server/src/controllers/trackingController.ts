@@ -5,7 +5,8 @@ import {
   TrackingRequest, 
   AppError, 
   ValidationError,
-  NotFoundError 
+  NotFoundError,
+  OrderStatus
 } from '../types/tracking';
 import { 
   ERROR_MESSAGES, 
@@ -184,135 +185,318 @@ export class TrackingController {
   };
 
   /**
-   * Test webhook configuration
+   * Cancel a shipment
    */
-  testWebhook = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  cancelShipment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const webhookModule = await import('../services/WebhookService');
-      
-      const webhookConfig: any = {
-        url: process.env.WEBHOOK_URL || '',
-        secret: process.env.WEBHOOK_SECRET || '',
-        events: ['tracking.status_change', 'order.shipped', 'order.delivered', 'order.cancelled'],
-        retryAttempts: 3,
-        timeout: 10000
-      };
+      const { docketNumber, reason, orderNumber, email } = req.body;
 
-      const webhookService = new webhookModule.WebhookService(webhookConfig);
-      const success = await webhookService.testWebhook();
-
-      const response: ApiResponse = createSuccessResponse(
-        { success, config: webhookConfig },
-        success ? 'Webhook test successful' : 'Webhook test failed'
-      );
-      
-      res.status(success ? HTTP_STATUS.OK : HTTP_STATUS.BAD_REQUEST).json(response);
-
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  /**
-   * Get webhook configuration
-   */
-  getWebhookConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const config = {
-        url: process.env.WEBHOOK_URL || '',
-        events: ['tracking.status_change', 'order.shipped', 'order.delivered', 'order.cancelled'],
-        retryAttempts: 3,
-        timeout: 10000,
-        enabled: !!(process.env.WEBHOOK_URL && process.env.WEBHOOK_SECRET)
-      };
-
-      const response: ApiResponse = createSuccessResponse(config);
-      res.status(HTTP_STATUS.OK).json(response);
-
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  /**
-   * Get audit trail for an order
-   */
-  getOrderAuditTrail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { orderNumber } = req.params;
-      const { limit = 50 } = req.query;
-
-      if (!orderNumber) {
-        const response: ApiResponse = createErrorResponse('Order number is required');
+      // Validation - require either docketNumber OR orderNumber+email
+      if (!reason || (!docketNumber && !(orderNumber && email))) {
+        const response: ApiResponse = createErrorResponse(
+          'Reason is required, and either docket number OR order number with email must be provided'
+        );
         res.status(HTTP_STATUS.BAD_REQUEST).json(response);
         return;
       }
 
-      const { AuditService } = await import('../services/AuditService');
-      const auditService = new AuditService();
-      const auditTrail = await auditService.getOrderAuditTrail(orderNumber, parseInt(limit as string));
-
-      const response: ApiResponse = createSuccessResponse(auditTrail);
-      res.status(HTTP_STATUS.OK).json(response);
-
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  /**
-   * Search audit logs
-   */
-  searchAuditLogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { 
-        entityType, 
-        action, 
-        userId, 
-        orderNumber, 
-        docketNumber, 
-        startDate, 
-        endDate, 
-        limit = 100 
-      } = req.query;
-
-      const { AuditService } = await import('../services/AuditService');
-      const auditService = new AuditService();
+      // Find tracking order by docketNumber OR orderNumber+email
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      const { OrderModel } = await import('../models/orderModel');
+      const { UserModel } = await import('../models/userModel');
       
-      const filters = {
-        entityType: entityType as string,
-        action: action as string,
-        userId: userId as string,
-        orderNumber: orderNumber as string,
-        docketNumber: docketNumber as string,
-        startDate: startDate ? new Date(startDate as string) : undefined,
-        endDate: endDate ? new Date(endDate as string) : undefined,
-        limit: parseInt(limit as string)
-      };
+      let trackingOrder: any = null;
 
-      const auditLogs = await auditService.searchAuditLogs(filters);
+      if (docketNumber) {
+        // Find by docket number (order already shipped)
+        trackingOrder = await TrackingOrder.findOne({ docketNumber }).populate('order');
+      } else if (orderNumber && email) {
+        // Find by order number and email (order not yet shipped)
+        const user = await UserModel.findOne({ email: email.toLowerCase() });
+        if (!user) {
+          const response: ApiResponse = createErrorResponse('User not found with this email');
+          res.status(HTTP_STATUS.NOT_FOUND).json(response);
+          return;
+        }
 
-      const response: ApiResponse = createSuccessResponse(auditLogs);
-      res.status(HTTP_STATUS.OK).json(response);
+        const order = await OrderModel.findOne({ 
+          orderNumber: new RegExp(`^${orderNumber}$`, 'i'),
+          user: user._id 
+        });
+
+        if (!order) {
+          const response: ApiResponse = createErrorResponse('Order not found');
+          res.status(HTTP_STATUS.NOT_FOUND).json(response);
+          return;
+        }
+
+        trackingOrder = await TrackingOrder.findOne({ order: order._id }).populate('order');
+      }
+      
+      if (!trackingOrder) {
+        const response: ApiResponse = createErrorResponse(
+          'Order not found. Please check your order details.'
+        );
+        res.status(HTTP_STATUS.NOT_FOUND).json(response);
+        return;
+      }
+
+      // Check 1: Order must NOT be delivered
+      if (trackingOrder.status === OrderStatus.DELIVERED) {
+        const response: ApiResponse = createErrorResponse(
+          'Cannot cancel delivered orders. This order has already been delivered.'
+        );
+        res.status(HTTP_STATUS.FORBIDDEN).json(response);
+        return;
+      }
+
+      // Check 2: Order must NOT be already cancelled
+      if (trackingOrder.status === OrderStatus.CANCELLED) {
+        const response: ApiResponse = createErrorResponse(
+          'This order has already been cancelled.'
+        );
+        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        return;
+      }
+
+      // Check 3: Only 'normal' orders can be cancelled (not 'customized')
+      if (trackingOrder.order) {
+        const order = trackingOrder.order as any;
+        if (order.orderType === 'customized') {
+          const response: ApiResponse = createErrorResponse(
+            'Cannot cancel customized orders. Customized products (Build Your Own, Upload Your Own, Engraved) cannot be cancelled once placed.'
+          );
+          res.status(HTTP_STATUS.FORBIDDEN).json(response);
+          return;
+        }
+      }
+
+      // Cancel the shipment
+      let success = true;
+      
+      // If order has docket number (already shipped), call Sequel247 API
+      if (trackingOrder.docketNumber) {
+        console.log(`📞 Calling Sequel247 API to cancel docket: ${trackingOrder.docketNumber}`);
+        success = await this.trackingService.cancelShipment(trackingOrder.docketNumber, reason);
+        
+        if (!success) {
+          const response: ApiResponse = createErrorResponse(
+            'Failed to cancel shipment with courier. Please contact support.'
+          );
+          res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(response);
+          return;
+        }
+      } else {
+        // Order not yet shipped - no need to call courier API
+        console.log(`✅ Order not yet shipped (no docket). Cancelling in database only.`);
+      }
+
+      // Update the tracking order status in database
+      try {
+        trackingOrder.status = OrderStatus.CANCELLED;
+        trackingOrder.addTrackingEvent(
+          OrderStatus.CANCELLED,
+          trackingOrder.docketNumber 
+            ? `Shipment cancelled with courier: ${reason}` 
+            : `Order cancelled before shipment: ${reason}`
+        );
+        await trackingOrder.save();
+
+        // Sync with main order model
+        await this.trackingService.syncOrderStatus(trackingOrder, trackingOrder.status);
+
+        const response: ApiResponse = createSuccessResponse(
+          { cancelled: true, orderNumber: trackingOrder.order?.orderNumber || orderNumber },
+          trackingOrder.docketNumber 
+            ? 'Shipment cancelled successfully' 
+            : 'Order cancelled successfully'
+        );
+        res.status(HTTP_STATUS.OK).json(response);
+      } catch (dbError) {
+        console.error('❌ Failed to update tracking status in database:', dbError);
+        const response: ApiResponse = createErrorResponse(
+          'Failed to cancel order. Please try again or contact support.'
+        );
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(response);
+      }
 
     } catch (error) {
+      logError(error as Error, 'cancelShipment');
       next(error);
     }
   };
 
   /**
-   * Get audit statistics
+   * Get all orders for the logged-in user
+   * Protected route - uses direct userId reference in TrackingOrder and populates Order data
    */
-  getAuditStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getAllTestOrders = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { AuditService } = await import('../services/AuditService');
-      const auditService = new AuditService();
-      const stats = await auditService.getAuditStats();
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      
+      // Get user from request (set by authenticateToken middleware)
+      const user = (req as any).user;
+      if (!user || !user._id) {
+        console.error('❌ NO USER IN REQUEST!');
+        const response: ApiResponse = createErrorResponse('User not authenticated');
+        res.status(HTTP_STATUS.UNAUTHORIZED).json(response);
+        return;
+      }
 
-      const response: ApiResponse = createSuccessResponse(stats);
+      console.log('\n=================================================');
+      console.log('🔍 GET USER ORDERS - PROTECTED ROUTE');
+      console.log('=================================================');
+      console.log('📧 Authenticated User:', user.email);
+      console.log('🆔 User ID:', user._id);
+      console.log('👤 User Name:', user.firstName || user.name);
+      console.log('=================================================\n');
+      
+      // Query TrackingOrder and populate Order data
+      console.log('📊 Fetching tracking orders with populated order data...');
+      const trackingOrders = await TrackingOrder.find({ userId: user._id })
+        .populate({
+          path: 'order',
+          select: 'orderNumber orderType items totalAmount amount shippingAddress billingInfo createdAt'
+        })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
+
+      console.log('✅ QUERY RESULTS:');
+      console.log(`   Total Tracking Orders Found: ${trackingOrders.length}`);
+      console.log('');
+      
+      // Log each order's details
+      if (trackingOrders.length > 0) {
+        console.log('📦 TRACKING ORDER DETAILS:');
+        trackingOrders.forEach((tracking: any, index: number) => {
+          const order = tracking.order;
+          console.log(`   ${index + 1}. Order: ${order?.orderNumber}`);
+          console.log(`      User ID: ${tracking.userId}`);
+          console.log(`      Type: ${order?.orderType || 'normal'}`);
+          console.log(`      Tracking Status: ${tracking.status}`);
+          console.log(`      Docket: ${tracking.docketNumber || 'Not assigned'}`);
+        });
+        
+        // Verify all orders belong to the authenticated user
+        const wrongUserOrders = trackingOrders.filter((o: any) => o.userId?.toString() !== user._id.toString());
+        if (wrongUserOrders.length > 0) {
+          console.log('\n❌ ERROR: Found orders from other users!');
+        } else {
+          console.log('\n✅ USER ISOLATION VERIFIED: All orders belong to userId:', user._id);
+        }
+      } else {
+        console.log('⚠️  NO TRACKING ORDERS FOUND for user:', user.email);
+      }
+      console.log('\n=================================================\n');
+
+      // Format the response by combining tracking and order data
+      const formattedOrders = trackingOrders.map((tracking: any) => {
+        const order = tracking.order;
+        return {
+          orderNumber: order?.orderNumber || 'N/A',
+          email: user.email, // From authenticated user
+          customerName: `${user.firstName || user.name || ''} ${user.lastName || ''}`.trim(), // From authenticated user
+          status: tracking.status, // From TrackingOrder
+          orderType: order?.orderType || 'normal', // From Order
+          amount: order?.totalAmount || order?.amount || 0, // From Order
+          productName: order?.items && order.items.length > 0 ? order.items[0].productName || 'Product' : 'Product', // From Order.items
+          docketNumber: tracking.docketNumber, // From TrackingOrder
+          createdAt: tracking.createdAt,
+          updatedAt: tracking.updatedAt
+        };
+      });
+
+      const response: ApiResponse = createSuccessResponse(
+        formattedOrders,
+        `Found ${formattedOrders.length} orders for your account`
+      );
       res.status(HTTP_STATUS.OK).json(response);
 
     } catch (error) {
+      logError(error as Error, 'getAllTestOrders');
+      next(error);
+    }
+  };
+
+  /**
+   * Download Proof of Delivery (POD) for delivered orders
+   */
+  downloadProofOfDelivery = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { orderNumber, docketNumber, email } = req.body;
+
+      // Validate required fields
+      if (!orderNumber || !docketNumber || !email) {
+        const response: ApiResponse = createErrorResponse(
+          'Order number, docket number, and email are required'
+        );
+        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        return;
+      }
+
+      // Find the order
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      const trackingOrder = await TrackingOrder.findOne({ docketNumber }).populate('order');
+
+      if (!trackingOrder) {
+        const response: ApiResponse = createErrorResponse(
+          'Order not found'
+        );
+        res.status(HTTP_STATUS.NOT_FOUND).json(response);
+        return;
+      }
+
+      // Check if order is delivered
+      if (trackingOrder.status !== OrderStatus.DELIVERED) {
+        const response: ApiResponse = createErrorResponse(
+          'Proof of Delivery is only available for delivered orders'
+        );
+        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        return;
+      }
+
+      // Check if POD link is already cached
+      if (trackingOrder.podLink) {
+        const response: ApiResponse = createSuccessResponse(
+          { link: trackingOrder.podLink },
+          'POD retrieved from cache'
+        );
+        res.status(HTTP_STATUS.OK).json(response);
+        return;
+      }
+
+      // Get delivery date
+      const deliveryDate = trackingOrder.deliveredAt 
+        ? new Date(trackingOrder.deliveredAt).toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0];
+
+      // Fetch POD from Sequel247 (or set to null if not available)
+      const podLink = await this.trackingService.downloadPOD(
+        [docketNumber],
+        deliveryDate,
+        deliveryDate
+      );
+
+      if (podLink) {
+        // Cache the POD link in database
+        trackingOrder.podLink = podLink;
+        await trackingOrder.save();
+
+        const response: ApiResponse = createSuccessResponse(
+          { link: podLink },
+          'Proof of Delivery is ready for download'
+        );
+        res.status(HTTP_STATUS.OK).json(response);
+      } else {
+        const response: ApiResponse = createErrorResponse(
+          'Proof of Delivery is being processed. Please try again in 1-2 hours.'
+        );
+        res.status(HTTP_STATUS.NOT_FOUND).json(response);
+      }
+
+    } catch (error) {
+      logError(error as Error, 'downloadProofOfDelivery');
       next(error);
     }
   };

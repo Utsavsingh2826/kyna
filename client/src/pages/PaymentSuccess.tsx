@@ -202,13 +202,13 @@ const PaymentSuccess: React.FC = () => {
             {/* Action Buttons */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               {isSuccess ? (
-                <>
-                  <Link to="/profile">
-                    <Button className="bg-[#328F94] hover:bg-[#328F94]/90 flex items-center gap-2">
-                      View Your Orders
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
+                  <>
+                    <Link to="/track-order">
+                      <Button className="bg-[#328F94] hover:bg-[#328F94]/90 flex items-center gap-2">
+                        Track Your Order
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
                   <Link to="/">
                     <Button variant="outline">Continue Shopping</Button>
                   </Link>

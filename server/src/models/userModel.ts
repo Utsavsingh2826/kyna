@@ -105,6 +105,10 @@ const userSchema = new Schema<IUserInternal>({
     uppercase: true,
     trim: true
   },
+  // The code of the user who referred this user (stored at signup if present in URL)
+  referredBy: { type: String, trim: true, uppercase: true, default: null },
+  // Simple referral discount percent reserved for this user (e.g., 5 for 5%)
+  refDiscount: { type: Number, default: 0 },
   referralCount: { type: Number, default: 0 },
   totalReferralEarnings: { type: Number, default: 0 },
   

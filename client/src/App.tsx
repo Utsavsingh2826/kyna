@@ -59,6 +59,7 @@ import BuildYourJewelleryBracelets from "./pages/Build_yr_own/BuildYourJewellery
 import BuildYourJewelleryBands from "./pages/Build_yr_own/BuildYourJewelleryBands";
 import BuildYourJewelleryEarrings from "./pages/Build_yr_own/BuildYourJewelleryEarings";
 import BuildYourJewelleryRings from "./pages/Build_yr_own/BuildYourJewelleryRings";
+import TrackOrderPage from "./pages/TrackOrderPage";
 import Giftings from "./pages/Gifting/Giftings";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
@@ -310,8 +311,9 @@ function App() {
             element={<BuildYourJewelleryEarrings />}
           />
           <Route path="/about" element={<AboutPage />} />
-              <Route path="/payment-success" element={<PaymentSuccess />} />
-              <Route path="/payment-failed" element={<PaymentFailed />} />
+          <Route path="/track-order" element={<TrackOrderPage />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-failed" element={<PaymentFailed />} />
         </Routes>
 
         <Footer />

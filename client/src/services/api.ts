@@ -257,6 +257,20 @@ class ApiService {
     });
   }
 
+  // Redeem referral promo (cart flow) - supports passing either referFrdId or public code
+  async redeemReferralPromo(codeOrId: string) {
+    return this.makeRequest('/referrals/promos/redeem', {
+      method: 'POST',
+      body: JSON.stringify({ referFrdId: codeOrId, code: codeOrId }),
+    });
+  }
+
+  async applySimpleReferral() {
+    return this.makeRequest('/referrals/apply-simple', {
+      method: 'POST',
+    });
+  }
+
   async validateReferralCode(code: string) {
     return this.makeRequest("/referral-code/validate", {
       method: "POST",
@@ -348,14 +362,6 @@ class ApiService {
   async copyBillingToShipping() {
     return this.makeRequest("/address/copy-billing-to-shipping", {
       method: "POST",
-    });
-  }
-
-  // Order management methods
-  async createOrder(paymentMethod: string, billingAddress?: any, shippingAddress?: any) {
-    return this.makeRequest("/orders", {
-      method: "POST",
-      body: JSON.stringify({ paymentMethod, billingAddress, shippingAddress }),
     });
   }
 }

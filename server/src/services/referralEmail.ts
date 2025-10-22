@@ -24,7 +24,7 @@ export const sendReferralInvitation = async (
     const transporter = createTransporter();
     
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const referralLink = `${baseUrl}/refer?code=${referral.referFrdId}`;
+    const referralLink = `${baseUrl}/signup?referral=${referrer.referralCode}`;
     
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
@@ -74,15 +74,16 @@ export const sendReferralInvitation = async (
               </div>
               
               <div style="text-align: center;">
-                <a href="${referralLink}" class="cta-button">Join Kyna Jewels Now</a>
+                <a href="${referralLink}" class="cta-button">Sign Up & Get Rewards</a>
               </div>
               
-              <p><strong>How to use your referral code:</strong></p>
+              <p><strong>How to get your rewards:</strong></p>
               <ol>
                 <li>Click the button above to visit our website</li>
-                <li>Create your account</li>
-                <li>Enter the referral code during checkout</li>
-                <li>Enjoy your discount and start earning rewards!</li>
+                <li>You'll be redirected to our signup page</li>
+                <li>Create your account (referral code is automatically applied)</li>
+                <li>Verify your email with OTP</li>
+                <li>Both you and ${referrer.firstName} get ₹100 rewards automatically!</li>
               </ol>
               
               <p><em>This invitation expires on ${new Date(referral.expiresAt).toLocaleDateString()}.</em></p>
@@ -184,7 +185,7 @@ export const sendReferralReminder = async (
     const transporter = createTransporter();
     
     const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const referralLink = `${baseUrl}/refer?code=${referral.referFrdId}`;
+    const referralLink = `${baseUrl}/signup?referral=${referrer.referralCode}`;
     
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
@@ -239,15 +240,16 @@ export const sendReferralReminder = async (
               </div>
               
               <div style="text-align: center;">
-                <a href="${referralLink}" class="cta-button">Claim Your Offer Now</a>
+                <a href="${referralLink}" class="cta-button">Sign Up & Get Rewards</a>
               </div>
               
-              <p><strong>How to use your referral code:</strong></p>
+              <p><strong>How to get your rewards:</strong></p>
               <ol>
                 <li>Click the button above to visit our website</li>
-                <li>Create your account</li>
-                <li>Enter the referral code during checkout</li>
-                <li>Enjoy your discount and start earning rewards!</li>
+                <li>You'll be redirected to our signup page</li>
+                <li>Create your account (referral code is automatically applied)</li>
+                <li>Verify your email with OTP</li>
+                <li>Both you and ${referrer.firstName} get ₹100 rewards automatically!</li>
               </ol>
               
               <p><em>This is your final reminder - don't let this opportunity slip away!</em></p>

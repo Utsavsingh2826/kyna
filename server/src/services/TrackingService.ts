@@ -1,22 +1,12 @@
 import { TrackingOrder } from '../models/TrackingOrder';
-import { Sequel247Service } from './Sequel247Service';
-import { OrderModel } from '../models/orderModel';
-import { UserModel } from '../models/userModel';
-import { NotificationService } from './NotificationService';
-import { WebhookService, WebhookConfig } from './WebhookService';
-import { AuditService, AuditContext } from './AuditService';
 import { 
   TrackingRequest, 
-  TrackingResponse, 
   OrderStatus, 
-  TrackingStep,
-  AppError,
   NotFoundError
 } from '../types/tracking';
 import { 
   ORDER_STATUS_MAPPING, 
-  ERROR_MESSAGES, 
-  SUCCESS_MESSAGES 
+  ERROR_MESSAGES
 } from '../constants/tracking';
 import { 
   validateOrderNumber, 
@@ -25,59 +15,38 @@ import {
   logError,
   logInfo
 } from '../utils/tracking';
-import { DataValidator, validateAndSanitize } from '../utils/validation';
-import { RetryService, createRetryService, RETRY_CONFIGS, RetryableOperation } from './RetryService';
 
 export class TrackingService {
-  private sequelService: Sequel247Service;
-  private notificationService: NotificationService;
-  private webhookService?: WebhookService;
-  private auditService: AuditService;
-  private retryService: RetryService;
-
-  constructor(sequelService: Sequel247Service, webhookConfig?: WebhookConfig) {
-    this.sequelService = sequelService;
-    this.notificationService = new NotificationService();
-    this.auditService = new AuditService();
-    this.retryService = createRetryService(RETRY_CONFIGS.SEQUEL247_API);
-    
-    if (webhookConfig) {
-      this.webhookService = new WebhookService(webhookConfig);
-    }
-  }
+  constructor() {}
 
   /**
    * Track an order by order number and email
    */
-  async trackOrder(request: TrackingRequest): Promise<TrackingResponse> {
+  async trackOrder(request: TrackingRequest): Promise<any> {
     try {
-      // Validate and sanitize input
-      const validationResult = validateAndSanitize(request, DataValidator.validateTrackingRequest);
-      if (!validationResult.isValid) {
-        throw createValidationError('validation', validationResult.errors.join(', '));
+      // Validate input
+      if (!validateOrderNumber(request.orderNumber)) {
+        throw createValidationError('orderNumber', ERROR_MESSAGES.INVALID_ORDER_NUMBER);
       }
 
-      const sanitizedRequest = validationResult.sanitizedData;
+      if (!validateEmail(request.email)) {
+        throw createValidationError('email', ERROR_MESSAGES.INVALID_EMAIL);
+      }
 
-      // Find order in database
-      const order = await TrackingOrder.findByOrderNumberAndEmail(
-        sanitizedRequest.orderNumber, 
-        sanitizedRequest.email
+      // Find order in database (already populated by findByOrderNumberAndEmail)
+      const trackingOrder = await TrackingOrder.findByOrderNumberAndEmail(
+        request.orderNumber, 
+        request.email
       );
 
-      if (!order) {
+      if (!trackingOrder) {
         throw new NotFoundError(ERROR_MESSAGES.ORDER_NOT_FOUND);
       }
 
-      // Update tracking from Sequel247 if docket number exists
-      if (order.docketNumber) {
-        await this.updateTrackingFromSequel(order);
-      }
+      // Build tracking response (order is already populated)
+      const trackingResponse = this.buildTrackingResponse(trackingOrder);
 
-      // Build tracking response
-      const trackingResponse = this.buildTrackingResponse(order);
-
-      logInfo(`Order ${sanitizedRequest.orderNumber} tracked successfully`, 'TrackingService');
+      logInfo(`Order ${request.orderNumber} tracked successfully`, 'TrackingService');
       return trackingResponse;
 
     } catch (error) {
@@ -105,58 +74,6 @@ export class TrackingService {
   }
 
   /**
-   * Update order tracking from Sequel247
-   */
-  async updateTrackingFromSequel(order: any): Promise<void> {
-    try {
-      if (!order.docketNumber) {
-        return;
-      }
-
-      logInfo(`Updating tracking for docket ${order.docketNumber}`, 'TrackingService');
-
-      // Create retryable operation for Sequel247 API call
-      const retryableOperation: RetryableOperation<any> = {
-        operation: async () => {
-          return await this.sequelService.trackShipment(order.docketNumber);
-        },
-        operationName: `trackShipment-${order.docketNumber}`,
-        context: { orderNumber: order.orderNumber, docketNumber: order.docketNumber }
-      };
-
-      const sequelResponse = await this.retryService.executeWithRetry(retryableOperation);
-      
-      if (sequelResponse.data) {
-        order.updateFromSequelTracking(sequelResponse.data);
-        await order.save();
-        
-        logInfo(`Tracking updated for order ${order.orderNumber}`, 'TrackingService');
-      }
-
-    } catch (error) {
-      logError(error as Error, 'updateTrackingFromSequel');
-      // Don't throw error here as we still want to return cached data
-    }
-  }
-
-  /**
-   * Create a new order (for testing purposes)
-   */
-  async createOrder(orderData: Partial<any>): Promise<any> {
-    try {
-      const order = new TrackingOrder(orderData);
-      await order.save();
-      
-      logInfo(`Order ${order.orderNumber} created`, 'TrackingService');
-      return order;
-
-    } catch (error) {
-      logError(error as Error, 'createOrder');
-      throw error;
-    }
-  }
-
-  /**
    * Update order status
    */
   async updateOrderStatus(
@@ -166,7 +83,7 @@ export class TrackingService {
     location?: string
   ): Promise<any> {
     try {
-      const order = await TrackingOrder.findOne({ orderNumber: orderNumber.toUpperCase() });
+      const order = await TrackingOrder.findOne({ orderNumber: orderNumber.toUpperCase() }).populate('order');
       
       if (!order) {
         throw new NotFoundError(ERROR_MESSAGES.ORDER_NOT_FOUND);
@@ -192,86 +109,73 @@ export class TrackingService {
   /**
    * Build tracking response with progress steps
    */
-  private buildTrackingResponse(order: any): TrackingResponse {
-    const steps = this.buildTrackingSteps(order);
-    const currentStatus = order.status;
-    const progress = this.calculateProgress(currentStatus);
-
-    return {
-      order: order.toObject(),
-      tracking: {
-        currentStatus,
-        progress,
-        steps,
-        estimatedDelivery: order.estimatedDelivery
+  private buildTrackingResponse(trackingOrder: any): any {
+    const trackingObj = trackingOrder.toObject();
+    
+    // Get data from TrackingOrder and populated order reference
+    const order: any = trackingObj.order;
+    
+    // Get orderType directly from TrackingOrder (fallback to order if not present)
+    const orderType = trackingObj.orderType || order?.orderType || 'normal';
+    const orderNumber = order?.orderNumber || 'N/A';
+    const totalAmount = order?.totalAmount || order?.amount || 0;
+    const items = order?.items || [];
+    const shippingAddress = order?.shippingAddress;
+    
+    console.log('🔍 Building Tracking Response:');
+    console.log('  Order Number:', orderNumber);
+    console.log('  Order Type from TrackingOrder:', trackingObj.orderType);
+    console.log('  Order Type from populated order:', order?.orderType);
+    console.log('  Final Order Type:', orderType);
+    console.log('  Status:', trackingObj.status);
+    
+    // Get user email - handle both populated and unpopulated scenarios
+    let customerEmail = '';
+    if (order?.user) {
+      if (typeof order.user === 'object' && order.user.email) {
+        customerEmail = order.user.email;
       }
-    };
-  }
-
-  /**
-   * Build tracking steps for UI display
-   */
-  private buildTrackingSteps(order: any): TrackingStep[] {
-    const allSteps: OrderStatus[] = [
-      OrderStatus.ORDER_PLACED,
-      OrderStatus.PROCESSING,
-      OrderStatus.PACKAGING,
-      OrderStatus.ON_THE_ROAD,
-      OrderStatus.DELIVERED
-    ];
-
-    const currentStatusIndex = allSteps.indexOf(order.status);
-    const completedStatuses = allSteps.slice(0, currentStatusIndex + 1);
-
-    return allSteps.map((status, index) => {
-      const isCompleted = completedStatuses.includes(status);
-      const isActive = status === order.status;
-      const statusInfo = ORDER_STATUS_MAPPING[status];
-      
-      // Find the most recent tracking event for this status
-      const trackingEvent = order.trackingHistory
-        .filter((event: any) => event.status === status)
-        .sort((a: any, b: any) => b.timestamp.getTime() - a.timestamp.getTime())[0];
-
-      return {
-        status,
-        title: statusInfo.title,
-        description: trackingEvent?.description || statusInfo.description,
-        completed: isCompleted,
-        active: isActive,
-        timestamp: trackingEvent?.timestamp,
-        location: trackingEvent?.location
-      };
-    });
-  }
-
-  /**
-   * Calculate progress percentage
-   */
-  private calculateProgress(status: OrderStatus): number {
-    const statusProgressMap: Record<OrderStatus, number> = {
-      [OrderStatus.ORDER_PLACED]: 20,
-      [OrderStatus.PROCESSING]: 40,
-      [OrderStatus.PACKAGING]: 60,
-      [OrderStatus.IN_TRANSIT]: 70,
-      [OrderStatus.ON_THE_ROAD]: 80,
-      [OrderStatus.DELIVERED]: 100,
-      [OrderStatus.CANCELLED]: 0
-    };
-
-    return statusProgressMap[status] || 0;
-  }
-
-  /**
-   * Validate tracking request
-   */
-  private validateTrackingRequest(request: TrackingRequest): void {
-    if (!request.orderNumber || !validateOrderNumber(request.orderNumber)) {
-      throw createValidationError('orderNumber', ERROR_MESSAGES.INVALID_ORDER_NUMBER);
+    }
+    
+    // Fallback: get from billingInfo if available (for PaymentOrder)
+    if (!customerEmail && order?.billingInfo?.email) {
+      customerEmail = order.billingInfo.email;
     }
 
-    if (!request.email || !validateEmail(request.email)) {
-      throw createValidationError('email', ERROR_MESSAGES.INVALID_EMAIL);
+    // Return data in the format expected by frontend
+    const response = {
+      orderNumber: orderNumber,
+      customerEmail: customerEmail,
+      status: trackingObj.status,
+      orderType: orderType, // ⭐ FROM POPULATED ORDER REFERENCE
+      estimatedDelivery: trackingObj.estimatedDelivery ? new Date(trackingObj.estimatedDelivery).toISOString() : undefined,
+      docketNumber: trackingObj.docketNumber,
+      shippingAddress: shippingAddress,
+      trackingHistory: trackingObj.trackingHistory || [],
+      items: items,
+      totalAmount: totalAmount,
+      updatedAt: trackingObj.updatedAt ? new Date(trackingObj.updatedAt).toISOString() : new Date().toISOString()
+    };
+    
+    console.log('  📤 Sending Order Type to Frontend:', response.orderType);
+    
+    return response;
+  }
+
+  /**
+   * Create a new order (for testing purposes)
+   */
+  async createOrder(orderData: Partial<any>): Promise<any> {
+    try {
+      const order = new TrackingOrder(orderData);
+      await order.save();
+      
+      logInfo(`Order ${order._id} created`, 'TrackingService');
+      return order;
+
+    } catch (error) {
+      logError(error as Error, 'createOrder');
+      throw error;
     }
   }
 
@@ -311,7 +215,8 @@ export class TrackingService {
 
       const recentOrders = await TrackingOrder.find()
         .sort({ createdAt: -1 })
-        .limit(10);
+        .limit(10)
+        .populate('order');
 
       return {
         totalOrders,
@@ -326,167 +231,92 @@ export class TrackingService {
   }
 
   /**
-   * Create tracking record from order when shipped
+   * Cancel shipment
    */
-  async createTrackingFromOrder(orderId: string, docketNumber: string): Promise<any> {
+  async cancelShipment(docketNumber: string, reason: string): Promise<boolean> {
     try {
-      // Validate docket number
-      const docketValidation = DataValidator.validateDocketNumber(docketNumber);
-      if (!docketValidation.isValid) {
-        throw createValidationError('docketNumber', docketValidation.errors.join(', '));
-      }
-
-      const order = await OrderModel.findById(orderId).populate('user');
-      if (!order) {
-        throw new NotFoundError('Order not found');
-      }
-
-      // Validate order number
-      const orderNumberValidation = DataValidator.validateOrderNumber(order.orderNumber);
-      if (!orderNumberValidation.isValid) {
-        throw createValidationError('orderNumber', orderNumberValidation.errors.join(', '));
-      }
-
-      // Check if tracking record already exists
-      const existingTracking = await TrackingOrder.findOne({ 
-        orderNumber: orderNumberValidation.sanitizedData
-      });
+      // In a real implementation, this would call Sequel247 API
+      // For now, just update the database
+      const trackingOrder = await TrackingOrder.findOne({ docketNumber });
       
-      if (existingTracking) {
-        // Update existing tracking record with docket number
-        existingTracking.docketNumber = docketValidation.sanitizedData;
-        await existingTracking.save();
-        logInfo(`Updated tracking record for order ${orderNumberValidation.sanitizedData} with docket ${docketValidation.sanitizedData}`, 'TrackingService');
-        return existingTracking;
+      if (!trackingOrder) {
+        return false;
       }
 
-      // Prepare tracking data with validation
-      const trackingData = {
-        orderNumber: orderNumberValidation.sanitizedData,
-        customerEmail: typeof order.user === 'object' && 'email' in order.user ? order.user.email : '',
-        customerName: typeof order.user === 'object' && 'firstName' in order.user ? `${order.user.firstName} ${order.user.lastName}`.trim() : '',
-        docketNumber: docketValidation.sanitizedData,
-        totalAmount: order.totalAmount,
-        status: OrderStatus.ORDER_PLACED,
-        items: order.items.map(item => ({
-          productId: item.product.toString(),
-          productName: `Product ${item.productModel}`,
-          quantity: item.quantity,
-          price: item.price,
-          image: ''
-        })),
-        shippingAddress: {
-          name: 'Home',
-          line1: order.shippingAddress.street,
-          line2: '',
-          city: order.shippingAddress.city,
-          state: order.shippingAddress.state,
-          pincode: order.shippingAddress.zipCode,
-          phone: typeof order.user === 'object' && 'phone' in order.user ? order.user.phone || '' : '',
-          email: typeof order.user === 'object' && 'email' in order.user ? order.user.email : ''
-        },
-        billingAddress: {
-          name: 'Home',
-          line1: order.shippingAddress.street,
-          line2: '',
-          city: order.shippingAddress.city,
-          state: order.shippingAddress.state,
-          pincode: order.shippingAddress.zipCode,
-          phone: typeof order.user === 'object' && 'phone' in order.user ? order.user.phone || '' : '',
-          email: typeof order.user === 'object' && 'email' in order.user ? order.user.email : ''
-        }
-      };
-
-      // Validate tracking data
-      const validationResult = DataValidator.validateTrackingOrderData(trackingData);
-      if (!validationResult.isValid) {
-        throw createValidationError('trackingData', validationResult.errors.join(', '));
-      }
-
-      // Create new tracking record with sanitized data
-      const trackingOrder = new TrackingOrder(validationResult.sanitizedData);
+      trackingOrder.status = OrderStatus.CANCELLED;
+      trackingOrder.addTrackingEvent(
+        OrderStatus.CANCELLED,
+        `Shipment cancelled: ${reason}`
+      );
+      
       await trackingOrder.save();
       
-      logInfo(`Created tracking record for order ${orderNumberValidation.sanitizedData} with docket ${docketValidation.sanitizedData}`, 'TrackingService');
-      return trackingOrder;
+      logInfo(`Shipment ${docketNumber} cancelled`, 'TrackingService');
+      return true;
 
     } catch (error) {
-      logError(error as Error, 'createTrackingFromOrder');
-      throw error;
+      logError(error as Error, 'cancelShipment');
+      return false;
+    }
+  }
+
+  /**
+   * Download Proof of Delivery
+   */
+  async downloadPOD(docketNumbers: string[], fromDate: string, toDate: string): Promise<string | null> {
+    try {
+      // In a real implementation, this would call Sequel247 API
+      // For now, return null to indicate POD not available
+      logInfo(`POD request for dockets: ${docketNumbers.join(', ')}`, 'TrackingService');
+      return null;
+
+    } catch (error) {
+      logError(error as Error, 'downloadPOD');
+      return null;
     }
   }
 
   /**
    * Sync tracking status back to original order
    */
-  async syncOrderStatus(trackingOrder: any, previousStatus?: OrderStatus, auditContext?: AuditContext): Promise<void> {
+  async syncOrderStatus(trackingOrder: any, newStatus: OrderStatus): Promise<void> {
     try {
-      const order = await OrderModel.findOne({ 
-        orderNumber: trackingOrder.orderNumber 
-      });
+      // Import order models
+      const OrderModel = require('../models/orderModel').default;
+      const PaymentOrder = require('../models/PaymentOrder').default;
+      
+      // Get the order reference
+      let order = await OrderModel.findById(trackingOrder.order);
+      
+      // If not found in regular orders, try PaymentOrder
+      if (!order) {
+        order = await PaymentOrder.findById(trackingOrder.order);
+      }
       
       if (!order) {
-        logError(new Error(`Order not found for tracking order ${trackingOrder.orderNumber}`), 'syncOrderStatus');
+        logError(new Error(`Order not found for tracking order ${trackingOrder._id}`), 'syncOrderStatus');
         return;
       }
 
-      const orderStatus = this.mapTrackingStatusToOrderStatus(trackingOrder.status);
-      const previousOrderStatus = previousStatus ? this.mapTrackingStatusToOrderStatus(previousStatus) : order.orderStatus;
+      // Map tracking status to order status
+      const orderStatus = this.mapTrackingStatusToOrderStatus(newStatus);
       
-      if (order.orderStatus !== orderStatus) {
-        const oldStatus = order.orderStatus;
-        order.orderStatus = orderStatus as any;
-        
-        // Update specific timestamps based on status
-        if (orderStatus === 'shipped' && !order.shippedAt) {
-          order.shippedAt = new Date();
-        } else if (orderStatus === 'delivered' && !order.deliveredAt) {
-          order.deliveredAt = new Date();
-        } else if (orderStatus === 'cancelled' && !order.cancelledAt) {
-          order.cancelledAt = new Date();
+      if (order.orderStatus !== orderStatus && order.status !== orderStatus) {
+        // Update order status (handle both 'orderStatus' and 'status' fields)
+        if ('orderStatus' in order) {
+          order.orderStatus = orderStatus;
+        }
+        if ('status' in order) {
+          order.status = orderStatus === 'delivered' ? 'success' : orderStatus;
         }
 
         await order.save();
-        
-        // Log audit trail for status change
-        if (auditContext) {
-          await this.auditService.logOrderStatusChange(
-            order._id.toString(),
-            order.orderNumber,
-            oldStatus,
-            orderStatus,
-            auditContext
-          );
-        }
-        
-        // Send notification for status changes
-        if (previousOrderStatus !== orderStatus) {
-          await this.notificationService.sendTrackingUpdateNotification(
-            trackingOrder, 
-            previousStatus || trackingOrder.status, 
-            trackingOrder.status
-          );
-
-          // Send webhook for status changes
-          if (this.webhookService) {
-            try {
-              await this.webhookService.sendTrackingStatusChange(
-                trackingOrder,
-                previousStatus || trackingOrder.status,
-                trackingOrder.status
-              );
-            } catch (webhookError) {
-              logError(webhookError as Error, 'sendTrackingStatusChange webhook');
-            }
-          }
-        }
-        
-        logInfo(`Synced status for order ${order.orderNumber}: ${orderStatus}`, 'TrackingService');
+        logInfo(`Synced order ${order._id} status to ${orderStatus}`, 'TrackingService');
       }
 
     } catch (error) {
       logError(error as Error, 'syncOrderStatus');
-      // Don't throw error here as we don't want to break the tracking update
+      // Don't throw - status sync is not critical
     }
   }
 
@@ -503,81 +333,7 @@ export class TrackingService {
       [OrderStatus.DELIVERED]: 'delivered',
       [OrderStatus.CANCELLED]: 'cancelled'
     };
-    
+
     return statusMap[trackingStatus] || 'pending';
-  }
-
-  /**
-   * Get user orders with tracking information
-   */
-  async getUserOrdersWithTracking(userId: string): Promise<any[]> {
-    try {
-      const orders = await OrderModel.find({ user: userId })
-        .populate('user', 'firstName lastName email phone')
-        .sort({ orderedAt: -1 });
-
-      // Add tracking info to each order
-      for (const order of orders) {
-        const tracking = await TrackingOrder.findOne({ 
-          orderNumber: order.orderNumber 
-        });
-        
-        if (tracking) {
-          order.trackingInfo = {
-            docketNumber: tracking.docketNumber,
-            status: tracking.status,
-            estimatedDelivery: tracking.estimatedDelivery?.toString(),
-            trackingHistory: tracking.trackingHistory,
-            hasTracking: true
-          };
-        } else {
-          order.trackingInfo = {
-            hasTracking: false
-          };
-        }
-      }
-
-      return orders;
-
-    } catch (error) {
-      logError(error as Error, 'getUserOrdersWithTracking');
-      throw error;
-    }
-  }
-
-  /**
-   * Get order by order number with tracking info
-   */
-  async getOrderWithTracking(orderNumber: string): Promise<any> {
-    try {
-      const order = await OrderModel.findOne({ orderNumber })
-        .populate('user', 'firstName lastName email phone');
-      
-      if (!order) {
-        throw new NotFoundError('Order not found');
-      }
-
-      const tracking = await TrackingOrder.findOne({ orderNumber });
-      
-      if (tracking) {
-        order.trackingInfo = {
-          docketNumber: tracking.docketNumber,
-          status: tracking.status,
-          estimatedDelivery: tracking.estimatedDelivery?.toString(),
-          trackingHistory: tracking.trackingHistory,
-          hasTracking: true
-        };
-      } else {
-        order.trackingInfo = {
-          hasTracking: false
-        };
-      }
-
-      return order;
-
-    } catch (error) {
-      logError(error as Error, 'getOrderWithTracking');
-      throw error;
-    }
   }
 }

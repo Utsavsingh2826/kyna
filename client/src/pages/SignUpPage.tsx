@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Mail, User, Lock } from "lucide-react";
 import apiService from "../services/api";
+import { toast } from "sonner";
 
 const SignUpPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ const SignUpPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [referralCode, setReferralCode] = useState("");
 
   const [step, setStep] = useState<"enterDetails" | "verifyOtp" | "completed">(
     "enterDetails"
@@ -22,6 +24,16 @@ const SignUpPage: React.FC = () => {
   const [otp, setOtp] = useState("");
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Handle referral code from URL
+  useEffect(() => {
+    const referralParam = searchParams.get("referral");
+    if (referralParam) {
+      setReferralCode(referralParam);
+      toast.info(`Referral code detected: ${referralParam}. You'll get rewards after signup!`);
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -52,11 +64,14 @@ const SignUpPage: React.FC = () => {
     }
 
     try {
-      const resp = await apiService.signup({
+      const payload: any = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-      });
+      };
+      if (referralCode) payload.referralCode = referralCode;
+
+      const resp = await apiService.signup(payload);
 
       if (resp.success) {
         setSuccess(
@@ -102,6 +117,33 @@ const SignUpPage: React.FC = () => {
           /* ignore storage write failures */
         }
         setStep("completed");
+        
+        // Apply referral code if present
+        if (referralCode) {
+          try {
+            // First login the user to get token
+            const loginResp = await apiService.login({
+              email: formData.email,
+              password: formData.password,
+              useCookie: true,
+            });
+            
+            if (loginResp.success) {
+              // Apply referral code
+              const referralResponse = await apiService.applyReferralCode(referralCode, 0);
+              if (referralResponse.success) {
+                const payload: any = referralResponse.data as any;
+                toast.success(`Referral code applied! You saved ₹${payload.discountAmount || 0}`);
+              } else {
+                toast.warning(`Referral code couldn't be applied: ${referralResponse.error}`);
+              }
+            }
+          } catch (error) {
+            console.error("Error applying referral code:", error);
+            toast.warning("Referral code couldn't be applied, but you can try again later.");
+          }
+        }
+        
         // Navigate to login so the user can sign in
         setTimeout(() => navigate("/login"), 800);
       } else {
@@ -150,6 +192,20 @@ const SignUpPage: React.FC = () => {
               sign in to your existing account
             </Link>
           </p>
+          
+          {/* Referral Code Indicator */}
+          {referralCode && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-center justify-center">
+                <div className="text-sm text-blue-800">
+                  🎉 Referral code detected: <span className="font-mono font-bold">{referralCode}</span>
+                </div>
+              </div>
+              <p className="text-xs text-blue-600 text-center mt-1">
+                You'll get ₹100 rewards after successful signup!
+              </p>
+            </div>
+          )}
         </div>
 
         {error && (

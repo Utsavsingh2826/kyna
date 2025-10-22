@@ -27,19 +27,20 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 // Order and Tracking Types
 export interface TrackingOrder {
   _id: string;
-  orderNumber: string;
-  customerEmail: string;
-  customerName: string;
-  totalAmount: number;
+  userId: any; // Reference to User model ObjectId
+  orderModel?: 'Order' | 'PaymentOrder'; // Model type for polymorphic reference
+  order: any; // Reference to Order or PaymentOrder model ObjectId
+  orderNumber: string; // Order number for easy querying
+  customerEmail: string; // Customer email for easy querying
   status: OrderStatus;
-  items: OrderItem[];
-  shippingAddress: Address;
-  billingAddress: Address;
-  createdAt: Date;
-  updatedAt: Date;
+  orderType: 'normal' | 'customized'; // Order type for cancellation policy
   docketNumber?: string;
   estimatedDelivery?: Date;
+  deliveredAt?: Date;
+  podLink?: string;
   trackingHistory: TrackingEvent[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface OrderItem {
@@ -128,6 +129,9 @@ export interface Sequel247TrackingResponse {
       code: string;
     }>;
   };
+  // For batch tracking API (trackMultiple)
+  successShipments?: Record<string, any>;
+  errorShipments?: Record<string, any>;
   errorInfo?: any[];
   message?: string;
 }
