@@ -128,6 +128,8 @@ export class TrackingService {
     console.log('  Order Type from populated order:', order?.orderType);
     console.log('  Final Order Type:', orderType);
     console.log('  Status:', trackingObj.status);
+    console.log('  Estimated Delivery (TrackingOrder):', trackingObj.estimatedDelivery);
+    console.log('  Estimated Delivery (Order):', order?.estimatedDelivery || order?.estimatedDeliveryDate);
     
     // Get user email - handle both populated and unpopulated scenarios
     let customerEmail = '';
@@ -143,12 +145,15 @@ export class TrackingService {
     }
 
     // Return data in the format expected by frontend
+    // Get estimatedDelivery from TrackingOrder first, fallback to Order collection
+    const estimatedDeliveryDate = trackingObj.estimatedDelivery || order?.estimatedDelivery || order?.estimatedDeliveryDate;
+    
     const response = {
       orderNumber: orderNumber,
       customerEmail: customerEmail,
       status: trackingObj.status,
       orderType: orderType, // ⭐ FROM POPULATED ORDER REFERENCE
-      estimatedDelivery: trackingObj.estimatedDelivery ? new Date(trackingObj.estimatedDelivery).toISOString() : undefined,
+      estimatedDelivery: estimatedDeliveryDate ? new Date(estimatedDeliveryDate).toISOString() : undefined,
       docketNumber: trackingObj.docketNumber,
       shippingAddress: shippingAddress,
       trackingHistory: trackingObj.trackingHistory || [],
@@ -158,6 +163,7 @@ export class TrackingService {
     };
     
     console.log('  📤 Sending Order Type to Frontend:', response.orderType);
+    console.log('  📅 Sending Estimated Delivery to Frontend:', response.estimatedDelivery);
     
     return response;
   }
