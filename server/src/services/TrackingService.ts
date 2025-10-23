@@ -159,6 +159,8 @@ export class TrackingService {
       trackingHistory: trackingObj.trackingHistory || [],
       items: items,
       totalAmount: totalAmount,
+      createdAt: order?.orderedAt || order?.createdAt || trackingObj.createdAt, // ✅ For 2-day cancellation policy
+      orderedAt: order?.orderedAt || order?.createdAt, // ✅ For 2-day cancellation policy
       updatedAt: trackingObj.updatedAt ? new Date(trackingObj.updatedAt).toISOString() : new Date().toISOString()
     };
     

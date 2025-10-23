@@ -259,16 +259,34 @@ export class TrackingController {
         return;
       }
 
-      // Check 3: Only 'normal' orders can be cancelled (not 'customized')
+      // Check 3: Order must be within 2 days of creation (NEW POLICY: All orders can be cancelled within 2 days)
       if (trackingOrder.order) {
         const order = trackingOrder.order as any;
-        if (order.orderType === 'customized') {
+        const orderCreatedAt = order.orderedAt || order.createdAt;
+        
+        if (!orderCreatedAt) {
           const response: ApiResponse = createErrorResponse(
-            'Cannot cancel customized orders. Customized products (Build Your Own, Upload Your Own, Engraved) cannot be cancelled once placed.'
+            'Cannot determine order creation date. Please contact support.'
+          );
+          res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+          return;
+        }
+
+        const currentTime = new Date();
+        const orderTime = new Date(orderCreatedAt);
+        const hoursSinceOrder = (currentTime.getTime() - orderTime.getTime()) / (1000 * 60 * 60);
+        const twoDaysInHours = 48;
+
+        if (hoursSinceOrder > twoDaysInHours) {
+          const daysSinceOrder = Math.floor(hoursSinceOrder / 24);
+          const response: ApiResponse = createErrorResponse(
+            `Cannot cancel order. Cancellation is only allowed within 2 days of order placement. This order was placed ${daysSinceOrder} days ago.`
           );
           res.status(HTTP_STATUS.FORBIDDEN).json(response);
           return;
         }
+        
+        console.log(`✅ Order within cancellation window: ${hoursSinceOrder.toFixed(1)} hours since order (${(48 - hoursSinceOrder).toFixed(1)} hours remaining)`);
       }
 
       // Cancel the shipment
