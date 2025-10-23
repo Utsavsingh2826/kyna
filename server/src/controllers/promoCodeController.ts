@@ -45,7 +45,7 @@ export const applyPromoCode = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Check if user has already used this code
+    // Check if user exists
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
@@ -54,12 +54,9 @@ export const applyPromoCode = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (user.usedPromoCodes.includes(promoCode._id)) {
-      return res.status(400).json({
-        success: false,
-        message: 'You have already used this promo code'
-      });
-    }
+    // Don't check if user has already used this code here
+    // This check should only happen when the order is created
+    // The promo code can be applied multiple times to the cart until order is placed
 
     // Check minimum purchase requirement
     if (subtotal < promoCode.minPurchase) {
@@ -72,14 +69,8 @@ export const applyPromoCode = async (req: AuthRequest, res: Response) => {
     // Calculate discount
     const discountAmount = promoCode.calculateDiscount(subtotal);
 
-    // Update database - mark promo code as used
-    user.usedPromoCodes.push(promoCode._id);
-    await user.save();
-
-    // Update promo code usage count
-    promoCode.usedBy.push(new mongoose.Types.ObjectId(userId));
-    promoCode.usedCount += 1;
-    await promoCode.save();
+    // Don't mark promo code as used yet - only mark when order is created
+    // Just return the discount info for cart display
 
     res.json({
       success: true,
@@ -90,7 +81,8 @@ export const applyPromoCode = async (req: AuthRequest, res: Response) => {
         discountValue: promoCode.discountValue,
         discountAmount,
         description: promoCode.description,
-        promoCodeId: promoCode._id
+        promoCodeId: promoCode._id,
+        isTemporary: true // Indicates this is temporary until order is placed
       }
     });
 

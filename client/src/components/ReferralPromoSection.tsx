@@ -69,9 +69,7 @@ export const ReferralPromoSection: React.FC<ReferralPromoSectionProps> = ({
     
     try {
       const response = await apiService.redeemReferralPromo(referralCode);
-
       if (response.success) {
-        // response.data should contain discountAmount, subtotal, totalAfter
         const payload: any = response.data as any;
         onReferralApplied?.({
           code: referralCode,
@@ -79,14 +77,15 @@ export const ReferralPromoSection: React.FC<ReferralPromoSectionProps> = ({
           description: 'Referral 5% off',
         });
         setReferralCode('');
-        toast.success(`Referral applied — you saved ₹${payload.discountAmount} (5%)`);
+        toast.success(`Referral code applied — you saved ₹${payload.discountAmount}`);
       } else {
         setReferralError(response.error || 'Invalid referral code');
         toast.error(response.error || 'Invalid referral code');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Failed to apply referral code', error);
       setReferralError('Failed to apply referral code');
-      toast.error('Failed to apply referral code');
+      toast.error(error?.response?.data?.message || 'Failed to apply referral code');
     } finally {
       setReferralLoading(false);
     }

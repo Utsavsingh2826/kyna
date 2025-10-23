@@ -266,49 +266,17 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left side - Form and Stats */}
               <div>
-                {/* Referral Statistics */}
-                {userReferralData && (
-                  <div className="mb-6 grid grid-cols-3 gap-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <Users className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-                      <p className="text-sm text-gray-600">Referrals</p>
-                      <p className="text-lg font-semibold text-blue-600">
-                        {userReferralData.referralCount}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <DollarSign className="h-6 w-6 mx-auto mb-2 text-green-600" />
-                      <p className="text-sm text-gray-600">Earnings</p>
-                      <p className="text-lg font-semibold text-green-600">
-                        ₹{userReferralData.totalReferralEarnings}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-purple-50 rounded-lg">
-                      <Gift className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-                      <p className="text-sm text-gray-600">Wallet</p>
-                      <p className="text-lg font-semibold text-purple-600">
-                        ₹{userReferralData.availableOffers}
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 <div className="mb-6">
-                  <h2
-                    className="text-6xl font-light mb-1"
-                    style={{ fontFamily: "KoPub Batang" }}
-                  >
-                    Give ₹{referralSettings?.referralRewardFriend || 10},
-                  </h2>
                   <h2
                     className="text-6xl font-light mb-4"
                     style={{ fontFamily: "KoPub Batang" }}
                   >
-                    Get ₹{referralSettings?.referralRewardReferrer || 10}
+                    Gift your friend 5% discount
                   </h2>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Treat your friend to ₹{referralSettings?.referralRewardFriend || 10} and get ₹{referralSettings?.referralRewardReferrer || 10} towards a future
-                    purchase after their first order of ₹1,000+.
+                    Share your referral code with friends and they'll get 5% off their first purchase. 
+                    You'll earn rewards when they make their first order.
                   </p>
                 </div>
 
@@ -436,42 +404,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
                   )}
                 </form>
 
-                {/* Recent Referrals */}
-                {referralHistory.length > 0 && (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-4">Recent Referrals</h3>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {referralHistory.slice(0, 5).map((referral) => (
-                        <div key={referral._id} className="p-3 bg-gray-50 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-sm font-medium">
-                                {referral.toEmails.join(", ")}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(referral.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              referral.status === 'accepted' 
-                                ? 'bg-green-100 text-green-800' 
-                                : referral.status === 'expired'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {referral.status}
-                            </span>
-                          </div>
-                          {referral.redeemedBy && (
-                            <p className="text-xs text-green-600 mt-1">
-                              Redeemed by: {referral.redeemedBy.firstName} {referral.redeemedBy.lastName}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Right side - Image */}

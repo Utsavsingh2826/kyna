@@ -244,11 +244,116 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       await order.save();
     }
 
+    // Handle referral/promo code usage tracking
+    try {
+      const user = await User.findById(userId);
+      if (user) {
+        // Handle referral code usage
+        if (user.referredBy && user.refDiscount > 0) {
+          const referralCodeUsed = user.referredBy; // Store before clearing
+          user.refDiscount = 0;
+          user.referredBy = null;
+          await user.save();
+          console.log('Referral discount marked as used');
+
+          const referrerUser = await User.findOne({ referralCode: referralCodeUsed });
+          if (referrerUser) {
+            const Referral = (await import('../models/referralModel')).default;
+            const referral = await Referral.findOne({
+              fromUserId: referrerUser._id,
+              toEmails: user.email,
+              status: 'pending'
+            });
+            if (referral) {
+              referral.status = 'accepted';
+              referral.redeemedBy = userId;
+              referral.redeemedAt = new Date();
+              await referral.save();
+              console.log('Referral record marked as accepted');
+            }
+          }
+        } else if (user.referredBy && user.refDiscount <= 0) {
+          console.log('User has already used their referral discount');
+        }
+
+        // Handle promo code usage - check if cart has applied promo code
+        if (cart.appliedPromoCode) {
+          const PromoCode = (await import('../models/promoCodeModel')).default;
+          const promoCode = await PromoCode.findOne({ 
+            code: cart.appliedPromoCode,
+            isActive: true 
+          });
+          
+          if (promoCode && promoCode.isValid() && promoCode.canBeUsedBy(userId)) {
+            // Mark promo code as used
+            promoCode.usedCount += 1;
+            promoCode.usedBy.push(userId);
+            await promoCode.save();
+            
+            // Add to user's used promo codes
+            user.usedPromoCodes.push(promoCode._id);
+            await user.save();
+            
+            console.log('Promo code marked as used:', cart.appliedPromoCode);
+          }
+        }
+      }
+    } catch (referralError) {
+      console.error('Error handling referral/promo tracking:', referralError);
+    }
+
     // Clear cart after successful order
     cart.items = [];
     cart.totalAmount = 0;
     await cart.save();
     console.log('Cart cleared');
+
+    // Handle referral/promo code usage tracking
+    try {
+      const user = await User.findById(userId);
+      if (user) {
+        // Handle referral code usage
+        if (user.referredBy && user.refDiscount > 0) {
+          // Store the referral code before clearing it
+          const referralCodeUsed = user.referredBy;
+          
+          // Mark referral as used since order was created
+          user.refDiscount = 0;
+          user.referredBy = null;
+          await user.save();
+          console.log('Referral discount marked as used');
+
+          // Mark referral record as accepted if it exists
+          const referrerUser = await User.findOne({ referralCode: referralCodeUsed });
+          if (referrerUser) {
+            const Referral = (await import('../models/referralModel')).default;
+            const referral = await Referral.findOne({ 
+              fromUserId: referrerUser._id, 
+              toEmails: user.email, 
+              status: 'pending' 
+            });
+            if (referral) {
+              referral.status = 'accepted';
+              referral.redeemedBy = userId;
+              referral.redeemedAt = new Date();
+              await referral.save();
+              console.log('Referral record marked as accepted');
+            }
+          }
+        } else if (user.referredBy && user.refDiscount <= 0) {
+          // User has already used their referral discount
+          console.log('User has already used their referral discount');
+        }
+
+        // Handle promo code usage - check if any promo codes were applied
+        // Note: This would need to be passed from frontend or stored in cart/session
+        // For now, we'll add a placeholder for future implementation
+        console.log('Promo code usage tracking - to be implemented based on frontend data');
+      }
+    } catch (referralError) {
+      console.error('Error handling referral tracking:', referralError);
+      // Don't fail the order if referral tracking fails
+    }
 
     // Populate order for response
     await order.populate('items.product');

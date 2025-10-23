@@ -62,7 +62,16 @@ export const signup = async (req: Request, res: Response) => {
       isVerified: false, // User must verify email before login
     };
     if (referralCode) {
-      userData.referredBy = referralCode;
+      // Validate that the referral code exists
+      const referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
+      if (!referrer) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid referral code. Please check and try again." 
+        });
+      }
+      
+      userData.referredBy = referralCode.toUpperCase();
       userData.refDiscount = 5; // reserve 5% discount for referred user
     }
 

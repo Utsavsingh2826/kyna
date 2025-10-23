@@ -266,8 +266,9 @@ class ApiService {
   }
 
   async applySimpleReferral() {
-    return this.makeRequest('/referrals/apply-simple', {
+    return this.makeRequest('/referrals/promos/redeem', {
       method: 'POST',
+      body: JSON.stringify({ code: 'SAVED' }),
     });
   }
 
