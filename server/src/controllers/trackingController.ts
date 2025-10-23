@@ -518,6 +518,138 @@ export class TrackingController {
       next(error);
     }
   };
+
+  /**
+   * Handle return order request
+   * Send email notification to admin
+   */
+  returnOrder = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { orderNumber, email, reason, hasManufacturerFault, customerName, orderAmount } = req.body;
+
+      // Validate required fields
+      if (!orderNumber || !email || !reason) {
+        const response: ApiResponse = createErrorResponse(
+          'Order number, email, and reason are required'
+        );
+        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        return;
+      }
+
+      // Find the order
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      const { UserModel } = await import('../models/userModel');
+      
+      const user = await UserModel.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        const response: ApiResponse = createErrorResponse('User not found');
+        res.status(HTTP_STATUS.NOT_FOUND).json(response);
+        return;
+      }
+
+      const trackingOrder = await TrackingOrder.findOne({ 
+        orderNumber: new RegExp(`^${orderNumber}$`, 'i')
+      }).populate('order');
+
+      if (!trackingOrder) {
+        const response: ApiResponse = createErrorResponse('Order not found');
+        res.status(HTTP_STATUS.NOT_FOUND).json(response);
+        return;
+      }
+
+      // Check if order is delivered
+      if (trackingOrder.status !== OrderStatus.DELIVERED) {
+        const response: ApiResponse = createErrorResponse(
+          'Returns are only available for delivered orders'
+        );
+        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        return;
+      }
+
+      // Send email notification to admin
+      try {
+        const nodemailer = await import('nodemailer');
+        
+        // Create transporter
+        const transporter = nodemailer.default.createTransport({
+          host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.EMAIL_PORT || '587'),
+          secure: false,
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+
+        // Email content
+        const returnCharges = hasManufacturerFault ? 0 : 1800;
+        const refundAmount = hasManufacturerFault ? orderAmount : (orderAmount - returnCharges);
+
+        const mailOptions = {
+          from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
+          to: 'addytiwari1810@gmail.com', // Admin email
+          subject: `🔄 Return Request - Order ${orderNumber}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #f97316;">Return Order Request</h2>
+              
+              <div style="background-color: #fff7ed; padding: 15px; border-left: 4px solid #f97316; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #ea580c;">Order Details</h3>
+                <p><strong>Order Number:</strong> ${orderNumber}</p>
+                <p><strong>Customer Name:</strong> ${customerName}</p>
+                <p><strong>Customer Email:</strong> ${email}</p>
+                <p><strong>Order Amount:</strong> ₹${orderAmount?.toLocaleString('en-IN') || 'N/A'}</p>
+                ${trackingOrder.docketNumber ? `<p><strong>Docket Number:</strong> ${trackingOrder.docketNumber}</p>` : ''}
+              </div>
+
+              <div style="background-color: #f0fdf4; padding: 15px; border-left: 4px solid #22c55e; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #16a34a;">Return Information</h3>
+                <p><strong>Manufacturer Fault:</strong> ${hasManufacturerFault ? 'YES ✅' : 'NO ❌'}</p>
+                <p><strong>Return Charges:</strong> ₹${returnCharges.toLocaleString('en-IN')}</p>
+                <p><strong>Refund Amount:</strong> ₹${refundAmount.toLocaleString('en-IN')}</p>
+              </div>
+
+              <div style="background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #d97706;">Return Reason</h3>
+                <p style="white-space: pre-wrap;">${reason}</p>
+              </div>
+
+              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>Action Required:</strong></p>
+                <p style="margin: 5px 0 0 0;">Please contact the customer and arrange the return pickup.</p>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+              
+              <p style="color: #6b7280; font-size: 12px;">
+                This is an automated notification from Kyna Jewels Return Management System.<br>
+                Received: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+              </p>
+            </div>
+          `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Return request email sent to admin for order ${orderNumber}`);
+      } catch (emailError) {
+        console.error('Failed to send return request email:', emailError);
+        // Don't fail the request if email fails
+      }
+
+      const response: ApiResponse = createSuccessResponse(
+        { 
+          orderNumber,
+          returnCharges: hasManufacturerFault ? 0 : 1800 
+        },
+        'Return request submitted successfully. Admin will contact you soon.'
+      );
+      res.status(HTTP_STATUS.OK).json(response);
+
+    } catch (error) {
+      logError(error as Error, 'returnOrder');
+      next(error);
+    }
+  };
 }
 
 // Error handling middleware

@@ -166,6 +166,19 @@ router.post('/download-pod', trackingRateLimit, (req, res) => {
   }
 });
 
+// Return Order endpoint
+router.post('/return-order', trackingRateLimit, (req, res) => {
+  try {
+    const controller = getController();
+    controller.returnOrder(req, res, () => {});
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      error: 'Tracking service not initialized'
+    });
+  }
+});
+
 // Development only endpoints
 if (process.env.NODE_ENV !== 'production') {
   router.post('/test/create-order', (req, res) => {
