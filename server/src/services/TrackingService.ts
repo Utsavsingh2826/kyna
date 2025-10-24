@@ -161,6 +161,7 @@ export class TrackingService {
       totalAmount: totalAmount,
       createdAt: order?.orderedAt || order?.createdAt || trackingObj.createdAt, // ✅ For 2-day cancellation policy
       orderedAt: order?.orderedAt || order?.createdAt, // ✅ For 2-day cancellation policy
+      returnRequest: trackingObj.returnRequest, // ✅ Return request info
       updatedAt: trackingObj.updatedAt ? new Date(trackingObj.updatedAt).toISOString() : new Date().toISOString()
     };
     

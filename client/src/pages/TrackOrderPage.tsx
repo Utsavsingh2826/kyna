@@ -16,6 +16,12 @@ interface TrackingData {
   docketNumber?: string;
   createdAt?: string; // ✅ For 2-day cancellation policy
   orderedAt?: string; // ✅ For 2-day cancellation policy
+  returnRequest?: {
+    requested: boolean;
+    reason: string;
+    hasManufacturerFault: boolean;
+    requestedAt: string;
+  }; // ✅ For return request notice
   shippingAddress?: {
     name: string;
     line1: string;
@@ -402,7 +408,7 @@ export default function TrackOrderPage() {
       return;
     }
 
-    if (!trackingData?.orderNumber || !trackingData?.customerEmail) {
+    if (!trackingData?.orderNumber) {
       setError("Order information is incomplete. Please try again.");
       return;
     }
@@ -413,7 +419,7 @@ export default function TrackOrderPage() {
     try {
       const response = await trackingApi.returnOrder({
         orderNumber: trackingData.orderNumber,
-        email: trackingData.customerEmail,
+        email: trackingData.customerEmail || email, // Use email from form if customerEmail not available
         reason: returnReason,
         hasManufacturerFault: hasManufacturerFault,
         customerName: trackingData.shippingAddress?.name || 'Customer',
@@ -426,8 +432,8 @@ export default function TrackOrderPage() {
         setHasManufacturerFault(false);
         alert(
           hasManufacturerFault
-            ? "Return request submitted successfully! No charges will be applied as this is a manufacturer fault. Admin will contact you soon."
-            : "Return request submitted successfully! ₹1800 return charges will be deducted. Admin will contact you soon."
+            ? "Return request submitted successfully! ✅\n\nNo charges will be applied as this is a manufacturer fault.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
+            : "Return request submitted successfully! ✅\n\n₹1,800 return charges will be deducted from your refund.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
         );
       } else {
         setError(response.error || "Failed to submit return request");

@@ -579,6 +579,9 @@ export class TrackingController {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS,
           },
+          tls: {
+            rejectUnauthorized: false // Fix for self-signed certificate error
+          },
         });
 
         // Email content
@@ -631,17 +634,75 @@ export class TrackingController {
 
         await transporter.sendMail(mailOptions);
         console.log(`✅ Return request email sent to admin for order ${orderNumber}`);
+
+        // Send confirmation email to customer
+        const customerMailOptions = {
+          from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
+          to: email,
+          subject: `Return Request Received - Order ${orderNumber}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #f97316;">Return Request Received</h2>
+              
+              <p>Dear ${customerName},</p>
+              
+              <p>We have received your return request for order <strong>${orderNumber}</strong>.</p>
+
+              <div style="background-color: #fff7ed; padding: 15px; border-left: 4px solid #f97316; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #ea580c;">Return Details</h3>
+                <p><strong>Order Number:</strong> ${orderNumber}</p>
+                <p><strong>Order Amount:</strong> ₹${orderAmount?.toLocaleString('en-IN') || 'N/A'}</p>
+                <p><strong>Return Charges:</strong> ${hasManufacturerFault ? '₹0 (Manufacturer Fault)' : '₹1,800'}</p>
+                <p><strong>Expected Refund:</strong> ₹${hasManufacturerFault ? orderAmount?.toLocaleString('en-IN') : (orderAmount - 1800).toLocaleString('en-IN')}</p>
+              </div>
+
+              <div style="background-color: #dbeafe; padding: 15px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+                <p style="margin: 0;"><strong>📧 We're on it!</strong></p>
+                <p style="margin: 5px 0 0 0;">Our team is reviewing your return request and will contact you shortly to arrange the pickup.</p>
+              </div>
+
+              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>Your Return Reason:</strong></p>
+                <p style="margin: 5px 0 0 0; white-space: pre-wrap;">${reason}</p>
+              </div>
+
+              <p>If you have any questions, please don't hesitate to contact us.</p>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+              
+              <p style="color: #6b7280; font-size: 12px;">
+                Thank you for shopping with Kyna Jewels.<br>
+                This is an automated confirmation email.<br>
+                Sent: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+              </p>
+            </div>
+          `,
+        };
+
+        await transporter.sendMail(customerMailOptions);
+        console.log(`✅ Return confirmation email sent to customer: ${email}`);
+
       } catch (emailError) {
         console.error('Failed to send return request email:', emailError);
         // Don't fail the request if email fails
       }
+
+      // Update the tracking order to mark return request
+      trackingOrder.returnRequest = {
+        requested: true,
+        reason: reason,
+        hasManufacturerFault: hasManufacturerFault || false,
+        requestedAt: new Date()
+      };
+      await trackingOrder.save();
+      console.log(`✅ Return request marked in database for order ${orderNumber}`);
 
       const response: ApiResponse = createSuccessResponse(
         { 
           orderNumber,
           returnCharges: hasManufacturerFault ? 0 : 1800 
         },
-        'Return request submitted successfully. Admin will contact you soon.'
+        'Return request submitted successfully. We have sent you a confirmation email. Our team will contact you soon.'
       );
       res.status(HTTP_STATUS.OK).json(response);
 
