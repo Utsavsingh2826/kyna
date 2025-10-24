@@ -38,6 +38,12 @@ export interface TrackingOrder {
   estimatedDelivery?: Date;
   deliveredAt?: Date;
   podLink?: string;
+  returnRequest?: {
+    requested: boolean;
+    reason: string;
+    hasManufacturerFault: boolean;
+    requestedAt: Date;
+  }; // Return request information
   trackingHistory: TrackingEvent[];
   createdAt: Date;
   updatedAt: Date;

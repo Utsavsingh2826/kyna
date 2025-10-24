@@ -73,9 +73,9 @@ const TrackingOrderSchema = new Schema<TrackingOrderDocument>({
   },
   returnRequest: {
     requested: { type: Boolean, default: false },
-    reason: { type: String },
+    reason: String,
     hasManufacturerFault: { type: Boolean, default: false },
-    requestedAt: { type: Date }
+    requestedAt: Date
   },
   trackingHistory: [TrackingEventSchema]
 }, {
