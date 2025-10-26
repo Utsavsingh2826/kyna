@@ -613,7 +613,8 @@ router.post('/verify', async (req: Request, res: Response) => {
       // Don't fail the verification if user update fails
     }
 
-    // Create TrackingOrder for this payment order
+    // Create TrackingOrder for this payment order if orderCategory is not design-your-own
+   if(paymentOrder.orderCategory !== 'design-your-own') {
     try {
       console.log('\n🔍 Creating TrackingOrder for payment order...');
       console.log('   Payment Order ID:', paymentOrder._id);
@@ -657,6 +658,7 @@ router.post('/verify', async (req: Request, res: Response) => {
       console.error('   Stack:', (trackingError as Error).stack);
       // Don't fail the verification if tracking creation fails
     }
+   }
 
     // Update the main order if it exists
     try {

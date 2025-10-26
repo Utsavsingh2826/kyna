@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ import {
 // import { Progress } from "@/components/ui/progress";
 import { X, Edit, Upload } from "lucide-react";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+import EngravingPage from "../Engrave";
+
 const steps = [
   { number: 1, title: "Inspiration Upload", active: true },
   { number: 2, title: "Customize Properties", active: false },
@@ -52,10 +54,17 @@ const diamondShapes = [
 
 const goldKarat = ["22KT", "18KT", "14KT", "10KT"];
 
-export default function BangleBuilder() {
+export default function PendantBuilder() {
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [selectedEngravingImage, setSelectedEngravingImage] = useState<string>("");
+  const [showEngravingPopup, setShowEngravingPopup] = useState(false);
+  const [engravingBlobs, setEngravingBlobs] = useState<{ blob: Blob; url: string }[]>([]);
+  const [Loading, setLoading] = useState<boolean>(false);
+  const [serviceabilityStatus, setServiceabilityStatus] = useState<'idle' | 'checking' | 'serviceable' | 'not-serviceable'>('idle');
+  const [serviceabilityMessage, setServiceabilityMessage] = useState<string>('');
   const [formData, setFormData] = useState({
+    sameAsImage: false,
     url: "",
     modification: "",
     description: "",
@@ -64,10 +73,10 @@ export default function BangleBuilder() {
     diamondColor: "Center Stone",
     metalType: "Gold",
     metalColor: "Same as Image",
-    bangleSize: "",
-    openingStyle: "",
+    pendantSize: "",
     goldKarat: "22KT",
     engraving: "",
+    userId: "",
     firstName: "",
     lastName: "",
     address: "",
@@ -79,13 +88,57 @@ export default function BangleBuilder() {
     phoneNumber: "",
   });
 
+  // Cleanup blob URLs on component unmount
+  useEffect(() => {
+    return () => {
+      engravingBlobs.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [engravingBlobs]);
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      const imageUrls = Array.from(files).map((file) =>
-        URL.createObjectURL(file)
-      );
-      setUploadedImages([...uploadedImages, ...imageUrls]);
+      const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      const incoming = Array.from(files);
+
+      // Filter valid type/size
+      const validFiles = incoming.filter((file) => {
+        const isValidType = allowed.includes(file.type);
+        const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB
+        if (!isValidType) {
+          alert(`File ${file.name} is not a supported image type.`);
+        }
+        if (!isValidSize) {
+          alert(`File ${file.name} exceeds 5MB.`);
+        }
+        return isValidType && isValidSize;
+      });
+
+      // Limit total images to max 5
+      const maxAllowed = 5;
+      const availableSlots = Math.max(0, maxAllowed - uploadedImages.length);
+      if (availableSlots === 0) {
+        alert(`You can upload a maximum of ${maxAllowed} images.`);
+        return;
+      }
+
+      const filesToAdd = validFiles.slice(0, availableSlots);
+      if (validFiles.length > filesToAdd.length) {
+        alert(`Only ${availableSlots} more image(s) can be added. Extra files were skipped.`);
+      }
+
+      const imageUrls = filesToAdd.map((file) => URL.createObjectURL(file));
+
+      // Use functional update to avoid stale state and ensure the total never exceeds maxAllowed
+      setUploadedImages((prev) => {
+        if (prev.length >= maxAllowed) return prev.slice(0, maxAllowed);
+        const merged = [...prev, ...imageUrls];
+        return merged.slice(0, maxAllowed);
+      });
+
+      // Clear the file input value so the same files can be selected again if needed
+      const input = document.getElementById("file-upload") as HTMLInputElement | null;
+      if (input) input.value = "";
     }
   };
 
@@ -95,6 +148,218 @@ export default function BangleBuilder() {
 
   const updateSteps = (step: number) => {
     setCurrentStep(step);
+  };
+
+  // Step-aware validation to avoid requiring fields from later steps
+  const validateForStep = (targetStep: number): boolean => {
+    // Step 1 -> 2: ensure uploads + modification + description
+    if (targetStep === 2) {
+      if (uploadedImages.length < 2) {
+        alert("Please upload at least 2 images before proceeding.");
+        return false;
+      }
+
+      if (!formData.modification || formData.modification.trim().length < 15) {
+        alert("Please provide a modification description (min 15 characters).");
+        return false;
+      }
+
+      if (!formData.description || formData.description.trim() === "") {
+        alert("Please provide a description (max 100 words).");
+        return false;
+      }
+
+      const descWords = formData.description.trim().split(/\s+/).filter(Boolean).length;
+      if (descWords > 100) {
+        alert("The description field must not exceed 100 words.");
+        return false;
+      }
+
+      return true;
+    }
+
+    // Step 2 -> 3: ensure customization fields only (contact validated at payment)
+    if (targetStep === 3) {
+      // ensure step1 checks are satisfied first
+      if (!validateForStep(2)) return false;
+
+      const customizationFields: Array<keyof typeof formData> = [
+        "diamondShape",
+        "diamondSize",
+        "diamondColor",
+        "metalType",
+        "metalColor",
+        "goldKarat",
+        "pendantSize",
+      ];
+
+      for (const field of customizationFields) {
+        const value = formData[field];
+        if (typeof value === "string") {
+          if (!value || value.trim() === "") {
+            alert(`Please fill out the ${field} field.`);
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+    return true;
+  };
+
+  const handleNextStep = (step: number) => {
+    if (validateForStep(step)) setCurrentStep(step);
+  };
+
+  const handleCloseEngraving = () => {
+    setShowEngravingPopup(false);
+  };
+
+  const handleEngravingSaved = async (
+    engravingText: string,
+    engravingImageUrl?: string
+  ) => {
+    console.log("💾 Engraving saved:", { engravingText, engravingImageUrl });
+
+    // Update form data with engraving text
+    setFormData((prev) => ({ ...prev, engraving: engravingText }));
+
+    // If we received an engraved image URL (blob URL), convert it to blob and store
+    if (engravingImageUrl) {
+      try {
+        // Fetch the blob from the blob URL
+        const response = await fetch(engravingImageUrl);
+        const blob = await response.blob();
+        
+        // Store only ONE engraved blob (replace previous if exists)
+        setEngravingBlobs([{ blob, url: engravingImageUrl }]);
+        
+        // Add to uploaded images for preview (blob URL - will be converted to File later during upload)
+        setUploadedImages((prev) => {
+          // Remove any previous engraved images
+          const filtered = prev.filter(img => !engravingBlobs.some(eb => eb.url === img));
+          return [...filtered, engravingImageUrl];
+        });
+
+        console.log("🖼️ Added single engraved image (replaces any previous):", {
+          blobSize: blob.size,
+          blobType: blob.type,
+          displayUrl: engravingImageUrl,
+          willUploadWith: "other images on Request Customization"
+        });
+
+        alert("✅ Engraving created! Will be uploaded with your customization request.");
+      } catch (error) {
+        console.error("❌ Error converting engraved image to blob:", error);
+      }
+    }
+
+    // Close the modal
+    setShowEngravingPopup(false);
+  };
+
+  // Function to check serviceability using Sequel247 API
+  const checkServiceability = async (pinCode: string): Promise<boolean> => {
+    if (!pinCode || pinCode.length !== 6 || !/^\d{6}$/.test(pinCode)) {
+      setServiceabilityStatus('idle');
+      setServiceabilityMessage('');
+      return false;
+    }
+
+    try {
+      setServiceabilityStatus('checking');
+      setServiceabilityMessage('Checking serviceability...');
+      console.log("🚀 Checking serviceability for pincode:", pinCode);
+      
+      const response = await fetch("https://test.sequel247.com/api/checkServiceability", {
+        method: "POST",
+        body: JSON.stringify({
+          token: "b228a27399f07927985d57c0f7d94ce8",
+          pin_code: pinCode,
+        }),
+      });
+
+      const result = await response.json();
+      console.log("📍 Serviceability check result:", result);
+
+      // Handle API returning boolean true or string variants like 'true', 'True', '1'
+      const statusRaw = result?.status;
+      console.debug('🔎 Raw serviceability status from API:', statusRaw, typeof statusRaw);
+      const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
+      const isServiceableApi =
+        statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
+
+      if (isServiceableApi) {
+        setServiceabilityStatus('serviceable');
+        setServiceabilityMessage('✅ Great! This area is serviceable for delivery.');
+        return true;
+      } else {
+        setServiceabilityStatus('not-serviceable');
+        setServiceabilityMessage('❌ Sorry, this area is not serviceable for delivery.');
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error checking serviceability:", error);
+      setServiceabilityStatus('idle');
+      setServiceabilityMessage('⚠️ Unable to check serviceability. Please try again.');
+      return false;
+    }
+  };
+
+  const requestCustomization = async () => {
+    try {
+      setLoading(true);
+      console.log("🎨 Starting customization request process...");
+
+      // Check if zip code is provided and valid
+      if (!formData.zipCode) {
+        alert("Please enter your zip code before creating the customization request.");
+        setLoading(false);
+        return;
+      }
+
+      if (formData.zipCode.length !== 6 || !/^\d{6}$/.test(formData.zipCode)) {
+        alert("Please enter a valid 6-digit pincode.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if serviceability has been verified
+      if (serviceabilityStatus !== 'serviceable') {
+        if (serviceabilityStatus === 'not-serviceable') {
+          alert("❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.");
+          setLoading(false);
+          return;
+        } else if (serviceabilityStatus === 'checking') {
+          alert("Please wait while we check if your area is serviceable.");
+          setLoading(false);
+          return;
+        } else {
+          // Status is 'idle' - need to check serviceability
+          console.log("📍 Checking serviceability for pincode:", formData.zipCode);
+          const isServiceable = await checkServiceability(formData.zipCode);
+          
+          if (!isServiceable) {
+            alert("❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.");
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      console.log("✅ Area is serviceable, proceeding with customization request...");
+
+      // TODO: Add backend integration to create customization request
+      // This would submit the formData and engravingBlobs to your backend
+      alert("Customization request will be processed!");
+      setLoading(false);
+    } catch (error) {
+      console.error("❌ Error creating customization request:", error);
+      alert("Failed to create customization request. Please try again.");
+      setLoading(false);
+    }
   };
 
   const renderStepIndicator = () => (
@@ -211,7 +476,7 @@ export default function BangleBuilder() {
             </div>
 
             {/* URL Input */}
-            <div>
+            {/* <div>
               <p className="text-center text-sm text-muted-foreground mb-4">
                 OR
               </p>
@@ -230,16 +495,16 @@ export default function BangleBuilder() {
                   further!
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
         }
         rightColumn={
           <div className="space-y-6">
-            {/* Bangle Image Display */}
+            {/* Pendant Image Display */}
             <div className="rounded-lg p-8 flex items-center justify-center min-h-64">
               <img
-                src="/navigation/upload-your-design/bangeldisplay.png"
-                alt="Bangle preview"
+                src="/navigation/upload-your-design/pendantdisplay.jpg"
+                alt="Pendant preview"
                 className="max-w-full max-h-full object-contain"
               />
             </div>
@@ -273,7 +538,7 @@ export default function BangleBuilder() {
               />
               <p className="text-xs text-muted-foreground">0 characters.</p>
               <p className="text-xs text-muted-foreground">
-                "We want to make sure your bangle is exactly how you envision
+                "We want to make sure your pendant is exactly how you envision
                 it. Please share your thoughts on."
               </p>
               <div className="flex items-center gap-2">
@@ -281,6 +546,16 @@ export default function BangleBuilder() {
                   type="checkbox"
                   id="same-image"
                   className="rounded border-border"
+                  checked={formData.sameAsImage}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFormData((prev) => ({
+                      ...prev,
+                      sameAsImage: checked,
+                      diamondShape: checked ? "Same as Image" : prev.diamondShape || "Round",
+                      metalColor: checked ? "Same as Image" : prev.metalColor || "White Gold",
+                    }));
+                  }}
                 />
                 <label htmlFor="same-image" className="text-sm">
                   Same as Image
@@ -293,7 +568,7 @@ export default function BangleBuilder() {
 
       <div className="flex justify-end mt-8">
         <Button
-          onClick={() => updateSteps(2)}
+          onClick={() => handleNextStep(2)}
           className="px-8 bg-[#328F94] hover:bg-[#328F94]/90 text-white"
         >
           Next
@@ -312,7 +587,7 @@ export default function BangleBuilder() {
           <p>• Refine Your Design: Discover Your Perfect Diamond</p>
           <p>
             • Select Shape, Size, Color, Clarity, Quality, Metal Type, Karat,
-            Metal Color, Bangle Size, Opening Style
+            Metal Color, Pendant Size
           </p>
         </div>
       </div>
@@ -350,22 +625,28 @@ export default function BangleBuilder() {
                 Select Diamond Shape * : {formData.diamondShape}
               </h3>
               <div className="grid grid-cols-5 gap-2">
-                {diamondShapes.map((shape) => (
-                  <button
-                    key={shape.name}
-                    onClick={() =>
-                      setFormData({ ...formData, diamondShape: shape.name })
-                    }
-                    className={`aspect-square  rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${
-                      formData.diamondShape === shape.name
-                        ? "bg-[#328F94]/20"
-                        : ""
-                    }`}
-                  >
-                    <span className="text-2xl mb-1">{shape.icon}</span>
-                    {/* <span>{shape.name}</span> */}
-                  </button>
-                ))}
+                {formData.sameAsImage ? (
+                  <div className="col-span-5 p-4 rounded-lg bg-gray-50 border border-neutral-200 text-sm text-gray-600">
+                    Same as Image
+                  </div>
+                ) : (
+                  diamondShapes.map((shape) => (
+                    <button
+                      key={shape.name}
+                      onClick={() =>
+                        setFormData({ ...formData, diamondShape: shape.name })
+                      }
+                      className={`aspect-square  rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${
+                        formData.diamondShape === shape.name
+                          ? "bg-[#328F94]/20"
+                          : ""
+                      }`}
+                    >
+                      <span className="text-2xl mb-1">{shape.icon}</span>
+                      {/* <span>{shape.name}</span> */}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
@@ -477,6 +758,7 @@ export default function BangleBuilder() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, metalColor: value })
                 }
+                disabled={formData.sameAsImage}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -490,66 +772,117 @@ export default function BangleBuilder() {
               </Select>
             </div>
 
-            {/* Bangle Size */}
+            {/* Pendant Size */}
             <div>
               <label className="text-sm text-muted-foreground">
-                Bangle Size
+                Chain Length(inches)
               </label>
-              <Select
-                value={formData.bangleSize}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, bangleSize: value })
+              <Input
+                placeholder="Write Your Size"
+                value={formData.pendantSize}
+                onChange={(e) =>
+                  setFormData({ ...formData, pendantSize: e.target.value })
                 }
+              />
+              <Button
+                variant="link"
+                size="sm"
+                className="text-[#328F94] p-0 mt-1"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select bangle size" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="small">Small (2.4")</SelectItem>
-                  <SelectItem value="medium">Medium (2.6")</SelectItem>
-                  <SelectItem value="large">Large (2.8")</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Opening Style */}
-            <div>
-              <label className="text-sm text-muted-foreground">
-                Opening Style
-              </label>
-              <Select
-                value={formData.openingStyle}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, openingStyle: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select opening style" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="hinged">Hinged</SelectItem>
-                  <SelectItem value="slip-on">Slip-on</SelectItem>
-                  <SelectItem value="cuff">Cuff Style</SelectItem>
-                </SelectContent>
-              </Select>
+                Pendant Size Guide
+              </Button>
             </div>
 
             {/* Add Engraving */}
-            <Link to="/engrave-your-bangle" className="text-sm text-[#328F94]">
+            <div className="space-y-3">
               <div className="bg-[#328F94]/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-4">
                   <div className="w-6 h-6 bg-[#328F94] text-white rounded-full flex items-center justify-center text-xs font-bold">
                     +
                   </div>
                   <span className="font-medium">Add Engraving</span>
                 </div>
-                <p className="text-sm text-[#8D8A91] mb-3">
+                <p className="text-xs font-medium text-gray-700 mb-3">
+                  Select an image for engraving:
+                </p>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  {uploadedImages.map((image, index) => (
+                    <div
+                      key={index}
+                      className={`relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
+                        selectedEngravingImage === image
+                          ? "border-[#328F94] bg-[#328F94]/10"
+                          : "border-gray-200 hover:border-[#328F94]/50"
+                      }`}
+                      onClick={() => {
+                        setSelectedEngravingImage(image);
+                        console.log("🖼️ Engraving image selected:", {
+                          imageIndex: index,
+                          imageUrl: image,
+                        });
+                      }}
+                    >
+                      <img
+                        src={image}
+                        alt={`Engraving option ${index + 1}`}
+                        className="w-full h-16 object-cover"
+                      />
+                      {selectedEngravingImage === image && (
+                        <div className="absolute inset-0 bg-[#328F94]/20 flex items-center justify-center">
+                          <div className="w-4 h-4 bg-[#328F94] text-white rounded-full flex items-center justify-center text-xs">
+                            ✓
+                          </div>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-1 py-0.5">
+                        View {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  onClick={() => {
+                    if (!selectedEngravingImage) {
+                      alert("Please select an image for engraving first.");
+                      return;
+                    }
+
+                    console.log("🎨 Opening engraving popup with image:", {
+                      selectedImage: selectedEngravingImage,
+                      jewelryType: "pendant",
+                    });
+
+                    setShowEngravingPopup(true);
+                  }}
+                  className={`w-full text-sm py-2 transition-all ${
+                    selectedEngravingImage
+                      ? "bg-[#328F94] text-white hover:bg-[#328F94]/90"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                  }`}
+                  disabled={!selectedEngravingImage}
+                >
+                  {selectedEngravingImage
+                    ? "Proceed to Engraving"
+                    : "Select Image First"}
+                </Button>
+
+                {/* Current Engraving Display */}
+                {formData.engraving && (
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                    <p className="text-xs text-green-700">
+                      ✓ Engraving: <span className="font-semibold">{formData.engraving}</span>
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-sm text-[#8D8A91] mt-3">
                   Max 15 characters. We suggest 12 characters or less. More
                   characters will make the font size smaller. Engraving will
-                  appear on the inner surface of the bangle.
+                  appear on the back of the pendant.
                 </p>
               </div>
-            </Link>
+            </div>
           </div>
         }
       />
@@ -563,7 +896,7 @@ export default function BangleBuilder() {
           Back
         </Button>
         <Button
-          onClick={() => updateSteps(3)}
+          onClick={() => handleNextStep(3)}
           className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
         >
           Next
@@ -651,12 +984,8 @@ export default function BangleBuilder() {
                   <div>{formData.metalColor}</div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Bangle Size:</span>
-                  <div>{formData.bangleSize}</div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Opening Style:</span>
-                  <div>{formData.openingStyle}</div>
+                  <span className="text-muted-foreground">Pendant Size:</span>
+                  <div>{formData.pendantSize}</div>
                 </div>
               </div>
               {formData.engraving && (
@@ -675,6 +1004,19 @@ export default function BangleBuilder() {
           {/* Contact Information */}
           <div>
             <h3 className="font-medium mb-4">Contact Information</h3>
+            {/* Engraving input (uses existing engraving field) */}
+            <div className="mb-4">
+              <label className="text-sm">Engraving (optional)</label>
+              <Input
+                placeholder="Text to engrave"
+                value={formData.engraving}
+                onChange={(e) =>
+                  setFormData({ ...formData, engraving: e.target.value })
+                }
+                maxLength={30}
+              />
+              <p className="text-xs text-muted-foreground">Max 30 characters</p>
+            </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -770,9 +1112,11 @@ export default function BangleBuilder() {
                 <div>
                   <label className="text-sm">Zip Code *</label>
                   <Input
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={formData.zipCode}
                     onChange={(e) =>
-                      setFormData({ ...formData, zipCode: e.target.value })
+                      setFormData({ ...formData, zipCode: e.target.value.replace(/\D/g, "") })
                     }
                   />
                 </div>
@@ -792,9 +1136,12 @@ export default function BangleBuilder() {
               <div>
                 <label className="text-sm">Phone Number *</label>
                 <Input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={formData.phoneNumber}
                   onChange={(e) =>
-                    setFormData({ ...formData, phoneNumber: e.target.value })
+                    setFormData({ ...formData, phoneNumber: e.target.value.replace(/\D/g, "") })
                   }
                 />
               </div>
@@ -835,9 +1182,28 @@ export default function BangleBuilder() {
             </div>
           </div>
 
-          <Button className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white">
-            Make Payment →
+          <Button
+            onClick={requestCustomization}
+            className="w-full mt-3 bg-[#328F94] hover:bg-[#328F94]/90 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={Loading || !formData.zipCode || serviceabilityStatus !== 'serviceable'}
+          >
+            {Loading ? "Creating Request..." : 
+             !formData.zipCode ? "Enter Pincode First" :
+             serviceabilityStatus === 'checking' ? "Checking Area..." :
+             serviceabilityStatus === 'not-serviceable' ? "Area Not Serviceable" :
+             serviceabilityStatus !== 'serviceable' ? "Check Pincode Serviceability" :
+             "Request Customization →"}
           </Button>
+
+          {serviceabilityMessage && (
+            <p className={`text-sm mt-2 text-center ${
+              serviceabilityStatus === 'serviceable' ? 'text-green-600' :
+              serviceabilityStatus === 'not-serviceable' ? 'text-red-600' :
+              'text-blue-600'
+            }`}>
+              {serviceabilityMessage}
+            </p>
+          )}
 
           <div className="text-xs text-muted-foreground space-y-1">
             <p>Need assistance? Call us at 080-61919123</p>
@@ -866,27 +1232,40 @@ export default function BangleBuilder() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Breadcrumb */}
-      <div className="max-w-7xl mx-auto px-4 py-4">
-        <nav className="text-sm text-gray-600">
-          <Link to="/" className="hover:text-teal-600">
-            Home
-          </Link>
-          <span className="mx-2">-</span>
-          <span className="text-gray-800">Upload Your Design</span>
-          <span className="mx-2">-</span>
-          <span className="text-gray-800">Bangles</span>
-        </nav>
+    <>
+      <div className="min-h-screen bg-background">
+        {/* Breadcrumb */}
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <nav className="text-sm text-gray-600">
+            <Link to="/" className="hover:text-teal-600">
+              Home
+            </Link>
+            <span className="mx-2">-</span>
+            <span className="text-gray-800">Upload Your Design</span>
+            <span className="mx-2">-</span>
+            <span className="text-gray-800">Pendants</span>
+          </nav>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {renderStepIndicator()}
+
+          {currentStep === 1 && renderStep1()}
+          {currentStep === 2 && renderStep2()}
+          {currentStep === 3 && renderStep3()}
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {renderStepIndicator()}
-
-        {currentStep === 1 && renderStep1()}
-        {currentStep === 2 && renderStep2()}
-        {currentStep === 3 && renderStep3()}
-      </div>
-    </div>
+      {/* Engraving Modal - Outside main container for proper z-index */}
+      {showEngravingPopup && (
+        <EngravingPage
+          onClose={handleCloseEngraving}
+          selectedImage={selectedEngravingImage}
+          jewelryType="pendant"
+          userId={formData.userId}
+          onSave={handleEngravingSaved}
+        />
+      )}
+    </>
   );
 }

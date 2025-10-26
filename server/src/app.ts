@@ -34,6 +34,7 @@ import buildYourJewelryRoutes from "./routes/buildYourJewelry";
 import subProductRoutes from "./routes/subProduct";
 import blogRoutes from "./routes/blog";
 import addressRoutes from "./routes/address";
+import customizationRoutes from "./routes/customization";
 
 // Import tracking services
 import { TrackingController } from "./controllers/trackingController";
@@ -327,6 +328,7 @@ app.use("/api/build-your-jewelry", buildYourJewelryRoutes);
 app.use("/api/sub-products", subProductRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/address", addressRoutes);
+app.use("/api/customization", customizationRoutes);
 
 // Home route
 app.get("/", (req: Request, res: Response) => {

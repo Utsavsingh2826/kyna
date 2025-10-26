@@ -10,9 +10,6 @@ import {
   MessageCircle,
   Share2,
 } from "lucide-react";
-import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { useParams, Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
@@ -99,310 +96,56 @@ const sampleProduct = {
   ],
 };
 
-const GLBViewer = ({
-  modelUrl,
-  className,
-  isMain = false,
-}: {
-  modelUrl: string;
-  className?: string;
-  isMain?: boolean;
-}) => {
-  const mountRef = useRef<HTMLDivElement | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const modelRef = useRef<THREE.Group | null>(null);
-  const animationIdRef = useRef<number | null>(null);
-
+const IjewelViewer: React.FC = () => {
   useEffect(() => {
-    if (!mountRef.current) return;
+    // Create script element to load iJewel viewer SDK
+    const script = document.createElement("script");
+    script.src = "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
+    script.async = true;
 
-    const initThreeJS = () => {
-      if (!mountRef.current) return;
+    script.onload = () => {
+      const container = document.getElementById("ijewel-viewer-container");
+      if (!container) return;
 
-      // Scene setup
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf5f5f5);
-      sceneRef.current = scene;
-
-      // Camera setup
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        mountRef.current.clientWidth / mountRef.current.clientHeight,
-        0.1,
-        1000
-      );
-      camera.position.set(0, 0, 5);
-
-      // Renderer setup
-      const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true,
-      });
-      renderer.setSize(
-        mountRef.current.clientWidth,
-        mountRef.current.clientHeight
-      );
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      mountRef.current.appendChild(renderer.domElement);
-      rendererRef.current = renderer;
-
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(10, 10, 5);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-
-      const pointLight = new THREE.PointLight(0xffffff, 0.3);
-      pointLight.position.set(-10, -10, -5);
-      scene.add(pointLight);
-
-      let diamond: THREE.Mesh | null = null;
-
-      function createPlaceholderModel() {
-        const group = new THREE.Group();
-
-        // Ring band
-        const ringGeometry = new THREE.TorusGeometry(1.2, 0.15, 8, 32);
-        const ringMaterial = new THREE.MeshStandardMaterial({
-          color: 0xffd700,
-          metalness: 0.9,
-          roughness: 0.1,
-        });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.castShadow = true;
-        group.add(ring);
-
-        // Center diamond (simplified)
-        const diamondGeometry = new THREE.OctahedronGeometry(0.3);
-        const diamondMaterial = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.9,
-          roughness: 0,
-          metalness: 0,
-          reflectivity: 1,
-          clearcoat: 1,
-          clearcoatRoughness: 0,
-        });
-        diamond = new THREE.Mesh(diamondGeometry, diamondMaterial);
-        diamond.position.y = 0.2;
-        diamond.castShadow = true;
-        group.add(diamond);
-
-        // Small accent diamonds
-        for (let i = 0; i < 8; i++) {
-          const angle = (i / 8) * Math.PI * 2;
-          const smallDiamondGeometry = new THREE.OctahedronGeometry(0.08);
-          const smallDiamond = new THREE.Mesh(
-            smallDiamondGeometry,
-            diamondMaterial
-          );
-          smallDiamond.position.set(
-            Math.cos(angle) * 1.3,
-            0.1,
-            Math.sin(angle) * 1.3
-          );
-          smallDiamond.scale.set(0.7, 0.7, 0.7);
-          group.add(smallDiamond);
-        }
-
-        scene.add(group);
-        modelRef.current = group;
-      }
-
-      // Load GLB Model
-      if (modelUrl && modelUrl.endsWith(".glb")) {
-        console.log("Attempting to load GLB model:", modelUrl);
-
-        const loader = new GLTFLoader();
-
-        // Setup DRACO loader for compressed models
-        const dracoLoader = new DRACOLoader();
-        // Use CDN for DRACO decoder files
-        dracoLoader.setDecoderPath(
-          "https://www.gstatic.com/draco/versioned/decoders/1.5.6/"
-        );
-        dracoLoader.preload();
-        loader.setDRACOLoader(dracoLoader);
-
-        loader.load(
-          modelUrl,
-          (gltf) => {
-            console.log("Successfully loaded GLB model:", modelUrl, gltf);
-            const model = gltf.scene;
-
-            // Clear any existing models
-            if (modelRef.current) {
-              scene.remove(modelRef.current);
-            }
-
-            // Auto-scale the model to fit the scene
-            const box = new THREE.Box3().setFromObject(model);
-            const size = box.getSize(new THREE.Vector3()).length();
-            const center = box.getCenter(new THREE.Vector3());
-
-            // Scale the model to fit in the view
-            const scale = isMain ? 2 / size : 1.6 / size;
-            model.scale.setScalar(scale);
-
-            // Center the model
-            model.position.copy(center).multiplyScalar(-scale);
-
-            scene.add(model);
-            modelRef.current = model;
-            console.log("GLB model added to scene successfully");
-
-            // Dispose of the DRACO loader after use
-            dracoLoader.dispose();
-          },
-          (progress) => {
-            const progressPercent = (progress.loaded / progress.total) * 100;
-            console.log(
-              "Loading progress for",
-              modelUrl,
-              ":",
-              progressPercent + "%"
-            );
-          },
-          (error) => {
-            console.error("Error loading GLB model:", modelUrl, error);
-            console.log("Falling back to placeholder model");
-            dracoLoader.dispose();
-            createPlaceholderModel();
-          }
-        );
-      } else {
-        console.log("No valid GLB URL provided, using placeholder model");
-        createPlaceholderModel();
-      }
-
-      // Controls for main viewer (mouse interaction)
-      let isDragging = false;
-      let previousMousePosition = { x: 0, y: 0 };
-
-      const handleMouseDown = (event: MouseEvent) => {
-        if (!isMain) return;
-        isDragging = true;
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-        renderer.domElement.style.cursor = "grabbing";
+      // Project configuration with local GLB file path relative to public folder
+      const project = {
+        modelUrl: "/product_detail/glb.glb",
+        basePath: "",
       };
 
-      const handleMouseMove = (event: MouseEvent) => {
-        if (!isDragging || !isMain || !modelRef.current) return;
-
-        const deltaMove = {
-          x: event.clientX - previousMousePosition.x,
-          y: event.clientY - previousMousePosition.y,
-        };
-
-        const deltaRotationQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(deltaMove.y * 0.01, deltaMove.x * 0.01, 0, "XYZ")
-        );
-
-        modelRef.current.quaternion.multiplyQuaternions(
-          deltaRotationQuaternion,
-          modelRef.current.quaternion
-        );
-        previousMousePosition = { x: event.clientX, y: event.clientY };
+      // Viewer configuration options
+      const viewerOptions = {
+        showUiButtons: false,
+        showLogo: false,
+        showCard: false,
+        showSwitchNodes: false,
       };
 
-      const handleMouseUp = () => {
-        isDragging = false;
-        if (rendererRef.current) {
-          rendererRef.current.domElement.style.cursor = isMain
-            ? "grab"
-            : "pointer";
-        }
-      };
-
-      const handleWheel = (event: WheelEvent) => {
-        if (!isMain) return;
-        event.preventDefault();
-        camera.position.z += event.deltaY * 0.01;
-        camera.position.z = Math.max(2, Math.min(10, camera.position.z));
-      };
-
-      if (isMain) {
-        renderer.domElement.style.cursor = "grab";
-        renderer.domElement.addEventListener("mousedown", handleMouseDown);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
-        renderer.domElement.addEventListener("wheel", handleWheel);
-      }
-
-      // Animation loop
-      const animate = () => {
-        animationIdRef.current = requestAnimationFrame(animate);
-
-        // Auto-rotate for thumbnail
-        if (!isMain && modelRef.current) {
-          modelRef.current.rotation.y += 0.01;
-        }
-
-        // Sparkle effect for diamond
-        if (diamond) {
-          diamond.rotation.y += 0.02;
-        }
-
-        renderer.render(scene, camera);
-      };
-      animate();
-
-      // Handle resize
-      const handleResize = () => {
-        if (!mountRef.current || !camera || !renderer) return;
-        camera.aspect =
-          mountRef.current.clientWidth / mountRef.current.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(
-          mountRef.current.clientWidth,
-          mountRef.current.clientHeight
-        );
-      };
-
-      window.addEventListener("resize", handleResize);
-
-      // Store cleanup functions
-      const cleanup = () => {
-        if (animationIdRef.current) {
-          cancelAnimationFrame(animationIdRef.current);
-        }
-        if (isMain) {
-          renderer.domElement.removeEventListener("mousedown", handleMouseDown);
-          window.removeEventListener("mousemove", handleMouseMove);
-          window.removeEventListener("mouseup", handleMouseUp);
-          renderer.domElement.removeEventListener("wheel", handleWheel);
-        }
-        window.removeEventListener("resize", handleResize);
-        if (
-          mountRef.current &&
-          renderer.domElement &&
-          mountRef.current.contains(renderer.domElement)
-        ) {
-          mountRef.current.removeChild(renderer.domElement);
-        }
-        renderer.dispose();
-      };
-
-      return cleanup;
+      // Initialize the iJewel Viewer on the container element
+      new window.ijewelViewer.Viewer(container, project, viewerOptions);
     };
 
-    const cleanup = initThreeJS();
+    document.body.appendChild(script);
 
-    // Cleanup on unmount
+    // Cleanup script on unmount
     return () => {
-      if (cleanup) {
-        cleanup();
-      }
+      document.body.removeChild(script);
     };
-  }, [modelUrl, isMain]);
+  }, []);
 
-  return <div ref={mountRef} className={className} />;
+  // Adjust the style of the iJewel Viewer container to make it responsive
+  return (
+    <div
+      id="ijewel-viewer-container"
+      style={{
+        width: "100%",
+        height: "100%",
+        aspectRatio: window.innerWidth <= 767 ? "1" : "1 / 2", // Use aspect ratio 1 for mobile view
+        maxWidth: window.innerWidth <= 767 ? "100%" : "40vw", // Full width for mobile view
+        maxHeight: window.innerWidth <= 767 ? "auto" : "80vh", // Adjust height for mobile view
+      }}
+    />
+  );
 };
 
 const ProductDetail = () => {
@@ -545,13 +288,8 @@ const ProductDetail = () => {
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <GLBViewer
-                              modelUrl={image}
-                              className="w-full h-full"
-                              isMain={false}
-                            />
                             <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                              3D
+                              This is 3D model
                             </div>
                           </div>
                         ) : (
@@ -579,11 +317,16 @@ const ProductDetail = () => {
                     sampleProduct.images[selectedImage],
                     selectedImage
                   ) ? (
-                    <div className="relative w-full h-full">
-                      <GLBViewer
+                    <div className="">
+                      <IjewelViewer
                         modelUrl={sampleProduct.images[selectedImage]}
-                        className="w-full h-full"
+                        className="w-full h-full object-contain"
                         isMain={true}
+                        onLoading={() => (
+                          <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+                            <span className="loader" />
+                          </div>
+                        )}
                       />
                       <div className="absolute bottom-16 left-4 bg-gradient-to-r from-[#328F94] to-[#2a7a7e] text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
                         🔄 Interactive 3D Model
@@ -643,13 +386,8 @@ const ProductDetail = () => {
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <GLBViewer
-                              modelUrl={image}
-                              className="w-full h-full"
-                              isMain={false}
-                            />
                             <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                              3D
+                              This is 3D model
                             </div>
                           </div>
                         ) : (
@@ -1101,3 +839,12 @@ const ProductDetail = () => {
 };
 
 export default ProductDetail;
+
+// Refine the type for `ijewelViewer`
+declare global {
+  interface Window {
+    ijewelViewer: {
+      Viewer: new (container: HTMLElement, project: object, options: object) => void;
+    };
+  }
+}

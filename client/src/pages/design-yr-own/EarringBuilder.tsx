@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import PaymentForm from "@/components/PaymentForm";
 import {
   Select,
   SelectContent,
@@ -53,15 +56,44 @@ const diamondShapes = [
 const goldKarat = ["22KT", "18KT", "14KT", "10KT"];
 
 export default function EarringBuilder() {
+    type PaymentOrderType = {
+    orderId: string;
+    orderNumber?: string;
+    orderCategory?: 'design-your-own' | 'build-your-own' | 'products';
+    orderType?: 'customized' | 'normal';
+    amount: number;
+    items: Array<{ name: string; quantity: number; price: number }>;
+    jewelryId?: string;
+    userId?: string;
+    images?: Array<{ url: string; publicId?: string; source?: string }>;
+    customData?: Record<string, unknown>;
+    orderDetails?: Record<string, unknown>;
+  } | null;
+
+    const [orderData, setOrderData] = useState<PaymentOrderType>(null);
+   const [Loading, setLoading] = useState<boolean>(false);
+     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const navigate = useNavigate();
+     const authUser = useSelector((state: RootState) => state.auth.user);
+   const [serviceabilityStatus, setServiceabilityStatus ] = useState<'idle' | 'checking' | 'serviceable' | 'not-serviceable'>('idle');
+     const [serviceabilityMessage, setServiceabilityMessage] = useState<string>('');
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+    const [showPaymentForm, setShowPaymentForm] = useState(false);
+
   const [formData, setFormData] = useState({
+    userId:"",
+    jewelryType:"earring",
+    sameAsImage: false,
     url: "",
+    images: [] as string[],
+    imageUrls: [] as string[],
     modification: "",
     description: "",
     diamondShape: "Round",
     diamondSize: "Center Stone",
     diamondColor: "Center Stone",
+    priority: "normal",
     metalType: "Gold",
     metalColor: "Same as Image",
     backingType: "",
@@ -78,13 +110,66 @@ export default function EarringBuilder() {
     phoneNumber: "",
   });
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+   // Get userId reliably from multiple sources
+    const getUserId = useCallback(() => {
+      // 1. Try Redux store first
+      if (authUser?.id) {
+        return String(authUser.id);
+      }
+  
+      // 2. Try localStorage
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          return String(
+            parsedUser.id || parsedUser._id || parsedUser.userId || ""
+          );
+        } catch (e) {
+          console.error("Error parsing stored user:", e);
+        }
+      }
+  
+      // 3. Try direct userId
+      const directUserId = localStorage.getItem("userId");
+      if (directUserId) {
+        return String(directUserId);
+      }
+  
+      return "";
+    }, [authUser]);
+    useEffect(() => {
+      const currentUserId = getUserId();
+      if (currentUserId && currentUserId !== formData.userId) {
+        setFormData((prev) => ({ ...prev, userId: currentUserId }));
+        console.log("🔄 Updated userId in formData:", currentUserId);
+      }
+    }, [authUser, getUserId, formData.userId]);
+
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      const imageUrls = Array.from(files).map((file) =>
-        URL.createObjectURL(file)
-      );
+      const newFiles = Array.from(files);
+      const imageUrls = newFiles.map((file) => URL.createObjectURL(file));
+
       setUploadedImages([...uploadedImages, ...imageUrls]);
+      setUploadedFiles([...uploadedFiles, ...newFiles]);
+
+      // Update formData with new image data
+      setFormData((prev) => ({
+        ...prev,
+        images: [...prev.images, ...imageUrls],
+      }));
+
+      console.log("📸 Images uploaded:", {
+        totalImages: uploadedImages.length + imageUrls.length,
+        newImages: imageUrls.length,
+        filesInfo: newFiles.map((file) => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        })),
+      });
     }
   };
 
@@ -92,8 +177,96 @@ export default function EarringBuilder() {
     setUploadedImages(uploadedImages.filter((_, i) => i !== index));
   };
 
+ // Handle zip code change with real-time serviceability check
+  const handleZipCodeChange = async (value: string) => {
+    setFormData({ ...formData, zipCode: value });
+    
+    // Check serviceability when user enters a valid 6-digit pincode
+    if (value.length === 6 && /^\d{6}$/.test(value)) {
+      await checkServiceability(value);
+    } else if (value.length < 6) {
+      setServiceabilityStatus('idle');
+      setServiceabilityMessage('');
+    }
+  };
+
+    const handlePaymentInitiated = (orderId: string, ...rest: unknown[]) => {
+    // PaymentForm may call with an optional second argument (orderNumber); capture it via rest params
+    const orderNumber = rest[0] as string | undefined;
+    console.log("✅ Payment initiated for order:", orderId, orderNumber);
+    // Could save order info locally or send to backend
+  };
+  const handlePaymentError = (error: string) => {
+    console.error("❌ Payment error:", error);
+    alert(`Payment Error: ${error}`);
+    setShowPaymentForm(false);
+  };
+
+
   const updateSteps = (step: number) => {
     setCurrentStep(step);
+  };
+
+  // Validation per-step: step -> target step number
+  const validateForStep = (targetStep: number): boolean => {
+    // Moving from step 1 -> 2: check uploads and basic inputs on right column
+    if (targetStep === 2) {
+      if (uploadedImages.length < 2) {
+        alert("Please upload at least 2 images before proceeding.");
+        return false;
+      }
+
+      if (!formData.modification || formData.modification.trim().length < 15) {
+        alert("Please provide a modification description (min 15 characters).");
+        return false;
+      }
+
+      if (!formData.description || formData.description.trim() === "") {
+        alert("Please provide a description (max 100 words).");
+        return false;
+      }
+
+      const descWords = formData.description.trim().split(/\s+/).filter(Boolean).length;
+      if (descWords > 100) {
+        alert("The description field must not exceed 100 words.");
+        return false;
+      }
+
+      return true;
+    }
+
+    // Moving from step 2 -> 3: ensure customization fields only (contact validated at payment)
+    if (targetStep === 3) {
+      // Ensure step1 requirements are met first
+      if (!validateForStep(2)) return false;
+
+      const customizationFields: Array<keyof typeof formData> = [
+        "diamondShape",
+        "diamondSize",
+        "diamondColor",
+        "metalType",
+        "metalColor",
+        "goldKarat",
+      ];
+
+      for (const field of customizationFields) {
+        const value = formData[field];
+        if (typeof value === "string") {
+          if (!value || value.trim() === "") {
+            alert(`Please fill out the ${field} field.`);
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+    return true;
+  };
+
+  const handleNextStep = (step: number) => {
+    if (validateForStep(step)) setCurrentStep(step);
   };
 
   const renderStepIndicator = () => (
@@ -210,7 +383,7 @@ export default function EarringBuilder() {
             </div>
 
             {/* URL Input */}
-            <div>
+            {/* <div>
               <p className="text-center text-sm text-muted-foreground mb-4">
                 OR
               </p>
@@ -229,7 +402,7 @@ export default function EarringBuilder() {
                   further!
                 </p>
               </div>
-            </div>
+            </div> */}
           </div>
         }
         rightColumn={
@@ -280,6 +453,17 @@ export default function EarringBuilder() {
                   type="checkbox"
                   id="same-image"
                   className="rounded border-border"
+                  checked={formData.sameAsImage}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setFormData((prev) => ({
+                      ...prev,
+                      sameAsImage: checked,
+                      // when same-as-image is enabled, set these fields to the 'Same as Image' marker
+                      diamondShape: checked ? "Same as Image" : prev.diamondShape || "Round",
+                      metalColor: checked ? "Same as Image" : prev.metalColor || "White Gold",
+                    }));
+                  }}
                 />
                 <label htmlFor="same-image" className="text-sm">
                   Same as Image
@@ -292,7 +476,7 @@ export default function EarringBuilder() {
 
       <div className="flex justify-end mt-8">
         <Button
-          onClick={() => updateSteps(2)}
+          onClick={() => handleNextStep(2)}
           className="px-8 bg-[#328F94] hover:bg-[#328F94]/90 text-white"
         >
           Next
@@ -311,7 +495,7 @@ export default function EarringBuilder() {
           <p>• Refine Your Design: Discover Your Perfect Diamond</p>
           <p>
             • Select Shape, Size, Color, Clarity, Quality, Metal Type, Karat,
-            Metal Color, Backing Type
+            Metal Color
           </p>
         </div>
       </div>
@@ -348,24 +532,30 @@ export default function EarringBuilder() {
               <h3 className="font-medium mb-4">
                 Select Diamond Shape * : {formData.diamondShape}
               </h3>
-              <div className="grid grid-cols-5 gap-2">
-                {diamondShapes.map((shape) => (
-                  <button
-                    key={shape.name}
-                    onClick={() =>
-                      setFormData({ ...formData, diamondShape: shape.name })
-                    }
-                    className={`aspect-square  rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${
-                      formData.diamondShape === shape.name
-                        ? "bg-[#328F94]/20"
-                        : ""
-                    }`}
-                  >
-                    <span className="text-2xl mb-1">{shape.icon}</span>
-                    {/* <span>{shape.name}</span> */}
-                  </button>
-                ))}
-              </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {formData.sameAsImage ? (
+                    <div className="col-span-5 p-4 rounded-lg bg-gray-50 border border-neutral-200 text-sm text-gray-600">
+                      Same as Image
+                    </div>
+                  ) : (
+                    diamondShapes.map((shape) => (
+                      <button
+                        key={shape.name}
+                        onClick={() =>
+                          setFormData({ ...formData, diamondShape: shape.name })
+                        }
+                        className={`aspect-square  rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${
+                          formData.diamondShape === shape.name
+                            ? "bg-[#328F94]/20"
+                            : ""
+                        }`}
+                      >
+                        <span className="text-2xl mb-1">{shape.icon}</span>
+                        {/* <span>{shape.name}</span> */}
+                      </button>
+                    ))
+                  )}
+                </div>
             </div>
 
             {/* Diamond Specification */}
@@ -476,6 +666,7 @@ export default function EarringBuilder() {
                 onValueChange={(value) =>
                   setFormData({ ...formData, metalColor: value })
                 }
+                disabled={formData.sameAsImage}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -488,49 +679,6 @@ export default function EarringBuilder() {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Backing Type */}
-            <div>
-              <label className="text-sm text-muted-foreground">
-                Backing Type
-              </label>
-              <Select
-                value={formData.backingType}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, backingType: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select backing type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="butterfly">Butterfly</SelectItem>
-                  <SelectItem value="screw">Screw Back</SelectItem>
-                  <SelectItem value="lever">Lever Back</SelectItem>
-                  <SelectItem value="hook">Hook</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Add Engraving */}
-            <Link
-              to="/engrave-your-earrings"
-              className="text-sm text-[#328F94]"
-            >
-              <div className="bg-[#328F94]/5 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-6 h-6 bg-[#328F94] text-white rounded-full flex items-center justify-center text-xs font-bold">
-                    +
-                  </div>
-                  <span className="font-medium">Add Engraving</span>
-                </div>
-                <p className="text-sm text-[#8D8A91] mb-3">
-                  Max 15 characters. We suggest 12 characters or less. More
-                  characters will make the font size smaller. Engraving will
-                  appear on the back of the earring.
-                </p>
-              </div>
-            </Link>
           </div>
         }
       />
@@ -544,7 +692,7 @@ export default function EarringBuilder() {
           Back
         </Button>
         <Button
-          onClick={() => updateSteps(3)}
+          onClick={() => handleNextStep(3)}
           className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
         >
           Next
@@ -555,6 +703,33 @@ export default function EarringBuilder() {
 
   const renderStep3 = () => (
     <div className="max-w-4xl mx-auto">
+          {!authUser && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
+              <p className="text-sm text-yellow-700">
+                Please log in to proceed with payment.
+              </p>
+            </div>
+          )}
+          {showPaymentForm && orderData && authUser ? (
+            <PaymentForm
+              orderData={orderData}
+              userInfo={{
+                userId: authUser.id || "",
+                firstName: authUser.firstName || formData.firstName,
+                lastName: authUser.lastName || formData.lastName,
+                email: authUser.email || formData.email,
+                phone: authUser.phoneNumber || formData.phoneNumber,
+                address: formData.address,
+                city: formData.city,
+                state: formData.region,
+                zipCode: formData.zipCode,
+                country: formData.country,
+              }}
+              onPaymentInitiated={handlePaymentInitiated}
+              onError={handlePaymentError}
+            />
+          ) : (
+            <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-4">Secure Payment</h1>
         <div className="space-y-2 text-sm text-muted-foreground">
@@ -630,10 +805,6 @@ export default function EarringBuilder() {
                 <div>
                   <span className="text-muted-foreground">Metal Color:</span>
                   <div>{formData.metalColor}</div>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Backing Type:</span>
-                  <div>{formData.backingType}</div>
                 </div>
               </div>
               {formData.engraving && (
@@ -745,14 +916,25 @@ export default function EarringBuilder() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm">Zip Code *</label>
-                  <Input
-                    value={formData.zipCode}
-                    onChange={(e) =>
-                      setFormData({ ...formData, zipCode: e.target.value })
-                    }
-                  />
-                </div>
+                      <label className="text-sm">Zip Code *</label>
+                      <Input
+                        value={formData.zipCode}
+                        onChange={(e) => handleZipCodeChange(e.target.value)}
+                        placeholder="Enter 6-digit pincode"
+                        maxLength={6}
+                        pattern="\d{6}"
+                      />
+                      {serviceabilityMessage && (
+                        <div className={`text-xs mt-1 ${
+                          serviceabilityStatus === 'serviceable' ? 'text-green-600' : 
+                          serviceabilityStatus === 'not-serviceable' ? 'text-red-600' : 
+                          serviceabilityStatus === 'checking' ? 'text-blue-600' : 
+                          'text-gray-600'
+                        }`}>
+                          {serviceabilityMessage}
+                        </div>
+                      )}
+                    </div>
               </div>
 
               <div>
@@ -812,9 +994,18 @@ export default function EarringBuilder() {
             </div>
           </div>
 
-          <Button className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white">
-            Make Payment →
-          </Button>
+        <Button
+                onClick={requestCustomization}
+                className="w-full mt-3 bg-[#328F94] hover:bg-[#328F94]/90 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                disabled={Loading || !formData.zipCode || serviceabilityStatus !== 'serviceable'}
+              >
+                {Loading ? "Creating Request..." : 
+                 !formData.zipCode ? "Enter Pincode First" :
+                 serviceabilityStatus === 'checking' ? "Checking Area..." :
+                 serviceabilityStatus === 'not-serviceable' ? "Area Not Serviceable" :
+                 serviceabilityStatus !== 'serviceable' ? "Check Pincode Serviceability" :
+                 "Request Customization →"}
+              </Button>
 
           <div className="text-xs text-muted-foreground space-y-1">
             <p>Need assistance? Call us at 080-61919123</p>
@@ -840,7 +1031,413 @@ export default function EarringBuilder() {
         </Button>
       </div>
     </div>
+          )}
+        </div>
   );
+
+   // Function to check serviceability using Sequel247 API
+  const checkServiceability = async (pinCode: string): Promise<boolean> => {
+    if (!pinCode || pinCode.length !== 6 || !/^\d{6}$/.test(pinCode)) {
+      setServiceabilityStatus('idle');
+      setServiceabilityMessage('');
+      return false;
+    }
+
+    try {
+      setServiceabilityStatus('checking');
+      setServiceabilityMessage('Checking serviceability...');
+      console.log("🚀 Checking serviceability for pincode:", pinCode);
+      
+      const response = await fetch("https://test.sequel247.com/api/checkServiceability", {
+        method: "POST",
+        body: JSON.stringify({
+          token: "b228a27399f07927985d57c0f7d94ce8",
+          pin_code: pinCode,
+        }),
+      });
+
+      const result = await response.json();
+      console.log("📍 Serviceability check result:", result);
+
+      // Handle API returning boolean true or string variants like 'true', 'True', '1'
+      const statusRaw = result?.status;
+      console.debug('🔎 Raw serviceability status from API:', statusRaw, typeof statusRaw);
+      const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
+      const isServiceableApi =
+        statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
+
+      if (isServiceableApi) {
+        setServiceabilityStatus('serviceable');
+        setServiceabilityMessage('✅ Great! This area is serviceable for delivery.');
+        return true;
+      } else {
+        setServiceabilityStatus('not-serviceable');
+        setServiceabilityMessage('❌ Sorry, this area is not serviceable for delivery.');
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error checking serviceability:", error);
+      setServiceabilityStatus('idle');
+      setServiceabilityMessage('⚠️ Unable to check serviceability. Please try again.');
+      return false;
+    }
+  };
+
+    const requestCustomization = async () => {
+    try {
+      setLoading(true);
+      console.log("🎨 Starting customization request process...");
+
+      // Ensure we have the latest userId
+      const currentUserId = getUserId();
+      if (!currentUserId) {
+        alert("Please login to proceed with customization request.");
+        navigate("/login");
+        return;
+      }
+
+      // Check if zip code is provided and valid
+      if (!formData.zipCode) {
+        alert("Please enter your zip code before creating the customization request.");
+        setLoading(false);
+        return;
+      }
+
+      if (formData.zipCode.length !== 6 || !/^\d{6}$/.test(formData.zipCode)) {
+        alert("Please enter a valid 6-digit pincode.");
+        setLoading(false);
+        return;
+      }
+
+      // Check if serviceability has been verified
+      if (serviceabilityStatus !== 'serviceable') {
+        if (serviceabilityStatus === 'not-serviceable') {
+          alert("❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.");
+          setLoading(false);
+          return;
+        } else if (serviceabilityStatus === 'checking') {
+          alert("Please wait while we check if your area is serviceable.");
+          setLoading(false);
+          return;
+        } else {
+          // Status is 'idle' - need to check serviceability
+          console.log("📍 Checking serviceability for pincode:", formData.zipCode);
+          const isServiceable = await checkServiceability(formData.zipCode);
+          
+          if (!isServiceable) {
+            alert("❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.");
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
+      console.log("✅ Area is serviceable, proceeding with customization request...");
+
+      // Calculate Estimated Delivery Date (EDD) via Sequel247 before sending request
+      // let eddResult: { estimated_delivery?: string; estimated_day?: string } | null = null;
+      // try {
+      //   const pickupDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      //   console.log('📦 [EDD] Requesting EDD from Sequel247', { origin: '400097', destination: formData.zipCode, pickupDate });
+
+      //   if (formData.zipCode && /^\d{6}$/.test(formData.zipCode)) {
+      //     const eddResp = await fetch('https://test.sequel247.com/api/shipment/calculateEDD', {
+      //       method: 'POST',
+      //       body: JSON.stringify({
+      //         token: 'b228a27399f07927985d57c0f7d94ce8',
+      //         origin_pincode: '400097',
+      //         destination_pincode: formData.zipCode,
+      //         pickup_date: pickupDate,
+      //       }),
+      //     });
+
+      //     const eddJson = await eddResp.json();
+      //     console.log('📦 [EDD] Raw API response:', JSON.stringify(eddJson, null, 2));
+      //     const statusRaw = eddJson?.status;
+      //     const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
+      //     const ok = statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
+          
+      //     if (ok && eddJson?.data?.estimated_delivery) {
+      //       eddResult = {
+      //         estimated_delivery: eddJson.data.estimated_delivery,
+      //         estimated_day: eddJson.data.estimated_day,
+      //       };
+      //       console.log('✅ [EDD] Successfully parsed EDD data:', eddResult);
+      //     } else {
+      //       console.warn('⚠️ [EDD] EDD not available from API or not serviceable', { status: statusRaw, data: eddJson?.data });
+      //       alert('⚠️ Unable to fetch estimated delivery date. Customization request will continue without EDD.');
+      //     }
+      //   } else {
+      //     console.warn('⚠️ [EDD] Skipping EDD request - invalid destination pincode', formData.zipCode);
+      //     alert('⚠️ Invalid pincode format for EDD calculation. Please check your zip code.');
+      //   }
+      // } catch (eddError) {
+      //   console.error('❌ [EDD] Error fetching EDD:', eddError);
+      //   alert('⚠️ Failed to fetch estimated delivery date. Customization request will be created without EDD.');
+      // }
+      const eddResult: { estimated_delivery?: string; estimated_day?: string } = {
+        estimated_delivery: "2025-10-24",
+        estimated_day: "monday"
+      };
+
+      // Prepare customization request data for payment
+      const customizationRequestData = {
+        title: `Custom ${formData.jewelryType} Design Request`,
+        description: formData.description?.trim() || `Custom ${formData.jewelryType} with ${formData.diamondShape} diamond`,
+        category: formData.jewelryType.toUpperCase(),
+        subCategory: formData.jewelryType === 'earring' ? 'Custom Earrings' : `Custom ${formData.jewelryType}`,
+        jewelryType: formData.jewelryType,
+        stylingName: 'CUSTOM',
+        referenceImages: uploadedImages,
+        inspirationImages: uploadedImages,
+        diamondShape: formData.diamondShape,
+        diamondSize: formData.diamondSize,
+        diamondColor: formData.diamondColor,
+        metalKarat: formData.goldKarat,
+        metalColor: formData.metalColor,
+        engraving: formData.engraving ? {
+          text: formData.engraving,
+          font: 'Classic',
+          position: 'Inside'
+        } : undefined,
+        // specialInstructions: formData.specialInstructions || formData.modificationRequest,
+        // Add user contact information
+        contactInfo: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phoneNumber: formData.phoneNumber,
+          address: formData.address,
+          city: formData.city,
+          state: formData.region,
+          zipCode: formData.zipCode,
+          country: formData.country
+        },
+        customData: {
+          sameAsImage: formData.sameAsImage,
+          modificationRequest: formData.modification,
+          priority: formData.priority,
+          stepData: {
+            step1: {
+              jewelryType: formData.jewelryType,
+              images: uploadedImages,
+              sameAsImage: formData.sameAsImage,
+              Description: formData.description,
+              modificationRequest: formData.modification
+            },
+            step2: {
+              diamondShape: formData.diamondShape,
+              diamondSize: formData.diamondSize,
+              diamondColor: formData.diamondColor,
+              etalType: formData.metalType,
+              metalColor: formData.metalColor,
+              goldKarat: formData.goldKarat,
+            }
+          }
+        },
+        tags: ['custom', 'design-your-own', formData.jewelryType],
+        // Add EDD information
+        estimatedDelivery: eddResult?.estimated_delivery || null,
+        estimatedDeliveryDay: eddResult?.estimated_day || null
+      };
+
+      console.log("📤 Creating customization request with payment:", customizationRequestData);
+      console.log("📋 Current formData state:", {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        address: formData.address,
+        city: formData.city,
+        region: formData.region,
+        zipCode: formData.zipCode,
+        country: formData.country
+      });
+
+      // First upload images using the same endpoint as order creation
+      let uploadedImageUrls: string[] = [];
+      
+      if (uploadedFiles.length > 0) {
+        console.log("📤 Uploading images to Cloudinary first...");
+        
+        // Prepare FormData for image upload (same as order creation)
+        const imageFormData = new FormData();
+        imageFormData.append("userId", currentUserId);
+        imageFormData.append("jewelryType", formData.jewelryType);
+        
+        // Add uploaded files
+        uploadedFiles.forEach((file, index) => {
+          imageFormData.append("images", file);
+          console.log(`📎 Adding file ${index + 1}:`, {
+            name: file.name,
+            size: file.size,
+            type: file.type,
+          });
+        });
+
+        // Upload images using the same endpoint as order creation
+        const imageResponse = await fetch("http://localhost:5000/api/rings/upload", {
+          method: "POST",
+          body: imageFormData,
+        });
+
+        const imageResult = await imageResponse.json();
+        
+        if (imageResult.success && imageResult.data?.images) {
+          uploadedImageUrls = imageResult.data.images;
+          console.log("✅ Images uploaded successfully:", uploadedImageUrls);
+        } else {
+          console.error("❌ Failed to upload images:", imageResult.message);
+          alert("Failed to upload images. Please try again.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Now create customization request with uploaded image URLs
+      const customizationRequestDataWithImages = {
+        ...customizationRequestData,
+        referenceImages: uploadedImageUrls,
+        inspirationImages: uploadedImageUrls, // Same as reference images for now
+      };
+
+      console.log("📤 Creating customization request with uploaded images:", customizationRequestDataWithImages);
+      console.log("🔍 Required fields check:", {
+        title: customizationRequestDataWithImages.title,
+        description: customizationRequestDataWithImages.description,
+        category: customizationRequestDataWithImages.category,
+        subCategory: customizationRequestDataWithImages.subCategory,
+        jewelryType: customizationRequestDataWithImages.jewelryType
+      });
+      console.log("📞 Contact information being sent:", customizationRequestDataWithImages.contactInfo);
+
+      // Validate required fields before sending
+      if (!customizationRequestDataWithImages.title || 
+          !customizationRequestDataWithImages.description || 
+          !customizationRequestDataWithImages.category || 
+          !customizationRequestDataWithImages.subCategory || 
+          !customizationRequestDataWithImages.jewelryType) {
+        console.error("❌ Missing required fields:", {
+          title: !!customizationRequestDataWithImages.title,
+          description: !!customizationRequestDataWithImages.description,
+          category: !!customizationRequestDataWithImages.category,
+          subCategory: !!customizationRequestDataWithImages.subCategory,
+          jewelryType: !!customizationRequestDataWithImages.jewelryType
+        });
+        alert("Missing required information. Please fill in all required fields.");
+        setLoading(false);
+        return;
+      }
+
+      // Validate contact information
+      if (!customizationRequestDataWithImages.contactInfo || 
+          !customizationRequestDataWithImages.contactInfo.firstName ||
+          !customizationRequestDataWithImages.contactInfo.lastName ||
+          !customizationRequestDataWithImages.contactInfo.email ||
+          !customizationRequestDataWithImages.contactInfo.phoneNumber ||
+          !customizationRequestDataWithImages.contactInfo.address ||
+          !customizationRequestDataWithImages.contactInfo.city ||
+          !customizationRequestDataWithImages.contactInfo.zipCode) {
+        console.error("❌ Missing contact information:", customizationRequestDataWithImages.contactInfo);
+        alert("Please fill in all contact information fields (name, email, phone, address, city, pincode).");
+        setLoading(false);
+        return;
+      }
+
+      // Create customization request with payment integration
+      console.log("🔑 Auth token:", localStorage.getItem('token') ? 'Present' : 'Missing');
+      
+      // Test server connectivity first
+      try {
+        const testResponse = await fetch('http://localhost:5000/api/customization/my-requests', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        console.log("🔗 Server connectivity test:", testResponse.status);
+      } catch (error) {
+        console.error("❌ Server connectivity error:", error);
+        alert("Cannot connect to server. Please make sure the server is running.");
+        setLoading(false);
+        return;
+      }
+      
+      const response = await fetch('http://localhost:5000/api/customization/request-with-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(customizationRequestDataWithImages)
+      });
+
+      const result = await response.json();
+      
+      console.log("📥 Server response:", {
+        status: response.status,
+        success: result.success,
+        message: result.message,
+        data: result.data
+      });
+
+      if (result.success) {
+        console.log("✅ Customization request created successfully:", result.data);
+        
+        // Prepare payment order data similar to createOrder
+        const paymentOrderData = {
+          orderId: result.data.requestId,
+          orderNumber: result.data.requestNumber,
+          orderCategory: 'design-your-own' as const,
+          orderType: 'customized' as const,
+          amount: result.data.amount || 1000, // Default amount for customization request
+          items: [{
+            name: `Custom ${formData.jewelryType} Design Request`,
+            quantity: 1,
+            price: result.data.amount || 1800
+          }],
+          userId: currentUserId,
+          images: uploadedImages.map(url => ({
+            url,
+            source: 'upload',
+            uploadedAt: new Date().toISOString()
+          })),
+          customData: customizationRequestData,
+          orderDetails: {
+            jewelryType: formData.jewelryType,
+            description: formData.description,
+            estimatedDelivery: eddResult?.estimated_delivery || null,
+            estimatedDeliveryDay: eddResult?.estimated_day || null,
+            customizationRequest: true
+          }
+        };
+
+        console.log('💳 [PAYMENT] Setting customization request payment data:', paymentOrderData);
+        setOrderData(paymentOrderData as PaymentOrderType);
+        setShowPaymentForm(true);
+        setCurrentStep(3);
+
+        const eddInfo = eddResult?.estimated_delivery ? 
+          `EDD: ${eddResult.estimated_delivery} (${eddResult.estimated_day || 'N/A'})` : 
+          'No EDD';
+          
+        alert(
+          `Customization request created successfully! ${eddInfo}\n\nProceeding to payment...`
+        );
+        
+        setLoading(false);
+      } else {
+        console.error("❌ Failed to create customization request:", result.message);
+        alert(`❌ Failed to submit customization request: ${result.message}`);
+        setLoading(false);
+      }
+
+    } catch (error) {
+      console.error("❌ Error creating customization request:", error);
+      alert("❌ An error occurred while submitting your customization request. Please try again.");
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
