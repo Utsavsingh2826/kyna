@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Package, Search, Mail, AlertCircle, Clock, RefreshCw, XCircle, FileText } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import TrackingProgress from "@/components/tracking/TrackingProgress";
 import TrackingTimeline from "@/components/tracking/TrackingTimeline";
 import TrackingCard from "@/components/tracking/TrackingCard";
@@ -130,7 +130,6 @@ const trackingApi = {
 };
 
 export default function TrackOrderPage() {
-  const navigate = useNavigate();
   const location = useLocation();
   const [orderNumber, setOrderNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -435,6 +434,9 @@ export default function TrackOrderPage() {
             ? "Return request submitted successfully! ✅\n\nNo charges will be applied as this is a manufacturer fault.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
             : "Return request submitted successfully! ✅\n\n₹1,800 return charges will be deducted from your refund.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
         );
+        
+        // Refresh tracking data to show the return request notice
+        await fetchTrackingData(false);
       } else {
         setError(response.error || "Failed to submit return request");
       }
@@ -668,13 +670,15 @@ export default function TrackOrderPage() {
                             </>
                           )}
                         </button>
-                        <button
-                          onClick={() => setShowReturnDialog(true)}
-                          className="flex items-center text-orange-600 hover:text-orange-700 font-medium"
-                        >
-                          <Package className="w-4 h-4 mr-1" />
-                          Return Order
-                        </button>
+                        {!trackingData.returnRequest?.requested && (
+                          <button
+                            onClick={() => setShowReturnDialog(true)}
+                            className="flex items-center text-orange-600 hover:text-orange-700 font-medium"
+                          >
+                            <Package className="w-4 h-4 mr-1" />
+                            Return Order
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
@@ -683,6 +687,43 @@ export default function TrackOrderPage() {
 
               {/* Progress Bar */}
               <TrackingProgress status={trackingData.status} />
+
+              {/* Return Request Notice */}
+              {trackingData.returnRequest?.requested && (
+                <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-lg mb-4">
+                  <div className="flex items-start">
+                    <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-orange-800 mb-1">
+                        🔄 Return Request Submitted
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        You have submitted a return request for this order on{' '}
+                        <strong>
+                          {new Date(trackingData.returnRequest.requestedAt).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </strong>
+                        . Our team will review your request and contact you soon.
+                        {trackingData.returnRequest.hasManufacturerFault && (
+                          <span className="block mt-1 text-green-700 font-medium">
+                            ✓ No return charges will be applied (Manufacturer's Fault)
+                          </span>
+                        )}
+                        {!trackingData.returnRequest.hasManufacturerFault && (
+                          <span className="block mt-1 text-orange-800">
+                            • ₹1,800 return charges will be deducted from your refund
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Order Details and Timeline */}
               <div className="grid md:grid-cols-2 gap-4">
