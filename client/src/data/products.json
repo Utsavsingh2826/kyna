@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "title": "NECKLACE HEART SILVER",
+    "oldPrice": "Rs. 40,000/-",
+    "price": "Rs. 30,000/-",
+    "img": "/engravings/1.png",
+    "discount": "25% OFF",
+    "availableColors": ["white", "gold", "rosegold"],
+    "category": "pendants"
+  },
+  {
+    "id": 2,
+    "title": "Secret Garden Lab Diamond",
+    "oldPrice": "Rs. 50,000/-",
+    "price": "Rs. 40,000/-",
+    "img": "/engravings/2.png",
+    "discount": "20% OFF",
+    "availableColors": ["gold", "rosegold"],
+    "category": "rings"
+  },
+  {
+    "id": 3,
+    "title": "Secret Garden Lab Diamond",
+    "oldPrice": "Rs. 50,000/-",
+    "price": "Rs. 40,000/-",
+    "img": "/engravings/3.png",
+    "discount": "20% OFF",
+    "availableColors": ["white"],
+    "category": "earrings"
+  },
+  {
+    "id": 4,
+    "title": "Secret Garden Lab Diamond",
+    "oldPrice": "Rs. 50,000/-",
+    "price": "Rs. 40,000/-",
+    "img": "/engravings/4.png",
+    "discount": "20% OFF",
+    "availableColors": ["white", "gold"],
+    "category": "rings"
+  },
+  {
+    "id": 5,
+    "title": "Secret Garden Lab Diamond",
+    "oldPrice": "Rs. 50,000/-",
+    "price": "Rs. 40,000/-",
+    "img": "/engravings/5.png",
+    "discount": "",
+    "availableColors": ["rosegold"],
+    "category": "earrings"
+  },
+  {
+    "id": 6,
+    "title": "Secret Garden Lab Diamond",
+    "oldPrice": "Rs. 50,000/-",
+    "price": "Rs. 40,000/-",
+    "img": "/engravings/6.png",
+    "discount": "",
+    "availableColors": ["white", "rosegold"],
+    "category": "pendants"
+  },
+  {
+    "id": 7,
+    "title": "Secret Garden Lab Diamond",
+    "oldPrice": "Rs. 50,000/-",
+    "price": "Rs. 50,000/-",
+    "img": "/engravings/7.png",
+    "discount": "",
+    "availableColors": ["gold"],
+    "category": "rings"
+  },
+  {
+    "id": 8,
+    "title": "Secret Garden Lab Diamond",
+    "oldPrice": "Rs. 50,000/-",
+    "price": "Rs. 50,000/-",
+    "img": "/engravings/8.png",
+    "discount": "",
+    "availableColors": ["white", "gold", "rosegold"],
+    "category": "earrings"
+  }
+]

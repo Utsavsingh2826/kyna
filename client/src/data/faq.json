@@ -1,0 +1,769 @@
+[
+  {
+    "category": "Account & Registration",
+    "questions": [
+      {
+        "question": "Do I need to create an account to shop on Kyna Jewels?",
+        "answer": "No, you can checkout as a guest. However, creating an account allows for faster checkout, order tracking, exclusive offers, and access to loyalty programs."
+      },
+      {
+        "question": "How do I register on Kyna Jewels?",
+        "answer": "Click \"Sign Up\", enter your name, email, phone number, and address, and set a password."
+      },
+      {
+        "question": "How can I reset my password?",
+        "answer": "Click \"Forgot Password\" on the login page and follow the instructions to reset it via email."
+      },
+      {
+        "question": "Is my personal data secure with Kyna Jewels?",
+        "answer": "Yes, we use advanced security measures and encryption to protect your personal data."
+      }
+    ]
+  },
+  {
+    "category": "Product Availability & Customization",
+    "questions": [
+      {
+        "question": "What if the jewellery piece I want is out of stock?",
+        "answer": "Sometimes, certain products may not be available. Contact our customer support team at +91 8928610682, and we will try our best to assist you in getting the same product."
+      },
+      {
+        "question": "Can I customize jewellery with different metals or gemstones?",
+        "answer": "Yes, we offer customization options for metal and gemstones. Get in touch with our team at +91 8928610682 for more details."
+      },
+      {
+        "question": "Do pendants come with a chain?",
+        "answer": "Products which are sold with chain will be mentioned on product detail page that it will come with chain."
+      },
+      {
+        "question": "Can I get a duplicate jewellery certificate if I lose mine?",
+        "answer": "Yes, we can provide a duplicate certificate for a fee of ₹2000. The word \"Copy/Duplicate\" will be written on the certificate."
+      }
+    ]
+  },
+  {
+    "category": "Jewellery Sizing & Engraving",
+    "questions": [
+      {
+        "question": "How do I determine my ring size?",
+        "answer": "Use our Ring Size Guide available on our website or visit a jeweller for accurate measurement."
+      },
+      {
+        "question": "What if my ring doesn't fit?",
+        "answer": "You can return it for resizing. However, third-party resizing voids our 14-day return policy and lifetime exchange policy."
+      },
+      {
+        "question": "Do you offer engraving services?",
+        "answer": "Yes, we offer engraving on select jewellery. Additional processing time of 3 business days is required."
+      },
+      {
+        "question": "Can I order a ring size that is not listed?",
+        "answer": "Yes, we can customize ring sizes. Contact +91 8928610682."
+      }
+    ]
+  },
+  {
+    "category": "Diamonds & Gemstones",
+    "questions": [
+      {
+        "question": "Are lab-grown diamonds real diamonds?",
+        "answer": "Yes, lab-grown diamonds have the same structure, brilliance, and durability as natural diamonds."
+      },
+      {
+        "question": "Why should I choose lab-grown diamonds?",
+        "answer": "Lab-grown diamonds are ethical & conflict-free, more affordable than natural diamonds, and sustainable & environmentally friendly."
+      },
+      {
+        "question": "Are Kyna Jewels' diamonds certified?",
+        "answer": "Yes, our diamonds are IGI/GIA certified, and our gold is BIS Hallmarked."
+      },
+      {
+        "question": "Do you sell conflict-free diamonds?",
+        "answer": "Yes, all our diamonds are ethically sourced and conflict-free."
+      }
+    ]
+  },
+  {
+    "category": "Ordering & Payments",
+    "questions": [
+      {
+        "question": "How do I place an order?",
+        "answer": "Select a product, click \"Buy Now\", and complete payment. You may also order via WhatsApp at +91 8928610682."
+      },
+      {
+        "question": "What payment methods do you accept?",
+        "answer": "We accept Credit/Debit Cards (Visa, MasterCard, American Express), Net Banking, and Gift Cards."
+      },
+      {
+        "question": "Do you offer EMI payment options?",
+        "answer": "No, EMI is currently not available."
+      },
+      {
+        "question": "Do you accept international orders?",
+        "answer": "No, we currently only accept domestic orders within India."
+      },
+      {
+        "question": "Will I be charged any hidden fees?",
+        "answer": "No, all prices listed are final. No additional shipping charges apply."
+      }
+    ]
+  },
+  {
+    "category": "Shipping & Delivery",
+    "questions": [
+      {
+        "question": "Do you offer free shipping?",
+        "answer": "Yes, free shipping is available within India."
+      },
+      {
+        "question": "How long does delivery take?",
+        "answer": "10-30 days for manufacturing + 2-3 days for shipping within India."
+      },
+      {
+        "question": "Is shipping insured?",
+        "answer": "Yes, all shipments are fully insured until delivered."
+      },
+      {
+        "question": "How do I track my order?",
+        "answer": "You will receive a tracking number via email once your order is shipped."
+      }
+    ]
+  },
+  {
+    "category": "Returns, Exchanges & Buyback",
+    "questions": [
+      {
+        "question": "What is your return policy?",
+        "answer": "Returns are accepted within 15 working days if the item is unused and in original packaging."
+      },
+      {
+        "question": "How do I request a return?",
+        "answer": "Email enquiries@kynajewels.com with images and reason within 24 hours of receiving the product."
+      },
+      {
+        "question": "Is there a return shipping fee?",
+        "answer": "Yes, a ₹1800 processing fee applies for returns."
+      },
+      {
+        "question": "Do you offer lifetime buyback?",
+        "answer": "Yes. 98% value for gold, silver, and platinum. 80% value for natural and lab-grown diamonds."
+      }
+    ]
+  },
+  {
+    "category": "Customer Support",
+    "questions": [
+      {
+        "question": "How can I contact customer service?",
+        "answer": "Phone: +91 8928610682, Email: enquiries@kynajewels.com, or BOOK A VIRTUAL APPOINTMENT for a live video call."
+      },
+      {
+        "question": "What are your customer service hours?",
+        "answer": "Monday to Friday, 9 AM – 6 PM IST."
+      }
+    ]
+  },
+  {
+    "category": "Legal & Compliance",
+    "questions": [
+      {
+        "question": "Are my purchases legally protected?",
+        "answer": "Yes, all transactions follow Indian consumer protection laws."
+      },
+      {
+        "question": "What happens if I violate Kyna Jewels' terms of use?",
+        "answer": "We reserve the right to terminate accounts and take legal action if necessary."
+      },
+      {
+        "question": "Under which jurisdiction does Kyna Jewels operate?",
+        "answer": "Mumbai, India is the legal jurisdiction for all disputes."
+      }
+    ]
+  },
+  {
+    "category": "Replacement & Warranty",
+    "questions": [
+      {
+        "question": "What happens if my product is damaged during the warranty period?",
+        "answer": "If your jewellery is damaged within the warranty period due to a manufacturing defect, we will repair or replace it at no additional cost. Contact our customer care team at +91 8928610682 or email enquiries@kynajewels.com to initiate a replacement request."
+      },
+      {
+        "question": "Can I request a different product as a replacement?",
+        "answer": "No, replacements are strictly provided for the same product model. If the original product is unavailable, we may offer an equivalent design."
+      },
+      {
+        "question": "What issues are NOT covered under the repair or replacement policy?",
+        "answer": "Damage due to improper handling, accidents, or external impact; normal wear and tear (scratches, fading, discoloration); any modifications or repairs done by a third party; loss of stones due to mishandling."
+      },
+      {
+        "question": "What qualifies as a manufacturing defect?",
+        "answer": "Manufacturing defects include loose settings or improper gemstone placement, structural defects in the metal or clasps, and faulty engraving or design flaws."
+      }
+    ]
+  },
+  {
+    "category": "Exchange & Buyback Process",
+    "questions": [
+      {
+        "question": "How do I place an exchange order?",
+        "answer": "Contact customer support at +91 8928610682 or email enquiries@kynajewels.com, provide details and images of the product, and once approved, ship the product back in its original condition. The exchange process will begin upon receipt and quality verification."
+      },
+      {
+        "question": "When should I request an exchange?",
+        "answer": "Exchanges must be requested within 15 working days from the date of delivery."
+      },
+      {
+        "question": "How do I pay the excess amount if the exchange order is of a higher value?",
+        "answer": "If your exchanged jewellery has a higher value, you can pay the difference through Credit/Debit Cards, Bank Transfer, or UPI or Net Banking."
+      },
+      {
+        "question": "How will I get a refund for the difference if the exchanged item is of a lower value?",
+        "answer": "If your exchanged item has a lower value, the difference will be credited to your Kyna Jewels wallet for future purchases. It will not be refunded in cash."
+      },
+      {
+        "question": "Can I exchange more than once?",
+        "answer": "Yes, exchanges can be done multiple times, but each transaction will be subject to Kyna Jewels' exchange policies and quality verification."
+      },
+      {
+        "question": "Do I need to provide a certificate for availing lifetime exchange?",
+        "answer": "Yes, the original jewellery certificate must be provided for a lifetime exchange request to be processed."
+      }
+    ]
+  },
+  {
+    "category": "Refund & Payment Processing",
+    "questions": [
+      {
+        "question": "In which mode will I receive my refund?",
+        "answer": "Refunds are processed through Bank Transfer (NEFT/RTGS), Credit/Debit Card Reversal (if paid via card), or UPI Refund."
+      },
+      {
+        "question": "How long will it take for my refund to reflect in my account?",
+        "answer": "Refunds typically take 21-30 working days from the date we receive and verify the returned product."
+      },
+      {
+        "question": "What happens if my return is rejected?",
+        "answer": "If the returned product does not meet the merchantable condition (used, damaged, missing packaging/certification), it will be returned to you, and no refund will be provided."
+      }
+    ]
+  },
+  {
+    "category": "Pricing & Ordering Process",
+    "questions": [
+      {
+        "question": "Will Kyna Jewels match the price if the item price drops after my purchase?",
+        "answer": "No, the price at the time of purchase is final. Our pricing is based on current precious metal and gemstone rates, which fluctuate regularly."
+      },
+      {
+        "question": "How do I place an order online?",
+        "answer": "Select your jewellery piece and click \"Add to Cart\", click \"Checkout\" or \"Continue Shopping\" if you wish to add more items, enter your name and email for billing and shipping details, provide your shipping address and choose a payment method, complete the payment and place your order. You will receive a confirmation email with your order details."
+      },
+      {
+        "question": "Can I place an order over the phone?",
+        "answer": "Yes, you can place an order by calling or messaging our customer support at +91 8928610682. Our team will guide you through the process."
+      },
+      {
+        "question": "Will I receive an order confirmation?",
+        "answer": "Yes, once your order is successfully placed, you will receive a confirmation email at the email address provided during checkout."
+      }
+    ]
+  },
+  {
+    "category": "Gifting & Personalization",
+    "questions": [
+      {
+        "question": "Can I add a personalized message if I send jewellery as a gift?",
+        "answer": "Yes, we offer the option to include a personalized message with your order."
+      }
+    ]
+  },
+  {
+    "category": "Order Cancellation",
+    "questions": [
+      {
+        "question": "Can I cancel my order after placing it?",
+        "answer": "Yes, you can cancel your order within 2 working days of placing it. After this period, cancellations are not allowed."
+      },
+      {
+        "question": "Can I cancel my order after it has been shipped?",
+        "answer": "No, once an order has been shipped, it cannot be canceled. You can return the product after receiving it, following our Return & Exchange Policy."
+      },
+      {
+        "question": "How do I cancel my order?",
+        "answer": "Contact customer support at +91 8928610682 or email enquiries@kynajewels.com, provide your order details and reason for cancellation. If your cancellation request is within the allowed period, the process will be initiated."
+      },
+      {
+        "question": "Is there a cancellation fee?",
+        "answer": "Yes, a 2% cancellation fee is applicable on all order cancellations. The remaining amount will be refunded to you."
+      },
+      {
+        "question": "How will I receive my refund after cancellation?",
+        "answer": "Refunds will be processed through the same payment method used during purchase, including Credit/Debit Card Reversal, Net Banking (NEFT/RTGS), and UPI Refund."
+      },
+      {
+        "question": "How long will it take to receive my refund after cancellation?",
+        "answer": "Refunds typically take 21-30 working days after the cancellation is processed."
+      }
+    ]
+  },
+  {
+    "category": "Custom & Personalized Orders",
+    "questions": [
+      {
+        "question": "Can I cancel a customized or personalized jewellery order?",
+        "answer": "No, cancellations are not allowed for customized jewellery (engraved, altered designs), made-to-order pieces, or personalized jewellery with name engravings or special modifications."
+      },
+      {
+        "question": "Can I cancel a \"Design Your Own Jewellery\" order?",
+        "answer": "Yes, but only within 2 working days from the order placement. After this, cancellations will not be accepted."
+      },
+      {
+        "question": "Can I cancel a bulk or wholesale order?",
+        "answer": "No, bulk and wholesale orders are non-cancelable once confirmed. Please contact our customer support for assistance."
+      },
+      {
+        "question": "Can I cancel an order that was placed using a discount or promotional code?",
+        "answer": "Yes, but any applied discounts, vouchers, or promotional codes will not be refunded or reissued."
+      },
+      {
+        "question": "Can I modify my order instead of canceling it?",
+        "answer": "No, modifications to orders are not allowed. You will need to cancel the existing order (if eligible) and place a new order."
+      }
+    ]
+  },
+  {
+    "category": "Loyalty Programs & Promotions",
+    "questions": [
+      {
+        "question": "Does Kyna Jewels have a loyalty program?",
+        "answer": "Yes! We offer a Loyalty Rewards Program where customers earn points on every purchase, which can be redeemed for discounts on future purchases."
+      },
+      {
+        "question": "How do I join the Kyna Jewels Loyalty Program?",
+        "answer": "You are automatically enrolled when you create an account and make your first purchase."
+      },
+      {
+        "question": "How do I earn loyalty points?",
+        "answer": "You can earn points through purchases (1 point per ₹100 spent), referrals (100 bonus points when a friend makes their first purchase using your referral link), and special promotions (bonus points during promotional events)."
+      },
+      {
+        "question": "How can I redeem my loyalty points?",
+        "answer": "Redeem your points at checkout. 1 point = ₹1 discount on eligible purchases."
+      },
+      {
+        "question": "Do my loyalty points expire?",
+        "answer": "Yes, loyalty points expire 3 years from the date they are earned."
+      },
+      {
+        "question": "Can I transfer my loyalty points to another account?",
+        "answer": "No, loyalty points are non-transferable and can only be used by the account holder."
+      }
+    ]
+  },
+  {
+    "category": "Referral Program",
+    "questions": [
+      {
+        "question": "Does Kyna Jewels have a referral program?",
+        "answer": "Yes! You can refer friends and earn 5% discount on your next purchase when they place their first order."
+      },
+      {
+        "question": "How does the referral program work?",
+        "answer": "Share your unique referral link with friends. Your friend gets a 5% discount on their first order. Once they complete the purchase, you receive a ₹500 discount coupon for your next order."
+      },
+      {
+        "question": "Is there a limit on referral rewards?",
+        "answer": "No, you can refer as many friends as you like and earn rewards for each successful referral."
+      }
+    ]
+  },
+  {
+    "category": "Promotions & Discounts",
+    "questions": [
+      {
+        "question": "What types of promotions does Kyna Jewels offer?",
+        "answer": "We offer seasonal sales (Diwali, Christmas, etc.), flash discounts on select collections, limited-time offers on new arrivals, and festive bonus rewards."
+      },
+      {
+        "question": "How can I find out about upcoming promotions?",
+        "answer": "Subscribe to our newsletter or follow us on social media to stay updated on promotions and exclusive deals."
+      },
+      {
+        "question": "Can I combine multiple discount codes?",
+        "answer": "No, only one discount code can be applied per order."
+      },
+      {
+        "question": "Do gift cards count towards earning loyalty points?",
+        "answer": "No, points are earned only on purchases made with standard payment methods."
+      },
+      {
+        "question": "Are there any restrictions on using loyalty points and discounts?",
+        "answer": "Yes: loyalty points cannot be redeemed for cash, points cannot be used on customized jewellery, and discounts cannot be applied to already discounted items."
+      },
+      {
+        "question": "Can I get a refund if I used a discount code?",
+        "answer": "No, if a discount was applied, the refund will be processed only for the amount paid after the discount."
+      }
+    ]
+  },
+  {
+    "category": "Review & Feedback Submission",
+    "questions": [
+      {
+        "question": "How can I leave a review for a product I purchased?",
+        "answer": "Log in to your Kyna Jewels account, go to \"My Orders\" and select the product you want to review, click on \"Write a Review\" and rate the product, add your comments and submit."
+      },
+      {
+        "question": "Can I submit a review without making a purchase?",
+        "answer": "No, only verified customers who have purchased a product can submit a review."
+      },
+      {
+        "question": "Where will my review be displayed?",
+        "answer": "Your review will appear on the respective product page and may also be featured on Kyna Jewels' social media and marketing campaigns."
+      },
+      {
+        "question": "What kind of reviews do you accept?",
+        "answer": "We accept reviews that are honest and detailed about the product's quality, design, and experience; respectful and appropriate; and written in English or Hindi."
+      },
+      {
+        "question": "What content is NOT allowed in reviews?",
+        "answer": "We do not accept reviews that contain offensive or inappropriate language, false or misleading information, references to competitors, or personal details like phone numbers or emails."
+      },
+      {
+        "question": "Can I edit or delete my review after submitting it?",
+        "answer": "No, once a review is submitted, it cannot be edited. However, you can contact customer support to request removal."
+      }
+    ]
+  },
+  {
+    "category": "General Feedback",
+    "questions": [
+      {
+        "question": "How can I provide general feedback about Kyna Jewels?",
+        "answer": "You can share your feedback through our website's Contact Us page, emailing us at enquiries@kynajewels.com, or calling customer service at +91 8928610682."
+      },
+      {
+        "question": "Will I receive a response to my feedback?",
+        "answer": "Yes, our team reviews all feedback and may reach out for more details or to offer assistance."
+      },
+      {
+        "question": "Can I suggest new jewellery designs?",
+        "answer": "Absolutely! We love hearing from our customers. You can share your design suggestions through our Custom Design Request Form on our website."
+      },
+      {
+        "question": "Does Kyna Jewels offer rewards for writing reviews?",
+        "answer": "Yes! Customers who submit a review receive 50 loyalty points as a thank-you."
+      },
+      {
+        "question": "How long does it take for my review to be approved?",
+        "answer": "Reviews are typically approved within 48 hours after moderation."
+      },
+      {
+        "question": "Can I submit a video review?",
+        "answer": "Yes, we encourage customers to share video testimonials. You can upload them to social media and tag @kynajewels for a chance to be featured!"
+      }
+    ]
+  },
+  {
+    "category": "Privacy & Review Moderation",
+    "questions": [
+      {
+        "question": "Will my personal details be visible in my review?",
+        "answer": "No, we only display your first name and city to protect your privacy."
+      },
+      {
+        "question": "Why was my review not approved?",
+        "answer": "Reviews may be rejected if they contain prohibited content (spam, offensive language, false claims), do not provide relevant information about the product, or are suspected of being fake or promotional."
+      }
+    ]
+  },
+  {
+    "category": "Product Information & Care",
+    "questions": [
+      {
+        "question": "Do the product images reflect the actual item?",
+        "answer": "We strive for accuracy, but variations in color and weight may occur due to handcrafted production."
+      },
+      {
+        "question": "How should I care for my jewellery?",
+        "answer": "Avoid exposure to chemicals, store in a jewellery box, and clean with a soft brush and mild soap."
+      },
+      {
+        "question": "Does Kyna Jewels offer real silver?",
+        "answer": "Yes, Kyna Jewels offer some products crafted from sterling silver, which is a high-quality and durable alloy composed of 92.5% pure silver, ensuring lasting value and elegance."
+      }
+    ]
+  },
+  {
+    "category": "Silver Products with White Rhodium",
+    "questions": [
+      {
+        "question": "How long will the white rhodium plating on silver jewellery last?",
+        "answer": "The white rhodium plating typically lasts for approximately 6 months or more, depending on usage and exposure. Regular wear, contact with chemicals, and environmental factors may affect its longevity."
+      },
+      {
+        "question": "What should I do if my silver jewellery tarnishes?",
+        "answer": "We offer free lifetime repolishing in case of tarnish. However, the jewellery must pass our Quality Control (QC) inspection to be eligible for free repolishing."
+      },
+      {
+        "question": "What is covered under the free lifetime repolishing service?",
+        "answer": "The free service covers only tarnishing of the silver jewellery. It does not include scratches, dents, or physical damage; loss of stones or settings; or general wear and tear or fading due to improper care."
+      },
+      {
+        "question": "How do I get my jewellery repolished?",
+        "answer": "You can visit our store or contact our customer service team to initiate the repolishing process. The jewellery will undergo a QC check before being approved for free repolishing."
+      },
+      {
+        "question": "What is not covered under the free repolishing service?",
+        "answer": "Physical damage (e.g., bent, broken, or misshapen jewellery), loss of stones or setting issues, discoloration due to exposure to chemicals, perfumes, or improper care, and requests for re-plating without tarnish."
+      },
+      {
+        "question": "How can I maintain the rhodium plating for a longer duration?",
+        "answer": "To extend the life of the rhodium plating: avoid contact with chemicals, perfumes, and lotions; remove jewellery before swimming, bathing, or exercising; store in a dry, airtight container when not in use; and clean gently with a soft, non-abrasive cloth."
+      }
+    ]
+  },
+  {
+    "category": "Silver Products with Gold Plating",
+    "questions": [
+      {
+        "question": "How long will the gold plating on silver jewellery last?",
+        "answer": "The gold plating typically lasts for approximately 1 year or more, depending on usage and exposure. Factors such as regular wear, contact with chemicals, and environmental conditions can affect its longevity."
+      },
+      {
+        "question": "What should I do if my gold-plated silver jewellery tarnishes?",
+        "answer": "We offer free lifetime repolishing in case of tarnish. However, the jewellery must pass our Quality Control (QC) inspection to be eligible for this service."
+      },
+      {
+        "question": "What is covered under the free lifetime repolishing service for gold-plated items?",
+        "answer": "The free service covers only tarnishing of the jewellery. It does not include scratches, dents, or physical damage; loss of stones or settings; or fading or discoloration due to improper care."
+      },
+      {
+        "question": "How do I get my gold-plated jewellery repolished?",
+        "answer": "You can visit our store or contact our customer service team to initiate the repolishing process. The jewellery will be inspected through our QC process before approval."
+      },
+      {
+        "question": "What is not covered under the free repolishing service for gold-plated items?",
+        "answer": "Physical damage (e.g., bent, broken, or misshapen jewellery), loss of stones or any setting issues, discoloration due to exposure to chemicals, perfumes, or improper storage, and requests for re-plating if there is no tarnish."
+      },
+      {
+        "question": "How can I maintain the gold plating for a longer duration?",
+        "answer": "To extend the life of the gold plating: avoid exposure to chemicals, perfumes, and lotions; remove jewellery before swimming, bathing, or exercising; store in a dry, airtight container when not in use; and clean gently with a soft, non-abrasive cloth."
+      }
+    ]
+  },
+  {
+    "category": "General Brand Information",
+    "questions": [
+      {
+        "question": "What is Kyna Brand?",
+        "answer": "Kyna is a premium jewelry brand specializing in exquisite gold, silver, platinum, titanium and diamond jewelry. We create timeless pieces with the highest quality craftsmanship and ethical sourcing of materials, designed to complement your style for any occasion."
+      },
+      {
+        "question": "Where can I buy Kyna jewelry?",
+        "answer": "You can shop our entire collection online on our official website or contact us through WhatsApp or email us."
+      },
+      {
+        "question": "Is Kyna a trusted jewelry brand?",
+        "answer": "Yes, Kyna is recognized for its exceptional quality and craftsmanship in diamond jewelry. We use only certified materials and ensure each piece is ethically sourced and thoroughly inspected."
+      },
+      {
+        "question": "What types of jewelry does Kyna offer?",
+        "answer": "Kyna offers a wide variety of diamond jewelry, including rings, earrings, necklaces, bracelets, pendants, and more. Each piece is designed with precision to provide both beauty and durability."
+      },
+      {
+        "question": "Are the diamonds used in Kyna jewelry certified?",
+        "answer": "Yes, all the diamonds used in Kyna jewelry are certified by recognized gemological laboratories like GIA (Gemological Institute of America) and IGI (International Gemological Institute), ensuring their quality, clarity, cut, and color."
+      }
+    ]
+  },
+  {
+    "category": "Care and Maintenance",
+    "questions": [
+      {
+        "question": "How do I care for my silver and diamond jewelry?",
+        "answer": "To maintain the shine and quality of your silver and diamond jewelry, keep it away from harsh chemicals, water, and perfumes. Store your jewelry in a soft pouch or box to avoid scratches, and clean it regularly with a soft cloth."
+      },
+      {
+        "question": "How do I clean my silver jewelry?",
+        "answer": "You can clean your silver jewelry with a soft polishing cloth specifically designed for silver or use a mixture of mild soap and water, then dry thoroughly with a soft towel."
+      },
+      {
+        "question": "How do I prevent my diamond jewellery from scratching?",
+        "answer": "Store pieces individually and avoid wearing them during activities that could cause scratches (e.g., gym, gardening)."
+      }
+    ]
+  },
+  {
+    "category": "Platinum Diamond Jewellery Care",
+    "questions": [
+      {
+        "question": "Does platinum require special cleaning?",
+        "answer": "No. Clean platinum diamond jewellery using warm water, mild soap, and a soft cloth. Avoid abrasive materials."
+      },
+      {
+        "question": "Why does my platinum jewellery look dull over time?",
+        "answer": "Platinum can develop a patina (a matte, dull finish) with regular wear. This is normal and can be professionally polished to restore its original shine."
+      },
+      {
+        "question": "How often should I have my platinum jewellery polished?",
+        "answer": "For frequent wearers, have it professionally polished every 12–18 months."
+      }
+    ]
+  },
+  {
+    "category": "Titanium Diamond Jewellery Care",
+    "questions": [
+      {
+        "question": "Is titanium diamond jewellery scratch-resistant?",
+        "answer": "Yes, titanium is highly scratch-resistant but can still show minor wear over time."
+      },
+      {
+        "question": "How do I clean titanium diamond jewellery?",
+        "answer": "Use warm water + mild soap and wipe with a soft cloth. Avoid harsh jewellery cleaners or abrasives."
+      },
+      {
+        "question": "Can titanium jewellery be resized?",
+        "answer": "No, titanium is extremely hard and cannot be resized easily. Ensure you get the correct size when purchasing."
+      }
+    ]
+  },
+  {
+    "category": "Warranty and Repairs",
+    "questions": [
+      {
+        "question": "Does Kyna offer a warranty on its jewelry?",
+        "answer": "Yes, Kyna offers a limited warranty on all our jewelry, covering manufacturing defects. The warranty does not cover damages caused by misuse, accidents, or normal wear and tear."
+      },
+      {
+        "question": "Can I get my jewelry repaired?",
+        "answer": "Yes, we offer repair services for most of our jewelry pieces. Please reach out to our customer service team or visit a Kyna store for assistance."
+      }
+    ]
+  },
+  {
+    "category": "Customization",
+    "questions": [
+      {
+        "question": "Does Kyna offer customized jewelry?",
+        "answer": "Yes, we offer customization options for many of our jewelry pieces. Whether it's engraving a special message or designing a unique piece, our expert designers are here to bring your vision to life."
+      }
+    ]
+  },
+  {
+    "category": "Platinum Information",
+    "questions": [
+      {
+        "question": "What is the purity of the platinum used in Kyna's jewelry?",
+        "answer": "Kyna uses 950 platinum, meaning it is made of 95% pure platinum and 5% other metals, ensuring exceptional strength, durability, and hypoallergenic properties."
+      },
+      {
+        "question": "Why is platinum more expensive than other metals?",
+        "answer": "Platinum is rarer, more durable, and denser than most other metals. It's also more difficult to mine and craft, which contributes to its higher cost. The durability and long-lasting beauty of platinum make it a worthwhile investment for high-end jewelry."
+      },
+      {
+        "question": "Is platinum jewelry hypoallergenic?",
+        "answer": "Yes, platinum is hypoallergenic. Since it is one of the least reactive metals, it is less likely to cause irritation or allergic reactions, making it an ideal choice for sensitive skin."
+      },
+      {
+        "question": "How does platinum compare to white gold?",
+        "answer": "Platinum is denser, more durable, and naturally white, while white gold requires rhodium plating to achieve its white color. Platinum also doesn't need regular replating, making it a more low-maintenance option compared to white gold."
+      }
+    ]
+  },
+  {
+    "category": "Titanium Information",
+    "questions": [
+      {
+        "question": "What is titanium jewellery?",
+        "answer": "Titanium jewellery is made from a lightweight, durable, and hypoallergenic metal called titanium. It is known for its strength, resistance to corrosion, and sleek, modern appearance."
+      },
+      {
+        "question": "Is titanium jewellery safe for sensitive skin?",
+        "answer": "Yes, titanium is hypoallergenic and safe for people with metal allergies. It does not contain nickel, which is a common cause of skin irritation."
+      },
+      {
+        "question": "Can titanium jewellery be customized or engraved?",
+        "answer": "Yes, titanium can be engraved with laser or diamond-tip engraving. However, due to its hardness, intricate or deep engravings may be challenging."
+      },
+      {
+        "question": "Does titanium jewellery come in different colors?",
+        "answer": "Yes, titanium can be anodized to produce a variety of colors, including blue, purple, gold, and rainbow hues. However, the color layer may wear over time."
+      },
+      {
+        "question": "Is titanium suitable for wedding and engagement rings?",
+        "answer": "Absolutely! Titanium is a popular choice for wedding and engagement rings due to its durability, lightweight feel, and modern aesthetic."
+      },
+      {
+        "question": "Does titanium jewellery tarnish or rust?",
+        "answer": "No, titanium does not tarnish, corrode, or rust. It retains its original appearance for years, making it a low-maintenance metal."
+      },
+      {
+        "question": "Is titanium jewellery heavy?",
+        "answer": "No, titanium is incredibly lightweight—about 45% lighter than steel. This makes it comfortable for daily wear."
+      },
+      {
+        "question": "What is the price range for titanium jewellery?",
+        "answer": "Titanium jewellery is generally more affordable than gold or platinum. Prices vary based on design, and any added gemstones or finishes."
+      }
+    ]
+  },
+  {
+    "category": "Product Images & Appearance",
+    "questions": [
+      {
+        "question": "Will my jewellery look same as shown in the website images?",
+        "answer": "We take utmost care to ensure the images on our website are representative of how our jewellery looks. However, some designs may look slightly different in terms of lighting."
+      }
+    ]
+  },
+  {
+    "category": "Engraving Tool",
+    "questions": [
+      {
+        "question": "What is the Kyna Engraving Tool?",
+        "answer": "The Kyna Engraving Tool allows you to personalize selected jewelry pieces with a short message, name, date, or symbol—creating something uniquely meaningful to you."
+      },
+      {
+        "question": "How do I use the engraving tool?",
+        "answer": "Choose a piece that offers engraving, tap the Add Engraving button on the product page, type your message into the engraving field, select your preferred style, preview it live and add to cart once you're happy."
+      },
+      {
+        "question": "What can I engrave?",
+        "answer": "You can engrave names, initials, dates, and symbols (from the available set). Unsupported characters may be excluded depending on the item."
+      },
+      {
+        "question": "Are there limits to how much I can engrave?",
+        "answer": "Yes, each item has a limit based on its design and space. The engraving tool will automatically guide you if the text is too long."
+      },
+      {
+        "question": "Can I engrave both the front and back?",
+        "answer": "Some items support engraving on both sides. If available, the option will appear in the tool. Additional charges may apply for dual-side engraving."
+      },
+      {
+        "question": "Is engraving free?",
+        "answer": "Engraving is complimentary on most products. If there's a charge, it will be clearly shown before you check out."
+      },
+      {
+        "question": "Can I choose where the engraving goes?",
+        "answer": "Engraving placement may vary depending on the piece and available space. Our team will always place it where it fits best while maintaining the design's balance and beauty."
+      },
+      {
+        "question": "Can I change my engraving after placing the order?",
+        "answer": "Changes may be possible if requested within 2 hours of ordering. After that, your item may already be in production and cannot be edited."
+      },
+      {
+        "question": "Can I return or exchange engraved items?",
+        "answer": "Since engraved items are made just for you, they are non-returnable and non-exchangeable unless there is a manufacturing issue."
+      },
+      {
+        "question": "Can I engrave something I've already purchased?",
+        "answer": "Engraving is only available during the ordering process. If your item hasn't shipped yet, contact us and we'll see if it's eligible for engraving."
+      },
+      {
+        "question": "How long does engraving take?",
+        "answer": "Engraving may add 1–2 business days to your order processing time. We'll keep you updated every step of the way."
+      }
+    ]
+  }
+]
