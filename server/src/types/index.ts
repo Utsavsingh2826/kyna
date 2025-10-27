@@ -114,10 +114,6 @@ export interface ICart extends Document {
   totalAmount: number;
   // Optional promo code applied to the cart (string code) - used at order creation to mark promo usage
   appliedPromoCode?: string | null;
-  // Optional referral code applied to the cart (string code) - used at order creation to mark referral usage
-  appliedReferralCode?: string | null;
-  // Referral discount percentage (e.g., 5 for 5%)
-  referralDiscount?: number;
   createdAt: Date;
   updatedAt: Date;
 }

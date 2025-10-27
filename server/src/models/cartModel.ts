@@ -31,25 +31,13 @@ const cartSchema = new Schema<ICart>({
     required: true, 
     default: 0,
     min: 0
-  },
+  }
+  ,
   // Optional applied promo code stored on the cart for tracking usage during order creation
   appliedPromoCode: {
     type: String,
     trim: true,
     default: null,
-  },
-  // Optional applied referral code stored on the cart for tracking usage during order creation
-  appliedReferralCode: {
-    type: String,
-    trim: true,
-    default: null,
-  },
-  // Referral discount percentage (e.g., 5 for 5%)
-  referralDiscount: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 100
   }
 }, {
   timestamps: true

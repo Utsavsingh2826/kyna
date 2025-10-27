@@ -14,34 +14,21 @@ import rateLimit from "express-rate-limit";
 
 import authRoutes from "./routes/auth";
 import productRoutes from "./routes/product";
-import cartRoutes from "./routes/cart";
-import orderRoutes from "./routes/order";
 import giftCardRoutes from "./routes/giftCard";
 import wishlistRoutes from "./routes/wishlist";
 import wishlistShareRoutes from "./routes/wishlistShare";
-import referralRoutes from "./routes/referral";
 import settingsRoutes from "./routes/settings";
 import reviewRoutes from "./routes/review";
 import giftingRoutes from "./routes/gifting";
 import engravingRoutes from "./routes/engraving";
-import paymentRoutes from "./routes/payment";
 import ringsRoutes from "./routes/rings";
-import promoCodeRoutes from "./routes/promoCode";
-import referralCodeRoutes from "./routes/referralCode";
-import trackingRoutes, { setTrackingController } from "./routes/tracking";
 import adminRoutes from "./routes/admin";
 import buildYourJewelryRoutes from "./routes/buildYourJewelry";
 import subProductRoutes from "./routes/subProduct";
 import blogRoutes from "./routes/blog";
 import addressRoutes from "./routes/address";
 
-// Import tracking services
-import { TrackingController } from "./controllers/trackingController";
-import { TrackingService } from "./services/TrackingService";
-import { createSequel247Service } from "./services/Sequel247Service";
-import { Sequel247Config } from "./types/tracking";
-
-import { startCronJobs, startTrackingCronJob } from './services/cronService';
+import { startCronJobs } from './services/cronService';
 import { errorHandler, notFoundHandler, asyncHandler } from './middleware/errorHandler';
 import { healthService } from './services/healthService';
 import { validateProductionConfig } from './config/production';
@@ -87,22 +74,6 @@ if (!process.env.PORT) {
 //   }
 }
 
-// Sequel247 configuration - NO DEFAULT VALUES FOR PRODUCTION
-if (!process.env.SEQUEL247_TEST_ENDPOINT) {
-  console.warn('⚠️ SEQUEL247_TEST_ENDPOINT not set');
-}
-if (!process.env.SEQUEL247_TEST_TOKEN) {
-  console.warn('⚠️ SEQUEL247_TEST_TOKEN not set');
-}
-if (!process.env.SEQUEL247_PROD_ENDPOINT) {
-  console.warn('⚠️ SEQUEL247_PROD_ENDPOINT not set');
-}
-if (!process.env.SEQUEL247_PROD_TOKEN) {
-  console.warn('⚠️ SEQUEL247_PROD_TOKEN not set');
-}
-if (!process.env.SEQUEL247_STORE_CODE) {
-  console.warn('⚠️ SEQUEL247_STORE_CODE not set');
-}
 
 const app: Express = express();
 
@@ -221,42 +192,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Initialize tracking services
-const initializeTrackingServices = () => {
-  try {
-    // Sequel247 configuration
-    const sequelConfig: Sequel247Config = {
-      endpoint:
-        process.env.NODE_ENV === "production"
-          ? process.env.SEQUEL247_PROD_ENDPOINT || "https://sequel247.com/"
-          : process.env.SEQUEL247_TEST_ENDPOINT ||
-            "https://test.sequel247.com/",
-      token:
-        process.env.NODE_ENV === "production"
-          ? process.env.SEQUEL247_PROD_TOKEN || ""
-          : process.env.SEQUEL247_TEST_TOKEN || "",
-      storeCode: process.env.SEQUEL247_STORE_CODE || "BLRAK",
-    };
-
-    // Initialize services
-    const sequelService = createSequel247Service(sequelConfig);
-    const trackingService = new TrackingService(sequelService);
-    const trackingController = new TrackingController(trackingService);
-
-    // Set controller in routes
-    setTrackingController(trackingController);
-
-    // Start automatic tracking updates cron job
-    startTrackingCronJob(trackingService);
-
-    console.log("✅ Tracking services initialized successfully");
-  } catch (error) {
-    console.error("❌ Failed to initialize tracking services:", error);
-  }
-};
-
-// Initialize tracking services
-initializeTrackingServices();
 
 // Initialize Redis (optional)
 if (process.env.REDIS_HOST) {
@@ -313,17 +248,12 @@ app.get("/api", (req: Request, res: Response) => {
     endpoints: {
       auth: "/api/auth",
       products: "/api/products",
-      cart: "/api/cart",
-      orders: "/api/orders",
-      tracking: "/api/tracking",
       giftCards: "/api/gift-cards",
       wishlist: "/api/wishlist",
-      referrals: "/api/referrals",
       settings: "/api/settings",
       reviews: "/api/reviews",
       gifting: "/api/gifting",
       engraving: "/api/engraving",
-      payment: "/api/payment",
       rings: "/api/rings",
       buildYourJewelry: "/api/build-your-jewelry",
       subProducts: "/api/sub-products",
@@ -365,21 +295,14 @@ app.get("/api/monitoring/trends", asyncHandler(async (req: Request, res: Respons
 // Routes with deprecation warnings
 app.use("/api/auth", deprecationWarning, authRoutes);
 app.use("/api/products", deprecationWarning, productRoutes);
-app.use("/api/cart", deprecationWarning, cartRoutes);
-app.use("/api/orders", deprecationWarning, orderRoutes);
-app.use("/api/tracking", deprecationWarning, trackingRoutes);
 app.use("/api/gift-cards", deprecationWarning, giftCardRoutes);
 app.use("/api/wishlist", deprecationWarning, wishlistRoutes);
 app.use("/api/wishlist-share", deprecationWarning, wishlistShareRoutes);
-app.use("/api/referrals", deprecationWarning, referralRoutes);
 app.use("/api/settings", deprecationWarning, settingsRoutes);
 app.use("/api/reviews", deprecationWarning, reviewRoutes);
 app.use("/api/gifting", deprecationWarning, giftingRoutes);
 app.use("/api/engraving", deprecationWarning, engravingRoutes);
-app.use("/api/payment", deprecationWarning, paymentRoutes);
 app.use("/api/rings", deprecationWarning, ringsRoutes);
-app.use("/api/promo-code", deprecationWarning, promoCodeRoutes);
-app.use("/api/referral-code", deprecationWarning, referralCodeRoutes);
 app.use("/api/admin", deprecationWarning, adminRoutes);
 app.use("/api/build-your-jewelry", deprecationWarning, buildYourJewelryRoutes);
 app.use("/api/sub-products", deprecationWarning, subProductRoutes);
@@ -391,98 +314,6 @@ app.get("/", (req: Request, res: Response) => {
   res.send("API is running");
 });
 
-// System health check endpoint
-app.get('/api/system/health', async (req: Request, res: Response) => {
-  try {
-    const { TrackingOrder } = await import('./models/TrackingOrder');
-    const { OrderModel } = await import('./models/orderModel');
-    
-    // Check orders pending updates
-    const ordersToUpdate = await TrackingOrder.countDocuments({
-      docketNumber: { $exists: true, $ne: null },
-      status: { $nin: ['DELIVERED', 'CANCELLED'] }
-    });
-    
-    // Get last 5 successful updates
-    const recentUpdates = await TrackingOrder.find({
-      status: { $nin: ['ORDER_PLACED'] }
-    })
-    .sort({ updatedAt: -1 })
-    .limit(5)
-    .select('orderNumber status updatedAt');
-    
-    // Basic database connectivity check
-    const totalOrders = await OrderModel.countDocuments();
-    const totalTracking = await TrackingOrder.countDocuments();
-    
-    res.json({
-      success: true,
-      message: 'System is healthy',
-      timestamp: new Date().toISOString(),
-      cronJob: {
-        status: 'running',
-        frequency: 'Every 30 minutes',
-        nextUpdate: 'Within 30 minutes'
-      },
-      database: {
-        connected: true,
-        totalOrders,
-        totalTracking,
-        ordersToUpdate
-      },
-      recentActivity: recentUpdates,
-      systemInfo: {
-        environment: process.env.NODE_ENV,
-        uptime: process.uptime() + ' seconds'
-      }
-    });
-  } catch (error) {
-    console.error('Health check error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'System health check failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
-    });
-  }
-});
-
-// Manual tracking update endpoint (for testing)
-app.post('/api/tracking/manual-update', async (req: Request, res: Response) => {
-  try {
-    // Get tracking service from the global scope
-    const { runTrackingUpdateJob } = await import('./services/cronService');
-    
-    // We need to create a tracking service instance
-    const sequelConfig: Sequel247Config = {
-      endpoint: process.env.NODE_ENV === "production"
-        ? process.env.SEQUEL247_PROD_ENDPOINT || "https://sequel247.com/"
-        : process.env.SEQUEL247_TEST_ENDPOINT || "https://test.sequel247.com/",
-      token: process.env.NODE_ENV === "production"
-        ? process.env.SEQUEL247_PROD_TOKEN || ""
-        : process.env.SEQUEL247_TEST_TOKEN || "",
-      storeCode: process.env.SEQUEL247_STORE_CODE || "BLRAK",
-    };
-    
-    const sequelService = createSequel247Service(sequelConfig);
-    const trackingService = new TrackingService(sequelService);
-    
-    const result = await runTrackingUpdateJob(trackingService);
-    
-    res.json({
-      success: true,
-      message: 'Manual tracking update completed',
-      data: result
-    });
-  } catch (error) {
-    console.error('Manual tracking update error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to run manual tracking update',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
 
 // 404 handler for undefined routes
 app.use('*', notFoundHandler);
