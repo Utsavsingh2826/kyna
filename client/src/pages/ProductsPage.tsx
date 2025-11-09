@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, Heart } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import productsData from "@/data/products.json";
 import {
   FilterGroup,
   // DiamondShapeSelector,
@@ -9,33 +8,58 @@ import {
 } from "@/components/Engravings";
 import "./ProductPage.css";
 
-type ColorOption = "white" | "gold" | "rosegold";
 type MainCategory = "rings" | "earrings" | "pendants" | "bracelets";
 
 interface Product {
-  id: number;
+  modelSku: string;
+  metalTypes: string[];
   title: string;
-  oldPrice: string;
-  price: string;
-  img: string;
-  discount: string;
-  availableColors: ColorOption[];
-  category: MainCategory;
+  slug: string;
+  variantCount: number;
+  firstVariantSku: string;
+  firstVariantImageUrl: string;
+  sellingPrice: number;
+  priceIncomplete: boolean;
 }
 
-const COLOR_ICONS: Record<ColorOption, JSX.Element> = {
-  white: <img src="/colors/white.png" className="h-7" alt="White color" />,
-  gold: <img src="/colors/gold.png" className="h-7" alt="Gold color" />,
-  rosegold: (
-    <img src="/colors/rosegold.png" className="h-7" alt="Rose Gold color" />
-  ),
-};
+interface ApiResponse {
+  success: boolean;
+  count: number;
+  total: number;
+  pagination: {
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+  };
+  appliedFilters?: {
+    category?: string;
+    centerStoneShape?: string[];
+    ringTypeRequested?: string[];
+    ringPrefixesApplied?: string[];
+    earringType?: string[];
+    pendantType?: string[];
+    braceletType?: string[];
+  };
+  products: Product[];
+}
 
 export default function ProductsPage({ category }: { category: MainCategory }) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [minPrice, setMinPrice] = useState<number>(24000);
+  const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(50000);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    totalPages: 1,
+    currentPage: 1,
+    limit: 5,
+    total: 0,
+  });
+  const [appliedFilters, setAppliedFilters] = useState<
+    ApiResponse["appliedFilters"] | null
+  >(null);
 
   // Filter state management with backend parameter names - category-specific for all jewelry types
   const [activeFilters, setActiveFilters] = useState({
@@ -44,6 +68,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     solitaire_diamond_shape: [] as string[],
     engagement_diamond_shape: [] as string[],
     fashion_diamond_shape: [] as string[],
+    mens_diamond_shape: [] as string[],
 
     // Earring categories and filters
     earring_category: [] as string[], // Backend parameter for earring categories
@@ -66,12 +91,295 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
     // Common filters
     style: [] as string[],
-    min_price: "24000",
+    min_price: "0",
     max_price: "50000",
   });
 
-  const products: Product[] = productsData as unknown as Product[];
-  const filtered = products.filter((p) => p.category === category);
+  // API function to fetch products
+  const fetchProducts = useCallback(
+    async (page: number = 1, limit: number = 20) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Map category names to API category format
+        const categoryMap: Record<MainCategory, string> = {
+          rings: "RINGS",
+          earrings: "EARRINGS",
+          pendants: "PENDANTS",
+          bracelets: "BRACELETS",
+        };
+
+        const apiCategory = categoryMap[category];
+
+        // Build filter parameters based on active filters
+        const buildApiFilters = () => {
+          const params = new URLSearchParams();
+          params.set("page", page.toString());
+          params.set("limit", limit.toString());
+
+          // Handle diamond shapes - collect all selected shapes from different categories
+          const allSelectedShapes = new Set<string>();
+
+          if (category === "rings") {
+            // Collect shapes from all ring subcategories
+            activeFilters.solitaire_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+            activeFilters.engagement_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+            activeFilters.fashion_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+
+            // Add centerStoneShape parameter if any shapes are selected
+            if (allSelectedShapes.size > 0) {
+              params.set(
+                "centerStoneShape",
+                Array.from(allSelectedShapes)
+                  .map((s) => s.toLowerCase())
+                  .join(",")
+              );
+            }
+
+            // Handle ring types based on selected categories
+            const ringTypes = new Set<string>();
+            if (
+              activeFilters.ring_category.includes("Solitaire Rings") ||
+              activeFilters.solitaire_diamond_shape.length > 0
+            ) {
+              ringTypes.add("solitaire");
+            }
+            if (
+              activeFilters.ring_category.includes("Engagement Rings") ||
+              activeFilters.engagement_diamond_shape.length > 0
+            ) {
+              ringTypes.add("engagement");
+            }
+            if (
+              activeFilters.ring_category.includes("Fashion Rings") ||
+              activeFilters.fashion_diamond_shape.length > 0
+            ) {
+              ringTypes.add("fashion");
+            }
+            if (
+              activeFilters.ring_category.includes("Men's Rings") ||
+              activeFilters.mens_diamond_shape.length > 0
+            ) {
+              ringTypes.add("men");
+            }
+
+            if (ringTypes.size > 0) {
+              params.set("ringType", Array.from(ringTypes).join(","));
+            }
+          }
+
+          // Handle earrings filters
+          if (category === "earrings") {
+            // Collect shapes from all earring subcategories
+            activeFilters.studs_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+            activeFilters.hoops_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+            activeFilters.drop_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+            activeFilters.fashion_earring_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+
+            if (allSelectedShapes.size > 0) {
+              params.set(
+                "centerStoneShape",
+                Array.from(allSelectedShapes)
+                  .map((s) => s.toLowerCase())
+                  .join(",")
+              );
+            }
+
+            // Handle earring types
+            const earringTypes = new Set<string>();
+            if (
+              activeFilters.earring_category.includes("Studs") ||
+              activeFilters.studs_diamond_shape.length > 0
+            ) {
+              earringTypes.add("studs");
+            }
+            if (
+              activeFilters.earring_category.includes("Hoops / Huggies") ||
+              activeFilters.hoops_diamond_shape.length > 0
+            ) {
+              earringTypes.add("hoops");
+            }
+            if (
+              activeFilters.earring_category.includes("Drop Earrings") ||
+              activeFilters.drop_diamond_shape.length > 0
+            ) {
+              earringTypes.add("drop");
+            }
+            if (
+              activeFilters.earring_category.includes("Fashion Earrings") ||
+              activeFilters.fashion_earring_diamond_shape.length > 0
+            ) {
+              earringTypes.add("fashion");
+            }
+
+            if (earringTypes.size > 0) {
+              params.set("earringType", Array.from(earringTypes).join(","));
+            }
+
+            // Handle earring lengths
+            if (activeFilters.earring_length.length > 0) {
+              params.set(
+                "earringLength",
+                activeFilters.earring_length.join(",")
+              );
+            }
+          }
+
+          // Handle pendants filters
+          if (category === "pendants") {
+            activeFilters.solitaire_pendant_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+            activeFilters.fashion_pendant_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+            activeFilters.halo_pendant_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+
+            if (allSelectedShapes.size > 0) {
+              params.set(
+                "centerStoneShape",
+                Array.from(allSelectedShapes)
+                  .map((s) => s.toLowerCase())
+                  .join(",")
+              );
+            }
+
+            const pendantTypes = new Set<string>();
+            if (
+              activeFilters.pendant_category.includes("Solitaire Pendants") ||
+              activeFilters.solitaire_pendant_diamond_shape.length > 0
+            ) {
+              pendantTypes.add("solitaire");
+            }
+            if (
+              activeFilters.pendant_category.includes("Fashion Pendants") ||
+              activeFilters.fashion_pendant_diamond_shape.length > 0
+            ) {
+              pendantTypes.add("fashion");
+            }
+            if (
+              activeFilters.pendant_category.includes("Solitaire Halo") ||
+              activeFilters.halo_pendant_diamond_shape.length > 0
+            ) {
+              pendantTypes.add("halo");
+            }
+
+            if (pendantTypes.size > 0) {
+              params.set("pendantType", Array.from(pendantTypes).join(","));
+            }
+          }
+
+          // Handle bracelets filters
+          if (category === "bracelets") {
+            activeFilters.tennis_bracelet_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+            activeFilters.fashion_bracelet_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
+
+            if (allSelectedShapes.size > 0) {
+              params.set(
+                "centerStoneShape",
+                Array.from(allSelectedShapes)
+                  .map((s) => s.toLowerCase())
+                  .join(",")
+              );
+            }
+
+            const braceletTypes = new Set<string>();
+            if (
+              activeFilters.bracelet_category.includes("Tennis Bracelets") ||
+              activeFilters.tennis_bracelet_diamond_shape.length > 0
+            ) {
+              braceletTypes.add("tennis");
+            }
+            if (
+              activeFilters.bracelet_category.includes("Fashion Bracelets") ||
+              activeFilters.fashion_bracelet_diamond_shape.length > 0
+            ) {
+              braceletTypes.add("fashion");
+            }
+            if (activeFilters.bracelet_category.includes("Chain Bracelets")) {
+              braceletTypes.add("chain");
+            }
+            if (activeFilters.bracelet_category.includes("Charm Bracelets")) {
+              braceletTypes.add("charm");
+            }
+
+            if (braceletTypes.size > 0) {
+              params.set("braceletType", Array.from(braceletTypes).join(","));
+            }
+          }
+
+          // Handle styles
+          if (activeFilters.style.length > 0) {
+            params.set("style", activeFilters.style.join(","));
+          }
+
+          // Handle price range - use current slider values directly
+          if (minPrice !== 0) {
+            params.set("minPrice", minPrice.toString());
+          }
+          if (maxPrice !== 50000) {
+            params.set("maxPrice", maxPrice.toString());
+          }
+
+          return params;
+        };
+
+        const filterParams = buildApiFilters();
+        const response = await fetch(
+          `http://localhost:5000/api/products/category/${apiCategory}?${filterParams.toString()}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+
+        if (data.success) {
+          setProducts(data.products);
+          setPagination({
+            totalPages: data.pagination.totalPages,
+            currentPage: data.pagination.currentPage,
+            limit: data.pagination.limit,
+            total: data.total,
+          });
+          setAppliedFilters(data.appliedFilters || null);
+        } else {
+          throw new Error("API returned success: false");
+        }
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch products"
+        );
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [category, activeFilters, minPrice, maxPrice]
+  );
 
   // Update URL when filters change - use comma-separated values
   const updateUrlFilters = (
@@ -122,7 +430,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
     // Only update URL if value is different from default
     if (
-      (type === "min_price" && value !== "24000") ||
+      (type === "min_price" && value !== "0") ||
       (type === "max_price" && value !== "50000")
     ) {
       currentParams.set(type, value);
@@ -139,24 +447,31 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   };
 
   const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Math.min(Number(e.target.value), maxPrice - 1000);
-    setMinPrice(value);
-    updatePriceFilter("min_price", value.toString());
+    const value = Number(e.target.value);
+    console.log("🔵 MIN THUMB MOVED:", value);
+    // Ensure min price doesn't exceed max price - 2000
+    const clampedValue = Math.min(value, maxPrice - 2000);
+    setMinPrice(clampedValue);
+    updatePriceFilter("min_price", clampedValue.toString());
   };
 
   const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Math.max(Number(e.target.value), minPrice + 1000);
-    setMaxPrice(value);
+    const value = Number(e.target.value);
+    console.log("🔶 MAX THUMB MOVED:", value);
+    // Ensure max price doesn't go below min price + 2000
+    const clampedValue = Math.max(value, minPrice + 2000);
+    setMaxPrice(clampedValue);
     updatePriceFilter("max_price", value.toString());
   };
 
   // Clear all filters
-  const clearAllFilters = () => {
+  const clearAllFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
     setActiveFilters({
       ring_category: [],
       solitaire_diamond_shape: [],
       engagement_diamond_shape: [],
+      mens_diamond_shape: [],
       fashion_diamond_shape: [],
       earring_category: [],
       studs_diamond_shape: [],
@@ -172,12 +487,26 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       bracelet_category: [],
       tennis_bracelet_diamond_shape: [],
       fashion_bracelet_diamond_shape: [],
-      min_price: "24000",
+      min_price: "0",
       max_price: "50000",
     });
-    setMinPrice(24000);
+    setMinPrice(0);
     setMaxPrice(50000);
-  };
+  }, [setSearchParams]);
+
+  // Fetch products when category changes
+  useEffect(() => {
+    fetchProducts();
+  }, [category, fetchProducts]);
+
+  // Trigger API call when filters change (with debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchProducts(1); // Reset to first page when filters change
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [fetchProducts]);
 
   // Initialize filters from URL on component mount
   useEffect(() => {
@@ -200,6 +529,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         solitaire_diamond_shape: getFilterValues("solitaire_diamond_shape"),
         engagement_diamond_shape: getFilterValues("engagement_diamond_shape"),
         fashion_diamond_shape: getFilterValues("fashion_diamond_shape"),
+        mens_diamond_shape: getFilterValues("mens_diamond_shape"),
 
         // Earring filters
         earring_category: getFilterValues("earring_category"),
@@ -234,13 +564,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         // Common filters
         style: getFilterValues("style"),
-        min_price: urlMinPrice || "24000",
+        min_price: urlMinPrice || "0",
         max_price: urlMaxPrice || "50000",
       });
     } else {
       clearAllFilters();
     }
-  }, []);
+  }, [searchParams, clearAllFilters]);
 
   const titleMap: Record<MainCategory, string> = {
     rings: "Rings",
@@ -402,7 +732,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               />
               {showImages && (
                 <img
-                  src={`/diamond-shapes/${shape.toLowerCase()}.png`}
+                  src={`/DIAMOND_SHAPES_WEBP/${shape.toLowerCase()}.png`}
                   alt={shape}
                   className="h-8 w-8 mb-1"
                   onError={(e) => {
@@ -497,7 +827,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.engagement_diamond_shape}
-              showImages={false}
+              showImages={true}
               ringCategory="Engagement Rings"
               diamondShapeFilterKey="engagement_diamond_shape"
             />
@@ -514,12 +844,30 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </div>
           </FilterGroup>
 
+          {/* Mens Rings */}
+          <FilterGroup title="Mens Rings" isSubGroup={true}>
+            <p className="eng-label-muted">DIAMOND SHAPE</p>
+            <EnhancedDiamondShapeSelector
+              selectedShapes={activeFilters.mens_diamond_shape}
+              showImages={true}
+              ringCategory="Mens Rings"
+              diamondShapeFilterKey="mens_diamond_shape"
+            />
+            <p className="eng-label-muted">PRICE</p>
+            <PriceRangeSlider
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              onMinChange={handleMinChange}
+              onMaxChange={handleMaxChange}
+            />
+          </FilterGroup>
+
           {/* Fashion Rings */}
           <FilterGroup title="Fashion Rings" isSubGroup={true}>
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.fashion_diamond_shape}
-              showImages={false}
+              showImages={true}
               ringCategory="Fashion Rings"
               diamondShapeFilterKey="fashion_diamond_shape"
             />
@@ -529,6 +877,24 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               "ring_category",
               "Fashion Rings"
             )}
+            <p className="eng-label-muted">PRICE</p>
+            <PriceRangeSlider
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              onMinChange={handleMinChange}
+              onMaxChange={handleMaxChange}
+            />
+          </FilterGroup>
+
+          {/* Men's Rings */}
+          <FilterGroup title="Men's Rings" isSubGroup={true}>
+            <p className="eng-label-muted">DIAMOND SHAPE</p>
+            <EnhancedDiamondShapeSelector
+              selectedShapes={activeFilters.mens_diamond_shape}
+              showImages={true}
+              ringCategory="Men's Rings"
+              diamondShapeFilterKey="mens_diamond_shape"
+            />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
               minPrice={minPrice}
@@ -818,7 +1184,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         <div className="eng-header">
           <h2 id="products-heading" className="eng-title">
-            {titleMap[category]} Products ({filtered.length})
+            {titleMap[category]} Products ({loading ? "..." : pagination.total})
           </h2>
           <div className="eng-actions">
             <label>
@@ -832,6 +1198,35 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </label>
           </div>
         </div>
+
+        {/* API Applied Filters Display */}
+        {appliedFilters && !loading && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm font-medium text-blue-900 mb-2">
+              Applied Filters (from API):
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              {appliedFilters.centerStoneShape &&
+                appliedFilters.centerStoneShape.length > 0 && (
+                  <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded">
+                    Shapes: {appliedFilters.centerStoneShape.join(", ")}
+                  </span>
+                )}
+              {appliedFilters.ringTypeRequested &&
+                appliedFilters.ringTypeRequested.length > 0 && (
+                  <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded">
+                    Ring Types: {appliedFilters.ringTypeRequested.join(", ")}
+                  </span>
+                )}
+              {appliedFilters.ringPrefixesApplied &&
+                appliedFilters.ringPrefixesApplied.length > 0 && (
+                  <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded">
+                    Prefixes: {appliedFilters.ringPrefixesApplied.join(", ")}
+                  </span>
+                )}
+            </div>
+          </div>
+        )}
 
         {/* Mobile filter bar */}
         <div
@@ -891,7 +1286,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 .some(([, shapes]) => (shapes as string[]).length > 0) ||
               activeFilters.earring_length.length > 0 ||
               activeFilters.style.length > 0 ||
-              activeFilters.min_price !== "24000" ||
+              activeFilters.min_price !== "0" ||
               activeFilters.max_price !== "50000") && (
               <div className="col-span-full mb-4 p-3 bg-gray-100 rounded-lg">
                 <p className="text-sm text-gray-600 mb-2">Active Filters:</p>
@@ -1032,47 +1427,138 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               </div>
             )}
 
-            {filtered.map((p) => (
-              <article
-                className="eng-card"
-                key={`${category}-${p.id}`}
-                aria-label={p.title}
-              >
-                {p.discount && (
-                  <span
-                    className="eng-badge"
-                    aria-label={`${p.discount} badge`}
-                  >
-                    {p.discount}
-                  </span>
-                )}
-                <button className="eng-wishlist" aria-label="Add to wishlist">
-                  <Heart size={16} />
-                </button>
-                <img
-                  src={p.img}
-                  alt={`${p.title} product image`}
-                  loading="lazy"
-                  className="eng-card-img"
-                />
-                {p.availableColors && p.availableColors.length > 0 && (
-                  <div className="eng-color-row" aria-label="Available colors">
-                    {p.availableColors.map((c) => (
-                      <span key={`${p.id}-${c}`}>{COLOR_ICONS[c]}</span>
-                    ))}
-                  </div>
-                )}
-                <div className="eng-card-body">
-                  <h3 className="eng-card-title">{p.title}</h3>
-                  <div className="eng-card-prices">
-                    <span className="eng-old">{p.oldPrice}</span>
-                    <span className="eng-new">{p.price}</span>
-                  </div>
+            {/* Loading State */}
+            {loading && (
+              <div className="col-span-full flex justify-center items-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Loading products...</p>
                 </div>
-              </article>
-            ))}
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="col-span-full flex justify-center items-center py-12">
+                <div className="text-center">
+                  <div className="text-red-500 text-xl mb-2">⚠️</div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Failed to load products
+                  </h3>
+                  <p className="text-gray-600 mb-4">{error}</p>
+                  <button
+                    onClick={() => fetchProducts()}
+                    className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Products */}
+            {!loading &&
+              !error &&
+              products.map((p) => (
+                <Link
+                  to={`/product/${category}/${
+                    p.modelSku
+                  }?variantId=${encodeURIComponent(
+                    p.firstVariantSku
+                  )}&metalColor=WG`}
+                  key={`${category}-${p.modelSku}`}
+                  className="block"
+                >
+                  <article
+                    className="eng-card hover:shadow-lg transition-shadow duration-200"
+                    aria-label={p.title}
+                  >
+                    <button
+                      className="eng-wishlist"
+                      aria-label="Add to wishlist"
+                    >
+                      <Heart size={16} />
+                    </button>
+                    <img
+                      src={p.firstVariantImageUrl}
+                      alt={`${p.title} product image`}
+                      loading="lazy"
+                      className="eng-card-img"
+                    />
+                    {p.metalTypes && p.metalTypes.length > 0 && (
+                      <div
+                        className="eng-color-row"
+                        aria-label="Available metals"
+                      >
+                        {p.metalTypes.slice(0, 3).map((metal) => (
+                          // <span
+                          //   key={`${p.modelSku}-${metal}`}
+                          //   className="text-xs px-2 py-1 bg-gray-100 rounded-full"
+                          // >
+                          //   {metal}
+                          // </span>
+                          <div
+                            key={`${p.modelSku}-${metal}`}
+                            className="text-xs px-2 py-1 bg-gray-100 rounded-full"
+                          >
+                            <img
+                              src={
+                                metal === "GOLD"
+                                  ? "/colors/gold.png"
+                                  : metal === "SILVER"
+                                  ? "/colors/white.png"
+                                  : metal === "PLATINUM"
+                                  ? "/colors/platinum.png"
+                                  : metal === "ROSE GOLD"
+                                  ? "/colors/rose-gold.png"
+                                  : metal === "WHITE GOLD"
+                                  ? "/colors/white-gold.png"
+                                  : "/colors/default.png"
+                              }
+                              className="h-6 w-6"
+                              alt=""
+                            />
+                            {/* {metal} */}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="eng-card-body">
+                      <h3 className="eng-card-title">{p.title}</h3>
+                      <div className="text-xs text-black mt-1">
+                        Starting at Rs.{p.sellingPrice.toLocaleString()}
+                      </div>
+                    </div>
+                  </article>
+                </Link>
+              ))}
           </section>
         </section>
+
+        {/* Pagination */}
+        {!loading && !error && pagination.totalPages > 1 && (
+          <div className="flex justify-center items-center mt-8 space-x-2">
+            <button
+              onClick={() => fetchProducts(pagination.currentPage - 1)}
+              disabled={pagination.currentPage === 1}
+              className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Previous
+            </button>
+
+            <span className="px-4 py-2 text-sm text-gray-700">
+              Page {pagination.currentPage} of {pagination.totalPages}
+            </span>
+
+            <button
+              onClick={() => fetchProducts(pagination.currentPage + 1)}
+              disabled={pagination.currentPage === pagination.totalPages}
+              className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       <div

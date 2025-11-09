@@ -51,7 +51,7 @@ import WishlistPage from "./pages/WishlistPage";
 import SharedWishlistPage from "./pages/SharedWishlistPage";
 import PrivacyPolicy from "./components/terms&conditions/PrivacyPolicy";
 import ShippingPolicy from "./components/terms&conditions/Shipping";
-import CancellationRefund from './components/terms&conditions/Cancellation&Refund'
+import CancellationRefund from "./components/terms&conditions/Cancellation&Refund";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
 import BuildYourJewelleryPendants from "./pages/Build_yr_own/BuildYourJewelleryPendants";
@@ -118,10 +118,14 @@ function App() {
         <Routes>
           <Route path="/product-3d" element={<Product3d />} />
           <Route path="/" element={<HomePage />} />
-          <Route path="/product" element={<ProductDetail />} />
+          <Route path="/product/:category/:id" element={<ProductDetail />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/payment-processing" element={<PaymentProcessingPage />} />
+          <Route
+            path="/payment-processing"
+            element={<PaymentProcessingPage />}
+          />
           <Route path="/shipping" element={<ShippingInformationPage />} />
           <Route path="/order-success" element={<OrderSuccessPage />} />
           <Route
@@ -192,8 +196,14 @@ function App() {
           <Route path="/customer-service" element={<CustomerService />} />
           {/* Pretty path-based FAQ routes */}
           <Route path="/customer-service/faqs" element={<CustomerService />} />
-          <Route path="/customer-service/faqs/:categorySlug" element={<CustomerService />} />
-          <Route path="/customer-service/faqs/:categorySlug/:questionSlug" element={<CustomerService />} />
+          <Route
+            path="/customer-service/faqs/:categorySlug"
+            element={<CustomerService />}
+          />
+          <Route
+            path="/customer-service/faqs/:categorySlug/:questionSlug"
+            element={<CustomerService />}
+          />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/shipping-policy" element={<ShippingPolicy />} />
           <Route path="/cancellation-refund" element={<CancellationRefund />} />
@@ -230,10 +240,7 @@ function App() {
             path="/upload-your-design/earrings"
             element={<EarringBuilder />}
           />
-          <Route
-            path="/jewellery" 
-            element={<JewelleryPage />}
-          />
+          <Route path="/jewellery" element={<JewelleryPage />} />
           <Route
             path="/jewellery/:category"
             element={
@@ -274,14 +281,8 @@ function App() {
               </div>
             }
           />
-          <Route
-            path="/gifting"
-            element={<Giftings />}
-          />
-          <Route
-            path="/gifting/:priceRange"
-            element={<Giftings />}
-          />
+          <Route path="/gifting" element={<Giftings />} />
+          <Route path="/gifting/:priceRange" element={<Giftings />} />
           <Route
             path="/gifting/:category"
             element={
