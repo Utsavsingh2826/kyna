@@ -14,11 +14,11 @@ export const addReview = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    const { productId, rating, comment } = req.body;
-    if (!productId || !rating || !comment) {
+    const { productId, rating, title, comment } = req.body;
+    if (!productId || !rating || !title || !comment) {
       return res.status(400).json({
         success: false,
-        message: "productId, rating, and comment are required",
+        message: "productId, rating, title, and comment are required",
       });
     }
 
@@ -30,6 +30,7 @@ export const addReview = async (req: AuthRequest, res: Response) => {
       user: userId,
       product: productId,
       rating,
+      title,
       comment,
       images: imageFiles,
     });
