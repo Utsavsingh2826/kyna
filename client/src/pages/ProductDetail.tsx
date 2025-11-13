@@ -11,6 +11,9 @@ import {
   Share2,
 } from "lucide-react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { addToCart } from "@/store/slices/cartSlice";
+import type { RootState, AppDispatch } from "@/store";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import Engrave from "./Engrave";
@@ -179,6 +182,14 @@ const ProductDetail = () => {
   const { id, category } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth
+  );
+  const { loading: cartLoading } = useSelector(
+    (state: RootState) => state.cart
+  );
+
   const [productData, setProductData] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -699,6 +710,153 @@ const ProductDetail = () => {
       metalTypesRef.current.scrollBy({ left: 100, behavior: "smooth" });
     }
   };
+
+  // Handle Add to Cart
+  const handleAddToCart = useCallback(async () => {
+    if (!isAuthenticated) {
+      alert("Please log in to add items to cart");
+      navigate("/login");
+      return;
+    }
+
+    if (!productData || !productData.chosenVariantSku) {
+      alert("Please select all product options");
+      return;
+    }
+
+    try {
+      console.log("Adding to cart - Product:", {
+        modelSku: productData.modelSku,
+        variantSku: productData.chosenVariantSku,
+        title: productData.title,
+        price: productData.sellingPrice,
+        metalColor: selectedMetalColor,
+        metalType: selectedMetalType,
+        goldKarat: selectedGoldKarat,
+        diamondShape: selectedDiamondShape,
+        diamondSize: selectedDiamondSize,
+        diamondOrigin: selectedDiamondOrigin,
+        ringSize: selectedSize,
+      });
+
+      // In a real implementation, you would pass the product ID
+      // For now, we'll use the model SKU as a fallback
+      await dispatch(addToCart(productData.modelSku, 1));
+      alert("Product added to cart successfully!");
+    } catch (error) {
+      console.error("Error adding to cart:", error);
+      alert("Failed to add product to cart");
+    }
+  }, [
+    isAuthenticated,
+    navigate,
+    productData,
+    selectedMetalColor,
+    selectedMetalType,
+    selectedGoldKarat,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedDiamondOrigin,
+    selectedSize,
+    dispatch,
+  ]);
+
+  // Handle Buy Now
+  const handleBuyNow = useCallback(async () => {
+    if (!isAuthenticated) {
+      alert("Please log in to purchase");
+      navigate("/login");
+      return;
+    }
+
+    if (!productData || !productData.chosenVariantSku) {
+      alert("Please select all product options");
+      return;
+    }
+
+    // Create order data for console logging and payment
+    const orderData = {
+      orderId: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      customer: {
+        userId: user?.id || user?.id,
+        name: `${user?.firstName} ${user?.lastName}`,
+        email: user?.email,
+        phone: user?.phone,
+      },
+      product: {
+        modelSku: productData.modelSku,
+        variantSku: productData.chosenVariantSku,
+        title: productData.title,
+        description: productData.description,
+        price: productData.sellingPrice,
+        images: productData.variantImages,
+      },
+      customization: {
+        metalColor: selectedMetalColor,
+        metalType: selectedMetalType,
+        goldKarat: selectedGoldKarat,
+        diamondShape: selectedDiamondShape,
+        diamondSize: selectedDiamondSize,
+        diamondOrigin: selectedDiamondOrigin,
+        ringSize: selectedSize,
+      },
+      quantity: 1,
+      totalAmount: productData.sellingPrice,
+      orderDate: new Date().toISOString(),
+      status: "pending",
+    };
+
+    // Console log the order data
+    console.log("=== ORDER CREATED ===");
+    console.log("Order Data:", JSON.stringify(orderData, null, 2));
+    console.log("===================");
+
+    // Navigate to payment page with product data
+    navigate("/payment", {
+      state: {
+        orderData,
+        directPurchase: true,
+        items: [
+          {
+            product: {
+              _id: productData.modelSku,
+              title: productData.title,
+              price: productData.sellingPrice,
+              images: {
+                main: productData.variantImages?.[0] || "",
+                sub: productData.variantImages?.slice(1) || [],
+              },
+              sku: productData.chosenVariantSku,
+            },
+            quantity: 1,
+            price: productData.sellingPrice,
+            customization: {
+              metalColor: selectedMetalColor,
+              metalType: selectedMetalType,
+              goldKarat: selectedGoldKarat,
+              diamondShape: selectedDiamondShape,
+              diamondSize: selectedDiamondSize,
+              diamondOrigin: selectedDiamondOrigin,
+              ringSize: selectedSize,
+            },
+          },
+        ],
+        totalAmount: productData.sellingPrice,
+      },
+    });
+  }, [
+    isAuthenticated,
+    navigate,
+    productData,
+    selectedMetalColor,
+    selectedMetalType,
+    selectedGoldKarat,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedDiamondOrigin,
+    selectedSize,
+    user,
+  ]);
 
   const ringSizes = [
     "4",
@@ -1336,14 +1494,20 @@ const ProductDetail = () => {
 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 gap-4">
-                  <Button className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white  py-3">
-                    Buy Now
+                  <Button
+                    onClick={handleBuyNow}
+                    disabled={cartLoading}
+                    className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3"
+                  >
+                    {cartLoading ? "Processing..." : "Buy Now"}
                   </Button>
                   <Button
+                    onClick={handleAddToCart}
+                    disabled={cartLoading}
                     variant="outline"
-                    className="w-full border-[#328F94] text-[#328F94]  py-3"
+                    className="w-full border-[#328F94] text-[#328F94] py-3"
                   >
-                    Add To Cart
+                    {cartLoading ? "Adding..." : "Add To Cart"}
                   </Button>
                 </div>
 
@@ -1450,7 +1614,11 @@ const ProductDetail = () => {
 
           {/* Reviews Section */}
           <div className="mt-16">
-            <ProductReviews />
+            {productData ? (
+              <ProductReviews productId={productData.modelSku || id} />
+            ) : (
+              <ProductReviews productId={id} />
+            )}
           </div>
         </div>
 
