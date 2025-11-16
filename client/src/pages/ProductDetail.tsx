@@ -364,7 +364,7 @@ const ProductDetail = () => {
 
         // First try to fetch by slug, if that fails try by modelSku
         let response = await fetch(
-          `http://localhost:5000/api/products/model/${id}`
+          `http://localhost:5000/api/products/model/slug/${id}?var`
         );
 
         // If slug endpoint doesn't work, try the model endpoint
@@ -374,7 +374,7 @@ const ProductDetail = () => {
           const modelUrl = variantId
             ? `http://localhost:5000/api/products/model/${id}?variantId=${encodeURIComponent(
                 variantId
-              )}`
+              )}/&metalColor=${params.get("metalColor") || "WG"}`
             : `http://localhost:5000/api/products/model/${id}`;
 
           response = await fetch(modelUrl);
@@ -495,13 +495,32 @@ const ProductDetail = () => {
     const modelSku = productData.modelSku;
 
     // Get karat/purity code
+    // let karatCode = "18";
+    // if (selectedGoldKarat) {
+    //   if (selectedGoldKarat.includes("kt")) {
+    //     karatCode = selectedGoldKarat.replace("kt", "");
+    //   } else {
+    //     karatCode = selectedGoldKarat; // For 950, 925
+    //   }
+    // }
+
     let karatCode = "18";
-    if (selectedGoldKarat) {
-      if (selectedGoldKarat.includes("kt")) {
-        karatCode = selectedGoldKarat.replace("kt", "");
-      } else {
-        karatCode = selectedGoldKarat; // For 950, 925
-      }
+
+    // Prefix mapping for metal types
+    const metalCodeMap: { [key: string]: string } = {
+      GOLD: "", // Gold → no prefix, numbers only
+      PLATINUM: "PT", // Platinum → PT
+      SILVER: "SLV", // Silver → SLV
+    };
+
+    if (selectedMetalType === "GOLD") {
+      // For gold use numeric karat 18kt → 18
+      karatCode = selectedGoldKarat.includes("kt")
+        ? selectedGoldKarat.replace("kt", "")
+        : selectedGoldKarat; // fallback
+    } else {
+      // PLATINUM or SILVER → return PT or SLV only
+      karatCode = metalCodeMap[selectedMetalType];
     }
 
     // Determine diamond origin and specifications
@@ -1553,28 +1572,8 @@ const ProductDetail = () => {
             }
           />
 
-          {/* Matching Wedding Bands */}
-          <div className="mt-16">
-            <h2 className="text-xl font-bold mb-6">Matching Wedding Bands</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {sampleProduct.matchingBands.map((band) => (
-                <div key={band.id} className="text-center">
-                  <div className="aspect-square bg-neutral-50 rounded-lg mb-3 overflow-hidden">
-                    <img
-                      src={band.image}
-                      alt={band.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <h3 className="font-medium text-sm mb-1">{band.name}</h3>
-                  <p className="text-sm text-muted-foreground">{band.price}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* FAQ Section */}
-          <div className="mt-16">
+          {/* <div className="mt-16">
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="details">
                 <AccordionTrigger className="text-lg text-[#328F94] font-semibold">
@@ -1606,6 +1605,240 @@ const ProductDetail = () => {
                       defects. 15-day hassle-free returns policy. Free resizing
                       within the first 30 days of purchase.
                     </p>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div> */}
+          <div className="mt-16">
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="details">
+                <AccordionTrigger className="text-lg text-[#328F94] font-semibold">
+                  Details
+                </AccordionTrigger>
+                <AccordionContent className="pt-4">
+                  {/* Three Column Layout */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    {/* Item Details Column */}
+                    <div>
+                      <h4 className="text-[#328F94] font-semibold mb-4 text-sm">
+                        ITEM DETAILS
+                      </h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            SKU Number
+                          </span>
+                          <span className="font-medium">
+                            BRDTXR07400Q300GW4
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Ring Size
+                          </span>
+                          <span className="font-medium">14 (20 mm)</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Metal Type
+                          </span>
+                          <span className="font-medium">Gold 22KT</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Metal Color
+                          </span>
+                          <span className="font-medium">Rose</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Gold/Silver/Platinum Grams (Approx net grams)
+                          </span>
+                          <span className="font-medium">1.356 Grams</span>
+                        </div>
+                        <div className="py-2 border-b border-border">
+                          <div className="text-muted-foreground mb-2">
+                            Product Dimensions (In mm)
+                          </div>
+                          <div className="space-y-1 ml-4">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                Length :
+                              </span>
+                              <span className="font-medium">1.356 mm</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                Width :
+                              </span>
+                              <span className="font-medium">1.356 mm</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                Height :
+                              </span>
+                              <span className="font-medium">1.356 mm</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="py-2 border-b border-border flex justify-between">
+                          <h4 className="font-medium mb-3 text-sm">
+                            Disclaimer For Product Image
+                          </h4>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Product Photography in Print Material and Website
+                            may not reflect exact true color and/or scale.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Diamond & Gemstones Details Column */}
+                    <div>
+                      <h4 className="text-[#328F94] font-semibold mb-4 text-sm">
+                        DIAMOND & GEMSTONES DETAILS
+                      </h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Diamond Origin
+                          </span>
+                          <span className="font-medium">4.39</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Diamond Color & Clarity
+                          </span>
+                          <span className="font-medium">14K White Gold</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Total Diamond Weight (Approx carats)
+                          </span>
+                          <span className="font-medium">8.60</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Gemstone Origin
+                          </span>
+                          <span className="font-medium">11.86</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Gemstone Color
+                          </span>
+                          <span className="font-medium">11.86</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Gemstone Clarity
+                          </span>
+                          <span className="font-medium">11.86</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Total Gemstone Weight (Approx carats)
+                          </span>
+                          <span className="font-medium">Oval</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Price Breakup Column */}
+                    <div>
+                      <h4 className="text-[#328F94] font-semibold mb-4 text-sm">
+                        Price Breakup
+                      </h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            SKU Number
+                          </span>
+                          <span className="font-medium">
+                            BRDTXR07400Q300GW4
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Gold/Silver/Platinum Value
+                          </span>
+                          <span className="font-medium">Rs. 1,20,000</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Diamond Value
+                          </span>
+                          <span className="font-medium">Rs.</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Gemstones Value
+                          </span>
+                          <span className="font-medium">Rs.</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Making Charges
+                          </span>
+                          <span className="font-medium">Rs.</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">GST</span>
+                          <span className="font-medium">VS2+</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border font-semibold">
+                          <span>Total</span>
+                          <span>Rs.</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            Certification
+                          </span>
+                          <span className="font-medium">IGI/SGL Certified</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-border">
+                          <span className="text-muted-foreground">
+                            HallMark
+                          </span>
+                          <span className="font-medium">BIS HALLMARK</span>
+                        </div>
+                        <div className="py-2">
+                          <div className="text-muted-foreground mb-2">
+                            Disclaimer For Price
+                          </div>
+                          <p className="text-xs leading-relaxed">
+                            Jewellery weights for metals, diamonds, or
+                            gemstones, may slightly vary post-crafting, but rest
+                            assured the agreed-upon price will stay the same.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Full Width Disclaimer Section */}
+                  <div className="border-t border-border pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Certification Logos */}
+                      <div className="flex items-center gap-4 justify-start md:justify-end">
+                        <img
+                          src="/lovable-uploads/28cda72c-8974-4ea2-aecb-d264b8358551.png"
+                          alt="BIS Hallmark"
+                          className="h-16 w-16 object-contain"
+                        />
+                        <img
+                          src="/lovable-uploads/5392cf55-b28f-4fbd-8889-824dfe20dc8f.png"
+                          alt="IGI Certification"
+                          className="h-16 w-16 object-contain"
+                        />
+                        <img
+                          src="/lovable-uploads/9f89b073-535e-401e-88cd-4905a114937f.png"
+                          alt="SGL Certification"
+                          className="h-16 w-16 object-contain"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>

@@ -356,9 +356,19 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         const data: ApiResponse = await response.json();
 
+        console.log("API Response:", data);
+        console.log("Pagination from API:", data.pagination);
+        console.log("Total from API:", data.total);
+
         if (data.success) {
           setProducts(data.products);
           setPagination({
+            totalPages: data.pagination.totalPages,
+            currentPage: data.pagination.currentPage,
+            limit: data.pagination.limit,
+            total: data.total,
+          });
+          console.log("Pagination state set to:", {
             totalPages: data.pagination.totalPages,
             currentPage: data.pagination.currentPage,
             limit: data.pagination.limit,
@@ -1536,6 +1546,15 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         </section>
 
         {/* Pagination */}
+        {(() => {
+          console.log("Pagination debug:", {
+            loading,
+            error,
+            totalPages: pagination.totalPages,
+            shouldShow: !loading && !error && pagination.totalPages > 1,
+          });
+          return null;
+        })()}
         {!loading && !error && pagination.totalPages > 1 && (
           <div className="flex justify-center items-center mt-8 space-x-2">
             <button

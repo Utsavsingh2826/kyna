@@ -44,6 +44,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Product3d from "./pages/Product3d";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
+import PaymentPage from "./pages/PaymentPage";
 import PaymentProcessingPage from "./pages/PaymentProcessingPage";
 import ShippingInformationPage from "./pages/ShippingInformationPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
@@ -122,6 +123,14 @@ function App() {
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route
+            path="/payment"
+            element={
+              <PrivateRoute>
+                <PaymentPage />
+              </PrivateRoute>
+            }
+          />
           <Route
             path="/payment-processing"
             element={<PaymentProcessingPage />}
