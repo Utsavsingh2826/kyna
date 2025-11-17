@@ -1,19 +1,25 @@
-import { Request, Response } from 'express';
-import CustomizationRequest, { CustomizationStatus, ICustomizationRequest } from '../models/CustomizationRequest';
-import { AuthRequest } from '../types';
+import { Request, Response } from "express";
+import CustomizationRequest, {
+  CustomizationStatus,
+  ICustomizationRequest,
+} from "../models/CustomizationRequest";
+import { AuthRequest } from "../types";
 
 /**
  * Create a new customization request with payment integration
  * POST /api/customization/request-with-payment
  */
-export const createCustomizationRequestWithPayment = async (req: AuthRequest, res: Response) => {
+export const createCustomizationRequestWithPayment = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const userId = req.user?._id;
-    
+
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated' 
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
       });
     }
 
@@ -43,21 +49,24 @@ export const createCustomizationRequestWithPayment = async (req: AuthRequest, re
       customData,
       tags = [],
       estimatedDelivery,
-      estimatedDeliveryDay
+      estimatedDeliveryDay,
+      paymentId,
+      paymentStatus,
+      paymentAmount,
     } = req.body;
-
-    console.log('📥 Received request body:', {
-      hasContactInfo: !!req.body.contactInfo,
-      contactInfo: req.body.contactInfo,
-      bodyKeys: Object.keys(req.body)
-    });
 
     // Validate required fields
     if (!title || !description || !category || !subCategory || !jewelryType) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields',
-        required: ['title', 'description', 'category', 'subCategory', 'jewelryType']
+        message: "Missing required fields",
+        required: [
+          "title",
+          "description",
+          "category",
+          "subCategory",
+          "jewelryType",
+        ],
       });
     }
 
@@ -69,7 +78,7 @@ export const createCustomizationRequestWithPayment = async (req: AuthRequest, re
       category,
       subCategory,
       jewelryType,
-      stylingName: stylingName || 'CUSTOM',
+      stylingName: stylingName || "CUSTOM",
       referenceImages,
       inspirationImages,
       diamondShape,
@@ -91,56 +100,67 @@ export const createCustomizationRequestWithPayment = async (req: AuthRequest, re
       status: CustomizationStatus.PENDING,
       progress: 10,
       requestedAt: new Date(),
-      estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery) : undefined,
-      estimatedDeliveryDay
+      estimatedDelivery: estimatedDelivery
+        ? new Date(estimatedDelivery)
+        : undefined,
+      estimatedDeliveryDay,
+      // Payment fields (if provided)
+      paymentId: paymentId || undefined,
+      paymentStatus: paymentStatus || (paymentId ? "success" : undefined),
+      paymentAmount: paymentAmount || undefined,
     });
 
-    console.log('📝 Customization request data before save:', {
+    console.log("📝 Customization request data before save:", {
       requestId: customizationRequest.requestId,
       requestNumber: customizationRequest.requestNumber,
       userId: customizationRequest.userId,
       title: customizationRequest.title,
-      contactInfo: customizationRequest.contactInfo
+      contactInfo: customizationRequest.contactInfo,
     });
 
     await customizationRequest.save();
 
-    console.log('✅ Customization request saved successfully:', {
+    console.log("✅ Customization request saved successfully:", {
       requestId: customizationRequest.requestId,
       requestNumber: customizationRequest.requestNumber,
-      _id: customizationRequest._id
+      _id: customizationRequest._id,
     });
 
     // Add initial message
     await customizationRequest.addMessage(
-      'user',
+      "user",
       `Customization request created: ${title}`
     );
 
-    console.log(`✅ Customization request created: ${customizationRequest.requestId}`);
+    console.log(
+      `✅ Customization request created: ${customizationRequest.requestId}`
+    );
 
     // Return data for payment processing
     res.status(201).json({
       success: true,
-      message: 'Customization request created successfully',
+      message: "Customization request created successfully",
       data: {
         requestId: customizationRequest.requestId,
         requestNumber: customizationRequest.requestNumber,
         status: customizationRequest.status,
         progress: customizationRequest.progress,
         createdAt: customizationRequest.createdAt,
-        amount: 1000, // Default amount for customization request
+        amount: customizationRequest.paymentAmount || 1000, // Use actual payment amount or default
         estimatedDelivery: customizationRequest.estimatedDelivery,
-        estimatedDeliveryDay: customizationRequest.estimatedDeliveryDay
-      }
+        estimatedDeliveryDay: customizationRequest.estimatedDeliveryDay,
+        // Include payment information
+        paymentId: customizationRequest.paymentId,
+        paymentStatus: customizationRequest.paymentStatus,
+        paymentAmount: customizationRequest.paymentAmount,
+      },
     });
-
   } catch (error) {
-    console.error('❌ Error creating customization request:', error);
+    console.error("❌ Error creating customization request:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create customization request',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to create customization request",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -149,14 +169,17 @@ export const createCustomizationRequestWithPayment = async (req: AuthRequest, re
  * Create a new customization request
  * POST /api/customization/request
  */
-export const createCustomizationRequest = async (req: AuthRequest, res: Response) => {
+export const createCustomizationRequest = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const userId = req.user?._id;
-    
+
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated' 
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
       });
     }
 
@@ -183,15 +206,21 @@ export const createCustomizationRequest = async (req: AuthRequest, res: Response
       specialInstructions,
       budgetRange,
       customData,
-      tags = []
+      tags = [],
     } = req.body;
 
     // Validate required fields
     if (!title || !description || !category || !subCategory || !jewelryType) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields',
-        required: ['title', 'description', 'category', 'subCategory', 'jewelryType']
+        message: "Missing required fields",
+        required: [
+          "title",
+          "description",
+          "category",
+          "subCategory",
+          "jewelryType",
+        ],
       });
     }
 
@@ -203,7 +232,7 @@ export const createCustomizationRequest = async (req: AuthRequest, res: Response
       category,
       subCategory,
       jewelryType,
-      stylingName: stylingName || 'CUSTOM',
+      stylingName: stylingName || "CUSTOM",
       referenceImages,
       inspirationImages,
       diamondShape,
@@ -223,51 +252,52 @@ export const createCustomizationRequest = async (req: AuthRequest, res: Response
       tags,
       status: CustomizationStatus.PENDING,
       progress: 10,
-      requestedAt: new Date()
+      requestedAt: new Date(),
     });
 
-    console.log('📝 Customization request data before save:', {
+    console.log("📝 Customization request data before save:", {
       requestId: customizationRequest.requestId,
       requestNumber: customizationRequest.requestNumber,
       userId: customizationRequest.userId,
       title: customizationRequest.title,
-      contactInfo: customizationRequest.contactInfo
+      contactInfo: customizationRequest.contactInfo,
     });
 
     await customizationRequest.save();
 
-    console.log('✅ Customization request saved successfully:', {
+    console.log("✅ Customization request saved successfully:", {
       requestId: customizationRequest.requestId,
       requestNumber: customizationRequest.requestNumber,
-      _id: customizationRequest._id
+      _id: customizationRequest._id,
     });
 
     // Add initial message
     await customizationRequest.addMessage(
-      'user',
+      "user",
       `Customization request created: ${title}`
     );
 
-    console.log(`✅ Customization request created: ${customizationRequest.requestId}`);
+    console.log(
+      `✅ Customization request created: ${customizationRequest.requestId}`
+    );
 
     res.status(201).json({
       success: true,
-      message: 'Customization request created successfully',
+      message: "Customization request created successfully",
       data: {
         requestId: customizationRequest.requestId,
         requestNumber: customizationRequest.requestNumber,
         status: customizationRequest.status,
         progress: customizationRequest.progress,
-        createdAt: customizationRequest.createdAt
-      }
+        createdAt: customizationRequest.createdAt,
+      },
     });
-
   } catch (error) {
-    console.error('❌ Error creating customization request:', error);
+    console.error("❌ Error creating customization request:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create customization request',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to create customization request",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -276,15 +306,18 @@ export const createCustomizationRequest = async (req: AuthRequest, res: Response
  * Get user's customization requests
  * GET /api/customization/my-requests
  */
-export const getMyCustomizationRequests = async (req: AuthRequest, res: Response) => {
+export const getMyCustomizationRequests = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const userId = req.user?._id;
     const { limit = 10, status } = req.query;
 
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated' 
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
       });
     }
 
@@ -299,16 +332,15 @@ export const getMyCustomizationRequests = async (req: AuthRequest, res: Response
 
     res.json({
       success: true,
-      message: 'Customization requests retrieved successfully',
-      data: requests
+      message: "Customization requests retrieved successfully",
+      data: requests,
     });
-
   } catch (error) {
-    console.error('❌ Error fetching customization requests:', error);
+    console.error("❌ Error fetching customization requests:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch customization requests',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to fetch customization requests",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -317,42 +349,44 @@ export const getMyCustomizationRequests = async (req: AuthRequest, res: Response
  * Get specific customization request
  * GET /api/customization/request/:requestId
  */
-export const getCustomizationRequest = async (req: AuthRequest, res: Response) => {
+export const getCustomizationRequest = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const userId = req.user?._id;
     const { requestId } = req.params;
 
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated' 
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
       });
     }
 
-    const request = await CustomizationRequest.findOne({ 
-      requestId, 
-      userId 
+    const request = await CustomizationRequest.findOne({
+      requestId,
+      userId,
     });
 
     if (!request) {
       return res.status(404).json({
         success: false,
-        message: 'Customization request not found'
+        message: "Customization request not found",
       });
     }
 
     res.json({
       success: true,
-      message: 'Customization request retrieved successfully',
-      data: request
+      message: "Customization request retrieved successfully",
+      data: request,
     });
-
   } catch (error) {
-    console.error('❌ Error fetching customization request:', error);
+    console.error("❌ Error fetching customization request:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch customization request',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to fetch customization request",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -368,48 +402,47 @@ export const addMessageToRequest = async (req: AuthRequest, res: Response) => {
     const { message, attachments = [] } = req.body;
 
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated' 
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
       });
     }
 
     if (!message) {
       return res.status(400).json({
         success: false,
-        message: 'Message is required'
+        message: "Message is required",
       });
     }
 
-    const request = await CustomizationRequest.findOne({ 
-      requestId, 
-      userId 
+    const request = await CustomizationRequest.findOne({
+      requestId,
+      userId,
     });
 
     if (!request) {
       return res.status(404).json({
         success: false,
-        message: 'Customization request not found'
+        message: "Customization request not found",
       });
     }
 
-    await request.addMessage('user', message, attachments);
+    await request.addMessage("user", message, attachments);
 
     res.json({
       success: true,
-      message: 'Message added successfully',
+      message: "Message added successfully",
       data: {
         requestId: request.requestId,
-        messageCount: request.messages.length
-      }
+        messageCount: request.messages.length,
+      },
     });
-
   } catch (error) {
-    console.error('❌ Error adding message:', error);
+    console.error("❌ Error adding message:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to add message',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to add message",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -418,58 +451,60 @@ export const addMessageToRequest = async (req: AuthRequest, res: Response) => {
  * Cancel customization request
  * PATCH /api/customization/request/:requestId/cancel
  */
-export const cancelCustomizationRequest = async (req: AuthRequest, res: Response) => {
+export const cancelCustomizationRequest = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const userId = req.user?._id;
     const { requestId } = req.params;
     const { reason } = req.body;
 
     if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated' 
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
       });
     }
 
-    const request = await CustomizationRequest.findOne({ 
-      requestId, 
-      userId 
+    const request = await CustomizationRequest.findOne({
+      requestId,
+      userId,
     });
 
     if (!request) {
       return res.status(404).json({
         success: false,
-        message: 'Customization request not found'
+        message: "Customization request not found",
       });
     }
 
     if (request.status === CustomizationStatus.COMPLETED) {
       return res.status(400).json({
         success: false,
-        message: 'Cannot cancel completed request'
+        message: "Cannot cancel completed request",
       });
     }
 
     await request.updateStatus(
       CustomizationStatus.CANCELLED,
-      reason ? `Request cancelled: ${reason}` : 'Request cancelled by user'
+      reason ? `Request cancelled: ${reason}` : "Request cancelled by user"
     );
 
     res.json({
       success: true,
-      message: 'Customization request cancelled successfully',
+      message: "Customization request cancelled successfully",
       data: {
         requestId: request.requestId,
-        status: request.status
-      }
+        status: request.status,
+      },
     });
-
   } catch (error) {
-    console.error('❌ Error cancelling customization request:', error);
+    console.error("❌ Error cancelling customization request:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to cancel customization request',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to cancel customization request",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -478,7 +513,10 @@ export const cancelCustomizationRequest = async (req: AuthRequest, res: Response
  * Admin: Get all customization requests
  * GET /api/customization/admin/all
  */
-export const getAllCustomizationRequests = async (req: AuthRequest, res: Response) => {
+export const getAllCustomizationRequests = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const { limit = 20, status, category } = req.query;
 
@@ -496,16 +534,15 @@ export const getAllCustomizationRequests = async (req: AuthRequest, res: Respons
 
     res.json({
       success: true,
-      message: 'All customization requests retrieved successfully',
-      data: requests
+      message: "All customization requests retrieved successfully",
+      data: requests,
     });
-
   } catch (error) {
-    console.error('❌ Error fetching all customization requests:', error);
+    console.error("❌ Error fetching all customization requests:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch customization requests',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to fetch customization requests",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -514,7 +551,10 @@ export const getAllCustomizationRequests = async (req: AuthRequest, res: Respons
  * Admin: Update customization request status
  * PATCH /api/customization/admin/request/:requestId/status
  */
-export const updateCustomizationRequestStatus = async (req: AuthRequest, res: Response) => {
+export const updateCustomizationRequestStatus = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const { requestId } = req.params;
     const { status, message, adminNotes } = req.body;
@@ -522,7 +562,7 @@ export const updateCustomizationRequestStatus = async (req: AuthRequest, res: Re
     if (!Object.values(CustomizationStatus).includes(status)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid status value'
+        message: "Invalid status value",
       });
     }
 
@@ -531,7 +571,7 @@ export const updateCustomizationRequestStatus = async (req: AuthRequest, res: Re
     if (!request) {
       return res.status(404).json({
         success: false,
-        message: 'Customization request not found'
+        message: "Customization request not found",
       });
     }
 
@@ -544,20 +584,19 @@ export const updateCustomizationRequestStatus = async (req: AuthRequest, res: Re
 
     res.json({
       success: true,
-      message: 'Customization request status updated successfully',
+      message: "Customization request status updated successfully",
       data: {
         requestId: request.requestId,
         status: request.status,
-        progress: request.progress
-      }
+        progress: request.progress,
+      },
     });
-
   } catch (error) {
-    console.error('❌ Error updating customization request status:', error);
+    console.error("❌ Error updating customization request status:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update customization request status',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to update customization request status",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
@@ -574,7 +613,7 @@ export const addAdminMessage = async (req: AuthRequest, res: Response) => {
     if (!message) {
       return res.status(400).json({
         success: false,
-        message: 'Message is required'
+        message: "Message is required",
       });
     }
 
@@ -583,27 +622,26 @@ export const addAdminMessage = async (req: AuthRequest, res: Response) => {
     if (!request) {
       return res.status(404).json({
         success: false,
-        message: 'Customization request not found'
+        message: "Customization request not found",
       });
     }
 
-    await request.addMessage('admin', message, attachments);
+    await request.addMessage("admin", message, attachments);
 
     res.json({
       success: true,
-      message: 'Admin message added successfully',
+      message: "Admin message added successfully",
       data: {
         requestId: request.requestId,
-        messageCount: request.messages.length
-      }
+        messageCount: request.messages.length,
+      },
     });
-
   } catch (error) {
-    console.error('❌ Error adding admin message:', error);
+    console.error("❌ Error adding admin message:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to add admin message',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to add admin message",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
