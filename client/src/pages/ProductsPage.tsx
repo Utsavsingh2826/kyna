@@ -93,6 +93,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     style: [] as string[],
     min_price: "0",
     max_price: "50000",
+
+    // Earrings API (new) fields
+    category1: "" as string,
+    category2: "" as string,
+    category3: "" as string,
+    centerStoneShape: "" as string,
   });
 
   // API function to fetch products
@@ -101,6 +107,35 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       try {
         setLoading(true);
         setError(null);
+
+        // Earrings: special endpoint with 4 fields only
+        if ((category as string) === "earrings") {
+          const params = new URLSearchParams();
+          params.set("category1", activeFilters.category1 || "");
+          params.set("category2", activeFilters.category2 || "");
+          params.set("category3", activeFilters.category3 || "");
+          params.set("centerStoneShape", activeFilters.centerStoneShape || "");
+
+          const apiUrl = `http://localhost:5000/api/products/category/earrings?${params.toString()}`;
+          const response = await fetch(apiUrl);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data: ApiResponse = await response.json();
+          if (data.success) {
+            setProducts(data.products);
+            setPagination({
+              totalPages: data.pagination.totalPages,
+              currentPage: data.pagination.currentPage,
+              limit: data.pagination.limit,
+              total: data.total,
+            });
+            setAppliedFilters(data.appliedFilters || null);
+          } else {
+            throw new Error("API returned success: false");
+          }
+          return; // Do not proceed to generic path
+        }
 
         // Map category names to API category format
         const categoryMap: Record<MainCategory, string> = {
@@ -499,6 +534,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       fashion_bracelet_diamond_shape: [],
       min_price: "0",
       max_price: "50000",
+      category1: "",
+      category2: "",
+      category3: "",
+      centerStoneShape: "",
     });
     setMinPrice(0);
     setMaxPrice(50000);
@@ -516,7 +555,15 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     }, 300); // 300ms debounce
 
     return () => clearTimeout(timeoutId);
-  }, [fetchProducts]);
+  }, [
+    fetchProducts,
+    category,
+    activeFilters.category1,
+    activeFilters.category2,
+    activeFilters.centerStoneShape,
+    minPrice,
+    maxPrice,
+  ]);
 
   // Initialize filters from URL on component mount
   useEffect(() => {
@@ -576,6 +623,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         style: getFilterValues("style"),
         min_price: urlMinPrice || "0",
         max_price: urlMaxPrice || "50000",
+
+        // Earrings API (new) fields from URL
+        category1: searchParams.get("category1") || "",
+        category2: searchParams.get("category2") || "",
+        category3: searchParams.get("category3") || "",
+        centerStoneShape: searchParams.get("centerStoneShape") || "",
       });
     } else {
       clearAllFilters();
@@ -591,6 +644,85 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
   // Function to render category-specific filters
   const renderCategoryFilters = () => {
+    // Helpers for Earrings mapping (do not change UI, just wire to API fields)
+    const mapEarringGroupToCategory1 = (group: string) => {
+      const g = group.toLowerCase();
+      if (g.includes("studs")) return "studs";
+      if (g.includes("hoops")) return "hoops/huggies";
+      if (g.includes("fashion")) return "fashion earrings";
+      if (g.includes("drop")) return "drop earrings";
+      return "";
+    };
+
+    const setEarringCategory1 = (groupTitle: string) => {
+      const c1 = mapEarringGroupToCategory1(groupTitle);
+      const currentParams = new URLSearchParams(searchParams);
+      currentParams.set("category1", c1);
+      if (!currentParams.has("category2")) currentParams.set("category2", "");
+      if (!currentParams.has("category3")) currentParams.set("category3", "");
+      setSearchParams(currentParams);
+      setActiveFilters((prev) => ({ ...prev, category1: c1 }));
+    };
+
+    const setEarringCenterStoneShape = (
+      groupTitle: string,
+      shape: string,
+      checked: boolean
+    ) => {
+      const c1 = mapEarringGroupToCategory1(groupTitle);
+      const shapeLower = shape.toLowerCase();
+
+      const currentParams = new URLSearchParams(searchParams);
+      const existingShapes = currentParams.get("centerStoneShape") || "";
+      const shapeArray = existingShapes ? existingShapes.split(",") : [];
+
+      if (checked) {
+        if (!shapeArray.includes(shapeLower)) {
+          shapeArray.push(shapeLower);
+        }
+      } else {
+        const index = shapeArray.indexOf(shapeLower);
+        if (index > -1) {
+          shapeArray.splice(index, 1);
+        }
+      }
+
+      currentParams.set("category1", c1);
+      currentParams.set("centerStoneShape", shapeArray.join(","));
+      if (!currentParams.has("category2")) currentParams.set("category2", "");
+      if (!currentParams.has("category3")) currentParams.set("category3", "");
+      setSearchParams(currentParams);
+
+      setActiveFilters((prev) => ({
+        ...prev,
+        category1: c1,
+        centerStoneShape: shapeArray.join(","),
+      }));
+    };
+
+    const setEarringCategory2 = (
+      groupTitle: string,
+      rawValue: string,
+      checked: boolean
+    ) => {
+      const c1 = mapEarringGroupToCategory1(groupTitle);
+      let c2 = rawValue;
+      if (rawValue.startsWith("Small")) c2 = "Small";
+      if (rawValue.startsWith("Medium")) c2 = "Medium";
+      if (rawValue.startsWith("Large")) c2 = "Large";
+
+      const currentParams = new URLSearchParams(searchParams);
+      currentParams.set("category1", c1);
+      currentParams.set("category2", checked ? c2 : "");
+      if (!currentParams.has("category3")) currentParams.set("category3", "");
+      setSearchParams(currentParams);
+
+      setActiveFilters((prev) => ({
+        ...prev,
+        category1: c1,
+        category2: checked ? c2 : "",
+      }));
+    };
     // Enhanced filter components with URL updates and category tracking
     const renderStyleOptions = (
       styles: string[],
@@ -608,6 +740,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 // Update appropriate category when style is selected
                 if (e.target.checked) {
                   updateUrlFilters(categoryType, categoryName, true);
+                }
+                // For earrings, map sub-option to category2 without changing UI
+                if (
+                  category === "earrings" &&
+                  categoryType === "earring_category"
+                ) {
+                  setEarringCategory2(categoryName, style, e.target.checked);
                 }
               }}
             />
@@ -635,6 +774,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 if (e.target.checked) {
                   updateUrlFilters("earring_category", earringCategory, true);
                 }
+                // Map length to category2 in earrings API
+                if (category === "earrings") {
+                  setEarringCategory2(earringCategory, item, e.target.checked);
+                }
               }}
             />
             <span>{item}</span>
@@ -656,6 +799,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 // Also update earring_category when style is selected
                 if (e.target.checked) {
                   updateUrlFilters("earring_category", earringCategory, true);
+                }
+                // Map drop styles to category2 for earrings
+                if (category === "earrings") {
+                  setEarringCategory2(earringCategory, item, e.target.checked);
                 }
               }}
             />
@@ -693,6 +840,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         diamondShapeFilterKey
       ] as string[];
 
+      // For earrings, also check centerStoneShape for selection state
+      const isEarrings = (category as string) === "earrings";
+      const centerStoneShapes = isEarrings
+        ? (activeFilters.centerStoneShape || "").split(",").filter((s) => s)
+        : [];
+
       return (
         <div
           className="diamond-shape-grid"
@@ -702,76 +855,89 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             gap: "8px",
           }}
         >
-          {shapes.map((shape) => (
-            <label
-              key={`${ringCategory}-${shape}`}
-              className="diamond-shape-option"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                padding: "8px",
-                cursor: "pointer",
-                border: categoryDiamondShapes.includes(shape)
-                  ? "2px solid var(--teal)"
-                  : "1px solid var(--border)",
-                borderRadius: "6px",
-                backgroundColor: categoryDiamondShapes.includes(shape)
-                  ? "var(--muted)"
-                  : "transparent",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={categoryDiamondShapes.includes(shape)}
-                onChange={(e) => {
-                  updateUrlFilters(
-                    diamondShapeFilterKey,
-                    shape,
-                    e.target.checked
-                  );
-                  // Only add ring_category if diamond shape is being checked and category not already present
-                  if (
-                    e.target.checked &&
-                    !activeFilters.ring_category.includes(ringCategory)
-                  ) {
-                    updateUrlFilters("ring_category", ringCategory, true);
-                  }
-                }}
-                style={{ marginBottom: "4px" }}
-              />
-              {showImages && (
-                <img
-                  src={`/DIAMOND_SHAPES_WEBP/${shape.toLowerCase()}.png`}
-                  alt={shape}
-                  className="h-8 w-8 mb-1"
-                  onError={(e) => {
-                    // Replace with a simple placeholder if image fails to load
-                    e.currentTarget.style.display = "none";
-                    const placeholder = document.createElement("div");
-                    placeholder.style.cssText =
-                      "width: 32px; height: 32px; background: #e5e7eb; border-radius: 50%; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280;";
-                    placeholder.textContent = shape.charAt(0);
-                    e.currentTarget.parentNode?.insertBefore(
-                      placeholder,
-                      e.currentTarget
-                    );
-                  }}
-                />
-              )}
-              <span
+          {shapes.map((shape) => {
+            const isSelected = isEarrings
+              ? centerStoneShapes.includes(shape.toLowerCase())
+              : categoryDiamondShapes.includes(shape);
+
+            return (
+              <label
+                key={`${ringCategory}-${shape}`}
+                className="diamond-shape-option"
                 style={{
-                  fontSize: "10px",
-                  textAlign: "center",
-                  fontWeight: categoryDiamondShapes.includes(shape)
-                    ? "600"
-                    : "400",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  padding: "8px",
+                  cursor: "pointer",
+                  border: isSelected
+                    ? "2px solid #10b981"
+                    : "1px solid var(--border)",
+                  borderRadius: "6px",
+                  backgroundColor: isSelected ? "#dcfce7" : "transparent",
                 }}
               >
-                {shape}
-              </span>
-            </label>
-          ))}
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={(e) => {
+                    if (isEarrings) {
+                      // Handle earrings with comma-separated centerStoneShape
+                      setEarringCenterStoneShape(
+                        ringCategory,
+                        shape,
+                        e.target.checked
+                      );
+                    } else {
+                      // Handle other categories with legacy logic
+                      updateUrlFilters(
+                        diamondShapeFilterKey,
+                        shape,
+                        e.target.checked
+                      );
+                      // Only add ring_category if diamond shape is being checked and category not already present
+                      if (
+                        e.target.checked &&
+                        !activeFilters.ring_category.includes(ringCategory)
+                      ) {
+                        updateUrlFilters("ring_category", ringCategory, true);
+                      }
+                    }
+                  }}
+                  style={{ marginBottom: "4px" }}
+                />
+                {showImages && (
+                  <img
+                    src={`/DIAMOND_SHAPES_WEBP/${shape.toLowerCase()}.png`}
+                    alt={shape}
+                    className="h-8 w-8 mb-1"
+                    onError={(e) => {
+                      // Replace with a simple placeholder if image fails to load
+                      e.currentTarget.style.display = "none";
+                      const placeholder = document.createElement("div");
+                      placeholder.style.cssText =
+                        "width: 32px; height: 32px; background: #e5e7eb; border-radius: 50%; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280;";
+                      placeholder.textContent = shape.charAt(0);
+                      e.currentTarget.parentNode?.insertBefore(
+                        placeholder,
+                        e.currentTarget
+                      );
+                    }}
+                  />
+                )}
+                <span
+                  style={{
+                    fontSize: "10px",
+                    textAlign: "center",
+                    fontWeight: isSelected ? "600" : "400",
+                    color: isSelected ? "#10b981" : "inherit",
+                  }}
+                >
+                  {shape}
+                </span>
+              </label>
+            );
+          })}
         </div>
       );
     };
@@ -1216,24 +1382,43 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               Applied Filters (from API):
             </p>
             <div className="flex flex-wrap gap-2 text-xs">
-              {appliedFilters.centerStoneShape &&
-                appliedFilters.centerStoneShape.length > 0 && (
-                  <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded">
-                    Shapes: {appliedFilters.centerStoneShape.join(", ")}
-                  </span>
-                )}
-              {appliedFilters.ringTypeRequested &&
-                appliedFilters.ringTypeRequested.length > 0 && (
-                  <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded">
-                    Ring Types: {appliedFilters.ringTypeRequested.join(", ")}
-                  </span>
-                )}
-              {appliedFilters.ringPrefixesApplied &&
-                appliedFilters.ringPrefixesApplied.length > 0 && (
-                  <span className="px-2 py-1 bg-blue-200 text-blue-800 rounded">
-                    Prefixes: {appliedFilters.ringPrefixesApplied.join(", ")}
-                  </span>
-                )}
+              {Object.entries(
+                (appliedFilters as unknown as Record<string, unknown>) || {}
+              )
+                .filter(([, v]) => {
+                  if (v === null || v === undefined) return false;
+                  if (Array.isArray(v)) return v.length > 0;
+                  if (typeof v === "string") return v.trim().length > 0;
+                  return true; // numbers/booleans/objects
+                })
+                .map(([k, v]) => {
+                  const formatLabel = (key: string) => {
+                    // space before capitals, digits; replace underscores; title case
+                    const spaced = key
+                      .replace(/_/g, " ")
+                      .replace(/([a-z])([A-Z])/g, "$1 $2")
+                      .replace(/(\D)(\d)/g, "$1 $2")
+                      .trim();
+                    return spaced
+                      .split(/\s+/)
+                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                      .join(" ");
+                  };
+
+                  let valueText = "";
+                  if (Array.isArray(v)) valueText = v.join(", ");
+                  else if (typeof v === "object") valueText = JSON.stringify(v);
+                  else valueText = String(v);
+
+                  return (
+                    <span
+                      key={`applied-${k}`}
+                      className="px-2 py-1 bg-blue-200 text-blue-800 rounded"
+                    >
+                      {formatLabel(k)}: {valueText}
+                    </span>
+                  );
+                })}
             </div>
           </div>
         )}
@@ -1286,156 +1471,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </aside>
 
           <section aria-label="Products" className="eng-grid">
-            {/* Display active filters summary */}
-            {(activeFilters.ring_category.length > 0 ||
-              activeFilters.earring_category.length > 0 ||
-              activeFilters.pendant_category.length > 0 ||
-              activeFilters.bracelet_category.length > 0 ||
-              Object.entries(activeFilters)
-                .filter(([key]) => key.includes("diamond_shape"))
-                .some(([, shapes]) => (shapes as string[]).length > 0) ||
-              activeFilters.earring_length.length > 0 ||
-              activeFilters.style.length > 0 ||
-              activeFilters.min_price !== "0" ||
-              activeFilters.max_price !== "50000") && (
-              <div className="col-span-full mb-4 p-3 bg-gray-100 rounded-lg">
-                <p className="text-sm text-gray-600 mb-2">Active Filters:</p>
-                <div className="flex flex-wrap gap-2">
-                  {/* Ring Categories */}
-                  {activeFilters.ring_category.map((category) => (
-                    <span
-                      key={category}
-                      className="px-2 py-1 bg-teal-100 text-teal-800 rounded-md text-xs"
-                    >
-                      Ring Category: {category}
-                      <button
-                        onClick={() =>
-                          updateUrlFilters("ring_category", category, false)
-                        }
-                        className="ml-1 text-teal-600 hover:text-teal-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-
-                  {/* Earring Categories */}
-                  {activeFilters.earring_category.map((category) => (
-                    <span
-                      key={category}
-                      className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs"
-                    >
-                      Earring Category: {category}
-                      <button
-                        onClick={() =>
-                          updateUrlFilters("earring_category", category, false)
-                        }
-                        className="ml-1 text-blue-600 hover:text-blue-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-
-                  {/* Pendant Categories */}
-                  {activeFilters.pendant_category.map((category) => (
-                    <span
-                      key={category}
-                      className="px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-xs"
-                    >
-                      Pendant Category: {category}
-                      <button
-                        onClick={() =>
-                          updateUrlFilters("pendant_category", category, false)
-                        }
-                        className="ml-1 text-purple-600 hover:text-purple-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-
-                  {/* Bracelet Categories */}
-                  {activeFilters.bracelet_category.map((category) => (
-                    <span
-                      key={category}
-                      className="px-2 py-1 bg-orange-100 text-orange-800 rounded-md text-xs"
-                    >
-                      Bracelet Category: {category}
-                      <button
-                        onClick={() =>
-                          updateUrlFilters("bracelet_category", category, false)
-                        }
-                        className="ml-1 text-orange-600 hover:text-orange-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-
-                  {/* Diamond Shapes */}
-                  {Object.entries(activeFilters)
-                    .filter(([key]) => key.includes("diamond_shape"))
-                    .map(([filterKey, shapes]) =>
-                      (shapes as string[]).map((shape) => {
-                        const categoryName = filterKey
-                          .replace("_diamond_shape", "")
-                          .replace("_", " ");
-                        return (
-                          <span
-                            key={`${filterKey}-${shape}`}
-                            className="px-2 py-1 bg-teal-100 text-teal-800 rounded-md text-xs"
-                          >
-                            {categoryName} Shape: {shape}
-                            <button
-                              onClick={() =>
-                                updateUrlFilters(filterKey, shape, false)
-                              }
-                              className="ml-1 text-teal-600 hover:text-teal-800"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        );
-                      })
-                    )}
-
-                  {/* Earring Lengths */}
-                  {activeFilters.earring_length.map((length) => (
-                    <span
-                      key={length}
-                      className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-xs"
-                    >
-                      Length: {length}
-                      <button
-                        onClick={() =>
-                          updateUrlFilters("earring_length", length, false)
-                        }
-                        className="ml-1 text-blue-600 hover:text-blue-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-
-                  {/* Styles */}
-                  {activeFilters.style.map((style) => (
-                    <span
-                      key={style}
-                      className="px-2 py-1 bg-green-100 text-green-800 rounded-md text-xs"
-                    >
-                      Style: {style}
-                      <button
-                        onClick={() => updateUrlFilters("style", style, false)}
-                        className="ml-1 text-green-600 hover:text-green-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Display active filters summary - removed to avoid confusion */}
 
             {/* Loading State */}
             {loading && (
