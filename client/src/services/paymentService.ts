@@ -66,8 +66,8 @@ export interface PaymentInitiateRequest {
   cancelUrl: string;
   userId: string;
   orderNumber: string;
-  orderCategory?: 'design-your-own' | 'build-your-own' | 'products';
-  orderType?: 'customized' | 'normal';
+  orderCategory?: "design-your-own" | "build-your-own" | "products";
+  orderType?: "customized" | "normal";
   jewelryId?: string; // Add optional jewelryId
   // Estimated delivery fields (required by backend at root level)
   estimatedDelivery?: string | null;
@@ -158,11 +158,14 @@ class PaymentService {
   ): Promise<PaymentInitiateResponse> {
     try {
       // Get auth token from localStorage
-      const token = localStorage.getItem('token');
-      
-      console.log('Making payment request to:', `${this.baseUrl}/payment/initiate`);
-      console.log('Request data:', paymentData);
-      console.log('Request data validation:', {
+      const token = localStorage.getItem("token");
+
+      console.log(
+        "Making payment request to:",
+        `${this.baseUrl}/payment/initiate`
+      );
+      console.log("Request data:", paymentData);
+      console.log("Request data validation:", {
         hasOrderId: !!paymentData.orderId,
         hasAmount: !!paymentData.amount,
         hasBillingInfo: !!paymentData.billingInfo,
@@ -172,70 +175,72 @@ class PaymentService {
         orderId: paymentData.orderId,
         amount: paymentData.amount,
         userId: paymentData.userId,
-        billingInfoKeys: paymentData.billingInfo ? Object.keys(paymentData.billingInfo) : 'no billing info'
+        billingInfoKeys: paymentData.billingInfo
+          ? Object.keys(paymentData.billingInfo)
+          : "no billing info",
       });
 
-      // Log EDD data being sent to backend (both root level and orderDetails)
-      console.log('📦 [EDD] PaymentService - EDD data in payment request:', {
-        // Root level EDD (required by backend)
-        rootEstimatedDelivery: paymentData.estimatedDelivery,
-        rootEstimatedDeliveryDay: paymentData.estimatedDeliveryDay,
-        // OrderDetails EDD (for reference)
-        orderDetailsEstimatedDelivery: paymentData.orderDetails?.estimatedDelivery,
-        hasRootEddData: !!(paymentData.estimatedDelivery)
-      });
-      
-      if (paymentData.estimatedDelivery) {
-        console.log('✅ [EDD] PaymentService - Sending EDD to backend at ROOT LEVEL:', {
-          estimatedDelivery: paymentData.estimatedDelivery,
-          estimatedDeliveryDay: paymentData.estimatedDeliveryDay
-        });
-      } else {
-        console.warn('⚠️ [EDD] PaymentService - No EDD data found at ROOT LEVEL - backend will reject this');
-      }
-      
-      console.log('Starting fetch request...');
-      
+      // // Log EDD data being sent to backend (both root level and orderDetails)
+      // console.log('📦 [EDD] PaymentService - EDD data in payment request:', {
+      //   // Root level EDD (required by backend)
+      //   rootEstimatedDelivery: paymentData.estimatedDelivery,
+      //   rootEstimatedDeliveryDay: paymentData.estimatedDeliveryDay,
+      //   // OrderDetails EDD (for reference)
+      //   orderDetailsEstimatedDelivery: paymentData.orderDetails?.estimatedDelivery,
+      //   hasRootEddData: !!(paymentData.estimatedDelivery)
+      // });
+
+      // if (paymentData.estimatedDelivery) {
+      //   console.log('✅ [EDD] PaymentService - Sending EDD to backend at ROOT LEVEL:', {
+      //     estimatedDelivery: paymentData.estimatedDelivery,
+      //     estimatedDeliveryDay: paymentData.estimatedDeliveryDay
+      //   });
+      // } else {
+      //   console.warn('⚠️ [EDD] PaymentService - No EDD data found at ROOT LEVEL - backend will reject this');
+      // }
+
+      console.log("Starting fetch request...");
+
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
+
       const response = await fetch(`${this.baseUrl}/payment/initiate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token && { "Authorization": `Bearer ${token}` })
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify(paymentData),
-        signal: controller.signal
+        signal: controller.signal,
       });
-      
-      clearTimeout(timeoutId);
-      console.log('Fetch request completed');
 
-      console.log('Raw response:', {
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
+      clearTimeout(timeoutId);
+      console.log("Fetch request completed");
+
+      // console.log('Raw response:', {
+      //   ok: response.ok,
+      //   status: response.status,
+      //   statusText: response.statusText,
+      //   headers: Object.fromEntries(response.headers.entries())
+      // });
 
       let data;
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('JSON parsing error:', jsonError);
+        console.error("JSON parsing error:", jsonError);
         const textResponse = await response.text();
-        console.error('Raw response text:', textResponse);
+        console.error("Raw response text:", textResponse);
         throw new Error(`Server returned invalid JSON: ${textResponse}`);
       }
 
-      console.log('Server response:', {
-        ok: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        data: data
-      });
+      // console.log('Server response:', {
+      //   ok: response.ok,
+      //   status: response.status,
+      //   statusText: response.statusText,
+      //   headers: Object.fromEntries(response.headers.entries()),
+      //   data: data
+      // });
 
       if (!response.ok) {
         console.error("Payment initiation failed:", {
@@ -244,22 +249,32 @@ class PaymentService {
           data: data,
           url: `${this.baseUrl}/payment/initiate`,
           dataType: typeof data,
-          dataKeys: data ? Object.keys(data) : 'no data'
+          dataKeys: data ? Object.keys(data) : "no data",
         });
-        
+
         // Handle specific error types
-        if (data.error === 'Amount exceeds maximum limit') {
-          throw new Error(`Payment amount ₹${data.amount} exceeds the maximum allowed limit of ₹${data.maxAmount}. Please use Net Banking or Card payment for this amount. Contact support at ${data.supportContact} to increase your transaction limit.`);
+        if (data.error === "Amount exceeds maximum limit") {
+          throw new Error(
+            `Payment amount ₹${data.amount} exceeds the maximum allowed limit of ₹${data.maxAmount}. Please use Net Banking or Card payment for this amount. Contact support at ${data.supportContact} to increase your transaction limit.`
+          );
         }
-        
-        if (data.error === 'Invalid payment amount') {
-          throw new Error(`Payment amount ₹${data.amount} is invalid. ${data.razorpayError || data.message}. Please try using Net Banking or Card payment.`);
+
+        if (data.error === "Invalid payment amount") {
+          throw new Error(
+            `Payment amount ₹${data.amount} is invalid. ${
+              data.razorpayError || data.message
+            }. Please try using Net Banking or Card payment.`
+          );
         }
-        
-        if (data.error === 'Payment gateway error') {
-          throw new Error(`Payment gateway error: ${data.razorpayError || data.message}. Please try again or contact support at ${data.supportContact}.`);
+
+        if (data.error === "Payment gateway error") {
+          throw new Error(
+            `Payment gateway error: ${
+              data.razorpayError || data.message
+            }. Please try again or contact support at ${data.supportContact}.`
+          );
         }
-        
+
         // Try to extract error message from different possible fields
         let errorMessage = "Payment initiation failed";
         if (data.message) {
@@ -268,7 +283,7 @@ class PaymentService {
           errorMessage = data.error;
         } else if (data.errorMessage) {
           errorMessage = data.errorMessage;
-        } else if (typeof data === 'string') {
+        } else if (typeof data === "string") {
           errorMessage = data;
         } else if (data.details) {
           errorMessage = data.details;
@@ -279,8 +294,8 @@ class PaymentService {
         } else {
           errorMessage = `Server error: ${response.status} ${response.statusText}`;
         }
-        
-        console.log('Extracted error message:', errorMessage);
+
+        console.log("Extracted error message:", errorMessage);
         throw new Error(errorMessage);
       }
 
@@ -289,11 +304,22 @@ class PaymentService {
       console.error("Payment initiation error:", error);
 
       // Handle different types of errors with clearer messages
-      if (error && typeof error === 'object' && 'name' in error && (error as any).name === 'AbortError') {
-        throw new Error("Request timeout: Payment service took too long to respond");
+      if (
+        error &&
+        typeof error === "object" &&
+        "name" in error &&
+        (error as any).name === "AbortError"
+      ) {
+        throw new Error(
+          "Request timeout: Payment service took too long to respond"
+        );
       }
 
-      if (error instanceof TypeError && error.message && error.message.includes('fetch')) {
+      if (
+        error instanceof TypeError &&
+        error.message &&
+        error.message.includes("fetch")
+      ) {
         throw new Error("Network error: Unable to connect to payment service");
       }
 
@@ -302,7 +328,12 @@ class PaymentService {
       }
 
       // If error has a message, rethrow preserving it. Otherwise stringify the error object.
-      const errMsg = error && error.message ? error.message : (error ? JSON.stringify(error) : null);
+      const errMsg =
+        error && error.message
+          ? error.message
+          : error
+          ? JSON.stringify(error)
+          : null;
       if (errMsg) {
         throw new Error(errMsg);
       }
@@ -386,13 +417,13 @@ class PaymentService {
   }) {
     try {
       // Get auth token from localStorage
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       const response = await fetch(`${this.baseUrl}/payment/verify`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token && { "Authorization": `Bearer ${token}` })
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify(verificationData),
       });

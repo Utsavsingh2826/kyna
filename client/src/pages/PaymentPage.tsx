@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { fetchCart } from "@/store/slices/cartSlice";
@@ -119,9 +119,18 @@ const PaymentPage = () => {
       description: isDirectPurchase
         ? `Direct purchase: ${directPurchaseData.orderData.product.title}`
         : `Order with ${itemsData.length} items`,
+      sku: isDirectPurchase
+        ? directPurchaseData.orderData.product.sku
+        : undefined,
+      variantSku: isDirectPurchase
+        ? directPurchaseData.orderData.product.variantSku
+        : undefined,
       isDirectPurchase,
       directPurchaseData: isDirectPurchase
-        ? directPurchaseData.orderData
+        ? {
+            product: directPurchaseData.orderData.product,
+            customization: directPurchaseData.orderData.customization,
+          }
         : null,
     },
   };
@@ -151,7 +160,7 @@ const PaymentPage = () => {
   };
 
   const handleError = (errorMsg: string) => {
-    console.error("Payment error:", errorMsg);
+    alert("Payment error: " + errorMsg);
     // Error will be shown to user by PaymentForm component
   };
 

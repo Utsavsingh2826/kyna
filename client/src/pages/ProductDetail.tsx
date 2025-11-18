@@ -46,6 +46,16 @@ interface ProductData {
   diamondSize: string[];
   diamondColorClarity: string[];
   isEngraving: boolean;
+  priceBreakdown: {
+    metalCost: number;
+    diamondCost: number;
+    labourCost: number;
+    expense: number;
+    gstPercent: number;
+    gstAmount: number;
+    totalBeforeGst: number;
+    totalWithGst: number;
+  };
   engraving: string[];
   variantCount: number;
   firstVariantSku: string;
@@ -98,26 +108,6 @@ const sampleProduct = {
   ringSize: "Select Ring Size",
   estimatedShipDate: "Monday, October 21st",
   inStock: true,
-  matchingBands: [
-    {
-      id: 1,
-      name: "Comfort Fit Band",
-      image: "/images/collections/bracelet.jpg",
-      price: "₹2,999",
-    },
-    {
-      id: 2,
-      name: "Petite Shared Prong Half",
-      image: "/images/collections/earrings.jpg",
-      price: "₹3,999",
-    },
-    {
-      id: 3,
-      name: "Petite Shared Prong Three",
-      image: "/images/collections/pendant.jpg",
-      price: "₹4,999",
-    },
-  ],
 };
 
 interface IjewelViewerProps {
@@ -195,6 +185,8 @@ const ProductDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [showEngraveModal, setShowEngraveModal] = useState(false);
+  const [engravingText, setEngravingText] = useState("");
+  const [engravingImageUrl, setEngravingImageUrl] = useState("");
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
@@ -788,6 +780,13 @@ const ProductDetail = () => {
       return;
     }
 
+    if (category === "rings") {
+      if (!selectedSize) {
+        alert("Please select a ring size");
+        return;
+      }
+    }
+
     if (!productData || !productData.chosenVariantSku) {
       alert("Please select all product options");
       return;
@@ -808,6 +807,7 @@ const ProductDetail = () => {
         title: productData.title,
         description: productData.description,
         price: productData.sellingPrice,
+        priceBreakdown: productData.priceBreakdown,
         images: productData.variantImages,
       },
       customization: {
@@ -818,6 +818,9 @@ const ProductDetail = () => {
         diamondSize: selectedDiamondSize,
         diamondOrigin: selectedDiamondOrigin,
         ringSize: selectedSize,
+        engraving: engravingText,
+        engravingImageUrl: engravingImageUrl,
+        hasEngraving: !!engravingText,
       },
       quantity: 1,
       totalAmount: productData.sellingPrice,
@@ -828,6 +831,16 @@ const ProductDetail = () => {
     // Console log the order data
     console.log("=== ORDER CREATED ===");
     console.log("Order Data:", JSON.stringify(orderData, null, 2));
+    console.log("=== DETAILED BREAKDOWN ===");
+    console.log("Product SKU:", productData.chosenVariantSku);
+    console.log("Metal Color:", selectedMetalColor);
+    console.log("Metal Type:", selectedMetalType);
+    console.log("Gold Karat:", selectedGoldKarat);
+    console.log("Ring Size:", selectedSize);
+    console.log("Diamond Shape:", selectedDiamondShape);
+    console.log("Diamond Size:", selectedDiamondSize);
+    console.log("Engraving Text:", engravingText);
+    console.log("Has Engraving:", !!engravingText);
     console.log("===================");
 
     // Navigate to payment page with product data
@@ -841,6 +854,7 @@ const ProductDetail = () => {
               _id: productData.modelSku,
               title: productData.title,
               price: productData.sellingPrice,
+              priceBreakdown: productData.priceBreakdown,
               images: {
                 main: productData.variantImages?.[0] || "",
                 sub: productData.variantImages?.slice(1) || [],
@@ -857,6 +871,9 @@ const ProductDetail = () => {
               diamondSize: selectedDiamondSize,
               diamondOrigin: selectedDiamondOrigin,
               ringSize: selectedSize,
+              engraving: engravingText,
+              engravingImageUrl: engravingImageUrl,
+              hasEngraving: !!engravingText,
             },
           },
         ],
@@ -875,7 +892,17 @@ const ProductDetail = () => {
     selectedDiamondOrigin,
     selectedSize,
     user,
+    engravingText,
+    engravingImageUrl,
   ]);
+
+  // Handle engraving save callback
+  const handleEngravingSave = useCallback((text: string, imageUrl?: string) => {
+    setEngravingText(text);
+    setEngravingImageUrl(imageUrl || "");
+    setShowEngraveModal(false);
+    console.log("Engraving saved:", { text, imageUrl });
+  }, []);
 
   const ringSizes = [
     "4",
@@ -1496,7 +1523,13 @@ const ProductDetail = () => {
                 {showEngraveModal && (
                   <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
                     <div className="relative w-full h-full bg-white overflow-auto">
-                      <Engrave onClose={() => setShowEngraveModal(false)} />
+                      <Engrave
+                        onClose={() => setShowEngraveModal(false)}
+                        onSave={handleEngravingSave}
+                        selectedImage={productData?.variantImages?.[0]}
+                        jewelryType={productData?.title}
+                        userId={user?.id}
+                      />
                     </div>
                   </div>
                 )}
@@ -1630,7 +1663,7 @@ const ProductDetail = () => {
                             SKU Number
                           </span>
                           <span className="font-medium">
-                            BRDTXR07400Q300GW4
+                            {productData.modelSku}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-border">
@@ -1704,7 +1737,9 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Diamond Origin
                           </span>
-                          <span className="font-medium">4.39</span>
+                          <span className="font-medium">
+                            {selectedDiamondOrigin}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-border">
                           <span className="text-muted-foreground">
@@ -1763,13 +1798,19 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Gold/Silver/Platinum Value
                           </span>
-                          <span className="font-medium">Rs. 1,20,000</span>
+                          <span className="font-medium">
+                            Rs{" "}
+                            {productData.priceBreakdown.metalCost.toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-border">
                           <span className="text-muted-foreground">
                             Diamond Value
                           </span>
-                          <span className="font-medium">Rs.</span>
+                          <span className="font-medium">
+                            Rs.
+                            {productData.priceBreakdown.diamondCost.toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-border">
                           <span className="text-muted-foreground">
@@ -1781,15 +1822,26 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Making Charges
                           </span>
-                          <span className="font-medium">Rs.</span>
+                          <span className="font-medium">
+                            Rs
+                            {productData.priceBreakdown.labourCost.toLocaleString()}
+                            .
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-border">
                           <span className="text-muted-foreground">GST</span>
-                          <span className="font-medium">VS2+</span>
+                          <span className="font-medium">
+                            Rs
+                            {productData.priceBreakdown.gstAmount.toLocaleString()}
+                            .
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-border font-semibold">
                           <span>Total</span>
-                          <span>Rs.</span>
+                          <span>
+                            Rs.
+                            {productData.priceBreakdown.totalWithGst.toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-border">
                           <span className="text-muted-foreground">
@@ -1859,7 +1911,13 @@ const ProductDetail = () => {
         {showEngraveModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
             <div className="relative w-full h-full bg-white overflow-auto">
-              <Engrave onClose={() => setShowEngraveModal(false)} />
+              <Engrave
+                onClose={() => setShowEngraveModal(false)}
+                onSave={handleEngravingSave}
+                selectedImage={productData?.variantImages?.[0]}
+                jewelryType={productData?.title}
+                userId={user?.id}
+              />
             </div>
           </div>
         )}

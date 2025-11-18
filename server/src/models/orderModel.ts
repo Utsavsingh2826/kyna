@@ -6,7 +6,7 @@ export interface IOrder extends Document {
   user: Schema.Types.ObjectId | IUser;
   orderNumber?: string; // Made optional to avoid unique constraint issues
   estimatedDeliveryDate?: Date;
-  orderType: 'normal' | 'customized'; // Order type for cancellation policy
+  orderType: "normal" | "customized"; // Order type for cancellation policy
   statusHistory?: {
     status: string;
     date: Date;
@@ -91,10 +91,64 @@ export interface IOrder extends Document {
   images?: Array<{
     url: string;
     publicId?: string;
-     uploadedAt?: Date;
+    uploadedAt?: Date;
     source?: string; // e.g., 'cloudinary', 'local'
     alt?: string;
   }>;
+  // Product details with complete specifications
+  productDetails?: {
+    jewelryType?: string;
+    description?: string;
+    sku?: string;
+    variantSku?: string;
+    isDirectPurchase?: boolean;
+    product?: {
+      modelSku?: string;
+      title?: string;
+      price?: number;
+      priceBreakdown?: any;
+      sku?: string;
+    };
+    customization?: {
+      metalColor?: string;
+      metalType?: string;
+      goldKarat?: string;
+      diamondShape?: string;
+      diamondSize?: string;
+      diamondOrigin?: string;
+      ringSize?: string;
+      engraving?: string;
+      engravingImageUrl?: string;
+      hasEngraving?: boolean;
+    };
+    diamondDetails?: {
+      shape?: string;
+      size?: string;
+      origin?: string;
+      carat?: string;
+    };
+    metalDetails?: {
+      type?: string;
+      color?: string;
+      karat?: string;
+    };
+    ringDetails?: {
+      size?: string;
+    };
+    engravingDetails?: {
+      text?: string;
+      imageUrl?: string;
+      hasEngraving?: boolean;
+    };
+    priceBreakdown?: any;
+    productSpecs?: {
+      modelSku?: string;
+      variantSku?: string;
+      variant?: string;
+      title?: string;
+      sellingPrice?: number;
+    };
+  };
   orderedAt: Date;
   shippedAt?: Date;
   deliveredAt?: Date;
@@ -108,13 +162,16 @@ const orderSchema = new Schema<IOrder>(
   {
     // Link to the customer placing the order
     user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    orderNumber: { type: String, default: function() { return this._id.toString(); } }, // Default to _id to avoid null values
+    orderNumber: {
+      type: String,
+      // Removed default function to avoid upsert issues - handle in route instead
+    },
     estimatedDeliveryDate: { type: Date }, // ✅ Added
-    orderType: { 
-      type: String, 
-      enum: ['normal', 'customized'],
-      default: 'normal',
-      required: true
+    orderType: {
+      type: String,
+      enum: ["normal", "customized"],
+      default: "normal",
+      required: true,
     }, // Order type for cancellation policy
     statusHistory: [
       {
@@ -150,7 +207,7 @@ const orderSchema = new Schema<IOrder>(
       city: { type: String, required: true, trim: true },
       state: { type: String, required: true, trim: true },
       country: { type: String, required: true, trim: true },
-      zipCode: { type: String, required: true, trim: true }
+      zipCode: { type: String, required: true, trim: true },
     },
 
     // Shipping details
@@ -161,7 +218,7 @@ const orderSchema = new Schema<IOrder>(
       state: { type: String, required: true, trim: true },
       country: { type: String, required: true, trim: true },
       zipCode: { type: String, required: true, trim: true },
-      sameAsBilling: { type: Boolean, default: false }
+      sameAsBilling: { type: Boolean, default: false },
     },
 
     // Payment info
@@ -249,6 +306,59 @@ const orderSchema = new Schema<IOrder>(
       },
     ],
 
+    // Product details with complete specifications
+    productDetails: {
+      jewelryType: { type: String },
+      description: { type: String },
+      isDirectPurchase: { type: Boolean },
+      product: {
+        modelSku: { type: String },
+        title: { type: String },
+        price: { type: Number },
+        priceBreakdown: { type: Schema.Types.Mixed },
+        sku: { type: String },
+      },
+      customization: {
+        metalColor: { type: String },
+        metalType: { type: String },
+        goldKarat: { type: String },
+        diamondShape: { type: String },
+        diamondSize: { type: String },
+        diamondOrigin: { type: String },
+        ringSize: { type: String },
+        engraving: { type: String },
+        engravingImageUrl: { type: String },
+        hasEngraving: { type: Boolean },
+      },
+      diamondDetails: {
+        shape: { type: String },
+        size: { type: String },
+        origin: { type: String },
+        carat: { type: String },
+      },
+      metalDetails: {
+        type: { type: String },
+        color: { type: String },
+        karat: { type: String },
+      },
+      ringDetails: {
+        size: { type: String },
+      },
+      engravingDetails: {
+        text: { type: String },
+        imageUrl: { type: String },
+        hasEngraving: { type: Boolean },
+      },
+      priceBreakdown: { type: Schema.Types.Mixed },
+      productSpecs: {
+        modelSku: { type: String },
+        variantSku: { type: String },
+        variant: { type: String },
+        title: { type: String },
+        sellingPrice: { type: Number },
+      },
+    },
+
     // Important dates
     orderedAt: { type: Date, default: Date.now },
     shippedAt: { type: Date },
@@ -265,9 +375,19 @@ const orderSchema = new Schema<IOrder>(
 orderSchema.index({ user: 1, orderedAt: -1 });
 
 // Pre-save hook to ensure orderNumber is set to avoid duplicate key errors
-orderSchema.pre('save', function(next) {
-  if (!this.orderNumber) {
-    this.orderNumber = this._id.toString();
+orderSchema.pre("save", function (next) {
+  try {
+    if (!this.orderNumber) {
+      if (this && this._id) {
+        this.orderNumber = this._id.toString();
+      } else {
+        this.orderNumber = new mongoose.Types.ObjectId().toString();
+      }
+    }
+  } catch (e) {
+    // Fallback: generate a fresh ObjectId string to avoid save-time crash
+    if (!this.orderNumber)
+      this.orderNumber = new mongoose.Types.ObjectId().toString();
   }
   next();
 });

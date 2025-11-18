@@ -1,8 +1,18 @@
-import express, { Request, Response } from 'express';
-import { getRazorpayInstance, createOrderPayload, verifyWebhookSignature, validatePaymentAmount, PAYMENT_METHOD_LIMITS, DEFAULT_MAX_AMOUNT } from '../utils/razorpay';
-import PaymentOrder, { OrderStatus, IPaymentResponse } from '../models/PaymentOrder';
-import OrderModel from '../models/orderModel';
-import User from '../models/userModel';
+import express, { Request, Response } from "express";
+import {
+  getRazorpayInstance,
+  createOrderPayload,
+  verifyWebhookSignature,
+  validatePaymentAmount,
+  PAYMENT_METHOD_LIMITS,
+  DEFAULT_MAX_AMOUNT,
+} from "../utils/razorpay";
+import PaymentOrder, {
+  OrderStatus,
+  IPaymentResponse,
+} from "../models/PaymentOrder";
+import OrderModel from "../models/orderModel";
+import User from "../models/userModel";
 
 const router = express.Router();
 
@@ -20,44 +30,63 @@ function generateShortOrderNumber(): string {
 /**
  * Utility function to detect order category and type based on order data
  */
-function detectOrderCategoryAndType(orderData: any): { category: string; type: string } {
+function detectOrderCategoryAndType(orderData: any): {
+  category: string;
+  type: string;
+} {
   // Default values
-  let category = 'products';
-  let type = 'normal';
-  
+  let category = "products";
+  let type = "normal";
+
   // Check orderId patterns
-  const orderId = orderData.orderId || '';
+  const orderId = orderData.orderId || "";
   const orderIdLower = orderId.toLowerCase();
-  
+
   // Check if customData indicates custom jewelry
-  if (orderData.customData?.customizationComplete || orderData.customData?.jewelryType) {
-    category = 'design-your-own';
-    type = 'customized';
+  if (
+    orderData.customData?.customizationComplete ||
+    orderData.customData?.jewelryType
+  ) {
+    category = "design-your-own";
+    type = "customized";
   }
   // Check for build-your-own patterns
-  else if (orderIdLower.includes('build') || orderIdLower.includes('jewelry') || 
-           orderData.items?.some((item: any) => item.name?.toLowerCase().includes('build'))) {
-    category = 'build-your-own';
-    type = 'customized';
+  else if (
+    orderIdLower.includes("build") ||
+    orderIdLower.includes("jewelry") ||
+    orderData.items?.some((item: any) =>
+      item.name?.toLowerCase().includes("build")
+    )
+  ) {
+    category = "build-your-own";
+    type = "customized";
   }
   // Check for design patterns
-  else if (orderIdLower.includes('design') || orderIdLower.includes('custom') ||
-           orderData.items?.some((item: any) => item.name?.toLowerCase().includes('custom'))) {
-    category = 'design-your-own';
-    type = 'customized';
+  else if (
+    orderIdLower.includes("design") ||
+    orderIdLower.includes("custom") ||
+    orderData.items?.some((item: any) =>
+      item.name?.toLowerCase().includes("custom")
+    )
+  ) {
+    category = "design-your-own";
+    type = "customized";
   }
   // Check redirectUrl for hints
   else if (orderData.redirectUrl) {
     const redirectUrl = orderData.redirectUrl.toLowerCase();
-    if (redirectUrl.includes('design') || redirectUrl.includes('custom')) {
-      category = 'design-your-own';
-      type = 'customized';
-    } else if (redirectUrl.includes('build') || redirectUrl.includes('jewelry')) {
-      category = 'build-your-own';
-      type = 'customized';
+    if (redirectUrl.includes("design") || redirectUrl.includes("custom")) {
+      category = "design-your-own";
+      type = "customized";
+    } else if (
+      redirectUrl.includes("build") ||
+      redirectUrl.includes("jewelry")
+    ) {
+      category = "build-your-own";
+      type = "customized";
     }
   }
-  
+
   return { category, type };
 }
 
@@ -65,21 +94,21 @@ function detectOrderCategoryAndType(orderData: any): { category: string; type: s
  * POST /api/payment/initiate
  * Initiates payment with CCAvenue
  */
-router.post('/initiate', async (req: Request, res: Response) => {
+router.post("/initiate", async (req: Request, res: Response) => {
   try {
     // Check if Razorpay is configured
     if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
       return res.status(500).json({
         success: false,
-        error: 'Payment gateway not configured',
-        message: 'Razorpay credentials are missing'
+        error: "Payment gateway not configured",
+        message: "Razorpay credentials are missing",
       });
     }
 
     const {
       orderId,
       amount,
-      currency = 'INR',
+      currency = "INR",
       billingInfo,
       redirectUrl,
       cancelUrl,
@@ -90,31 +119,49 @@ router.post('/initiate', async (req: Request, res: Response) => {
       customData,
       items,
       // Order details with all customization data
-      orderDetails
+      orderDetails,
     } = req.body;
+
+    // Debug: log the orderDetails being received
+    console.log("🔍 Payment initiation - orderDetails received:");
+    console.log(JSON.stringify(orderDetails, null, 2));
 
     // Smart detection of category and type if not provided
     let finalOrderCategory = orderCategory;
     let finalOrderType = orderType;
-    
+
     if (!orderCategory || !orderType) {
       const detected = detectOrderCategoryAndType({
         orderId,
         redirectUrl,
         customData,
-        items
+        items,
       });
-      
+
       finalOrderCategory = orderCategory || detected.category;
       finalOrderType = orderType || detected.type;
     }
 
     // Validate required fields
-    if (!orderId || !amount || !billingInfo || !redirectUrl || !cancelUrl || !userId) {
+    if (
+      !orderId ||
+      !amount ||
+      !billingInfo ||
+      !redirectUrl ||
+      !cancelUrl ||
+      !userId
+    ) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields',
-        required: ['orderId', 'amount', 'billingInfo', 'redirectUrl', 'cancelUrl', 'userId']
+        error: "Missing required fields",
+        required: [
+          "orderId",
+          "amount",
+          "billingInfo",
+          "redirectUrl",
+          "cancelUrl",
+          "userId",
+        ],
       });
     }
 
@@ -122,8 +169,9 @@ router.post('/initiate', async (req: Request, res: Response) => {
     if (!req.body.estimatedDelivery) {
       return res.status(400).json({
         success: false,
-        error: 'Missing estimatedDelivery',
-        message: 'Estimated delivery date is required to create orders. Please fetch EDD before initiating payment.'
+        error: "Missing estimatedDelivery",
+        message:
+          "Estimated delivery date is required to create orders. Please fetch EDD before initiating payment.",
       });
     }
 
@@ -132,8 +180,8 @@ router.post('/initiate', async (req: Request, res: Response) => {
     if (isNaN(amountNum) || amountNum <= 0) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid amount',
-        message: 'Amount must be a positive number'
+        error: "Invalid amount",
+        message: "Amount must be a positive number",
       });
     }
 
@@ -142,50 +190,73 @@ router.post('/initiate', async (req: Request, res: Response) => {
     if (!amountValidation.isValid) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid payment amount',
+        error: "Invalid payment amount",
         message: amountValidation.error,
         amount: amountNum,
-        recommendedPaymentMethods: amountValidation.recommendedMethods || ['netbanking', 'cards'],
-        supportContact: 'support@kynajewels.com'
+        recommendedPaymentMethods: amountValidation.recommendedMethods || [
+          "netbanking",
+          "cards",
+        ],
+        supportContact: "support@kynajewels.com",
       });
     }
 
     // Log payment method recommendations if any methods are exceeded
-    if (amountValidation.exceededMethods && amountValidation.exceededMethods.length > 0) {
-      console.warn(`Payment amount ₹${amountNum} exceeds limits for: ${amountValidation.exceededMethods.join(', ')}. Recommended methods: ${amountValidation.recommendedMethods?.join(', ')}`);
+    if (
+      amountValidation.exceededMethods &&
+      amountValidation.exceededMethods.length > 0
+    ) {
+      console.warn(
+        `Payment amount ₹${amountNum} exceeds limits for: ${amountValidation.exceededMethods.join(
+          ", "
+        )}. Recommended methods: ${amountValidation.recommendedMethods?.join(
+          ", "
+        )}`
+      );
     }
 
     // Validate orderCategory and orderType
-    const validCategories = ['design-your-own', 'build-your-own', 'products'];
-    const validTypes = ['customized', 'normal'];
-    
+    const validCategories = ["design-your-own", "build-your-own", "products"];
+    const validTypes = ["customized", "normal"];
+
     if (!validCategories.includes(finalOrderCategory)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid orderCategory',
+        error: "Invalid orderCategory",
         detected: finalOrderCategory,
-        validValues: validCategories
+        validValues: validCategories,
       });
     }
-    
+
     if (!validTypes.includes(finalOrderType)) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid orderType',
+        error: "Invalid orderType",
         detected: finalOrderType,
-        validValues: validTypes
+        validValues: validTypes,
       });
     }
 
     // Validate billing info
-    const requiredBillingFields = ['name', 'address', 'city', 'state', 'zip', 'country', 'phone', 'email'];
-    const missingBillingFields = requiredBillingFields.filter(field => !billingInfo[field]);
-    
+    const requiredBillingFields = [
+      "name",
+      "address",
+      "city",
+      "state",
+      "zip",
+      "country",
+      "phone",
+      "email",
+    ];
+    const missingBillingFields = requiredBillingFields.filter(
+      (field) => !billingInfo[field]
+    );
+
     if (missingBillingFields.length > 0) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required billing fields',
-        missing: missingBillingFields
+        error: "Missing required billing fields",
+        missing: missingBillingFields,
       });
     }
 
@@ -194,11 +265,11 @@ router.post('/initiate', async (req: Request, res: Response) => {
     if (existingOrder) {
       return res.status(400).json({
         success: false,
-        error: 'Order ID already exists'
+        error: "Order ID already exists",
       });
     }
 
-      // Create order in database
+    // Create order in database
     const shortOrderNumber = generateShortOrderNumber();
     const order = new PaymentOrder({
       orderId,
@@ -212,10 +283,10 @@ router.post('/initiate', async (req: Request, res: Response) => {
       billingInfo,
       redirectUrl,
       cancelUrl,
-        orderDetails: orderDetails || null,
-        // Accept estimated delivery information if frontend provided it
-        estimatedDelivery: req.body.estimatedDelivery || null,
-        estimatedDeliveryDay: req.body.estimatedDeliveryDay || null
+      orderDetails: orderDetails || null,
+      // Accept estimated delivery information if frontend provided it
+      estimatedDelivery: req.body.estimatedDelivery || null,
+      estimatedDeliveryDay: req.body.estimatedDeliveryDay || null,
     });
 
     await order.save();
@@ -228,86 +299,126 @@ router.post('/initiate', async (req: Request, res: Response) => {
     try {
       razorpayOrder = await razorpay.orders.create(payload);
     } catch (razorpayError: any) {
-      console.error('Razorpay order creation failed:', razorpayError);
-      
+      console.error("Razorpay order creation failed:", razorpayError);
+
       // Handle specific Razorpay errors
       if (razorpayError.error) {
         const errorCode = razorpayError.error.code;
         const errorDescription = razorpayError.error.description;
-        
-        if (errorCode === 'BAD_REQUEST_ERROR' && errorDescription?.includes('amount')) {
+
+        if (
+          errorCode === "BAD_REQUEST_ERROR" &&
+          errorDescription?.includes("amount")
+        ) {
           return res.status(400).json({
             success: false,
-            error: 'Invalid payment amount',
+            error: "Invalid payment amount",
             message: `Payment amount ₹${amountNum} is invalid. ${errorDescription}`,
             amount: amountNum,
             razorpayError: errorDescription,
-            recommendedPaymentMethods: ['netbanking', 'cards']
+            recommendedPaymentMethods: ["netbanking", "cards"],
           });
         }
-        
-        if (errorCode === 'BAD_REQUEST_ERROR' && errorDescription?.includes('maximum')) {
+
+        if (
+          errorCode === "BAD_REQUEST_ERROR" &&
+          errorDescription?.includes("maximum")
+        ) {
           return res.status(400).json({
             success: false,
-            error: 'Amount exceeds maximum limit',
+            error: "Amount exceeds maximum limit",
             message: `Payment amount ₹${amountNum} exceeds the maximum allowed limit. Please use Net Banking or Card payment for this amount.`,
             amount: amountNum,
             razorpayError: errorDescription,
-            recommendedPaymentMethods: ['netbanking', 'cards'],
-            supportContact: 'support@kynajewels.com'
+            recommendedPaymentMethods: ["netbanking", "cards"],
+            supportContact: "support@kynajewels.com",
           });
         }
       }
-      
+
       // Generic Razorpay error
       return res.status(500).json({
         success: false,
-        error: 'Payment gateway error',
-        message: 'Failed to create payment order. Please try again or contact support.',
-        razorpayError: razorpayError.message || 'Unknown Razorpay error',
-        supportContact: 'support@kynajewels.com'
+        error: "Payment gateway error",
+        message:
+          "Failed to create payment order. Please try again or contact support.",
+        razorpayError: razorpayError.message || "Unknown Razorpay error",
+        supportContact: "support@kynajewels.com",
       });
     }
 
     // Store razorpay order id in both paymentResponse and dedicated field
-    order.paymentResponse = { orderId: razorpayOrder.id, amount: String(amount), currency } as any;
+    order.paymentResponse = {
+      orderId: razorpayOrder.id,
+      amount: String(amount),
+      currency,
+    } as any;
     order.razorpayOrderId = razorpayOrder.id;
     await order.save();
 
-    // Ensure a main OrderModel exists with orderNumber === shortOrderNumber to avoid duplicate-null unique index errors
-    try {
-      const shippingAddress = {
-        label: 'Billing',
-        street: billingInfo.address || 'N/A',
-        city: billingInfo.city || 'N/A',
-        state: billingInfo.state || 'N/A',
-        postalCode: billingInfo.zip || 'N/A',
-        country: billingInfo.country || 'N/A'
-      };
+    // Skip OrderModel creation for customization orders (design-your-own category)
+    // Customizations should only create CustomizationRequest entries, not orders
+    if (finalOrderCategory !== "design-your-own") {
+      // Ensure a main OrderModel exists with orderNumber === shortOrderNumber to avoid duplicate-null unique index errors
+      try {
+        const billingAddressForOrder = {
+          street: billingInfo.address || "N/A",
+          city: billingInfo.city || "N/A",
+          state: billingInfo.state || "N/A",
+          country: billingInfo.country || "N/A",
+          zipCode: billingInfo.zip || "N/A",
+        };
 
-      await OrderModel.findOneAndUpdate(
-        { orderNumber: shortOrderNumber },
-        {
-          $setOnInsert: {
-            user: userId,
-            orderNumber: shortOrderNumber,
-            items: [],
-            shippingAddress,
-            paymentMethod: 'UPI',
-            paymentStatus: 'pending',
-            orderStatus: 'pending',
-            subtotal: parseFloat(amount),
-            gst: 0,
-            shippingCharge: 0,
-            totalAmount: parseFloat(amount),
-            orderedAt: new Date(),
-            statusHistory: [{ status: 'pending', date: new Date(), note: 'Order created via payment initiation' }]
-          }
-        },
-        { upsert: true, new: true }
+        const shippingAddressForOrder = {
+          street: billingInfo.address || "N/A",
+          city: billingInfo.city || "N/A",
+          state: billingInfo.state || "N/A",
+          country: billingInfo.country || "N/A",
+          zipCode: billingInfo.zip || "N/A",
+          sameAsBilling: true,
+        };
+
+        await OrderModel.findOneAndUpdate(
+          { orderNumber: shortOrderNumber },
+          {
+            $setOnInsert: {
+              user: userId,
+              orderNumber: shortOrderNumber,
+              items: [],
+              billingAddress: billingAddressForOrder,
+              shippingAddress: shippingAddressForOrder,
+              paymentMethod: "CARDS",
+              paymentStatus: "pending",
+              orderStatus: "pending",
+              subtotal: parseFloat(amount),
+              gst: 0,
+              shippingCharge: 0,
+              totalAmount: parseFloat(amount),
+              orderedAt: new Date(),
+              statusHistory: [
+                {
+                  status: "pending",
+                  date: new Date(),
+                  note: "Order created via payment initiation",
+                },
+              ],
+            },
+          },
+          { upsert: true, new: true }
+        );
+        console.log(
+          `✅ OrderModel created for ${finalOrderCategory} order: ${shortOrderNumber}`
+        );
+      } catch (e) {
+        console.warn(
+          "Failed to upsert main OrderModel for payment initiation:",
+          e
+        );
+      }
+    } else {
+      console.log(
+        `⏭️ Skipping OrderModel creation for customization order (${finalOrderCategory}): ${shortOrderNumber}`
       );
-    } catch (e) {
-      console.warn('Failed to upsert main OrderModel for payment initiation:', e);
     }
 
     res.json({
@@ -321,30 +432,29 @@ router.post('/initiate', async (req: Request, res: Response) => {
         orderType: order.orderType,
         amount: razorpayOrder.amount,
         currency: razorpayOrder.currency,
-        name: 'Kyna Jewels',
+        name: "Kyna Jewels",
         description: `Payment for Order ${order.orderId}`,
         prefill: {
           name: billingInfo.name,
           email: billingInfo.email,
-          contact: billingInfo.phone
+          contact: billingInfo.phone,
         },
         theme: {
-          color: '#328F94'
+          color: "#328F94",
         },
         notes: {
           orderId: order.orderId,
-          userId: userId
-        }
+          userId: userId,
+        },
       },
-      message: 'Payment initiated successfully'
+      message: "Payment initiated successfully",
     });
-
   } catch (error) {
-    console.error('Payment initiation error:', error);
+    console.error("Payment initiation error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to initiate payment',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: "Failed to initiate payment",
+      message: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
@@ -354,108 +464,149 @@ router.post('/initiate', async (req: Request, res: Response) => {
  * Handles CCAvenue payment callback
  */
 // Razorpay webhook endpoint
-router.post('/callback', express.raw({ type: '*/*' }), async (req: Request, res: Response) => {
-  try {
-    const signature = req.headers['x-razorpay-signature'] as string | undefined;
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET || '';
+router.post(
+  "/callback",
+  express.raw({ type: "*/*" }),
+  async (req: Request, res: Response) => {
+    try {
+      const signature = req.headers["x-razorpay-signature"] as
+        | string
+        | undefined;
+      const secret = process.env.RAZORPAY_WEBHOOK_SECRET || "";
 
-    if (!signature) {
-      return res.status(400).json({ success: false, error: 'Missing signature' });
-    }
-
-    const payload = req.body as Buffer;
-
-    const isValid = verifyWebhookSignature(payload, signature, secret);
-
-    if (!isValid) {
-      return res.status(400).json({ success: false, error: 'Invalid signature' });
-    }
-
-    const event = JSON.parse(payload.toString());
-
-    // Handle payment captured / failed events
-    if (event.event === 'payment.captured' || event.event === 'payment.failed') {
-      const payment = event.payload.payment.entity;
-      const razorpayOrderId = payment.order_id;
-
-      // Find our order by razorpay order id stored in paymentResponse.orderId
-      const order = await PaymentOrder.findOne({ 'paymentResponse.orderId': razorpayOrderId });
-
-      if (!order) {
-        return res.status(404).json({ success: false, error: 'PaymentOrder not found' });
+      if (!signature) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Missing signature" });
       }
 
-      const newStatus = event.event === 'payment.captured' ? OrderStatus.SUCCESS : OrderStatus.FAILED;
+      const payload = req.body as Buffer;
 
-      const paymentResp: IPaymentResponse = {
-        orderId: order.orderId,
-        trackingId: payment.id,
-        orderStatus: newStatus === OrderStatus.SUCCESS ? 'Success' : 'Failure',
-        paymentMode: payment.method,
-        cardName: payment.card ? payment.card.network : undefined,
-        statusMessage: payment.error_description || payment.status || undefined,
-        amount: String(payment.amount / 100),
-        currency: payment.currency
-      } as any;
+      const isValid = verifyWebhookSignature(payload, signature, secret);
 
-      await order.updateStatus(newStatus, paymentResp);
+      if (!isValid) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Invalid signature" });
+      }
 
-      return res.json({ success: true });
+      const event = JSON.parse(payload.toString());
+
+      // Handle payment captured / failed events
+      if (
+        event.event === "payment.captured" ||
+        event.event === "payment.failed"
+      ) {
+        const payment = event.payload.payment.entity;
+        const razorpayOrderId = payment.order_id;
+
+        // Find our order by razorpay order id stored in paymentResponse.orderId
+        const order = await PaymentOrder.findOne({
+          "paymentResponse.orderId": razorpayOrderId,
+        });
+
+        if (!order) {
+          return res
+            .status(404)
+            .json({ success: false, error: "PaymentOrder not found" });
+        }
+
+        const newStatus =
+          event.event === "payment.captured"
+            ? OrderStatus.SUCCESS
+            : OrderStatus.FAILED;
+
+        const paymentResp: IPaymentResponse = {
+          orderId: order.orderId,
+          trackingId: payment.id,
+          orderStatus:
+            newStatus === OrderStatus.SUCCESS ? "Success" : "Failure",
+          paymentMode: payment.method,
+          cardName: payment.card ? payment.card.network : undefined,
+          statusMessage:
+            payment.error_description || payment.status || undefined,
+          amount: String(payment.amount / 100),
+          currency: payment.currency,
+        } as any;
+
+        await order.updateStatus(newStatus, paymentResp);
+
+        return res.json({ success: true });
+      }
+
+      res.json({ success: true, message: "event ignored" });
+    } catch (error) {
+      console.error("Payment callback error:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to process webhook",
+        message: error instanceof Error ? error.message : "Unknown",
+      });
     }
-
-    res.json({ success: true, message: 'event ignored' });
-
-  } catch (error) {
-    console.error('Payment callback error:', error);
-    res.status(500).json({ success: false, error: 'Failed to process webhook', message: error instanceof Error ? error.message : 'Unknown' });
   }
-});
+);
 
 /**
  * GET /api/payment/callback
  * Handles CCAvenue payment callback (GET request for redirects)
  */
-router.get('/callback', async (req: Request, res: Response) => {
+router.get("/callback", async (req: Request, res: Response) => {
   try {
     // CCAvenue redirects with query parameters
     const { encResp } = req.query;
 
-    if (!encResp || typeof encResp !== 'string') {
+    if (!encResp || typeof encResp !== "string") {
       return res.status(400).json({
         success: false,
-        error: 'Missing encrypted response'
+        error: "Missing encrypted response",
       });
     }
 
     // For Razorpay, handle redirect by reading query params (Razorpay typically uses webhooks)
-      // We'll attempt to read razorpay_payment_id and razorpay_order_id if present and update order
-      const razorpayPaymentId = req.query['razorpay_payment_id'] as string | undefined;
-      const razorpayOrderId = req.query['razorpay_order_id'] as string | undefined;
+    // We'll attempt to read razorpay_payment_id and razorpay_order_id if present and update order
+    const razorpayPaymentId = req.query["razorpay_payment_id"] as
+      | string
+      | undefined;
+    const razorpayOrderId = req.query["razorpay_order_id"] as
+      | string
+      | undefined;
 
-      if (!razorpayOrderId) {
-        return res.status(400).json({ success: false, error: 'Missing razorpay_order_id' });
-      }
+    if (!razorpayOrderId) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Missing razorpay_order_id" });
+    }
 
-      const order = await PaymentOrder.findOne({ 'paymentResponse.orderId': razorpayOrderId });
-      if (!order) {
-        return res.status(404).json({ success: false, error: 'PaymentOrder not found' });
-      }
+    const order = await PaymentOrder.findOne({
+      "paymentResponse.orderId": razorpayOrderId,
+    });
+    if (!order) {
+      return res
+        .status(404)
+        .json({ success: false, error: "PaymentOrder not found" });
+    }
 
-      // If payment id present, assume success (actual verification should query Razorpay API)
-      if (razorpayPaymentId) {
-        await order.updateStatus(OrderStatus.SUCCESS, { orderId: order.orderId, trackingId: razorpayPaymentId } as any);
-      }
+    // If payment id present, assume success (actual verification should query Razorpay API)
+    if (razorpayPaymentId) {
+      await order.updateStatus(OrderStatus.SUCCESS, {
+        orderId: order.orderId,
+        trackingId: razorpayPaymentId,
+      } as any);
+    }
 
-      const redirectUrl = new URL(order.redirectUrl);
-      redirectUrl.searchParams.set('orderId', order.orderId);
-      redirectUrl.searchParams.set('status', order.status);
+    const redirectUrl = new URL(order.redirectUrl);
+    redirectUrl.searchParams.set("orderId", order.orderId);
+    redirectUrl.searchParams.set("status", order.status);
 
-      res.redirect(redirectUrl.toString());
-
+    res.redirect(redirectUrl.toString());
   } catch (error) {
-    console.error('Payment callback error:', error);
+    console.error("Payment callback error:", error);
     // Redirect to failure page on error
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:3000'}/payment-failure?error=callback_error`);
+    res.redirect(
+      `${
+        process.env.CLIENT_URL || "http://localhost:3000"
+      }/payment-failure?error=callback_error`
+    );
   }
 });
 
@@ -463,16 +614,16 @@ router.get('/callback', async (req: Request, res: Response) => {
  * GET /api/payment/status/:orderId
  * Get payment status for an order
  */
-router.get('/status/:orderId', async (req: Request, res: Response) => {
+router.get("/status/:orderId", async (req: Request, res: Response) => {
   try {
     const { orderId } = req.params;
 
     const order = await PaymentOrder.findByOrderId(orderId);
-    
+
     if (!order) {
       return res.status(404).json({
         success: false,
-        error: 'PaymentOrder not found'
+        error: "PaymentOrder not found",
       });
     }
 
@@ -485,16 +636,15 @@ router.get('/status/:orderId', async (req: Request, res: Response) => {
         currency: order.currency,
         paymentResponse: order.paymentResponse,
         createdAt: order.createdAt,
-        updatedAt: order.updatedAt
-      }
+        updatedAt: order.updatedAt,
+      },
     });
-
   } catch (error) {
-    console.error('Get payment status error:', error);
+    console.error("Get payment status error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get payment status',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: "Failed to get payment status",
+      message: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
@@ -503,13 +653,13 @@ router.get('/status/:orderId', async (req: Request, res: Response) => {
  * GET /api/payment/orders/:userId
  * Get all orders for a user
  */
-router.get('/orders/:userId', async (req: Request, res: Response) => {
+router.get("/orders/:userId", async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const { limit = 10, page = 1 } = req.query;
 
     const skip = (Number(page) - 1) * Number(limit);
-    
+
     const orders = await PaymentOrder.find({ userId })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -526,17 +676,16 @@ router.get('/orders/:userId', async (req: Request, res: Response) => {
           totalPages: Math.ceil(totalPaymentOrders / Number(limit)),
           totalPaymentOrders,
           hasNext: skip + orders.length < totalPaymentOrders,
-          hasPrev: Number(page) > 1
-        }
-      }
+          hasPrev: Number(page) > 1,
+        },
+      },
     });
-
   } catch (error) {
-    console.error('Get user orders error:', error);
+    console.error("Get user orders error:", error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get user orders',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: "Failed to get user orders",
+      message: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });
@@ -545,16 +694,21 @@ router.get('/orders/:userId', async (req: Request, res: Response) => {
  * POST /api/payment/verify
  * Verify Razorpay payment signature
  */
-router.post('/verify', async (req: Request, res: Response) => {
+router.post("/verify", async (req: Request, res: Response) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
+      req.body;
 
     // Validate required fields
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields',
-        required: ['razorpay_order_id', 'razorpay_payment_id', 'razorpay_signature']
+        error: "Missing required fields",
+        required: [
+          "razorpay_order_id",
+          "razorpay_payment_id",
+          "razorpay_signature",
+        ],
       });
     }
 
@@ -563,13 +717,13 @@ router.post('/verify', async (req: Request, res: Response) => {
     if (!razorpay) {
       return res.status(500).json({
         success: false,
-        error: 'Payment gateway not configured'
+        error: "Payment gateway not configured",
       });
     }
 
     // Verify signature
     const isValidSignature = verifyWebhookSignature(
-      razorpay_order_id + '|' + razorpay_payment_id,
+      razorpay_order_id + "|" + razorpay_payment_id,
       razorpay_signature,
       process.env.RAZORPAY_KEY_SECRET!
     );
@@ -577,109 +731,202 @@ router.post('/verify', async (req: Request, res: Response) => {
     if (!isValidSignature) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid payment signature'
+        error: "Invalid payment signature",
       });
     }
 
     // Find the payment order
-    const paymentOrder = await PaymentOrder.findOne({ 
-      razorpayOrderId: razorpay_order_id 
+    const paymentOrder = await PaymentOrder.findOne({
+      razorpayOrderId: razorpay_order_id,
     });
 
     if (!paymentOrder) {
       return res.status(404).json({
         success: false,
-        error: 'Order not found'
+        error: "Order not found",
       });
     }
+
+    console.log("🔍 PaymentOrder found - Full object:");
+    console.log(JSON.stringify(paymentOrder, null, 2));
 
     // Update payment order status
     paymentOrder.status = OrderStatus.SUCCESS;
     paymentOrder.razorpayPaymentId = razorpay_payment_id;
     paymentOrder.razorpaySignature = razorpay_signature;
     paymentOrder.paidAt = new Date();
-    
+
     await paymentOrder.save();
 
     // Add order to user's orders array
     try {
-      await User.findByIdAndUpdate(
-        paymentOrder.userId,
-        { $push: { orders: paymentOrder._id } }
+      await User.findByIdAndUpdate(paymentOrder.userId, {
+        $push: { orders: paymentOrder._id },
+      });
+      console.log(
+        `Payment order ${paymentOrder._id} added to user ${paymentOrder.userId} orders array`
       );
-      console.log(`Payment order ${paymentOrder._id} added to user ${paymentOrder.userId} orders array`);
     } catch (userUpdateError) {
-      console.warn('Failed to update user orders array:', userUpdateError);
+      console.warn("Failed to update user orders array:", userUpdateError);
       // Don't fail the verification if user update fails
     }
 
     // Create TrackingOrder for this payment order if orderCategory is not design-your-own
-   if(paymentOrder.orderCategory !== 'design-your-own') {
-    try {
-      console.log('\n🔍 Creating TrackingOrder for payment order...');
-      console.log('   Payment Order ID:', paymentOrder._id);
-      console.log('   Order Number:', paymentOrder.orderNumber);
-      console.log('   Order Type:', paymentOrder.orderType);
-      console.log('   Customer Email:', paymentOrder.billingInfo?.email);
-      
-      const { TrackingOrder } = await import('../models/TrackingOrder');
-      const { OrderStatus: TrackingOrderStatus } = await import('../types/tracking');
-      
-      // Check if TrackingOrder already exists
-      const existingTracking = await TrackingOrder.findOne({ order: paymentOrder._id });
-      if (existingTracking) {
-        console.log('   ⚠️ TrackingOrder already exists:', existingTracking._id);
-      } else {
-        const trackingOrder = new TrackingOrder({
-          userId: paymentOrder.userId,
-          orderModel: 'PaymentOrder', // Specify model type for polymorphic reference
+    if (paymentOrder.orderCategory !== "design-your-own") {
+      try {
+        console.log("\n🔍 Creating TrackingOrder for payment order...");
+        console.log("   Payment Order ID:", paymentOrder._id);
+        console.log("   Order Number:", paymentOrder.orderNumber);
+        console.log("   Order Type:", paymentOrder.orderType);
+        console.log("   Customer Email:", paymentOrder.billingInfo?.email);
+
+        const { TrackingOrder } = await import("../models/TrackingOrder");
+        const { OrderStatus: TrackingOrderStatus } = await import(
+          "../types/tracking"
+        );
+
+        // Check if TrackingOrder already exists
+        const existingTracking = await TrackingOrder.findOne({
           order: paymentOrder._id,
-          orderNumber: paymentOrder.orderNumber,
-          orderType: paymentOrder.orderType || 'customized', // PaymentOrders are usually customized
-          customerEmail: paymentOrder.billingInfo?.email || '',
-          status: TrackingOrderStatus.ORDER_PLACED,
-          trackingHistory: [{
-            status: TrackingOrderStatus.ORDER_PLACED,
-            description: 'Payment completed - Order placed',
-            timestamp: new Date(),
-            code: TrackingOrderStatus.ORDER_PLACED
-          }]
         });
+        if (existingTracking) {
+          console.log(
+            "   ⚠️ TrackingOrder already exists:",
+            existingTracking._id
+          );
+        } else {
+          const trackingOrder = new TrackingOrder({
+            userId: paymentOrder.userId,
+            orderModel: "PaymentOrder", // Specify model type for polymorphic reference
+            order: paymentOrder._id,
+            orderNumber: paymentOrder.orderNumber,
+            orderType: paymentOrder.orderType || "customized", // PaymentOrders are usually customized
+            customerEmail: paymentOrder.billingInfo?.email || "",
+            status: TrackingOrderStatus.ORDER_PLACED,
+            trackingHistory: [
+              {
+                status: TrackingOrderStatus.ORDER_PLACED,
+                description: "Payment completed - Order placed",
+                timestamp: new Date(),
+                code: TrackingOrderStatus.ORDER_PLACED,
+              },
+            ],
+          });
 
-        await trackingOrder.save();
-        console.log('   ✅ TrackingOrder created successfully!');
-        console.log('   TrackingOrder ID:', trackingOrder._id);
-        console.log('   Status:', trackingOrder.status);
+          await trackingOrder.save();
+          console.log("   ✅ TrackingOrder created successfully!");
+          console.log("   TrackingOrder ID:", trackingOrder._id);
+          console.log("   Status:", trackingOrder.status);
+        }
+      } catch (trackingError) {
+        console.error("   ❌ Failed to create TrackingOrder:");
+        console.error("   Error:", trackingError);
+        console.error("   Error message:", (trackingError as Error).message);
+        console.error("   Stack:", (trackingError as Error).stack);
+        // Don't fail the verification if tracking creation fails
       }
-    } catch (trackingError) {
-      console.error('   ❌ Failed to create TrackingOrder:');
-      console.error('   Error:', trackingError);
-      console.error('   Error message:', (trackingError as Error).message);
-      console.error('   Stack:', (trackingError as Error).stack);
-      // Don't fail the verification if tracking creation fails
     }
-   }
 
-    // Update the main order if it exists
-    try {
-      await OrderModel.findOneAndUpdate(
-        { orderId: paymentOrder.orderId },
-        { 
-          status: 'paid',
-          paymentStatus: 'completed',
-          razorpayPaymentId: razorpay_payment_id,
-          updatedAt: new Date()
-        },
-        { upsert: false }
+    // Update the main order if it exists (skip for customization orders)
+    if (paymentOrder.orderCategory !== "design-your-own") {
+      try {
+        const updateData: any = {
+          paymentStatus: "paid",
+          orderStatus: "processing",
+          transactionId: razorpay_payment_id,
+          updatedAt: new Date(),
+        };
+
+        // Add detailed product information if available from PaymentOrder
+        if (paymentOrder.orderDetails) {
+          const orderDetails = paymentOrder.orderDetails as any; // Type assertion for extended properties
+
+          console.log("🔍 Full orderDetails structure:");
+          console.log(JSON.stringify(orderDetails, null, 2));
+
+          updateData.productDetails = {
+            jewelryType: orderDetails.jewelryType,
+            description: orderDetails.description,
+            isDirectPurchase: orderDetails.isDirectPurchase,
+            ...(orderDetails.directPurchaseData && {
+              // Extract detailed product specifications from PaymentOrder
+              product: orderDetails.directPurchaseData.product,
+              customization: orderDetails.directPurchaseData.customization,
+              // Add structured diamond details
+              diamondDetails: {
+                shape:
+                  orderDetails.directPurchaseData.customization?.diamondShape,
+                size: orderDetails.directPurchaseData.customization
+                  ?.diamondSize,
+                origin:
+                  orderDetails.directPurchaseData.customization?.diamondOrigin,
+                carat:
+                  orderDetails.directPurchaseData.customization?.diamondSize,
+              },
+              // Add structured metal details
+              metalDetails: {
+                type: orderDetails.directPurchaseData.customization?.metalType,
+                color:
+                  orderDetails.directPurchaseData.customization?.metalColor,
+                karat: orderDetails.directPurchaseData.customization?.goldKarat,
+              },
+              // Add structured ring details
+              ringDetails: {
+                size: orderDetails.directPurchaseData.customization?.ringSize,
+              },
+              // Add structured engraving details
+              engravingDetails: {
+                text:
+                  orderDetails.directPurchaseData.customization?.engraving ||
+                  "",
+                imageUrl:
+                  orderDetails.directPurchaseData.customization
+                    ?.engravingImageUrl || "",
+                hasEngraving:
+                  orderDetails.directPurchaseData.customization?.hasEngraving ||
+                  false,
+              },
+              // Add price breakdown
+              priceBreakdown:
+                orderDetails.directPurchaseData.product?.priceBreakdown,
+              // Add product specifications
+              productSpecs: {
+                modelSku: orderDetails.directPurchaseData.product?.modelSku,
+                variantSku: orderDetails.directPurchaseData.product?.variantSku,
+                variant: orderDetails.directPurchaseData.product?.variantSku, // Include variant SKU
+                title: orderDetails.directPurchaseData.product?.title,
+                sellingPrice: orderDetails.directPurchaseData.product?.price,
+              },
+            }),
+          };
+
+          console.log(
+            "📦 Adding product details to OrderModel:",
+            JSON.stringify(updateData.productDetails, null, 2)
+          );
+        }
+
+        await OrderModel.findOneAndUpdate(
+          { orderNumber: paymentOrder.orderNumber },
+          updateData,
+          { upsert: false }
+        );
+        console.log(
+          `✅ OrderModel updated with product details for payment: ${paymentOrder.orderNumber}`
+        );
+      } catch (orderUpdateError) {
+        console.warn("Failed to update main order:", orderUpdateError);
+        // Don't fail the verification if main order update fails
+      }
+    } else {
+      console.log(
+        `⏭️ Skipping OrderModel update for customization order: ${paymentOrder.orderNumber}`
       );
-    } catch (orderUpdateError) {
-      console.warn('Failed to update main order:', orderUpdateError);
-      // Don't fail the verification if main order update fails
     }
 
     res.json({
       success: true,
-      message: 'Payment verified successfully',
+      message: "Payment verified successfully",
       data: {
         orderId: paymentOrder.orderId,
         orderNumber: paymentOrder.orderNumber,
@@ -689,16 +936,15 @@ router.post('/verify', async (req: Request, res: Response) => {
         razorpayOrderId: razorpay_order_id,
         razorpayPaymentId: razorpay_payment_id,
         status: paymentOrder.status,
-        paidAt: paymentOrder.paidAt
-      }
+        paidAt: paymentOrder.paidAt,
+      },
     });
-
   } catch (error) {
-    console.error('Payment verification error:', error);
+    console.error("Payment verification error:", error);
     res.status(500).json({
       success: false,
-      error: 'Payment verification failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      error: "Payment verification failed",
+      message: error instanceof Error ? error.message : "Unknown error",
     });
   }
 });

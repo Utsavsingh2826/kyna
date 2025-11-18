@@ -294,7 +294,6 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           "attributes.category2": 1,
           "attributes.category3": 1,
           "seo.metaTitle": 1,
-          slug: 1,
           engraving: 1, // include engraving object (so we can return fontSize/maxCharacters)
           firstVariantSku: { $arrayElemAt: ["$variantIds", 0] },
           variantCount: { $size: { $ifNull: ["$variantIds", []] } },
@@ -316,8 +315,13 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           modelSku: 1,
           metalTypes: "$attributes.metalTypes",
           goldKarats: "$attributes.goldKarats",
-          title: "$seo.metaTitle",
-          slug: 1,
+          title: {
+            $ifNull: [
+              "$firstVariantDoc.meta.title",
+              "$seo.metaTitle",
+              "$title",
+            ],
+          },
           variantCount: 1,
           firstVariantSku: 1,
           firstVariantDoc: 1,
@@ -343,13 +347,137 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     const conn = getCatalogConnection();
     const finalPricingColl = conn.collection("final_pricing");
     const defaultsColl = conn.collection("defaultValues");
-    const defaultVals: Record<string, any> =
-      (await defaultsColl.findOne({})) || {};
-    const goldValue24 = n(defaultVals.goldValue24) || NaN;
-    const silverPricePerGram = n(defaultVals.silverPricePerGram) || NaN;
-    const platinumPricePerGram = n(defaultVals.platinumPricePerGram) || NaN;
-    const titaniumPricePerGram = n(defaultVals.titaniumPricePerGram) || NaN;
 
+    // ----------------- Helper functions reused for robust default lookup -----------------
+    const toNumberRobust = (v: unknown): number => {
+      if (v == null) return NaN;
+      if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+      if (typeof v === "string") {
+        const cleaned = v.replace(/[₹$,£€\s]/g, "").replace(/,/g, "");
+        const n = Number(cleaned);
+        if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+        const m = cleaned.match(/-?\d+(\.\d+)?/);
+        if (m) {
+          const nf = Number(m[0]);
+          return Number.isFinite(nf) ? nf : NaN;
+        }
+        return NaN;
+      }
+      try {
+        const s = (v as any).toString?.();
+        const n = Number(s);
+        return Number.isFinite(n) ? n : NaN;
+      } catch {
+        return NaN;
+      }
+    };
+
+    const normalizeKey = (k: string) =>
+      k
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+    const findNumericDefault = (
+      obj: Record<string, any>,
+      candidateNames: string[]
+    ): { value: number; matchedKey?: string } => {
+      if (!obj || typeof obj !== "object") return { value: NaN };
+
+      const candNorm = candidateNames.map((c) => normalizeKey(c));
+
+      // 1) exact-normalized match
+      for (const [k, v] of Object.entries(obj)) {
+        const kn = normalizeKey(k);
+        if (candNorm.includes(kn)) {
+          const val = toNumberRobust(v);
+          if (!Number.isNaN(val)) return { value: val, matchedKey: k };
+        }
+      }
+
+      // 2) substring-normalized match
+      for (const [k, v] of Object.entries(obj)) {
+        const kn = normalizeKey(k);
+        for (const cn of candNorm) {
+          if (kn.includes(cn) || cn.includes(kn)) {
+            const val = toNumberRobust(v);
+            if (!Number.isNaN(val)) return { value: val, matchedKey: k };
+          }
+        }
+      }
+
+      // 3) one-level nested objects
+      for (const [k, v] of Object.entries(obj)) {
+        if (v && typeof v === "object" && !Array.isArray(v)) {
+          for (const [k2, v2] of Object.entries(v as Record<string, any>)) {
+            const kn2 = normalizeKey(k2);
+            if (candNorm.includes(kn2)) {
+              const val = toNumberRobust(v2);
+              if (!Number.isNaN(val))
+                return { value: val, matchedKey: `${k}.${k2}` };
+            }
+            for (const cn of candNorm) {
+              if (kn2.includes(cn) || cn.includes(kn2)) {
+                const val = toNumberRobust(v2);
+                if (!Number.isNaN(val))
+                  return { value: val, matchedKey: `${k}.${k2}` };
+              }
+            }
+          }
+        }
+      }
+
+      return { value: NaN };
+    };
+    // ----------------- end helpers -----------------
+
+    // Merge all default docs (same approach as used in the other controller)
+    const defaultDocs = (await defaultsColl.find({}).toArray()) as Record<
+      string,
+      any
+    >[];
+    const mergedDefaults: Record<string, any> = Object.assign(
+      {},
+      ...defaultDocs.map((doc) => {
+        const copy = { ...doc };
+        delete (copy as any)._id;
+        return copy;
+      })
+    );
+
+    // Resolve base metal prices from merged defaults robustly
+    const goldRes = findNumericDefault(mergedDefaults, [
+      "goldValue24PerGram",
+      "goldValue24",
+      "goldPerGram",
+      "gold24",
+      "goldvalue24pergram",
+    ]);
+    const platinumRes = findNumericDefault(mergedDefaults, [
+      "platinumPricePerGram",
+      "platinumPricePerGrm",
+      "platinumPerGram",
+      "ptPricePerGram",
+    ]);
+    const silverRes = findNumericDefault(mergedDefaults, [
+      "silverPricePerGram",
+      "silverPerGram",
+      "silverPrice",
+      "svPricePerGram",
+    ]);
+    const titaniumRes = findNumericDefault(mergedDefaults, [
+      "titaniumPricePerGram",
+      "titaniumPerGram",
+      "titaniumPrice",
+    ]);
+
+    const goldValue24 = goldRes.value;
+    const silverPricePerGram = silverRes.value;
+    const platinumPricePerGram = platinumRes.value;
+    const titaniumPricePerGram = titaniumRes.value;
+
+    // Prepare normalized output
     const normalized: any[] = [];
 
     for (const d of docs) {
@@ -381,7 +509,6 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           ? [d.metalTypes]
           : [],
         title: d.title ?? null,
-        slug: d.slug ?? null,
         variantCount: d.variantCount ?? 0,
         firstVariantSku: d.firstVariantSku ?? null,
         firstVariantImageUrl: imageUrl,
@@ -662,9 +789,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     let paged = filtered;
     let totalFiltered = filtered.length;
     if (variantDependentFilterPresent) {
-      // totalFiltered should be set before slicing for pagination
-      totalFiltered = filtered.length;
       paged = filtered.slice(skip, skip + limit);
+      totalFiltered = filtered.length;
     }
 
     const conn2 = getCatalogConnection();
@@ -672,26 +798,12 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       .collection("products")
       .countDocuments({ category });
 
-    console.log("Pagination Debug:", {
-      variantDependentFilterPresent,
-      totalFromDB: total,
-      filteredLength: filtered.length,
-      pagedLength: paged.length,
-      totalFiltered,
-      limit,
-      page,
-      calculatedTotalPages: Math.ceil(total / limit),
-      calculatedTotalPagesFromFiltered: Math.ceil(totalFiltered / limit),
-    });
-
     return res.status(200).json({
       success: true,
       count: paged.length,
       total,
       pagination: {
-        totalPages: Math.ceil(
-          variantDependentFilterPresent ? totalFiltered / limit : total / limit
-        ),
+        totalPages: Math.ceil(totalFiltered / limit),
         currentPage: page,
         limit,
       },
@@ -720,829 +832,516 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
   }
 };
 
-// ---------- Controller: getProductByModelSku (unchanged) ----------
-// export const getProductByModelSku = async (req: Request, res: Response) => {
-//   try {
-//     const rawSku = (req.params.modelSku || "").toString().trim();
-//     if (!rawSku) return res.status(400).json({ success: false, message: "modelSku required" });
-
-//     const modelSku = rawSku.toUpperCase();
-//     const ProductModel = getCollectionModel("products");
-//     const product: any = await ProductModel.findOne({ modelSku }).lean();
-
-//     if (!product) {
-//       return res.status(404).json({ success: false, message: `Model ${modelSku} not found` });
-//     }
-
-//     const title: string | null = product?.seo?.title ?? product?.title ?? null;
-//     const description: string | null = product?.description ?? null;
-
-//     const attributes: any = product?.attributes ?? {};
-//     const metalTypes: string[] = Array.isArray(attributes?.metalTypes)
-//       ? attributes.metalTypes
-//       : attributes?.metalTypes ? [attributes.metalTypes] : [];
-//     const goldKarats: string[] = Array.isArray(attributes?.goldKarats)
-//       ? attributes.goldKarats
-//       : attributes?.goldKarats ? [attributes.goldKarats] : [];
-
-//     const diamondShape: any[] = Array.isArray(attributes?.centerStoneShape)
-//       ? attributes.centerStoneShape
-//       : Array.isArray(attributes?.diamondShapes) ? attributes.diamondShapes : [];
-//     const diamondSize: any[] = Array.isArray(attributes?.centerStoneSize)
-//       ? attributes.centerStoneSize
-//       : Array.isArray(attributes?.diamondSizes) ? attributes.diamondSizes : [];
-
-//     const diamondColorClarity: any[] = Array.isArray(attributes?.diamondColorClarity)
-//       ? attributes.diamondColorClarity
-//       : Array.isArray(attributes?.diamondColors) ? attributes.diamondColors : [];
-
-//     const engravingIds: any[] = Array.isArray(product?.engravingDetailIds) ? product.engravingDetailIds : [];
-//     const isEngraving: boolean = engravingIds.length > 0;
-//     const engraving = engravingIds;
-
-//     const variantIds: any[] = Array.isArray(product?.variantIds) ? product.variantIds : [];
-//     const variantCount: number = variantIds.length;
-//     const firstVariantSku: string | null = variantCount > 0 ? variantIds[0] : null;
-
-//     const response = {
-//       success: true,
-//       modelSku,
-//       title,
-//       description,
-//       metalTypes,
-//       goldKarats,
-//       diamondShape,
-//       diamondSize,
-//       diamondColorClarity,
-//       isEngraving,
-//       engraving,
-//       variantCount,
-//       firstVariantSku,
-//     };
-
-//     return res.status(200).json(response);
-//   } catch (err) {
-//     console.error("getProductByModelSku error:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error",
-//       error: err instanceof Error ? err.message : String(err),
-//     });
-//   }
-// };
-
-// export const getProductByModelSku = async (req: Request, res: Response) => {
-//   try {
-//     const rawSku = (req.params.modelSku || "").toString().trim();
-//     if (!rawSku) return res.status(400).json({ success: false, message: "modelSku required" });
-
-//     const modelSku = rawSku.toUpperCase();
-//     const ProductModel = getCollectionModel("products");
-//     const product: any = await ProductModel.findOne({ modelSku }).lean();
-
-//     if (!product) {
-//       return res.status(404).json({ success: false, message: `Model ${modelSku} not found` });
-//     }
-
-//     // Basic metadata
-//     const title: string | null = product?.seo?.title ?? product?.title ?? null;
-//     const description: string | null = product?.description ?? null;
-
-//     const attributes: any = product?.attributes ?? {};
-//     const metalTypes: string[] = Array.isArray(attributes?.metalTypes)
-//       ? attributes.metalTypes
-//       : attributes?.metalTypes ? [attributes.metalTypes] : [];
-//     const goldKarats: string[] = Array.isArray(attributes?.goldKarats)
-//       ? attributes.goldKarats
-//       : attributes?.goldKarats ? [attributes.goldKarats] : [];
-
-//     const diamondShape: any[] = Array.isArray(attributes?.centerStoneShape)
-//       ? attributes.centerStoneShape
-//       : Array.isArray(attributes?.diamondShapes) ? attributes.diamondShapes : [];
-//     const diamondSize: any[] = Array.isArray(attributes?.centerStoneSize)
-//       ? attributes.centerStoneSize
-//       : Array.isArray(attributes?.diamondSizes) ? attributes.diamondSizes : [];
-
-//     const diamondColorClarity: any[] = Array.isArray(attributes?.diamondColorClarity)
-//       ? attributes.diamondColorClarity
-//       : Array.isArray(attributes?.diamondColors) ? attributes.diamondColors : [];
-
-//     const engravingIds: any[] = Array.isArray(product?.engravingDetailIds) ? product.engravingDetailIds : [];
-//     const isEngraving: boolean = engravingIds.length > 0;
-//     const engraving = engravingIds;
-
-//     const variantIds: any[] = Array.isArray(product?.variantIds) ? product.variantIds : [];
-//     const variantCount: number = variantIds.length;
-//     const firstVariantSku: string | null = variantCount > 0 ? variantIds[0] : null;
-
-//     // prepare default pricing values & final_pricing lookup
-//     const conn = getCatalogConnection();
-//     const finalPricingColl = conn.collection("final_pricing");
-//     const defaultsColl = conn.collection("defaultValues");
-//     const defaultVals: Record<string, any> = (await defaultsColl.findOne({})) || {};
-//     const goldValue24 = n(defaultVals.goldValue24) || NaN;
-//     const silverPricePerGram = n(defaultVals.silverPricePerGram) || NaN;
-//     const platinumPricePerGram = n(defaultVals.platinumPricePerGram) || NaN;
-//     const titaniumPricePerGram = n(defaultVals.titaniumPricePerGram) || NaN;
-
-//     // default response pieces
-//     let sellingPrice: number | null = null;
-//     let priceIncomplete = true;
-
-//     // fetch first variant doc if available (to compute price like in getProductsByCategory)
-//     let firstVariantDoc: any = null;
-//     if (firstVariantSku) {
-//       firstVariantDoc = await conn.collection("variants").findOne({ sku: firstVariantSku });
-//     }
-
-//     // Only compute if we have a firstVariantDoc
-//     if (firstVariantDoc) {
-//       try {
-//         const variant = firstVariantDoc;
-//         const stonesArr: any[] =
-//           Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
-//             ? variant.meta.stones
-//             : Array.isArray(variant?.stones)
-//               ? variant.stones
-//               : [];
-
-//         // pick included stones (same heuristic as other function)
-//         const includedStones: { sequence: string; cts: number; netWeightGrams: number | null }[] = [];
-//         for (let i = 0; i < stonesArr.length; i++) {
-//           const st = stonesArr[i];
-//           const seq = st?.sequence || (Array.isArray(st?.sequences) && st.sequences[0]?.sequence) || st?.sequenceNo;
-//           if (!seq) continue;
-//           const cts = typeof st?.cts === "number" ? st.cts : (Array.isArray(st?.sequences) && typeof st.sequences[0]?.cts === "number" ? st.sequences[0].cts : null);
-//           if (cts == null) continue;
-//           const net = st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
-//           if (i > 0 && net !== null) break;
-//           includedStones.push({ sequence: seq, cts, netWeightGrams: net });
-//         }
-
-//         // diamond cost
-//         let diamondCost = 0;
-//         let diamondIncomplete = false;
-//         for (const st of includedStones) {
-//           const pricingDoc: any = (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
-//           const pricePerCt = parseNumeric(pricingDoc.selling_price ?? pricingDoc.sellingPrice ?? pricingDoc.price);
-//           if (Number.isNaN(pricePerCt)) {
-//             diamondIncomplete = true;
-//             continue;
-//           }
-//           diamondCost += pricePerCt * st.cts;
-//         }
-
-//         // metal type & karat
-//         const metalType =
-//           (variant?.meta?.metalType || (Array.isArray(metalTypes) ? metalTypes[0] : metalTypes[0]) || "GOLD").toString().toUpperCase();
-//         let karatStr = variant?.meta?.metalKt || (Array.isArray(goldKarats) ? goldKarats[0] : goldKarats) || "18";
-//         const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
-
-//         // metal weight detection
-//         let metalWeightGrams: number | null =
-//           variant?.meta?.metalWeightGrams != null ? n(variant.meta.metalWeightGrams) : variant?.netWeightGrams != null ? n(variant.netWeightGrams) : null;
-//         if ((metalWeightGrams == null || Number.isNaN(metalWeightGrams)) && includedStones.length) {
-//           const sum = includedStones.reduce((acc, s) => acc + (s.netWeightGrams ? Number(s.netWeightGrams) : 0), 0);
-//           metalWeightGrams = sum > 0 ? sum : null;
-//         }
-
-//         // metal price per gram
-//         let metalPricePerGram = NaN;
-//         if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
-//           const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
-//           metalPricePerGram = goldValue24 * factor;
-//         } else if (metalType === "SILVER") metalPricePerGram = silverPricePerGram;
-//         else if (metalType === "PLATINUM") metalPricePerGram = platinumPricePerGram;
-//         else if (metalType === "TITANIUM") metalPricePerGram = titaniumPricePerGram;
-
-//         let metalCost = 0, labourCost = 0, metalIncomplete = false;
-//         if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
-//           metalCost = metalPricePerGram * metalWeightGrams;
-//           labourCost = LABOUR_RATE[metalType] ?? LABOUR_RATE.GOLD;
-//         } else {
-//           metalIncomplete = true;
-//         }
-
-//         const computedSellingPrice = metalCost + diamondCost + labourCost;
-//         sellingPrice = !Number.isNaN(computedSellingPrice) && computedSellingPrice > 0 ? Math.round(computedSellingPrice) : null;
-//         priceIncomplete = metalIncomplete || diamondIncomplete;
-//       } catch (err) {
-//         sellingPrice = null;
-//         priceIncomplete = true;
-//       }
-//     } else {
-//       // no variant -> can't compute price
-//       sellingPrice = null;
-//       priceIncomplete = true;
-//     }
-
-//     const response = {
-//       success: true,
-//       modelSku,
-//       title,
-//       description,
-//       metalTypes,
-//       goldKarats,
-//       diamondShape,
-//       diamondSize,
-//       diamondColorClarity,
-//       isEngraving,
-//       engraving,
-//       variantCount,
-//       firstVariantSku,
-//       // price info added
-//       sellingPrice,
-//       priceIncomplete,
-//     };
-
-//     return res.status(200).json(response);
-//   } catch (err) {
-//     console.error("getProductByModelSku error:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error",
-//       error: err instanceof Error ? err.message : String(err),
-//     });
-//   }
-// };
-
-// export const getProductByModelSku = async (req: Request, res: Response) => {
-//   try {
-//     const rawSku = (req.params.modelSku || "").toString().trim();
-//     if (!rawSku) return res.status(400).json({ success: false, message: "modelSku required" });
-
-//     const modelSku = rawSku.toUpperCase();
-//     const ProductModel = getCollectionModel("products");
-//     const product: any = await ProductModel.findOne({ modelSku }).lean();
-
-//     if (!product) {
-//       return res.status(404).json({ success: false, message: `Model ${modelSku} not found` });
-//     }
-
-//     // Basic metadata
-//     const title: string | null = product?.seo?.title ?? product?.title ?? null;
-//     const description: string | null = product?.description ?? null;
-
-//     const attributes: any = product?.attributes ?? {};
-//     const metalTypes: string[] = Array.isArray(attributes?.metalTypes)
-//       ? attributes.metalTypes
-//       : attributes?.metalTypes ? [attributes.metalTypes] : [];
-//     const goldKarats: string[] = Array.isArray(attributes?.goldKarats)
-//       ? attributes.goldKarats
-//       : attributes?.goldKarats ? [attributes.goldKarats] : [];
-
-//     const diamondShape: any[] = Array.isArray(attributes?.centerStoneShape)
-//       ? attributes.centerStoneShape
-//       : Array.isArray(attributes?.diamondShapes) ? attributes.diamondShapes : [];
-//     const diamondSize: any[] = Array.isArray(attributes?.centerStoneSize)
-//       ? attributes.centerStoneSize
-//       : Array.isArray(attributes?.diamondSizes) ? attributes.diamondSizes : [];
-
-//     const diamondColorClarity: any[] = Array.isArray(attributes?.diamondColorClarity)
-//       ? attributes.diamondColorClarity
-//       : Array.isArray(attributes?.diamondColors) ? attributes.diamondColors : [];
-
-//     const engravingIds: any[] = Array.isArray(product?.engravingDetailIds) ? product.engravingDetailIds : [];
-//     const isEngraving: boolean = engravingIds.length > 0;
-//     const engraving = engravingIds;
-
-//     const variantIds: any[] = Array.isArray(product?.variantIds) ? product.variantIds : [];
-//     const variantCount: number = variantIds.length;
-//     const firstVariantSku: string | null = variantCount > 0 ? variantIds[0] : null;
-
-//     // optional query param: variantId (treat as variant SKU or ObjectId)
-//     const variantIdParam = (req.query.variantId ?? "").toString().trim();
-
-//     // prepare default pricing values & final_pricing lookup
-//     const conn = getCatalogConnection();
-//     const finalPricingColl = conn.collection("final_pricing");
-//     const defaultsColl = conn.collection("defaultValues");
-//     const defaultVals: Record<string, any> = (await defaultsColl.findOne({})) || {};
-//     const goldValue24 = n(defaultVals.goldValue24) || NaN;
-//     const silverPricePerGram = n(defaultVals.silverPricePerGram) || NaN;
-//     const platinumPricePerGram = n(defaultVals.platinumPricePerGram) || NaN;
-//     const titaniumPricePerGram = n(defaultVals.titaniumPricePerGram) || NaN;
-
-//     // fetch variant doc:
-//     // if variantIdParam provided, try to fetch that variant (by sku or _id), otherwise fetch firstVariantSku
-//     let chosenVariantSku: string | null = null;
-//     let firstVariantDoc: any = null;
-
-//     if (variantIdParam) {
-//       // try by sku first
-//       firstVariantDoc = await conn.collection("variants").findOne({ sku: variantIdParam });
-//       if (!firstVariantDoc && mongoose.Types.ObjectId.isValid(variantIdParam)) {
-//         try {
-//           firstVariantDoc = await conn.collection("variants").findOne({ _id: new mongoose.Types.ObjectId(variantIdParam) });
-//         } catch (e) {
-//           // ignore
-//         }
-//       }
-//       if (firstVariantDoc) chosenVariantSku = firstVariantDoc.sku ?? (firstVariantDoc._id ? String(firstVariantDoc._id) : null);
-//     }
-
-//     if (!firstVariantDoc && firstVariantSku) {
-//       // fallback to firstVariantSku from product
-//       firstVariantDoc = await conn.collection("variants").findOne({ sku: firstVariantSku }) || null;
-//       chosenVariantSku = firstVariantDoc ? (firstVariantDoc.sku ?? firstVariantSku) : firstVariantSku;
-//     }
-
-//     // collect variant images (if any) based on the chosen variant (the one fetched above)
-//     let variantImages: string[] = [];
-//     if (firstVariantDoc && Array.isArray(firstVariantDoc.images)) {
-//       variantImages = firstVariantDoc.images
-//         .map((img: any) => (img?.url ?? img?.filename ?? img) )
-//         .filter(Boolean);
-//     }
-
-//     // price calculation (same logic as in getProductsByCategory)
-//     let sellingPrice: number | null = null;
-//     let priceIncomplete = true;
-
-//     if (firstVariantDoc) {
-//       try {
-//         const variant = firstVariantDoc;
-//         const stonesArr: any[] =
-//           Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
-//             ? variant.meta.stones
-//             : Array.isArray(variant?.stones)
-//               ? variant.stones
-//               : [];
-
-//         // pick included stones (same heuristic as other function)
-//         const includedStones: { sequence: string; cts: number; netWeightGrams: number | null }[] = [];
-//         for (let i = 0; i < stonesArr.length; i++) {
-//           const st = stonesArr[i];
-//           const seq = st?.sequence || (Array.isArray(st?.sequences) && st.sequences[0]?.sequence) || st?.sequenceNo;
-//           if (!seq) continue;
-//           const cts = typeof st?.cts === "number" ? st.cts : (Array.isArray(st?.sequences) && typeof st.sequences[0]?.cts === "number" ? st.sequences[0].cts : null);
-//           if (cts == null) continue;
-//           const net = st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
-//           if (i > 0 && net !== null) break;
-//           includedStones.push({ sequence: seq, cts, netWeightGrams: net });
-//         }
-
-//         // diamond cost
-//         let diamondCost = 0;
-//         let diamondIncomplete = false;
-//         for (const st of includedStones) {
-//           const pricingDoc: any = (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
-//           const pricePerCt = parseNumeric(pricingDoc.selling_price ?? pricingDoc.sellingPrice ?? pricingDoc.price);
-//           if (Number.isNaN(pricePerCt)) {
-//             diamondIncomplete = true;
-//             continue;
-//           }
-//           diamondCost += pricePerCt * st.cts;
-//         }
-
-//         // metal type & karat
-//         const metalType =
-//           (variant?.meta?.metalType || (Array.isArray(metalTypes) ? metalTypes[0] : metalTypes[0]) || "GOLD").toString().toUpperCase();
-//         let karatStr = variant?.meta?.metalKt || (Array.isArray(goldKarats) ? goldKarats[0] : goldKarats) || "18";
-//         const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
-
-//         // metal weight detection
-//         let metalWeightGrams: number | null =
-//           variant?.meta?.metalWeightGrams != null ? n(variant.meta.metalWeightGrams) : variant?.netWeightGrams != null ? n(variant.netWeightGrams) : null;
-//         if ((metalWeightGrams == null || Number.isNaN(metalWeightGrams)) && includedStones.length) {
-//           const sum = includedStones.reduce((acc, s) => acc + (s.netWeightGrams ? Number(s.netWeightGrams) : 0), 0);
-//           metalWeightGrams = sum > 0 ? sum : null;
-//         }
-
-//         // metal price per gram
-//         let metalPricePerGram = NaN;
-//         if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
-//           const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
-//           metalPricePerGram = goldValue24 * factor;
-//         } else if (metalType === "SILVER") metalPricePerGram = silverPricePerGram;
-//         else if (metalType === "PLATINUM") metalPricePerGram = platinumPricePerGram;
-//         else if (metalType === "TITANIUM") metalPricePerGram = titaniumPricePerGram;
-
-//         let metalCost = 0, labourCost = 0, metalIncomplete = false;
-//         if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
-//           metalCost = metalPricePerGram * metalWeightGrams;
-//           labourCost = LABOUR_RATE[metalType] ?? LABOUR_RATE.GOLD;
-//         } else {
-//           metalIncomplete = true;
-//         }
-
-//         const computedSellingPrice = metalCost + diamondCost + labourCost;
-//         sellingPrice = !Number.isNaN(computedSellingPrice) && computedSellingPrice > 0 ? Math.round(computedSellingPrice) : null;
-//         priceIncomplete = metalIncomplete || diamondIncomplete;
-//       } catch (err) {
-//         sellingPrice = null;
-//         priceIncomplete = true;
-//       }
-//     } else {
-//       sellingPrice = null;
-//       priceIncomplete = true;
-//     }
-
-//     const response = {
-//       success: true,
-//       modelSku,
-//       title,
-//       description,
-//       metalTypes,
-//       goldKarats,
-//       diamondShape,
-//       diamondSize,
-//       diamondColorClarity,
-//       isEngraving,
-//       engraving,
-//       variantCount,
-//       firstVariantSku,
-//       // price info
-//       sellingPrice,
-//       priceIncomplete,
-//       // variant info / images
-//       chosenVariantSku: chosenVariantSku ?? null,
-//       variantImages,
-//     };
-
-//     return res.status(200).json(response);
-//   } catch (err) {
-//     console.error("getProductByModelSku error:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error",
-//       error: err instanceof Error ? err.message : String(err),
-//     });
-//   }
-// };
-
-// ---------- Controller: getProductByModelSku ----------
-// export const getProductByModelSku = async (req: Request, res: Response) => {
-//   try {
-//     const rawSku = (req.params.modelSku || "").toString().trim();
-//     if (!rawSku) return res.status(400).json({ success: false, message: "modelSku required" });
-
-//     const modelSku = rawSku.toUpperCase();
-//     const ProductModel = getCollectionModel("products");
-//     const product: any = await ProductModel.findOne({ modelSku }).lean();
-
-//     if (!product) {
-//       return res.status(404).json({ success: false, message: `Model ${modelSku} not found` });
-//     }
-
-//     // Basic metadata
-//     const title: string | null = product?.seo?.title ?? product?.title ?? null;
-//     const description: string | null = product?.description ?? null;
-
-//     const attributes: any = product?.attributes ?? {};
-//     const metalTypes: string[] = Array.isArray(attributes?.metalTypes)
-//       ? attributes.metalTypes
-//       : attributes?.metalTypes ? [attributes.metalTypes] : [];
-//     const goldKarats: string[] = Array.isArray(attributes?.goldKarats)
-//       ? attributes.goldKarats
-//       : attributes?.goldKarats ? [attributes.goldKarats] : [];
-
-//     const diamondShape: any[] = Array.isArray(attributes?.centerStoneShape)
-//       ? attributes.centerStoneShape
-//       : Array.isArray(attributes?.diamondShapes) ? attributes.diamondShapes : [];
-//     const diamondSize: any[] = Array.isArray(attributes?.centerStoneSize)
-//       ? attributes.centerStoneSize
-//       : Array.isArray(attributes?.diamondSizes) ? attributes.diamondSizes : [];
-
-//     const diamondColorClarity: any[] = Array.isArray(attributes?.diamondColorClarity)
-//       ? attributes.diamondColorClarity
-//       : Array.isArray(attributes?.diamondColors) ? attributes.diamondColors : [];
-
-//     const engravingIds: any[] = Array.isArray(product?.engravingDetailIds) ? product.engravingDetailIds : [];
-//     const isEngraving: boolean = engravingIds.length > 0;
-//     const engraving = engravingIds;
-
-//     const variantIds: any[] = Array.isArray(product?.variantIds) ? product.variantIds : [];
-//     const variantCount: number = variantIds.length;
-//     const firstVariantSku: string | null = variantCount > 0 ? variantIds[0] : null;
-
-//     // optional query param: variantId (treat as variant SKU or ObjectId)
-//     const variantIdParam = (req.query.variantId ?? "").toString().trim();
-
-//     // prepare default pricing values & final_pricing lookup
-//     const conn = getCatalogConnection();
-//     const finalPricingColl = conn.collection("final_pricing");
-//     const defaultsColl = conn.collection("defaultValues");
-//     const defaultVals: Record<string, any> = (await defaultsColl.findOne({})) || {};
-//     const goldValue24 = n(defaultVals.goldValue24) || NaN;
-//     const silverPricePerGram = n(defaultVals.silverPricePerGram) || NaN;
-//     const platinumPricePerGram = n(defaultVals.platinumPricePerGram) || NaN;
-//     const titaniumPricePerGram = n(defaultVals.titaniumPricePerGram) || NaN;
-
-//     // fetch variant doc:
-//     // if variantIdParam provided, try to fetch that variant (by sku or _id), otherwise fetch firstVariantSku
-//     let chosenVariantSku: string | null = null;
-//     let firstVariantDoc: any = null;
-
-//     if (variantIdParam) {
-//       // try by sku first
-//       firstVariantDoc = await conn.collection("variants").findOne({ sku: variantIdParam });
-//       if (!firstVariantDoc && mongoose.Types.ObjectId.isValid(variantIdParam)) {
-//         try {
-//           firstVariantDoc = await conn.collection("variants").findOne({ _id: new mongoose.Types.ObjectId(variantIdParam) });
-//         } catch (e) {
-//           // ignore and continue
-//         }
-//       }
-//       if (firstVariantDoc) chosenVariantSku = firstVariantDoc.sku ?? (firstVariantDoc._id ? String(firstVariantDoc._id) : null);
-//     }
-
-//     if (!firstVariantDoc && firstVariantSku) {
-//       // fallback to firstVariantSku from product
-//       firstVariantDoc = (await conn.collection("variants").findOne({ sku: firstVariantSku })) || null;
-//       chosenVariantSku = firstVariantDoc ? (firstVariantDoc.sku ?? firstVariantSku) : firstVariantSku;
-//     }
-
-//     // collect variant images (if any) based on the chosen variant (the one fetched above)
-//     let variantImages: string[] = [];
-//     if (firstVariantDoc && Array.isArray(firstVariantDoc.images)) {
-//       // normalize to string urls
-//       const allImgs = firstVariantDoc.images
-//         .map((img: any) => (img?.url ?? img?.filename ?? img))
-//         .filter(Boolean)
-//         .map((s: any) => String(s));
-
-//       // helper: try to pick images that contain a token (case-insensitive)
-//       const pickByToken = (token: string) => {
-//         if (!token) return [];
-//         const up = token.toUpperCase();
-//         return allImgs.filter((u: string) => u.toUpperCase().includes(up));
-//       };
-
-//       // Candidate tokens commonly used in your filenames
-//       const TOKEN_CANDIDATES = ["WG", "YG", "RG", "GP", "PG", "NBV", "BV", "SV", "PV"];
-
-//       // 1) try to detect metal token from chosenVariantSku (e.g. ENG1-CUS-30-WG-SV)
-//       let detectedToken: string | null = null;
-//       if (chosenVariantSku) {
-//         const parts = String(chosenVariantSku).split(/[-_]/).map(p => p.trim().toUpperCase());
-//         for (const t of TOKEN_CANDIDATES) {
-//           if (parts.includes(t)) {
-//             detectedToken = t;
-//             break;
-//           }
-//         }
-//       }
-
-//       // 2) If detected, prefer images matching detectedToken
-//       if (detectedToken) {
-//         const matched = pickByToken(detectedToken);
-//         if (matched.length) variantImages = matched;
-//       }
-
-//       // 3) If not found from sku or no matches, try fallback priority search
-//       if (variantImages.length === 0) {
-//         const FALLBACK_PRIORITY = ["WG", "YG", "RG", "GP", "NBV", "BV", "SV"];
-//         for (const t of FALLBACK_PRIORITY) {
-//           const matched = pickByToken(t);
-//           if (matched.length) {
-//             variantImages = matched;
-//             break;
-//           }
-//         }
-//       }
-
-//       // 4) Final fallback: keep a small set of original images (don't return hundreds)
-//       if (variantImages.length === 0) {
-//         variantImages = allImgs.slice(0, 4);
-//       }
-
-//       // Optionally return only one image (uncomment if you want a single best match)
-//       // variantImages = variantImages.length ? [variantImages[0]] : [];
-//     }
-
-//     // price calculation (same logic as in your code)
-//     let sellingPrice: number | null = null;
-//     let priceIncomplete = true;
-
-//     if (firstVariantDoc) {
-//       try {
-//         const variant = firstVariantDoc;
-//         const stonesArr: any[] =
-//           Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
-//             ? variant.meta.stones
-//             : Array.isArray(variant?.stones)
-//               ? variant.stones
-//               : [];
-
-//         // pick included stones (same heuristic as other function)
-//         const includedStones: { sequence: string; cts: number; netWeightGrams: number | null }[] = [];
-//         for (let i = 0; i < stonesArr.length; i++) {
-//           const st = stonesArr[i];
-//           const seq = st?.sequence || (Array.isArray(st?.sequences) && st.sequences[0]?.sequence) || st?.sequenceNo;
-//           if (!seq) continue;
-//           const cts = typeof st?.cts === "number" ? st.cts : (Array.isArray(st?.sequences) && typeof st.sequences[0]?.cts === "number" ? st.sequences[0].cts : null);
-//           if (cts == null) continue;
-//           const net = st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
-//           if (i > 0 && net !== null) break;
-//           includedStones.push({ sequence: seq, cts, netWeightGrams: net });
-//         }
-
-//         // diamond cost
-//         let diamondCost = 0;
-//         let diamondIncomplete = false;
-//         for (const st of includedStones) {
-//           const pricingDoc: any = (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
-//           const pricePerCt = parseNumeric(pricingDoc.selling_price ?? pricingDoc.sellingPrice ?? pricingDoc.price);
-//           if (Number.isNaN(pricePerCt)) {
-//             diamondIncomplete = true;
-//             continue;
-//           }
-//           diamondCost += pricePerCt * st.cts;
-//         }
-
-//         // metal type & karat
-//         const metalType =
-//           (variant?.meta?.metalType || (Array.isArray(metalTypes) ? metalTypes[0] : metalTypes[0]) || "GOLD").toString().toUpperCase();
-//         let karatStr = variant?.meta?.metalKt || (Array.isArray(goldKarats) ? goldKarats[0] : goldKarats) || "18";
-//         const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
-
-//         // metal weight detection
-//         let metalWeightGrams: number | null =
-//           variant?.meta?.metalWeightGrams != null ? n(variant.meta.metalWeightGrams) : variant?.netWeightGrams != null ? n(variant.netWeightGrams) : null;
-//         if ((metalWeightGrams == null || Number.isNaN(metalWeightGrams)) && includedStones.length) {
-//           const sum = includedStones.reduce((acc, s) => acc + (s.netWeightGrams ? Number(s.netWeightGrams) : 0), 0);
-//           metalWeightGrams = sum > 0 ? sum : null;
-//         }
-
-//         // metal price per gram
-//         let metalPricePerGram = NaN;
-//         if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
-//           const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
-//           metalPricePerGram = goldValue24 * factor;
-//         } else if (metalType === "SILVER") metalPricePerGram = silverPricePerGram;
-//         else if (metalType === "PLATINUM") metalPricePerGram = platinumPricePerGram;
-//         else if (metalType === "TITANIUM") metalPricePerGram = titaniumPricePerGram;
-
-//         let metalCost = 0, labourCost = 0, metalIncomplete = false;
-//         if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
-//           metalCost = metalPricePerGram * metalWeightGrams;
-//           labourCost = LABOUR_RATE[metalType] ?? LABOUR_RATE.GOLD;
-//         } else {
-//           metalIncomplete = true;
-//         }
-
-//         const computedSellingPrice = metalCost + diamondCost + labourCost;
-//         sellingPrice = !Number.isNaN(computedSellingPrice) && computedSellingPrice > 0 ? Math.round(computedSellingPrice) : null;
-//         priceIncomplete = metalIncomplete || diamondIncomplete;
-//       } catch (err) {
-//         sellingPrice = null;
-//         priceIncomplete = true;
-//       }
-//     } else {
-//       sellingPrice = null;
-//       priceIncomplete = true;
-//     }
-
-//     const response = {
-//       success: true,
-//       modelSku,
-//       title,
-//       description,
-//       metalTypes,
-//       goldKarats,
-//       diamondShape,
-//       diamondSize,
-//       diamondColorClarity,
-//       isEngraving,
-//       engraving,
-//       variantCount,
-//       firstVariantSku,
-//       // price info
-//       sellingPrice,
-//       priceIncomplete,
-//       // variant info / images
-//       chosenVariantSku: chosenVariantSku ?? null,
-//       variantImages,
-//     };
-
-//     return res.status(200).json(response);
-//   } catch (err) {
-//     console.error("getProductByModelSku error:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error",
-//       error: err instanceof Error ? err.message : String(err),
-//     });
-//   }
-// };
-
-export const getProductByModelSku = async (req: Request, res: Response) => {
+export const getProductByModelSku = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
   try {
-    const rawSku = (req.params.modelSku || "").toString().trim();
+    // ----------------- Local types (scoped to this controller) -----------------
+    type DefaultValuesDoc = Record<string, any>;
+
+    interface PricingDoc {
+      sequence: string;
+      selling_price?: number;
+      sellingPrice?: number;
+      price?: number;
+      [key: string]: any;
+    }
+
+    interface StoneSeq {
+      sequence?: string;
+      cts?: number;
+      pts?: number;
+      pcs?: number;
+      [key: string]: any;
+    }
+
+    interface Stone {
+      netWeightGrams?: number | null;
+      sequences?: StoneSeq[];
+      cts?: number;
+      sequence?: string;
+      [key: string]: any;
+    }
+
+    interface VariantDoc {
+      _id?: any;
+      sku?: string;
+      meta?: {
+        stones?: Stone[];
+        metalWeightGrams?: number | string | null;
+        netWeightGrams?: number | string | null;
+        metalType?: string | null;
+        metalKt?: string | number | null;
+        [key: string]: any;
+      };
+      stones?: Stone[];
+      metalType?: string | null;
+      metalKt?: string | number | null;
+      netWeightGrams?: number | string | null;
+      images?: any[];
+      [key: string]: any;
+    }
+
+    interface ProductDoc {
+      modelSku?: string;
+      seo?: { title?: string };
+      title?: string;
+      description?: string;
+      attributes?: {
+        metalTypes?: string[] | string;
+        goldKarats?: string[] | string;
+        centerStoneShape?: string | string[];
+        centerStoneSize?: string | string[];
+        diamondColorClarity?: string[] | string;
+        diamondShapes?: string[] | string;
+        diamondSizes?: string[] | string;
+        [key: string]: any;
+      };
+      engravingDetailIds?: any[];
+      variantIds?: string[];
+      [key: string]: any;
+    }
+
+    interface PriceBreakdown {
+      metalCost: number | null;
+      diamondCost: number | null;
+      labourCost: number | null;
+      expense?: number | null;
+      gstPercent?: number | null;
+      gstAmount?: number | null;
+      totalBeforeGst?: number | null;
+      totalWithGst?: number | null;
+      missingDefaults?: string[];
+      error?: string;
+    }
+
+    // ----------------- Helpers scoped to this controller -----------------
+    const toNumberRobust = (v: unknown): number => {
+      if (v == null) return NaN;
+      if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+      if (typeof v === "string") {
+        const cleaned = v.replace(/[₹$,£€\s]/g, "").replace(/,/g, "");
+        const n = Number(cleaned);
+        if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+        const m = cleaned.match(/-?\d+(\.\d+)?/);
+        if (m) {
+          const nf = Number(m[0]);
+          return Number.isFinite(nf) ? nf : NaN;
+        }
+        return NaN;
+      }
+      try {
+        const s = (v as any).toString?.();
+        const n = Number(s);
+        return Number.isFinite(n) ? n : NaN;
+      } catch {
+        return NaN;
+      }
+    };
+
+    const normalizeKey = (k: string) =>
+      k
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
+
+    const findNumericDefault = (
+      obj: Record<string, any>,
+      candidateNames: string[]
+    ): { value: number; matchedKey?: string } => {
+      if (!obj || typeof obj !== "object") return { value: NaN };
+
+      const candNorm = candidateNames.map((c) => normalizeKey(c));
+
+      // 1) exact-normalized match
+      for (const [k, v] of Object.entries(obj)) {
+        const kn = normalizeKey(k);
+        if (candNorm.includes(kn)) {
+          const val = toNumberRobust(v);
+          if (!Number.isNaN(val)) return { value: val, matchedKey: k };
+        }
+      }
+
+      // 2) substring-normalized match
+      for (const [k, v] of Object.entries(obj)) {
+        const kn = normalizeKey(k);
+        for (const cn of candNorm) {
+          if (kn.includes(cn) || cn.includes(kn)) {
+            const val = toNumberRobust(v);
+            if (!Number.isNaN(val)) return { value: val, matchedKey: k };
+          }
+        }
+      }
+
+      // 3) one-level nested objects
+      for (const [k, v] of Object.entries(obj)) {
+        if (v && typeof v === "object" && !Array.isArray(v)) {
+          for (const [k2, v2] of Object.entries(v as Record<string, any>)) {
+            const kn2 = normalizeKey(k2);
+            if (candNorm.includes(kn2)) {
+              const val = toNumberRobust(v2);
+              if (!Number.isNaN(val))
+                return { value: val, matchedKey: `${k}.${k2}` };
+            }
+            for (const cn of candNorm) {
+              if (kn2.includes(cn) || cn.includes(kn2)) {
+                const val = toNumberRobust(v2);
+                if (!Number.isNaN(val))
+                  return { value: val, matchedKey: `${k}.${k2}` };
+              }
+            }
+          }
+        }
+      }
+
+      return { value: NaN };
+    };
+
+    const normalize = (v: any) =>
+      v == null ? null : typeof v === "string" ? v.trim() : String(v).trim();
+
+    // ----------------- Request validation -----------------
+    const rawSku = (req.params.modelSku ?? "").toString().trim();
     if (!rawSku)
       return res
         .status(400)
         .json({ success: false, message: "modelSku required" });
-
     const modelSku = rawSku.toUpperCase();
+
+    console.info(
+      `[getProductByModelSku] entry modelSku=${modelSku} query=${JSON.stringify(
+        req.query
+      )}`
+    );
+
+    // ----------------- Load product -----------------
     const ProductModel = getCollectionModel("products");
-    const product: any = await ProductModel.findOne({ modelSku }).lean();
-    if (!product)
+    const product = (await ProductModel.findOne({
+      modelSku,
+    }).lean()) as ProductDoc | null;
+    if (!product) {
+      console.warn(
+        `[getProductByModelSku] product not found modelSku=${modelSku}`
+      );
       return res
         .status(404)
         .json({ success: false, message: `Model ${modelSku} not found` });
+    }
+    console.debug(
+      `[getProductByModelSku] product loaded id=${
+        (product as any)?._id ?? "unknown"
+      }`
+    );
 
-    // Basic metadata
-    const title: string | null = product?.seo?.title ?? product?.title ?? null;
-    const description: string | null = product?.description ?? null;
-    const attributes: any = product?.attributes ?? {};
+    // ----------------- Basic metadata -----------------
+
+    const attributes = product?.attributes ?? {};
+
     const metalTypes: string[] = Array.isArray(attributes?.metalTypes)
-      ? attributes.metalTypes
+      ? attributes.metalTypes.map(String)
       : attributes?.metalTypes
-      ? [attributes.metalTypes]
-      : [];
-    const goldKarats: string[] = Array.isArray(attributes?.goldKarats)
-      ? attributes.goldKarats
-      : attributes?.goldKarats
-      ? [attributes.goldKarats]
+      ? [String(attributes.metalTypes)]
       : [];
 
-    // diamondShape / diamondSize (may be overridden by variant introspection)
-    let diamondShape: any[] = Array.isArray(attributes?.centerStoneShape)
-      ? attributes.centerStoneShape
+    const goldKarats: string[] = Array.isArray(attributes?.goldKarats)
+      ? attributes.goldKarats.map(String)
+      : attributes?.goldKarats
+      ? [String(attributes.goldKarats)]
+      : [];
+
+    let diamondShape: string[] = Array.isArray(attributes?.centerStoneShape)
+      ? attributes.centerStoneShape.map(String)
       : Array.isArray(attributes?.diamondShapes)
-      ? attributes.diamondShapes
+      ? attributes.diamondShapes.map(String)
       : [];
-    let diamondSize: any[] = Array.isArray(attributes?.centerStoneSize)
-      ? attributes.centerStoneSize
+
+    let diamondSize: string[] = Array.isArray(attributes?.centerStoneSize)
+      ? attributes.centerStoneSize.map(String)
       : Array.isArray(attributes?.diamondSizes)
-      ? attributes.diamondSizes
+      ? attributes.diamondSizes.map(String)
       : [];
-    const diamondColorClarity: any[] = Array.isArray(
+
+    const diamondColorClarity: string[] = Array.isArray(
       attributes?.diamondColorClarity
     )
-      ? attributes.diamondColorClarity
+      ? attributes.diamondColorClarity.map(String)
       : Array.isArray(attributes?.diamondColors)
-      ? attributes.diamondColors
+      ? attributes.diamondColors.map(String)
       : [];
 
-    const engravingIds: any[] = Array.isArray(product?.engravingDetailIds)
+    const engravingIds = Array.isArray(product?.engravingDetailIds)
       ? product.engravingDetailIds
       : [];
-    const isEngraving: boolean = engravingIds.length > 0;
+    const isEngraving = engravingIds.length > 0;
     const engraving = engravingIds;
 
-    const variantIds: any[] = Array.isArray(product?.variantIds)
+    const variantIds = Array.isArray(product?.variantIds)
       ? product.variantIds
       : [];
-    const variantCount: number = variantIds.length;
-    const firstVariantSku: string | null =
-      variantCount > 0 ? variantIds[0] : null;
+    const variantCount = variantIds.length;
+    const firstVariantSku = variantCount > 0 ? variantIds[0] : null;
     const variantIdParam = (req.query.variantId ?? "").toString().trim();
 
-    // pricing helpers
+    // ----------------- Pricing setup (merge multi-doc defaults) -----------------
     const conn = getCatalogConnection();
     const finalPricingColl = conn.collection("final_pricing");
     const defaultsColl = conn.collection("defaultValues");
-    const defaultVals: Record<string, any> =
-      (await defaultsColl.findOne({})) || {};
-    const goldValue24 = n(defaultVals.goldValue24) || NaN;
-    const silverPricePerGram = n(defaultVals.silverPricePerGram) || NaN;
-    const platinumPricePerGram = n(defaultVals.platinumPricePerGram) || NaN;
-    const titaniumPricePerGram = n(defaultVals.titaniumPricePerGram) || NaN;
 
-    // fetch variant doc
+    const defaultDocs = (await defaultsColl
+      .find({})
+      .toArray()) as DefaultValuesDoc[];
+    const mergedDefaults: DefaultValuesDoc = Object.assign(
+      {},
+      ...defaultDocs.map((doc) => {
+        const copy = { ...doc };
+        delete (copy as any)._id;
+        return copy;
+      })
+    );
+
+    console.debug(
+      "[getProductByModelSku] mergedDefaults keys:",
+      Object.keys(mergedDefaults)
+    );
+    // Candidate/resolution for base metal prices
+    const goldRes = findNumericDefault(mergedDefaults, [
+      "goldValue24PerGram",
+      "goldValue24",
+      "goldPerGram",
+      "gold24",
+      "goldvalue24pergram",
+    ]);
+    const platinumRes = findNumericDefault(mergedDefaults, [
+      "platinumPricePerGram",
+      "platinumPricePerGrm",
+      "platinumPerGram",
+      "ptPricePerGram",
+    ]);
+    const silverRes = findNumericDefault(mergedDefaults, [
+      "silverPricePerGram",
+      "silverPerGram",
+      "silverPrice",
+      "svPricePerGram",
+    ]);
+    const titaniumRes = findNumericDefault(mergedDefaults, [
+      "titaniumPricePerGram",
+      "titaniumPerGram",
+      "titaniumPrice",
+    ]);
+
+    const goldValue24 = goldRes.value;
+    const platinumPricePerGram = platinumRes.value;
+    const silverPricePerGram = silverRes.value;
+    const titaniumPricePerGram = titaniumRes.value;
+
+    // Candidate/resolution for labour, expense and gst values (new)
+    const labourGoldRes = findNumericDefault(mergedDefaults, [
+      "labourCostGold",
+      "labourGold",
+      "labourCost_Gold",
+      "labourcostgold",
+    ]);
+    const labourPlatinumRes = findNumericDefault(mergedDefaults, [
+      "labourCostPlatinum",
+      "labourPlatinum",
+      "labourCost_PT",
+      "labourcostplatinum",
+    ]);
+    const labourSilverRes = findNumericDefault(mergedDefaults, [
+      "labourCostSilver",
+      "labourSilver",
+      "labour_cost_silver",
+      "labourcostsilver",
+    ]);
+    const labourTitaniumRes = findNumericDefault(mergedDefaults, [
+      "labourCostTitanium",
+      "labourTitanium",
+      "labour_cost_titanium",
+      "labourcosttitanium",
+    ]);
+
+    const expenseGoldRes = findNumericDefault(mergedDefaults, [
+      "goldExpense",
+      "expenseGold",
+      "gold_expense",
+      "goldexpense",
+    ]);
+    const expensePlatinumRes = findNumericDefault(mergedDefaults, [
+      "platinumExpense",
+      "expensePlatinum",
+      "platinum_expense",
+      "platinumexpense",
+    ]);
+    const expenseSilverRes = findNumericDefault(mergedDefaults, [
+      "silverExpense",
+      "expenseSilver",
+      "silver_expense",
+      "silverexpense",
+    ]);
+    const expenseTitaniumRes = findNumericDefault(mergedDefaults, [
+      "titaniumExpense",
+      "expenseTitanium",
+      "titanium_expense",
+      "titaniumexpense",
+    ]);
+
+    const gstRes = findNumericDefault(mergedDefaults, [
+      "gstValue",
+      "gstPercent",
+      "gst",
+      "gstvalue",
+    ]);
+
+    const labourDefaults = {
+      GOLD: labourGoldRes.value,
+      PLATINUM: labourPlatinumRes.value,
+      SILVER: labourSilverRes.value,
+      TITANIUM: labourTitaniumRes.value,
+    };
+
+    const expenseDefaults = {
+      GOLD: expenseGoldRes.value,
+      PLATINUM: expensePlatinumRes.value,
+      SILVER: expenseSilverRes.value,
+      TITANIUM: expenseTitaniumRes.value,
+    };
+
+    const gstPercentDefault = gstRes.value; // may be NaN -> treat as 0%
+
+    const missingDefaults: string[] = [];
+    if (Number.isNaN(goldValue24)) missingDefaults.push("goldValue24");
+    if (Number.isNaN(platinumPricePerGram))
+      missingDefaults.push("platinumPricePerGram");
+    if (Number.isNaN(silverPricePerGram))
+      missingDefaults.push("silverPricePerGram");
+    if (Number.isNaN(titaniumPricePerGram))
+      missingDefaults.push("titaniumPricePerGram");
+
+    // don't strictly require labour/expense/gst in missingDefaults but log unresolved keys
+    if (Number.isNaN(labourDefaults.GOLD))
+      console.debug(
+        "[getProductByModelSku] labourDefaults GOLD not found in defaults"
+      );
+    if (Number.isNaN(labourDefaults.PLATINUM))
+      console.debug(
+        "[getProductByModelSku] labourDefaults PLATINUM not found in defaults"
+      );
+    if (Number.isNaN(labourDefaults.SILVER))
+      console.debug(
+        "[getProductByModelSku] labourDefaults SILVER not found in defaults"
+      );
+    if (Number.isNaN(labourDefaults.TITANIUM))
+      console.debug(
+        "[getProductByModelSku] labourDefaults TITANIUM not found in defaults"
+      );
+
+    if (Number.isNaN(expenseDefaults.GOLD))
+      console.debug(
+        "[getProductByModelSku] expenseDefaults GOLD not found in defaults"
+      );
+    if (Number.isNaN(expenseDefaults.PLATINUM))
+      console.debug(
+        "[getProductByModelSku] expenseDefaults PLATINUM not found in defaults"
+      );
+    if (Number.isNaN(expenseDefaults.SILVER))
+      console.debug(
+        "[getProductByModelSku] expenseDefaults SILVER not found in defaults"
+      );
+    if (Number.isNaN(expenseDefaults.TITANIUM))
+      console.debug(
+        "[getProductByModelSku] expenseDefaults TITANIUM not found in defaults"
+      );
+
+    if (Number.isNaN(gstPercentDefault))
+      console.debug(
+        "[getProductByModelSku] gstPercent not found in defaults; defaulting to 0%"
+      );
+
+    if (missingDefaults.length) {
+      console.warn(
+        "[getProductByModelSku] pricing: missing/NaN defaultValues:",
+        {
+          missingDefaults,
+          mergedDefaultsKeys: Object.keys(mergedDefaults),
+        }
+      );
+    } else {
+      console.info("[getProductByModelSku] pricing: defaults detected ->", {
+        goldKey: goldRes.matchedKey ?? null,
+        goldValue24,
+        platinumKey: platinumRes.matchedKey ?? null,
+        platinumPricePerGram,
+        silverKey: silverRes.matchedKey ?? null,
+        silverPricePerGram,
+        titaniumKey: titaniumRes.matchedKey ?? null,
+        titaniumPricePerGram,
+      });
+    }
+
+    // ----------------- Variant fetch (sku or ObjectId) -----------------
     let chosenVariantSku: string | null = null;
-    let firstVariantDoc: any = null;
+    let firstVariantDoc: VariantDoc | null = null;
+
     if (variantIdParam) {
-      firstVariantDoc = await conn
+      firstVariantDoc = (await conn
         .collection("variants")
-        .findOne({ sku: variantIdParam });
+        .findOne({ sku: variantIdParam })) as VariantDoc | null;
+
       if (!firstVariantDoc && mongoose.Types.ObjectId.isValid(variantIdParam)) {
         try {
-          firstVariantDoc = await conn
+          firstVariantDoc = (await conn
             .collection("variants")
-            .findOne({ _id: new mongoose.Types.ObjectId(variantIdParam) });
-        } catch {}
+            .findOne({
+              _id: new mongoose.Types.ObjectId(variantIdParam),
+            })) as VariantDoc | null;
+        } catch {
+          // ignore
+        }
       }
-      if (firstVariantDoc)
+
+      if (firstVariantDoc) {
         chosenVariantSku =
           firstVariantDoc.sku ??
           (firstVariantDoc._id ? String(firstVariantDoc._id) : null);
+      }
     }
+
     if (!firstVariantDoc && firstVariantSku) {
-      firstVariantDoc =
-        (await conn.collection("variants").findOne({ sku: firstVariantSku })) ||
-        null;
+      firstVariantDoc = (await conn
+        .collection("variants")
+        .findOne({ sku: firstVariantSku })) as VariantDoc | null;
       chosenVariantSku = firstVariantDoc
         ? firstVariantDoc.sku ?? firstVariantSku
         : firstVariantSku;
     }
 
-    // fallback extraction for diamond shape/size from variant stones
-    const normalize = (v: any) =>
-      v == null ? null : typeof v === "string" ? v.trim() : String(v).trim();
-    const extractFromVariantStones = (variant: any) => {
+    console.debug(
+      "[getProductByModelSku] chosenVariantSku:",
+      chosenVariantSku,
+      "variant found:",
+      !!firstVariantDoc
+    );
+    let title =
+      firstVariantDoc?.meta?.title ??
+      product?.seo?.title ??
+      product?.title ??
+      null;
+
+    let description =
+      firstVariantDoc?.meta?.description ?? product?.description ?? null;
+    // ----------------- diamond shape/size fallback from variant stones -----------------
+    const extractFromVariantStones = (variant: VariantDoc | null) => {
       const shapes: string[] = [];
       const sizes: string[] = [];
       if (!variant) return { shapes, sizes };
 
-      const stonesArr: any[] =
-        Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
-          ? variant.meta.stones
-          : Array.isArray(variant?.stones) && variant.stones.length
-          ? variant.stones
+      const stonesArr: Stone[] =
+        Array.isArray(variant?.meta?.stones) && variant.meta!.stones!.length
+          ? variant.meta!.stones!
+          : Array.isArray(variant?.stones) && variant.stones!.length
+          ? variant.stones!
           : [];
 
       for (const st of stonesArr) {
@@ -1551,24 +1350,24 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
           "centerStoneShape",
           "diamondGemstoneShape",
           "diamondGemstoneShapes",
-          "diamondGemstoneShape",
+          "diamondShapes",
         ];
         for (const k of possibleShapeKeys) {
-          const v = st[k];
+          const v = (st as any)[k];
           if (Array.isArray(v))
-            shapes.push(...v.map(normalize).filter(Boolean));
+            shapes.push(...(v.map(normalize).filter(Boolean) as string[]));
           else if (v != null && String(v).trim() !== "")
-            shapes.push(normalize(v));
+            shapes.push(normalize(v) as string);
         }
         if (
           typeof st.cts === "number" ||
-          (!Number.isNaN(Number(st.cts)) && st.cts != null)
-        )
-          sizes.push(String(st.cts));
-        else {
+          (!Number.isNaN(Number((st as any).cts)) && (st as any).cts != null)
+        ) {
+          sizes.push(String((st as any).cts));
+        } else {
           const possibleSizeKeys = ["size", "carat", "cts", "ct", "carats"];
           for (const k of possibleSizeKeys) {
-            const v = st[k];
+            const v = (st as any)[k];
             if (v != null && String(v).trim() !== "") {
               sizes.push(String(v).trim());
               break;
@@ -1582,29 +1381,32 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
               "diamondGemstoneShape",
               "diamondGemstoneShapes",
             ]) {
-              const v = seq[k];
+              const v = (seq as any)[k];
               if (Array.isArray(v))
-                shapes.push(...v.map(normalize).filter(Boolean));
+                shapes.push(...(v.map(normalize).filter(Boolean) as string[]));
               else if (v != null && String(v).trim() !== "")
-                shapes.push(normalize(v));
+                shapes.push(normalize(v) as string);
             }
             if (
-              typeof seq.cts === "number" ||
-              (!Number.isNaN(Number(seq.cts)) && seq.cts != null)
-            )
-              sizes.push(String(seq.cts));
+              typeof (seq as any).cts === "number" ||
+              (!Number.isNaN(Number((seq as any).cts)) &&
+                (seq as any).cts != null)
+            ) {
+              sizes.push(String((seq as any).cts));
+            }
           }
         }
       }
       return {
         shapes: Array.from(
           new Set(shapes.map((s) => (s ? s.toUpperCase() : s)))
-        ).filter(Boolean),
+        ).filter(Boolean) as string[],
         sizes: Array.from(
           new Set(sizes.map((s) => (s ? String(s) : s)))
         ).filter(Boolean),
       };
     };
+
     if (
       !diamondShape ||
       diamondShape.length === 0 ||
@@ -1626,15 +1428,14 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
     diamondShape = Array.isArray(diamondShape) ? diamondShape : [];
     diamondSize = Array.isArray(diamondSize) ? diamondSize : [];
 
-    // ---------- IMAGE SELECTION: update primary metals to include BLACK RHODIUM (BR) ----------
+    // ----------------- IMAGE selection (keeps your logic) -----------------
     let variantImages: string[] = [];
     if (firstVariantDoc && Array.isArray(firstVariantDoc.images)) {
       const allImgs = firstVariantDoc.images
         .map((img: any) => img?.url ?? img?.filename ?? img)
         .filter(Boolean)
-        .map((s: any) => String(s));
+        .map(String);
 
-      // Primary metals now include BR (black rhodium) — these are exclusive among themselves.
       const PRIMARY_METALS = ["WG", "YG", "RG", "BR"];
       const OTHER_ALLOWED = [
         "NBV",
@@ -1649,12 +1450,10 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
         "FV",
         "EV",
         "BRD",
-      ]; // keep extras; BRD optionally if used
+      ];
       const TOKEN_CANDIDATES = Array.from(
         new Set([...PRIMARY_METALS, ...OTHER_ALLOWED])
       );
-
-      // bare generic basenames to drop
       const BARE_GENERIC = new Set([
         "GP",
         "360",
@@ -1667,7 +1466,6 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
         "SV",
       ]);
 
-      // regex to match tokens as standalone parts
       const tokenRegex = (token: string) =>
         new RegExp(`(?:^|[-_\\.\\/])${token}(?:$|[-_\\.\\/])`, "i");
 
@@ -1676,10 +1474,9 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
         const dot = name.lastIndexOf(".");
         return dot === -1 ? name : name.slice(0, dot);
       };
-      const removeBareGeneric = (url: string) => {
-        const base = basenameNoExt(url).toUpperCase();
-        return BARE_GENERIC.has(base);
-      };
+
+      const removeBareGeneric = (url: string) =>
+        BARE_GENERIC.has(basenameNoExt(url).toUpperCase());
 
       const detectPrimariesInFilename = (url: string) =>
         PRIMARY_METALS.filter((pm) => tokenRegex(pm).test(url)).map((x) =>
@@ -1699,27 +1496,23 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
           );
         });
       };
+
       const inclusivePrimaryMatches = (token: string) => {
         if (!token) return [];
         const re = tokenRegex(token);
-        return allImgs.filter((u) => {
-          if (removeBareGeneric(u)) return false;
-          return re.test(u);
-        });
+        return allImgs.filter((u) => !removeBareGeneric(u) && re.test(u));
       };
+
       const looseMatches = (token: string) => {
         if (!token) return [];
         const up = token.toUpperCase();
-        return allImgs.filter((u) => {
-          if (removeBareGeneric(u)) return false;
-          return u.toUpperCase().includes(up);
-        });
+        return allImgs.filter(
+          (u) => !removeBareGeneric(u) && u.toUpperCase().includes(up)
+        );
       };
 
-      // Pre-filter out bare-generic files so they never appear
       const prefiltered = allImgs.filter((u) => !removeBareGeneric(u));
 
-      // normalize incoming metal query tokens including BLACK/BACK/RHODIUM synonyms
       const normalizeQueryToken = (raw: string | null) => {
         if (!raw) return null;
         const map: Record<string, string> = {
@@ -1747,13 +1540,13 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
         const k = raw.toString().trim().toUpperCase();
         return map[k] ?? k;
       };
+
       const metalQueryRaw = (req.query.metal ?? req.query.metalColor ?? "")
         .toString()
         .trim()
         .toUpperCase();
       const requestedToken = normalizeQueryToken(metalQueryRaw);
 
-      // selection logic: enforce exclusivity across PRIMARY_METALS
       if (requestedToken) {
         const rt = requestedToken.toUpperCase();
         if (PRIMARY_METALS.includes(rt)) {
@@ -1771,7 +1564,6 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
         }
       }
 
-      // detect from SKU if needed
       if ((!requestedToken || variantImages.length === 0) && chosenVariantSku) {
         const parts = String(chosenVariantSku)
           .split(/[-_]/)
@@ -1797,7 +1589,6 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
         }
       }
 
-      // final fallback: some non-bare images so frontend isn't starved
       if (!variantImages || variantImages.length === 0) {
         variantImages = prefiltered.slice(0, 6);
       }
@@ -1805,52 +1596,154 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
       variantImages = Array.from(new Set(variantImages)).slice(0, 24);
     }
 
-    // ---------- PRICE CALCULATION (unchanged) ----------
+    // ----------------- PRICE CALCULATION -----------------
     let sellingPrice: number | null = null;
     let priceIncomplete = true;
+    let priceBreakdown: PriceBreakdown = {
+      metalCost: null,
+      diamondCost: null,
+      labourCost: null,
+      missingDefaults: missingDefaults.length ? missingDefaults : undefined,
+    };
+    const priceIncompleteReasons: string[] = [];
+
     if (firstVariantDoc) {
       try {
         const variant = firstVariantDoc;
-        const stonesArr: any[] =
-          Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
-            ? variant.meta.stones
-            : Array.isArray(variant?.stones)
-            ? variant.stones
+        const stonesArr: Stone[] =
+          Array.isArray(variant?.meta?.stones) && variant.meta!.stones!.length
+            ? variant.meta!.stones!
+            : Array.isArray(variant?.stones) && variant.stones!.length
+            ? variant.stones!
             : [];
+
         const includedStones: {
           sequence: string;
           cts: number;
           netWeightGrams: number | null;
         }[] = [];
-        for (let i = 0; i < stonesArr.length; i++) {
-          const st = stonesArr[i];
-          const seq =
-            st?.sequence ||
-            (Array.isArray(st?.sequences) && st.sequences[0]?.sequence) ||
-            st?.sequenceNo;
-          if (!seq) continue;
-          const cts =
-            typeof st?.cts === "number"
-              ? st.cts
-              : Array.isArray(st?.sequences) &&
-                typeof st.sequences[0]?.cts === "number"
-              ? st.sequences[0].cts
-              : null;
-          if (cts == null) continue;
-          const net = st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
-          if (i > 0 && net !== null) break;
-          includedStones.push({ sequence: seq, cts, netWeightGrams: net });
+
+        for (const st of stonesArr) {
+          if (!st) continue;
+          if (Array.isArray(st.sequences) && st.sequences.length) {
+            for (const s of st.sequences) {
+              const sSeq = s?.sequence || null;
+              const sCts = typeof s?.cts === "number" ? s.cts : null;
+              if (sSeq && sCts != null) {
+                includedStones.push({
+                  sequence: String(sSeq),
+                  cts: sCts,
+                  netWeightGrams: st.netWeightGrams ?? null,
+                });
+              }
+            }
+          } else {
+            const seq = st?.sequence || (st as any).sequenceNo || null;
+            const cts = typeof st?.cts === "number" ? st.cts : null;
+            if (seq && cts != null) {
+              includedStones.push({
+                sequence: String(seq),
+                cts,
+                netWeightGrams: st.netWeightGrams ?? null,
+              });
+            }
+          }
+        }
+
+        console.debug("[getProductByModelSku] includedStones:", includedStones);
+
+        const sequences = Array.from(
+          new Set(includedStones.map((s) => s.sequence).filter(Boolean))
+        );
+
+        type RawPricingDoc = {
+          sequence?: unknown;
+          selling_price?: unknown;
+          sellingPrice?: unknown;
+          price?: unknown;
+          [k: string]: unknown;
+        };
+
+        const pricingMap: Record<string, PricingDoc> = {};
+        if (sequences.length) {
+          const rawDocs = (await finalPricingColl
+            .find({ sequence: { $in: sequences } })
+            .toArray()) as RawPricingDoc[];
+
+          console.debug(
+            "[getProductByModelSku] pricing rawDocs count:",
+            rawDocs.length
+          );
+
+          for (const raw of rawDocs) {
+            const seq =
+              raw && raw.sequence != null ? String(raw.sequence) : null;
+            if (!seq) continue;
+
+            const sp1 =
+              raw.selling_price !== undefined
+                ? toNumberRobust(raw.selling_price)
+                : undefined;
+            const sp2 =
+              raw.sellingPrice !== undefined
+                ? toNumberRobust(raw.sellingPrice)
+                : undefined;
+            const p =
+              raw.price !== undefined ? toNumberRobust(raw.price) : undefined;
+
+            const pd: PricingDoc = { sequence: seq };
+            if (sp1 !== undefined && !Number.isNaN(sp1)) pd.selling_price = sp1;
+            if (sp2 !== undefined && !Number.isNaN(sp2)) pd.sellingPrice = sp2;
+            if (p !== undefined && !Number.isNaN(p)) pd.price = p;
+
+            for (const k of Object.keys(raw)) {
+              if (
+                k === "sequence" ||
+                k === "selling_price" ||
+                k === "sellingPrice" ||
+                k === "price"
+              )
+                continue;
+              (pd as any)[k] = (raw as any)[k];
+            }
+
+            pricingMap[seq] = pd;
+          }
+
+          // === NEW LOGGING: show resolved per-sequence pricing info ===
+          console.debug(
+            "[getProductByModelSku] resolved pricingMap (raw -> normalized):"
+          );
+          for (const seq of sequences) {
+            const pd = pricingMap[seq];
+            if (!pd) {
+              console.debug(`  sequence=${seq} -> NOT FOUND in final_pricing`);
+              continue;
+            }
+            const resolved = {
+              sequence: seq,
+              selling_price_raw: pd.selling_price ?? null,
+              sellingPrice_raw: pd.sellingPrice ?? null,
+              price_raw: pd.price ?? null,
+              chosen_unit_price:
+                toNumberRobust(
+                  pd.selling_price ?? pd.sellingPrice ?? pd.price
+                ) ?? null,
+            };
+            console.debug("  pricing:", resolved);
+          }
+        } else {
+          console.debug(
+            "[getProductByModelSku] no sequences extracted; skipping pricing fetch"
+          );
         }
 
         let diamondCost = 0;
         let diamondIncomplete = false;
         for (const st of includedStones) {
-          const pricingDoc: any =
-            (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
-          const pricePerCt = parseNumeric(
-            pricingDoc.selling_price ??
-              pricingDoc.sellingPrice ??
-              pricingDoc.price
+          const pd = pricingMap[st.sequence];
+          const pricePerCt = toNumberRobust(
+            pd?.selling_price ?? pd?.sellingPrice ?? pd?.price
           );
           if (Number.isNaN(pricePerCt)) {
             diamondIncomplete = true;
@@ -1859,27 +1752,57 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
           diamondCost += pricePerCt * st.cts;
         }
 
+        // ----------------- METAL DETECTION LOGIC (modified as requested) -----------------
+        // If SKU contains SLV -> SILVER
+        // If SKU contains PT -> PLATINUM
+        // If SKU contains 18 or 9 -> GOLD
+        // Otherwise fall back to variant.meta.metalType or default to GOLD
+        const skuToCheck = String(
+          variant?.sku ?? chosenVariantSku ?? ""
+        ).toUpperCase();
+        let detectedMetalFromSku: string | null = null;
+        if (skuToCheck.includes("SLV")) {
+          detectedMetalFromSku = "SILVER";
+        } else if (skuToCheck.includes("PT")) {
+          detectedMetalFromSku = "PLATINUM";
+        } else if (skuToCheck.includes("18") || skuToCheck.includes("9")) {
+          detectedMetalFromSku = "GOLD";
+        }
+
         const metalType = (
+          detectedMetalFromSku ||
           variant?.meta?.metalType ||
-          (Array.isArray(metalTypes) ? metalTypes[0] : metalTypes[0]) ||
+          variant?.metalType ||
           "GOLD"
         )
           .toString()
           .toUpperCase();
-        let karatStr =
-          variant?.meta?.metalKt ||
-          (Array.isArray(goldKarats) ? goldKarats[0] : goldKarats) ||
-          "18";
-        const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
 
-        let metalWeightGrams: number | null =
-          variant?.meta?.metalWeightGrams != null
-            ? n(variant.meta.metalWeightGrams)
-            : variant?.netWeightGrams != null
-            ? n(variant.netWeightGrams)
-            : null;
+        // ------------------------------------------------------------------------------
+
+        let karatStr: string | number =
+          variant?.meta?.metalKt ??
+          (Array.isArray(goldKarats) ? goldKarats[0] : goldKarats) ??
+          variant?.metalKt ??
+          "18";
+
+        const karatNum = Number(
+          String(karatStr).match(/\d+/)?.[0] ||
+            (metalType === "PLATINUM" ? 950 : 18)
+        );
+
+        let metalWeightGrams: number | null = null;
+        if (variant?.meta?.metalWeightGrams != null)
+          metalWeightGrams = toNumberRobust(variant.meta.metalWeightGrams);
+        else if (variant?.meta?.netWeightGrams != null)
+          metalWeightGrams = toNumberRobust(variant.meta.netWeightGrams);
+        else if (variant?.netWeightGrams != null)
+          metalWeightGrams = toNumberRobust(variant.netWeightGrams);
+
+        if (Number.isNaN(metalWeightGrams as any)) metalWeightGrams = null;
+
         if (
-          (metalWeightGrams == null || Number.isNaN(metalWeightGrams)) &&
+          (metalWeightGrams == null || Number.isNaN(metalWeightGrams as any)) &&
           includedStones.length
         ) {
           const sum = includedStones.reduce(
@@ -1890,39 +1813,142 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
         }
 
         let metalPricePerGram = NaN;
-        if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
-          const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
-          metalPricePerGram = goldValue24 * factor;
-        } else if (metalType === "SILVER")
-          metalPricePerGram = silverPricePerGram;
-        else if (metalType === "PLATINUM")
-          metalPricePerGram = platinumPricePerGram;
-        else if (metalType === "TITANIUM")
-          metalPricePerGram = titaniumPricePerGram;
+        const mType = (metalType || "GOLD").toUpperCase();
 
-        let metalCost = 0,
-          labourCost = 0,
-          metalIncomplete = false;
+        if (mType === "GOLD" && !Number.isNaN(goldValue24)) {
+          const factor =
+            KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"] ?? 18 / 24;
+          metalPricePerGram = goldValue24 * factor;
+        } else if (mType === "SILVER" && !Number.isNaN(silverPricePerGram)) {
+          metalPricePerGram = silverPricePerGram;
+        } else if (
+          mType === "PLATINUM" &&
+          !Number.isNaN(platinumPricePerGram)
+        ) {
+          metalPricePerGram = platinumPricePerGram;
+        } else if (
+          mType === "TITANIUM" &&
+          !Number.isNaN(titaniumPricePerGram)
+        ) {
+          metalPricePerGram = titaniumPricePerGram;
+        }
+
+        let metalCost = 0;
+        let labourCost = 0;
+        let metalIncomplete = false;
+
+        // labour resolution: prefer DB default, else fallback to LABOUR_RATE constant
+        const labourFromDefaults =
+          labourDefaults[mType as keyof typeof labourDefaults];
+        const expenseFromDefaults =
+          expenseDefaults[mType as keyof typeof expenseDefaults];
+        const resolvedLabourCost = !Number.isNaN(labourFromDefaults)
+          ? labourFromDefaults
+          : LABOUR_RATE[mType] ?? LABOUR_RATE.GOLD;
+        const resolvedExpense = !Number.isNaN(expenseFromDefaults)
+          ? expenseFromDefaults
+          : 0;
+        const resolvedGstPercent = Number.isNaN(gstPercentDefault)
+          ? 0
+          : gstPercentDefault;
+
         if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
           metalCost = metalPricePerGram * metalWeightGrams;
-          labourCost = LABOUR_RATE[metalType] ?? LABOUR_RATE.GOLD;
-        } else metalIncomplete = true;
+          labourCost = resolvedLabourCost;
+        } else {
+          metalIncomplete = true;
+          if (!metalWeightGrams)
+            priceIncompleteReasons.push("missing_metal_weight");
+          if (Number.isNaN(metalPricePerGram))
+            priceIncompleteReasons.push("missing_metal_unit_price");
+        }
 
-        const computedSellingPrice = metalCost + diamondCost + labourCost;
+        // computedSellingPrice is BEFORE adding "expense" and GST
+        const computedSellingPriceBeforeExpense =
+          metalCost + diamondCost + labourCost;
+
+        // add expense (per-metal)
+        const expenseValue = resolvedExpense || 0;
+        const totalBeforeGst = computedSellingPriceBeforeExpense + expenseValue;
+
+        // compute gst
+        const gstPercent = resolvedGstPercent || 0;
+        const gstAmount = totalBeforeGst * (gstPercent / 100);
+
+        const totalWithGst = totalBeforeGst + gstAmount;
+
         sellingPrice =
-          !Number.isNaN(computedSellingPrice) && computedSellingPrice > 0
-            ? Math.round(computedSellingPrice)
+          !Number.isNaN(totalWithGst) && totalWithGst > 0
+            ? Math.round(totalWithGst)
             : null;
-        priceIncomplete = metalIncomplete || diamondIncomplete;
+
+        priceIncomplete =
+          metalIncomplete || diamondIncomplete || missingDefaults.length > 0;
+
+        priceBreakdown = {
+          metalCost: metalCost || 0,
+          diamondCost: diamondCost || 0,
+          labourCost: labourCost || 0,
+          expense: expenseValue || 0,
+          gstPercent: gstPercent || 0,
+          gstAmount: Math.round(gstAmount) || 0,
+          totalBeforeGst: Math.round(totalBeforeGst) || 0,
+          totalWithGst: Math.round(totalWithGst) || 0,
+          missingDefaults: missingDefaults.length ? missingDefaults : undefined,
+        };
+
+        if (diamondIncomplete)
+          priceIncompleteReasons.push("missing_diamond_price_entries");
+        if (missingDefaults.length)
+          priceIncompleteReasons.push("missing_default_values");
+
+        console.info("[getProductByModelSku] price result", {
+          modelSku,
+          chosenVariantSku,
+          metalType: mType,
+          karatNum,
+          metalWeightGrams,
+          metalPricePerGram,
+          metalCost,
+          diamondCost,
+          labourCost,
+          expenseValue,
+          gstPercent,
+          gstAmount,
+          totalBeforeGst,
+          totalWithGst,
+          sellingPrice,
+          priceIncomplete,
+          priceIncompleteReasons,
+        });
       } catch (err) {
+        console.error("[getProductByModelSku] pricing calc error:", err);
         sellingPrice = null;
         priceIncomplete = true;
+        priceBreakdown = {
+          metalCost: null,
+          diamondCost: null,
+          labourCost: null,
+          error: err instanceof Error ? err.message : String(err),
+        };
+        priceIncompleteReasons.push("exception_in_pricing");
       }
     } else {
       sellingPrice = null;
       priceIncomplete = true;
+      priceBreakdown = {
+        metalCost: null,
+        diamondCost: null,
+        labourCost: null,
+      };
+      priceIncompleteReasons.push("missing_variant");
+      console.warn(
+        "[getProductByModelSku] no variant doc found; cannot compute price",
+        { modelSku, firstVariantSku }
+      );
     }
 
+    // ----------------- Final response -----------------
     const response = {
       success: true,
       modelSku,
@@ -1939,10 +1965,13 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
       firstVariantSku,
       sellingPrice,
       priceIncomplete,
+      priceBreakdown,
+      priceIncompleteReasons,
       chosenVariantSku: chosenVariantSku ?? null,
       variantImages,
     };
 
+    // response stays exactly as before
     return res.status(200).json(response);
   } catch (err) {
     console.error("getProductByModelSku error:", err);
@@ -1953,275 +1982,161 @@ export const getProductByModelSku = async (req: Request, res: Response) => {
     });
   }
 };
-// export const getProductByModelSku = async (req: Request, res: Response) => {
-//   const debug: any = { logs: [] as Array<any> };
-//   const dlog = (label: string, ...values: any[]) => {
-//     const entry = { ts: new Date().toISOString(), label, values };
-//     debug.logs.push(entry);
-//     console.debug(`[DBG] ${label}`, ...values);
-//   };
 
-//   try {
-//     dlog("ENTRY", { params: req.params, query: req.query });
+export const getBuilderVariants = async (req: Request, res: Response) => {
+  try {
+    const stylingName = (req.query.stylingName || "")
+      .toString()
+      .trim()
+      .toUpperCase();
+    if (!stylingName) {
+      return res
+        .status(400)
+        .json({ success: false, message: "stylingName is required" });
+    }
 
-//     const rawSku = (req.params.modelSku || "").toString().trim();
-//     if (!rawSku)
-//       return res
-//         .status(400)
-//         .json({ success: false, message: "modelSku required" });
+    const conn = getCatalogConnection();
+    const builderColl = conn.collection("builder");
+    const variantsColl = conn.collection("variants");
 
-//     const modelSku = rawSku.toUpperCase();
-//     dlog("modelSku normalized", modelSku);
+    // Fetch all builder rows for the styling (trimmed)
+    const builderRows = await builderColl
+      .aggregate([
+        {
+          $addFields: {
+            stylingTrim: { $trim: { input: "$STYLING NAME" } },
+            parentTrim: { $trim: { input: "$PARENT SKU" } },
+            builderViewTrim: { $trim: { input: "$BUILDER VIEW" } },
+          },
+        },
+        { $match: { stylingTrim: stylingName } },
+        {
+          $project: {
+            _id: 0,
+            parentSku: "$parentTrim",
+            builderView: "$builderViewTrim",
+            category: "$CATEGORY",
+          },
+        },
+      ])
+      .toArray();
 
-//     const ProductModel = getCollectionModel("products");
-//     const product: any = await ProductModel.findOne({ modelSku }).lean();
-//     if (!product)
-//       return res
-//         .status(404)
-//         .json({ success: false, message: `Model ${modelSku} not found` });
+    if (!builderRows.length) {
+      return res.json({ success: true, stylingName, count: 0, entries: [] });
+    }
 
-//     dlog("product fetch result (lean)", {
-//       id: product._id,
-//       title: product.title,
-//     });
+    const escapeRegExp = (s: string) =>
+      s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-//     const title: string | null = product?.seo?.title ?? product?.title ?? null;
-//     const description: string | null = product?.description ?? null;
-//     const attributes: any = product?.attributes ?? {};
-//     const metalTypes: string[] = Array.isArray(attributes?.metalTypes)
-//       ? attributes.metalTypes
-//       : attributes?.metalTypes
-//       ? [attributes.metalTypes]
-//       : [];
-//     const goldKarats: any[] = Array.isArray(attributes?.goldKarats)
-//       ? attributes.goldKarats
-//       : attributes?.goldKarats
-//       ? [attributes.goldKarats]
-//       : [];
+    const entries: Array<{
+      parentSku: string;
+      builderView: string;
+      selectedImage: string | null;
+      variants: { sku: string }[];
+    }> = [];
 
-//     dlog("metadata", { title, description, metalTypes, goldKarats });
+    // Process each builder row individually so you get one image per builder row
+    for (const row of builderRows) {
+      const parentSkuRaw = (row.parentSku || "").toString().trim();
+      const builderViewRaw = (row.builderView || "").toString().trim();
+      if (!builderViewRaw) continue;
 
-//     const variantIds: any[] = Array.isArray(product?.variantIds)
-//       ? product.variantIds
-//       : [];
-//     const variantCount: number = variantIds.length;
-//     const firstVariantSku: string | null =
-//       variantCount > 0 ? variantIds[0] : null;
-//     const variantIdParam = (req.query.variantId ?? "").toString().trim();
+      const parentSku = parentSkuRaw.toUpperCase();
+      const builderView = builderViewRaw.toUpperCase();
 
-//     dlog("variants summary", { variantCount, firstVariantSku, variantIdParam });
+      // build flexible prefix allowing leading zeros in third segment
+      const parts = builderView
+        .split("-")
+        .map((p) => p.trim())
+        .filter(Boolean);
+      let prefixRegexStr: string;
+      if (parts.length >= 3) {
+        const p0 = escapeRegExp(parts[0]);
+        const p1 = escapeRegExp(parts[1]);
+        const thirdRaw = parts[2];
+        const thirdDigits = thirdRaw.replace(/^0+/, "") || thirdRaw;
+        // allow any number of leading zeros before canonical digits
+        prefixRegexStr = `^${p0}-${p1}-0*${escapeRegExp(thirdDigits)}`;
+      } else {
+        prefixRegexStr = `^${escapeRegExp(builderView)}`;
+      }
 
-//     const conn = getCatalogConnection();
-//     const finalPricingColl = conn.collection("final_pricing");
-//     const defaultsColl = conn.collection("defaultValues");
-//     const defaultVals: Record<string, any> =
-//       (await defaultsColl.findOne({})) || {};
+      // Build query: modelSku (if present) + sku starts with prefix
+      const andClauses: any[] = [];
+      if (parentSku) {
+        andClauses.push({
+          modelSku: { $regex: `^${escapeRegExp(parentSku)}$`, $options: "i" },
+        });
+      }
+      andClauses.push({ sku: { $regex: prefixRegexStr, $options: "i" } });
 
-//     dlog("defaultValues raw", defaultVals);
+      const matchedVariants = await variantsColl
+        .find({ $and: andClauses })
+        .project({ sku: 1, images: 1 })
+        .toArray();
 
-//     const goldValue24 = n(defaultVals.goldValue24PerGram) || NaN;
-//     const silverPricePerGram = n(defaultVals.silverPricePerGram) || NaN;
-//     const platinumPricePerGram = n(defaultVals.platinumPricePerGram) || NaN;
+      // select single image for this builderView: prefer image whose basename or url contains full builderView
+      let selectedImage: string | null = null;
+      for (const v of matchedVariants) {
+        if (!Array.isArray(v.images) || !v.images.length) continue;
+        for (const img of v.images) {
+          const candidate = (img?.url ?? img?.filename ?? img) as
+            | string
+            | undefined;
+          if (!candidate) continue;
+          const name = candidate.split("/").pop() || candidate;
+          const dot = name.lastIndexOf(".");
+          const basename = dot === -1 ? name : name.slice(0, dot);
+          const candUpper = (
+            candidate +
+            "|" +
+            name +
+            "|" +
+            basename
+          ).toUpperCase();
+          if (candUpper.includes(builderView)) {
+            selectedImage = candidate;
+            break;
+          }
+        }
+        if (selectedImage) break;
+      }
 
-//     dlog("resolved base metal prices (raw -> coerced)", {
-//       goldValue24,
-//       silverPricePerGram,
-//       platinumPricePerGram,
-//     });
+      // fallback to first image of first matched variant if no exact match found
+      if (!selectedImage) {
+        const v = matchedVariants.find(
+          (x: any) => Array.isArray(x.images) && x.images.length
+        );
+        if (v) {
+          const first = v.images[0];
+          selectedImage = (first?.url ?? first?.filename ?? first) || null;
+        }
+      }
 
-//     let chosenVariantSku: string | null = null;
-//     let firstVariantDoc: any = null;
+      const variantsOut = matchedVariants.map((v) => ({
+        sku: v.sku,
+      }));
 
-//     if (variantIdParam) {
-//       dlog(
-//         "attempting to fetch variant by variantIdParam (as sku)",
-//         variantIdParam
-//       );
-//       firstVariantDoc = await conn
-//         .collection("variants")
-//         .findOne({ sku: variantIdParam });
-//       if (!firstVariantDoc && mongoose.Types.ObjectId.isValid(variantIdParam)) {
-//         try {
-//           firstVariantDoc = await conn
-//             .collection("variants")
-//             .findOne({ _id: new mongoose.Types.ObjectId(variantIdParam) });
-//         } catch {}
-//       }
-//       if (firstVariantDoc)
-//         chosenVariantSku =
-//           firstVariantDoc.sku ??
-//           (firstVariantDoc._id ? String(firstVariantDoc._id) : null);
-//     }
+      entries.push({
+        parentSku: parentSku || null,
+        builderView: builderViewRaw,
+        selectedImage,
+        variants: variantsOut,
+      });
+    }
 
-//     if (!firstVariantDoc && firstVariantSku) {
-//       firstVariantDoc =
-//         (await conn.collection("variants").findOne({ sku: firstVariantSku })) ||
-//         null;
-//       chosenVariantSku = firstVariantDoc
-//         ? firstVariantDoc.sku ?? firstVariantSku
-//         : firstVariantSku;
-//     }
-
-//     dlog(
-//       "chosen firstVariantDoc summary",
-//       firstVariantDoc
-//         ? { sku: firstVariantDoc.sku, _id: firstVariantDoc._id }
-//         : null
-//     );
-
-//     // ---------------- METAL + KARAT DETECTION ----------------
-//     const extractKaratFromToken = (tok?: string | null) => {
-//       if (!tok) return null;
-//       const m = String(tok).match(/\b(9|14|18|22|24)\b/);
-//       return m ? Number(m[0]) : null;
-//     };
-
-//     const detectMetalFromSku = (sku: string) => {
-//       const parts = sku.split(/[-_]/).map((p) => p.trim().toUpperCase());
-//       if (parts.includes("PT")) return "PLATINUM";
-//       if (parts.includes("SLV") || parts.includes("SV")) return "SILVER";
-//       return "GOLD"; // default fallback
-//     };
-
-//     const skuParts = String(chosenVariantSku || "")
-//       .split(/[-_]/)
-//       .map((p) => p.trim().toUpperCase());
-//     const skuDetectedMetal = detectMetalFromSku(chosenVariantSku || "");
-//     const skuDetectedKarat =
-//       skuParts.map(extractKaratFromToken).find((k) => k !== null) ?? null;
-
-//     const metalType = skuDetectedMetal || "GOLD";
-//     const karatNum = skuDetectedKarat || 18;
-
-//     dlog("RESOLVED METAL/KARAT", {
-//       chosenVariantSku,
-//       skuDetectedMetal,
-//       skuDetectedKarat,
-//       metalType,
-//       karatNum,
-//     });
-
-//     // ---------------- PRICE CALCULATION ----------------
-//     let sellingPrice: number | null = null;
-//     let priceIncomplete = true;
-
-//     if (firstVariantDoc) {
-//       try {
-//         const stonesArr: any[] =
-//           Array.isArray(firstVariantDoc?.meta?.stones) &&
-//           firstVariantDoc.meta.stones.length
-//             ? firstVariantDoc.meta.stones
-//             : Array.isArray(firstVariantDoc?.stones)
-//             ? firstVariantDoc.stones
-//             : [];
-
-//         dlog("PRICE: stonesArr raw", stonesArr);
-
-//         const includedStones: {
-//           sequence: string;
-//           cts: number;
-//           netWeightGrams: number | null;
-//         }[] = [];
-//         for (const st of stonesArr) {
-//           const seq =
-//             st?.sequence ||
-//             (Array.isArray(st?.sequences) && st.sequences[0]?.sequence) ||
-//             null;
-//           if (!seq) continue;
-//           const cts =
-//             typeof st?.cts === "number"
-//               ? st.cts
-//               : Array.isArray(st?.sequences) &&
-//                 typeof st.sequences[0]?.cts === "number"
-//               ? st.sequences[0].cts
-//               : null;
-//           if (cts == null) continue;
-//           const net = st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
-//           includedStones.push({ sequence: seq, cts, netWeightGrams: net });
-//         }
-
-//         dlog("PRICE: includedStones (after loop)", includedStones);
-
-//         let diamondCost = 0;
-//         for (const st of includedStones) {
-//           const pricingDoc: any =
-//             (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
-//           const pricePerCt = parseNumeric(
-//             pricingDoc.selling_price ?? pricingDoc.price
-//           );
-//           if (!Number.isNaN(pricePerCt)) diamondCost += pricePerCt * st.cts;
-//         }
-
-//         const firstNet =
-//           includedStones.find((s) => s.netWeightGrams != null)
-//             ?.netWeightGrams ?? null;
-
-//         let metalWeightGrams = firstNet;
-//         let metalPricePerGram = NaN;
-//         if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
-//           const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
-//           metalPricePerGram = goldValue24 * factor;
-//         } else if (metalType === "SILVER") {
-//           metalPricePerGram = silverPricePerGram;
-//         } else if (metalType === "PLATINUM") {
-//           metalPricePerGram = platinumPricePerGram;
-//         }
-
-//         let metalCost = 0;
-//         let labourCost = 0;
-//         if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
-//           metalCost = metalPricePerGram * metalWeightGrams;
-//           labourCost = LABOUR_RATE[metalType] ?? LABOUR_RATE.GOLD;
-//         }
-
-//         const computedSellingPrice = metalCost + diamondCost + labourCost;
-//         if (!Number.isNaN(computedSellingPrice) && computedSellingPrice > 0) {
-//           sellingPrice = Math.round(computedSellingPrice);
-//           priceIncomplete = false;
-//         }
-
-//         dlog("PRICE FINAL", {
-//           metalType,
-//           karatNum,
-//           metalWeightGrams,
-//           metalCost,
-//           diamondCost,
-//           labourCost,
-//           sellingPrice,
-//         });
-//       } catch (err) {
-//         dlog("PRICE ERROR", String(err));
-//       }
-//     }
-
-//     const response = {
-//       success: true,
-//       modelSku,
-//       title,
-//       description,
-//       metalTypes,
-//       goldKarats,
-//       variantCount,
-//       firstVariantSku,
-//       sellingPrice,
-//       priceIncomplete,
-//       chosenVariantSku,
-//       debug,
-//     };
-
-//     console.info("DEBUG RESPONSE SUMMARY:", {
-//       modelSku,
-//       sellingPrice,
-//       priceIncomplete,
-//       chosenVariantSku,
-//     });
-//     return res.status(200).json(response);
-//   } catch (err) {
-//     console.error("getProductByModelSku error:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error",
-//       error: err instanceof Error ? err.message : String(err),
-//     });
-//   }
-// };
+    return res.json({
+      success: true,
+      stylingName,
+      count: entries.length,
+      entries,
+    });
+  } catch (err) {
+    console.error("getBuilderImagesPerRow error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+};

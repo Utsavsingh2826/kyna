@@ -10,8 +10,8 @@ import {
 interface PaymentFormProps {
   orderData: {
     orderId: string;
-    orderCategory?: 'design-your-own' | 'build-your-own' | 'products';
-    orderType?: 'customized' | 'normal';
+    orderCategory?: "design-your-own" | "build-your-own" | "products";
+    orderType?: "customized" | "normal";
     customData?: any;
     amount: number;
     items: Array<{
@@ -135,17 +135,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     );
 
     // Debug: Check EDD data in orderData
-    console.log('📦 [EDD] PaymentForm - EDD data check:', {
+    console.log("📦 [EDD] PaymentForm - EDD data check:", {
       hasOrderDetails: !!orderData.orderDetails,
       estimatedDelivery: orderData.orderDetails?.estimatedDelivery,
       estimatedDeliveryDay: orderData.orderDetails?.estimatedDeliveryDay,
-      fullOrderDetails: JSON.stringify(orderData.orderDetails, null, 2)
+      fullOrderDetails: JSON.stringify(orderData.orderDetails, null, 2),
     });
-    
+
     if (orderData.orderDetails?.estimatedDelivery) {
-      console.log('✅ [EDD] PaymentForm - EDD data found, will be sent to backend');
+      console.log(
+        "✅ [EDD] PaymentForm - EDD data found, will be sent to backend"
+      );
     } else {
-      console.warn('⚠️ [EDD] PaymentForm - No EDD data found in orderDetails');
+      console.warn("⚠️ [EDD] PaymentForm - No EDD data found in orderDetails");
     }
 
     try {
@@ -158,20 +160,30 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         cancelUrl: `${window.location.origin}/payment-cancel`,
         userId: userInfo.userId,
         orderNumber: orderData.orderId,
-        orderCategory: orderData.orderCategory || 'products',
-        orderType: orderData.orderType || 'normal',
+        orderCategory: orderData.orderCategory || "products",
+        orderType: orderData.orderType || "normal",
         customData: orderData.customData,
         items: orderData.items,
         orderDetails: orderData.orderDetails,
         // jewelryId: orderData.jewelryId, // Include jewelryId if available
         images: orderData.images || [],
         // Extract EDD from orderDetails and add to root level for backend validation
-        estimatedDelivery: orderData.orderDetails?.estimatedDelivery || null,
-        estimatedDeliveryDay: orderData.orderDetails?.estimatedDeliveryDay || null,
+        estimatedDelivery:
+          orderData.orderDetails?.estimatedDelivery || "03-04-05",
+        estimatedDeliveryDay:
+          orderData.orderDetails?.estimatedDeliveryDay || "sunday",
       };
 
       console.log("💳 Initiating payment with images:", paymentData.images);
       console.log("💳 Full payment data:", paymentData);
+      console.log(
+        "🔍 PaymentForm - orderDetails being sent:",
+        JSON.stringify(paymentData.orderDetails, null, 2)
+      );
+      console.log(
+        "🔍 PaymentForm - orderDetails.directPurchaseData:",
+        JSON.stringify(paymentData.orderDetails?.directPurchaseData, null, 2)
+      );
 
       // PROMINENT LOG FOR DEBUGGING
       if (!paymentData.images || paymentData.images.length === 0) {
