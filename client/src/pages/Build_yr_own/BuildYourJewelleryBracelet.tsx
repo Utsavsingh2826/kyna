@@ -18,7 +18,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import ProductReviews from "@/components/ProductReviews";
 import {
   Select,
   SelectContent,
@@ -28,20 +27,122 @@ import {
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
+// Types for API response
+interface ApiVariant {
+  sku: string;
+}
 
-type ApiVariant = {
-  variantId: string;
+interface ApiProduct {
+  parentSku: string;
+  builderView: string;
+  selectedImage: string;
+  variants: ApiVariant[];
+}
+
+interface ApiResponse {
+  success: boolean;
   stylingName: string;
-  builderImage: string;
-  basePrice: number;
-};
+  count: number;
+  entries: ApiProduct[];
+}
 
-type StyleGroup = {
+interface SubStyle {
+  img: string;
   name: string;
-  substyles: { img: string; name: string; price: string }[];
+  price: string;
+  parentSku?: string;
+  variants?: ApiVariant[];
+}
+
+// Hardcoded category mappings
+const categoryMappings: { [key: string]: string } = {
+  "TENNIS BRACELET": "TENNIS BRACELET",
+  "PAPPER CLIP": "PAPPER CLIP",
+  "MULTI SHAPE": "MULTI SHAPE",
 };
 
-// removed duplicate type declarations
+// Initial hardcoded structure that will be populated with API data
+const getInitialStyleAndDesign = () => [
+  {
+    name: "PAPPER CLIP",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "TENNIS BRACELET",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "MULTI SHAPE",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+];
+// {
+//   name: "Designer",
+//   substyles: [
+//     { img: "/build_yr_own/sample1.png", name: "Infinity", price: "5,224" },
+//     {
+//       img: "/build_yr_own/sample1.png",
+//       name: "Nature Inspired",
+//       price: "5,224",
+//     },
+//     { img: "/build_yr_own/sample1.png", name: "Geometric", price: "5,224" },
+//     { img: "/build_yr_own/sample1.png", name: "Celtic", price: "5,224" },
+//     { img: "/build_yr_own/sample1.png", name: "Art Nouveau", price: "5,224" },
+//   ],
+// },
+// {
+//   name: "Contemporary",
+//   substyles: [
+//     { img: "/build_yr_own/sample1.png", name: "Minimalist", price: "5,224" },
+//     {
+//       img: "/build_yr_own/sample1.png",
+//       name: "Bold Statement",
+//       price: "5,224",
+//     },
+//     { img: "/build_yr_own/sample1.png", name: "Stackable", price: "5,224" },
+//     { img: "/build_yr_own/sample1.png", name: "Asymmetric", price: "5,224" },
+//     { img: "/build_yr_own/sample1.png", name: "Mixed Metal", price: "5,224" },
+//   ],
+// },
+// {
+//   name: "Luxury",
+//   substyles: [
+//     { img: "/build_yr_own/sample1.png", name: "Eternity", price: "8,224" },
+//     { img: "/build_yr_own/sample1.png", name: "Multi-Stone", price: "7,224" },
+//     { img: "/build_yr_own/sample1.png", name: "Cocktail", price: "9,224" },
+//     {
+//       img: "/build_yr_own/sample1.png",
+//       name: "Statement Halo",
+//       price: "6,224",
+//     },
+//     { img: "/build_yr_own/sample1.png", name: "Double Band", price: "7,224" },
+//   ],
+// },
+// {
+//   name: "Classic",
+//   substyles: [
+//     { img: "/build_yr_own/sample1.png", name: "Simple Band", price: "3,224" },
+//     {
+//       img: "/build_yr_own/sample1.png",
+//       name: "Princess Cut",
+//       price: "4,224",
+//     },
+//     {
+//       img: "/build_yr_own/sample1.png",
+//       name: "Round Brilliant",
+//       price: "5,224",
+//     },
+//     { img: "/build_yr_own/sample1.png", name: "Emerald Cut", price: "4,724" },
+//     {
+//       img: "/build_yr_own/sample1.png",
+//       name: "Oval Classic",
+//       price: "4,524",
+//     },
+//   ],
+// },
 const diamondShapes = {
   shapes: [
     { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
@@ -57,7 +158,6 @@ const diamondShapes = {
   ],
 };
 const ProductDetail = () => {
-  const [styleData, setStyleData] = useState<StyleGroup[]>([]);
   const [showTooltip, setShowTooltip] = useState(false);
   const [showEngraveModal, setShowEngraveModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -68,49 +168,76 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedClarity, setSelectedClarity] = useState("");
 
-  // Default to "Most Popular" and first substyle
-  const [selectedStyleCategory, setSelectedStyleCategory] = useState("");
+  // API state
+  const [styleAndDesign, setStyleAndDesign] = useState(
+    getInitialStyleAndDesign()
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Default to first category
+  const [selectedStyleCategory, setSelectedStyleCategory] =
+    useState("TENNIS BRACELET");
   const [selectedRingStyle, setSelectedRingStyle] = useState("");
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchVariants = async () => {
-      try {
-        const res = await fetch("/api/build-your-jewelry/categories/BRACELET");
-        const json = await res.json();
-        const variants: ApiVariant[] = json?.data?.variants || [];
+  // Fetch data from API
+  const fetchCategoryData = async (categoryName: string) => {
+    if (!categoryMappings[categoryName]) return;
 
-        const groupsMap = new Map<string, StyleGroup>();
-        variants.forEach((v) => {
-          const key = (v.stylingName || "OTHER").toUpperCase();
-          const sub = {
-            img: `/build_yr_own/${v.builderImage}.png`,
-            name: v.builderImage,
-            price: new Intl.NumberFormat("en-IN").format(v.basePrice || 0),
-          };
-          if (!groupsMap.has(key)) {
-            groupsMap.set(key, { name: key, substyles: [sub] });
-          } else {
-            groupsMap.get(key)!.substyles.push(sub);
-          }
-        });
-        const groups = Array.from(groupsMap.values());
-        if (!isMounted) return;
-        setStyleData(groups);
-        if (groups.length > 0) {
-          setSelectedStyleCategory(groups[0].name);
-          if (groups[0].substyles.length > 0) {
-            setSelectedRingStyle(groups[0].substyles[0].name);
-          }
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/products/builder?stylingName=${encodeURIComponent(
+          categoryName
+        )}`
+      );
+      const data: ApiResponse = await response.json();
+
+      if (data.success && data.entries) {
+        const substyles: SubStyle[] = data.entries.map((entry) => ({
+          img: entry.selectedImage,
+          name: entry.builderView,
+          price: "5,224", // Hardcoded price as requested
+          parentSku: entry.parentSku,
+          variants: entry.variants,
+        }));
+
+        setStyleAndDesign((prev) =>
+          prev.map((category) =>
+            category.name === categoryName
+              ? { ...category, substyles, isLoaded: true }
+              : category
+          )
+        );
+
+        // Set first style as selected if none selected
+        if (!selectedRingStyle && substyles.length > 0) {
+          setSelectedRingStyle(substyles[0].name);
         }
-      } catch (e) {
-        console.error("Failed to fetch bracelet variants", e);
       }
-    };
-    fetchVariants();
-    return () => {
-      isMounted = false;
-    };
+    } catch (err) {
+      console.error("Failed to fetch category data:", err);
+      setError(`Failed to load ${categoryName} data`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load data for current category
+  useEffect(() => {
+    const currentCategory = styleAndDesign.find(
+      (cat) => cat.name === selectedStyleCategory
+    );
+    if (currentCategory && !currentCategory.isLoaded) {
+      fetchCategoryData(selectedStyleCategory);
+    }
+  }, [selectedStyleCategory]);
+
+  // Load Tennis Bracelet data on component mount
+  useEffect(() => {
+    fetchCategoryData("TENNIS BRACELET");
   }, []);
 
   // Separate refs for different scroll containers
@@ -170,7 +297,7 @@ const ProductDetail = () => {
   };
 
   // Get current category's substyles and selected style data
-  const currentCategory = styleData.find(
+  const currentCategory = styleAndDesign.find(
     (cat) => cat.name === selectedStyleCategory
   );
   const currentSubstyles = currentCategory?.substyles || [];
@@ -324,6 +451,11 @@ const ProductDetail = () => {
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                            {/* <GLBViewer
+                              modelUrl={image}
+                              className="w-full h-full"
+                              isMain={false}
+                            /> */}
                             <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                               3D
                             </div>
@@ -355,7 +487,11 @@ const ProductDetail = () => {
                       selectedImage
                     ) ? (
                       <div className="relative w-full h-full">
-                        <h1>3D</h1>
+                        <GLBViewer
+                          modelUrl={thumbnailImages[selectedImage]}
+                          className="w-full h-full"
+                          isMain={true}
+                        />
                         <div className="absolute bottom-16 left-4 bg-gradient-to-r from-[#328F94] to-[#2a7a7e] text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
                           🔄 Interactive 3D Model
                         </div>
@@ -413,7 +549,11 @@ const ProductDetail = () => {
                         >
                           {is3DModel(image, index) ? (
                             <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                              <h1>3D</h1>
+                              {/* <GLBViewer
+                                modelUrl={image}
+                                className="w-full h-full"
+                                isMain={false}
+                              /> */}
                               <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                                 3D
                               </div>
@@ -445,7 +585,7 @@ const ProductDetail = () => {
                           Ring Style & Design
                         </p>
                         <h2 className="text-xl md:text-2xl font-medium leading-tight truncate">
-                          {selectedStyleData?.name || selectedRingStyle || ""}
+                          {selectedStyleData?.name}
                         </h2>
                       </div>
                       <div className="text-left sm:text-right flex-shrink-0">
@@ -483,12 +623,19 @@ const ProductDetail = () => {
                         ref={styleCategoryRef}
                         className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
                       >
-                        {styleData.map((category, index) => (
+                        {styleAndDesign.map((category, index) => (
                           <button
                             key={`${category.name}-${index}`}
                             onClick={() => {
                               setSelectedStyleCategory(category.name);
-                              setSelectedRingStyle(category.substyles[0].name);
+                              // Load data if not loaded
+                              if (!category.isLoaded) {
+                                fetchCategoryData(category.name);
+                              } else if (category.substyles.length > 0) {
+                                setSelectedRingStyle(
+                                  category.substyles[0].name
+                                );
+                              }
                             }}
                             className={`px-3 md:px-4 py-2 md:py-2.5 rounded-lg border text-xs md:text-sm font-medium min-w-max whitespace-nowrap transition-all capitalize flex-shrink-0 ${
                               selectedStyleCategory === category.name
@@ -524,34 +671,63 @@ const ProductDetail = () => {
                         ref={ringStylesRef}
                         className="flex gap-2 md:gap-4 overflow-x-hidden scroll-smooth flex-1 w-[200px]"
                       >
-                        {currentSubstyles.map((style, index) => (
-                          <button
-                            key={`${style.name}-${index}`}
-                            onClick={() => setSelectedRingStyle(style.name)}
-                            className={`flex flex-col items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
-                              selectedRingStyle === style.name
-                                ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
-                                : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
-                            }`}
-                          >
-                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg overflow-hidden bg-gray-100">
-                              <img
-                                src={style.img}
-                                alt={style.name}
-                                className="w-full h-full object-cover"
-                              />
+                        {loading && currentSubstyles.length === 0 ? (
+                          // Loading state
+                          Array.from({ length: 3 }).map((_, index) => (
+                            <div
+                              key={`loading-${index}`}
+                              className="flex flex-col items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border border-neutral-300 min-w-[75px] md:min-w-[100px] animate-pulse"
+                            >
+                              <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-gray-200" />
+                              <div className="w-16 h-3 bg-gray-200 rounded" />
                             </div>
-                            <span
-                              className={`text-xs font-medium text-center leading-tight ${
+                          ))
+                        ) : error ? (
+                          // Error state
+                          <div className="flex items-center justify-center p-4 text-sm text-red-600 bg-red-50 rounded-lg min-w-[200px]">
+                            {error}
+                          </div>
+                        ) : currentSubstyles.length === 0 ? (
+                          // Empty state
+                          <div className="flex items-center justify-center p-4 text-sm text-gray-500 min-w-[200px]">
+                            No designs available
+                          </div>
+                        ) : (
+                          currentSubstyles.map((style, index) => (
+                            <button
+                              key={`${style.name}-${index}`}
+                              onClick={() => setSelectedRingStyle(style.name)}
+                              className={`flex flex-col items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
                                 selectedRingStyle === style.name
-                                  ? "text-[#328F94]"
-                                  : "text-neutral-600"
+                                  ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
+                                  : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              {style.name}
-                            </span>
-                          </button>
-                        ))}
+                              <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg overflow-hidden bg-gray-100">
+                                <img
+                                  src={style.img}
+                                  alt={style.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Fallback image on error
+                                    const target = e.target as HTMLImageElement;
+                                    target.src =
+                                      "/build_yr_own/placeholder.png";
+                                  }}
+                                />
+                              </div>
+                              <span
+                                className={`text-xs font-medium text-center leading-tight ${
+                                  selectedRingStyle === style.name
+                                    ? "text-[#328F94]"
+                                    : "text-neutral-600"
+                                }`}
+                              >
+                                {style.name}
+                              </span>
+                            </button>
+                          ))
+                        )}
                       </div>
                       <button
                         onClick={scrollRingStylesRight}
@@ -981,11 +1157,6 @@ const ProductDetail = () => {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </div>
-
-          {/* Reviews Section */}
-          <div className="mt-16">
-            <ProductReviews />
           </div>
         </div>
 

@@ -14,6 +14,28 @@ const Navigation: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState("upload");
 
+  const leftLinks = [
+    ["/rings", "Rings"],
+    ["/earrings", "Earrings"],
+    ["/pendants", "Pendants"],
+    ["/bracelets", "Bracelets"],
+    ["/design-your-own", "Design Your Own"],
+    ["/upload-design", "Upload Your Design"],
+    ["/build-jewellery", "Build Your Jewellery"],
+  ];
+  const rightLinks = [
+    ["/rings?ring_category=Men%27s+Rings", "Men's Rings"],
+    [
+      "/earrings?category1=studs&centerStoneShape=&category2=&category3=men%27s+stud",
+      "Men's Studs",
+    ],
+    ["/bracelets?bracelet_category=Men's Bracelets", "Men's Bracelets"],
+    ["/platinum", "Platinum Jewellery"],
+    ["/silver", "Silver Jewellery"],
+    ["/silver-gold-plated", "Silver Gold Plated Jewellery"],
+    ["/engraving", "Engraving"],
+  ];
+
   return (
     <nav className="bg-gray-50 border-b">
       <div className="px-4">
@@ -111,32 +133,30 @@ const Navigation: React.FC = () => {
               </div>
             </div>
             {/* JEWELLERY Dropdown */}
-            <div className="relative group">
-              <Link
-                to="/jewellery"
+            {/* <div className="relative group">
+              <div
+                // to="/jewellery"
                 className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                  isActive("/jewellery") ? "bg-[#68C5C0] text-white" : ""
+                  isActive("/") ? "bg-[#68C5C0] text-white" : ""
                 }`}
               >
                 JEWELLERY
-              </Link>
+              </div>
               <div className="absolute top-full left-0 bg-white shadow-lg border rounded-md w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-2 grid grid-cols-2 gap-4 px-4">
                   <div>
                     {[
-                      ["rings", "Rings"],
-                      ["earrings", "Earrings"],
-                      ["pendants", "Pendants"],
-                      ["bracelets", "Bracelets"],
+                      ["/rings", "Rings"],
+                      ["/earrings", "Earrings"],
+                      ["/pendants", "Pendants"],
+                      ["/bracelets", "Bracelets"],
                       ["/design-your-own", "Design Your Own"],
                       ["/upload-design", "Upload Your Design"],
                       ["/build-jewellery", "Build Your Jewellery"],
                     ].map(([path, label]) => (
                       <Link
                         key={path}
-                        to={`/jewellery${
-                          path.startsWith("/") ? path : "/" + path
-                        }`}
+                        to={`/${path.startsWith("/") ? path : "/" + path}`}
                         className="block px-2 py-2 text-sm text-gray-700 hover:bg-[#68C5C0] hover:text-white"
                       >
                         {label}
@@ -145,12 +165,15 @@ const Navigation: React.FC = () => {
                   </div>
                   <div>
                     {[
-                      ["mens-rings", "Men's Rings"],
-                      ["mens-studs", "Men's Studs"],
-                      ["mens-bracelets", "Men's Bracelets"],
-                      ["platinum", "Platinum Jewellery"],
-                      ["silver", "Silver Jewellery"],
-                      ["silver-gold-plated", "Silver Gold Plated Jewellery"],
+                      ["/rings?ring_category=Men's Rings", "Men's Rings"],
+                      ["/earrings?earring_category=Men's Studs", "Men's Studs"],
+                      [
+                        "/bracelets?bracelet_category=Men's Bracelets",
+                        "Men's Bracelets",
+                      ],
+                      ["/platinum", "Platinum Jewellery"],
+                      ["/silver", "Silver Jewellery"],
+                      ["/silver-gold-plated", "Silver Gold Plated Jewellery"],
                       ["/engraving", "Engraving"],
                     ].map(([path, label]) => (
                       <Link
@@ -166,7 +189,47 @@ const Navigation: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div> */}
+            <div className="relative group">
+              <div
+                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
+                  isActive("/") ? "bg-[#68C5C0] text-white" : ""
+                }`}
+              >
+                JEWELLERY
+              </div>
+
+              <div className="absolute top-full left-0 bg-white shadow-lg border rounded-md w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="py-2 grid grid-cols-2 gap-4 px-4">
+                  {/* LEFT SIDE */}
+                  <div>
+                    {leftLinks.map(([path, label]) => (
+                      <Link
+                        key={path}
+                        to={path}
+                        className="block px-2 py-2 text-sm text-gray-700 hover:bg-[#68C5C0] hover:text-white"
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+
+                  {/* RIGHT SIDE */}
+                  <div>
+                    {rightLinks.map(([path, label]) => (
+                      <Link
+                        key={label}
+                        to={path}
+                        className="block px-2 py-2 text-sm text-gray-700 hover:bg-[#68C5C0] hover:text-white"
+                      >
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
+
             {/* ENGRAVING */}
             <Link
               to="/engravings"

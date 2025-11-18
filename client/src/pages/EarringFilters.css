@@ -1,0 +1,84 @@
+/* Additional CSS for earrings filter components */
+.eng-filter-section {
+  margin-bottom: 1.5rem;
+}
+
+.eng-filter-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.eng-current-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.eng-filter-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.eng-filter-remove {
+  margin-left: 0.5rem;
+  padding: 0;
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.eng-filter-remove:hover {
+  color: #374151;
+}
+
+/* Radio button styling for earring categories */
+.eng-suboption input[type="radio"] {
+  margin-right: 0.5rem;
+}
+
+/* Diamond shape grid styling */
+.diamond-shape-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 0.5rem;
+}
+
+.diamond-shape-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.diamond-shape-option:hover {
+  background-color: #f9fafb;
+}
+
+.diamond-shape-option img {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  object-fit: contain;
+}
+
+.diamond-shape-option span {
+  font-size: 10px;
+  text-align: center;
+  text-transform: capitalize;
+}

@@ -37,7 +37,38 @@ const EngravingPage: React.FC<EngraveProps> = ({
     horizontal: 0,
     vertical: 0,
   });
+  const [motifs, setMotifs] = useState<string[]>([]);
+  const [selectedMotif, setSelectedMotif] = useState<string | null>(null);
+  const [motifScale, setMotifScale] = useState<number>(1); // multiplier of fontSize (1 = same height as text)
+  const maxCount = 12; // maximum total units (characters + motif cost)
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Load motif index from public/motif/index.json (if available)
+  useEffect(() => {
+    const loadMotifs = async () => {
+      try {
+        const res = await fetch(`/motif/index.json`);
+        if (!res.ok) return;
+        const list: string[] = await res.json();
+        setMotifs(list);
+        if (list.length > 0) setSelectedMotif(list[0]);
+      } catch (err) {
+        // ignore if not present
+        console.debug("No motif index found or failed to load motifs", err);
+      }
+    };
+
+    loadMotifs();
+  }, []);
+
+  // When motif selection changes, ensure current text fits into new allowed limit
+  useEffect(() => {
+    const motifCost = selectedMotif ? 2 : 0;
+    const allowed = Math.max(0, maxCount - motifCost);
+    if (engravingText.length > allowed) {
+      setEngravingText((prev) => prev.slice(0, allowed));
+    }
+  }, [selectedMotif, engravingText]);
 
   const fonts = [
     "My Script One",
@@ -134,6 +165,10 @@ const EngravingPage: React.FC<EngraveProps> = ({
         // Draw the base image
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
+        // Compute text coordinates regardless of whether text exists (used also for motif placement)
+        const textX = (textPosition.x / 100) * canvas.width;
+        const textY = (textPosition.y / 100) * canvas.height;
+
         // Draw the engraving text if present
         if (engravingText) {
           ctx.font = `${fontSize}px ${selectedFont}`;
@@ -145,9 +180,6 @@ const EngravingPage: React.FC<EngraveProps> = ({
           ctx.shadowBlur = 2;
           ctx.shadowOffsetX = 1;
           ctx.shadowOffsetY = 1;
-
-          const textX = (textPosition.x / 100) * canvas.width;
-          const textY = (textPosition.y / 100) * canvas.height;
 
           ctx.save();
           ctx.translate(textX, textY);
@@ -162,23 +194,68 @@ const EngravingPage: React.FC<EngraveProps> = ({
           ctx.restore();
         }
 
-        // Convert canvas to blob and create URL
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const engravingImageUrl = URL.createObjectURL(blob);
-              console.log(
-                "🎨 Generated engraved image URL:",
-                engravingImageUrl
-              );
-              resolve(engravingImageUrl);
+        // Draw motif if selected (inline with text)
+        const drawMotifThenFinalize = () => {
+          if (!selectedMotif) {
+            // no motif - finalize
+            finalizeCanvasToBlob();
+            return;
+          }
+
+          const motifImg = new Image();
+          motifImg.crossOrigin = "anonymous";
+          motifImg.onload = () => {
+            // draw motif inline with the text (to the right, vertically centered)
+            // ensure ctx.font is set so we can measure text width
+            ctx.font = `${fontSize}px ${selectedFont}`;
+            const textWidth = engravingText
+              ? ctx.measureText(engravingText).width
+              : 0;
+
+            // motif size derived from text size: base height = fontSize * motifScale
+            const motifHeight = fontSize * (motifScale || 1);
+            const motifWidth = (motifImg.width / motifImg.height) * motifHeight;
+
+            let motifX: number;
+            if (engravingText) {
+              // place to the right of the text (textX is center of text)
+              motifX = textX + textWidth / 2 + 4; // small gap
             } else {
-              resolve(null);
+              // center motif at textX if no text
+              motifX = textX - motifWidth / 2;
             }
-          },
-          "image/png",
-          0.9
-        );
+            const motifY = textY - motifHeight / 2; // center vertically with text
+
+            ctx.drawImage(motifImg, motifX, motifY, motifWidth, motifHeight);
+            finalizeCanvasToBlob();
+          };
+          motifImg.onerror = () => {
+            console.warn("Failed to load motif image", selectedMotif);
+            finalizeCanvasToBlob();
+          };
+          motifImg.src = `/motif/${selectedMotif}`;
+        };
+
+        const finalizeCanvasToBlob = () => {
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const engravingImageUrl = URL.createObjectURL(blob);
+                console.log(
+                  "🎨 Generated engraved image URL:",
+                  engravingImageUrl
+                );
+                resolve(engravingImageUrl);
+              } else {
+                resolve(null);
+              }
+            },
+            "image/png",
+            0.9
+          );
+        };
+        // If motif selected, draw it then finalize; otherwise finalize immediately
+        drawMotifThenFinalize();
       };
 
       img.onerror = () => {
@@ -350,6 +427,34 @@ const EngravingPage: React.FC<EngraveProps> = ({
                       </span>
                     </div>
                   )}
+
+                  {/* Motif Preview Overlay (shows while editing) */}
+                  {selectedMotif &&
+                    (() => {
+                      // approximate inline placement: place motif to the right of text
+                      const approxCharWidth = fontSize * 0.6; // px per character estimate
+                      const textPx = engravingText
+                        ? engravingText.length * approxCharWidth
+                        : 0;
+                      const halfTextPx = textPx / 2;
+                      const transformX = `calc(-50% + ${halfTextPx}px)`;
+                      const motifHeightPx = fontSize * (motifScale || 1);
+
+                      return (
+                        <img
+                          src={`/motif/${selectedMotif}`}
+                          alt="Selected motif preview"
+                          className="absolute pointer-events-none transition-all duration-200"
+                          style={{
+                            left: `${textPosition.x}%`,
+                            top: `${textPosition.y}%`,
+                            transform: `translate(${transformX}, -50%)`,
+                            height: `${motifHeightPx}px`,
+                            opacity: 0.95,
+                          }}
+                        />
+                      );
+                    })()}
 
                   {/* Position Guide */}
                   {engravingText && (
@@ -534,7 +639,14 @@ const EngravingPage: React.FC<EngraveProps> = ({
                       </div>
                       <textarea
                         value={engravingText}
-                        onChange={(e) => setEngravingText(e.target.value)}
+                        onChange={(e) => {
+                          // enforce maxCount with motif cost (motif consumes 2)
+                          const motifCost = selectedMotif ? 2 : 0;
+                          const allowed = Math.max(0, maxCount - motifCost);
+                          let v = e.target.value || "";
+                          if (v.length > allowed) v = v.slice(0, allowed);
+                          setEngravingText(v);
+                        }}
                         placeholder="Enter your text here..."
                         className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-none bg-white"
                         rows={4}
@@ -543,6 +655,25 @@ const EngravingPage: React.FC<EngraveProps> = ({
                           fontSize: `${Math.min(fontSize, 16)}px`,
                         }}
                       />
+
+                      <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                        <div>
+                          Characters: {engravingText.length} /{" "}
+                          {maxCount - (selectedMotif ? 2 : 0)}
+                          {selectedMotif && (
+                            <span className="ml-2">(Motif uses 2)</span>
+                          )}
+                        </div>
+                        <div>
+                          Remaining:{" "}
+                          {Math.max(
+                            0,
+                            maxCount -
+                              engravingText.length -
+                              (selectedMotif ? 2 : 0)
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Action Buttons */}
@@ -555,8 +686,11 @@ const EngravingPage: React.FC<EngraveProps> = ({
                       </button>
                       <button
                         onClick={async () => {
-                          if (!engravingText.trim()) {
-                            alert("Please enter some text for engraving");
+                          // Allow save if there is text or a selected motif
+                          if (!engravingText.trim() && !selectedMotif) {
+                            alert(
+                              "Please enter some text or select a motif for engraving"
+                            );
                             return;
                           }
 
@@ -567,23 +701,24 @@ const EngravingPage: React.FC<EngraveProps> = ({
                               selectedImage: currentSelectedImage,
                               jewelryType: engravingData.jewelryType,
                               userId: engravingData.userId,
+                              motif: selectedMotif,
                             }
                           );
 
                           // Save and process the engraving
                           await handleSaveEngraving(engravingText);
                         }}
-                        disabled={!engravingText.trim()}
+                        disabled={!engravingText.trim() && !selectedMotif}
                         className={`flex-1 py-3 px-6 rounded-lg font-medium flex items-center justify-center transition-colors ${
-                          engravingText.trim()
+                          engravingText.trim() || selectedMotif
                             ? "bg-teal-400 text-white hover:bg-teal-500"
                             : "bg-gray-300 text-gray-500 cursor-not-allowed"
                         }`}
                       >
                         <Download className="w-4 h-4 mr-2" />
-                        {engravingText.trim()
+                        {engravingText.trim() || selectedMotif
                           ? "SAVE & APPLY"
-                          : "ENTER TEXT FIRST"}
+                          : "ENTER TEXT OR SELECT MOTIF"}
                       </button>
                     </div>
 
@@ -628,10 +763,77 @@ const EngravingPage: React.FC<EngraveProps> = ({
                 )}
 
                 {activeTab === "MOTIF" && (
-                  <div className="text-center py-12">
-                    <p className="text-gray-500">
-                      Motif options coming soon...
-                    </p>
+                  <div className="space-y-4">
+                    {motifs.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-gray-500">
+                          No motifs available. Add SVG files to{" "}
+                          <code>/public/motif</code> and include an{" "}
+                          <code>index.json</code> listing them.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-sm text-gray-600 mb-2">
+                          Choose a motif to add near your text. Click a motif to
+                          select it.
+                        </div>
+
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+                          {motifs.map((m) => (
+                            <button
+                              key={m}
+                              onClick={() => setSelectedMotif(m)}
+                              className={`p-1 rounded-lg border overflow-hidden bg-white transition-shadow ${
+                                selectedMotif === m
+                                  ? "ring-2 ring-teal-400 border-transparent"
+                                  : "border-neutral-200 hover:shadow"
+                              }`}
+                            >
+                              <img
+                                src={`/motif/${m}`}
+                                alt={m}
+                                className="w-full h-16 object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.opacity = "0.5";
+                                }}
+                              />
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-4 mt-4">
+                          <div className="flex-1">
+                            <label className="block text-xs text-gray-600">
+                              Motif scale
+                            </label>
+                            <input
+                              type="range"
+                              min={0.5}
+                              max={2}
+                              step={0.05}
+                              value={motifScale}
+                              onChange={(e) =>
+                                setMotifScale(Number(e.target.value))
+                              }
+                              className="w-full"
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              Scale: {motifScale.toFixed(2)}× text height
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSelectedMotif(null)}
+                              className="px-3 py-2 bg-gray-100 rounded text-sm hover:bg-gray-200"
+                            >
+                              Clear Motif
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

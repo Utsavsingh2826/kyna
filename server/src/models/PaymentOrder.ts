@@ -1,15 +1,15 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema } from "mongoose";
 
 /**
  * Order Status Enum
  */
 export enum OrderStatus {
-  PENDING = 'pending',
-  PROCESSING = 'processing',
-  SUCCESS = 'success',
-  FAILED = 'failed',
-  CANCELLED = 'cancelled',
-  REFUNDED = 'refunded'
+  PENDING = "pending",
+  PROCESSING = "processing",
+  SUCCESS = "success",
+  FAILED = "failed",
+  CANCELLED = "cancelled",
+  REFUNDED = "refunded",
 }
 
 /**
@@ -65,7 +65,7 @@ export interface IOrderDetails {
   // Basic jewelry information
   jewelryType?: string;
   description?: string;
-  
+
   // Images from all steps
   images?: Array<{
     url: string;
@@ -75,7 +75,7 @@ export interface IOrderDetails {
     alt?: string;
     uploadedAt?: string | Date;
   }>;
-  
+
   // Diamond selection details
   diamond?: {
     carat?: number;
@@ -87,7 +87,7 @@ export interface IOrderDetails {
     price?: number;
     imageUrls?: string[];
   };
-  
+
   // Metal and setting details
   metal?: {
     type?: string; // gold, platinum, silver
@@ -95,7 +95,7 @@ export interface IOrderDetails {
     color?: string; // yellow, white, rose
     finish?: string; // polished, matte
   };
-  
+
   // Ring specific details
   ringDetails?: {
     size?: string | number;
@@ -104,7 +104,7 @@ export interface IOrderDetails {
     prongs?: number;
     style?: string;
   };
-  
+
   // Customization steps data
   stepData?: {
     step1?: any; // Basic info and jewelry type
@@ -113,26 +113,26 @@ export interface IOrderDetails {
     step4?: any; // Final customization
     step5?: any; // Review and images
   };
-  
+
   // Additional customization
   engraving?: {
     text?: string;
     font?: string;
     position?: string;
   };
-  
+
   // Special requests
   specialRequests?: string;
   notes?: string;
-  
+
   // Completion status
   customizationComplete?: boolean;
   completedSteps?: string[];
-  
+
   // Reference IDs
   backendJewelryId?: string;
   designId?: string;
-  
+
   // Pricing breakdown
   priceBreakdown?: {
     basePrice?: number;
@@ -151,8 +151,8 @@ export interface IOrderDetails {
 export interface IOrder extends Document {
   orderId: string;
   orderNumber: string;
-  orderCategory: 'design-your-own' | 'build-your-own' | 'products';
-  orderType: 'customized' | 'normal';
+  orderCategory: "design-your-own" | "build-your-own" | "products";
+  orderType: "customized" | "normal";
   userId: string;
   amount: number;
   currency: string;
@@ -182,7 +182,10 @@ export interface IOrder extends Document {
   paidAt?: Date;
   createdAt: Date;
   updatedAt: Date;
-  updateStatus(newStatus: OrderStatus, paymentResponse?: IPaymentResponse): Promise<IOrder>;
+  updateStatus(
+    newStatus: OrderStatus,
+    paymentResponse?: IPaymentResponse
+  ): Promise<IOrder>;
   isSuccessful(): boolean;
   isFailed(): boolean;
 }
@@ -199,266 +202,321 @@ export interface IOrderModel extends mongoose.Model<IOrder> {
 /**
  * Billing Info Schema
  */
-const billingInfoSchema = new Schema({
-  name: { type: String, required: true, trim: true },
-  address: { type: String, required: true, trim: true },
-  city: { type: String, required: true, trim: true },
-  state: { type: String, required: true, trim: true },
-  zip: { type: String, required: true, trim: true },
-  country: { type: String, required: true, trim: true },
-  phone: { type: String, required: true, trim: true },
-  email: { type: String, required: true, trim: true, lowercase: true }
-}, { _id: false });
+const billingInfoSchema = new Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    address: { type: String, required: true, trim: true },
+    city: { type: String, required: true, trim: true },
+    state: { type: String, required: true, trim: true },
+    zip: { type: String, required: true, trim: true },
+    country: { type: String, required: true, trim: true },
+    phone: { type: String, required: true, trim: true },
+    email: { type: String, required: true, trim: true, lowercase: true },
+  },
+  { _id: false }
+);
 
 /**
  * Payment Response Schema
  */
-const paymentResponseSchema = new Schema({
-  orderId: { type: String },
-  trackingId: { type: String },
-  bankRefNo: { type: String },
-  orderStatus: { type: String },
-  failureMessage: { type: String },
-  paymentMode: { type: String },
-  cardName: { type: String },
-  statusCode: { type: String },
-  statusMessage: { type: String },
-  currency: { type: String },
-  amount: { type: String },
-  billingName: { type: String },
-  billingAddress: { type: String },
-  billingCity: { type: String },
-  billingState: { type: String },
-  billingZip: { type: String },
-  billingCountry: { type: String },
-  billingTel: { type: String },
-  billingEmail: { type: String },
-  deliveryName: { type: String },
-  deliveryAddress: { type: String },
-  deliveryCity: { type: String },
-  deliveryState: { type: String },
-  deliveryZip: { type: String },
-  deliveryCountry: { type: String },
-  deliveryTel: { type: String },
-  merchantParam1: { type: String },
-  merchantParam2: { type: String },
-  merchantParam3: { type: String },
-  merchantParam4: { type: String },
-  merchantParam5: { type: String },
-  vault: { type: String },
-  offerType: { type: String },
-  offerCode: { type: String },
-  discountValue: { type: String },
-  merAmount: { type: String },
-  eciValue: { type: String },
-  retry: { type: String },
-  responseCode: { type: String },
-  transDate: { type: String }
-}, { _id: false });
+const paymentResponseSchema = new Schema(
+  {
+    orderId: { type: String },
+    trackingId: { type: String },
+    bankRefNo: { type: String },
+    orderStatus: { type: String },
+    failureMessage: { type: String },
+    paymentMode: { type: String },
+    cardName: { type: String },
+    statusCode: { type: String },
+    statusMessage: { type: String },
+    currency: { type: String },
+    amount: { type: String },
+    billingName: { type: String },
+    billingAddress: { type: String },
+    billingCity: { type: String },
+    billingState: { type: String },
+    billingZip: { type: String },
+    billingCountry: { type: String },
+    billingTel: { type: String },
+    billingEmail: { type: String },
+    deliveryName: { type: String },
+    deliveryAddress: { type: String },
+    deliveryCity: { type: String },
+    deliveryState: { type: String },
+    deliveryZip: { type: String },
+    deliveryCountry: { type: String },
+    deliveryTel: { type: String },
+    merchantParam1: { type: String },
+    merchantParam2: { type: String },
+    merchantParam3: { type: String },
+    merchantParam4: { type: String },
+    merchantParam5: { type: String },
+    vault: { type: String },
+    offerType: { type: String },
+    offerCode: { type: String },
+    discountValue: { type: String },
+    merAmount: { type: String },
+    eciValue: { type: String },
+    retry: { type: String },
+    responseCode: { type: String },
+    transDate: { type: String },
+  },
+  { _id: false }
+);
 
 /**
  * Order Details Schema - Contains all user customization data
  */
-const orderDetailsSchema = new Schema({
-  // Basic jewelry information
-  jewelryType: { type: String, trim: true },
-  description: { type: String, trim: true },
-  
-  // Images from all steps
-  images: [{
-    url: { type: String, required: true },
-    publicId: { type: String },
-    source: { type: String, default: 'upload' },
-    step: { type: String }, // Which step the image was uploaded in
-    alt: { type: String },
-    uploadedAt: { type: Date, default: Date.now }
-  }],
-  
-  // Diamond selection details
-  diamond: {
-    carat: { type: Number },
-    cut: { type: String },
-    color: { type: String },
-    clarity: { type: String },
-    shape: { type: String },
-    certification: { type: String },
-    price: { type: Number },
-    imageUrls: [{ type: String }]
+const orderDetailsSchema = new Schema(
+  {
+    // Basic jewelry information
+    jewelryType: { type: String, trim: true },
+    description: { type: String, trim: true },
+
+    // Direct purchase specific fields
+    variantSku: { type: String, trim: true },
+    isDirectPurchase: { type: Boolean },
+    directPurchaseData: {
+      product: {
+        modelSku: { type: String },
+        variantSku: { type: String },
+        title: { type: String },
+        description: { type: String },
+        price: { type: Number },
+        priceBreakdown: {
+          metalCost: { type: Number },
+          diamondCost: { type: Number },
+          labourCost: { type: Number },
+          expense: { type: Number },
+          gstPercent: { type: Number },
+          gstAmount: { type: Number },
+          totalBeforeGst: { type: Number },
+          totalWithGst: { type: Number },
+        },
+        images: [{ type: String }],
+      },
+      customization: {
+        metalColor: { type: String },
+        metalType: { type: String },
+        goldKarat: { type: String },
+        diamondShape: { type: String },
+        diamondSize: { type: String },
+        diamondOrigin: { type: String },
+        ringSize: { type: String },
+        engraving: { type: String },
+        engravingImageUrl: { type: String },
+        hasEngraving: { type: Boolean },
+      },
+    },
+
+    // Images from all steps
+    images: [
+      {
+        url: { type: String, required: true },
+        publicId: { type: String },
+        source: { type: String, default: "upload" },
+        step: { type: String }, // Which step the image was uploaded in
+        alt: { type: String },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // Diamond selection details
+    diamond: {
+      carat: { type: Number },
+      cut: { type: String },
+      color: { type: String },
+      clarity: { type: String },
+      shape: { type: String },
+      certification: { type: String },
+      price: { type: Number },
+      imageUrls: [{ type: String }],
+    },
+
+    // Metal and setting details
+    metal: {
+      type: { type: String }, // gold, platinum, silver
+      karat: { type: String }, // 14k, 18k, 22k
+      color: { type: String }, // yellow, white, rose
+      finish: { type: String }, // polished, matte
+    },
+
+    // Ring specific details
+    ringDetails: {
+      size: { type: Schema.Types.Mixed }, // string or number
+      width: { type: String },
+      setting: { type: String },
+      prongs: { type: Number },
+      style: { type: String },
+    },
+
+    // Customization steps data (flexible schema)
+    stepData: {
+      step1: { type: Schema.Types.Mixed },
+      step2: { type: Schema.Types.Mixed },
+      step3: { type: Schema.Types.Mixed },
+      step4: { type: Schema.Types.Mixed },
+      step5: { type: Schema.Types.Mixed },
+    },
+
+    // Additional customization
+    engraving: {
+      text: { type: String },
+      font: { type: String },
+      position: { type: String },
+    },
+
+    // Special requests
+    specialRequests: { type: String },
+    notes: { type: String },
+
+    // Completion status
+    customizationComplete: { type: Boolean, default: false },
+    completedSteps: [{ type: String }],
+
+    // Reference IDs
+    backendJewelryId: { type: String },
+    designId: { type: String },
+
+    // Pricing breakdown
+    priceBreakdown: {
+      basePrice: { type: Number },
+      diamondPrice: { type: Number },
+      metalPrice: { type: Number },
+      customizationFee: { type: Number },
+      engraving: { type: Number },
+      gst: { type: Number },
+      total: { type: Number },
+    },
   },
-  
-  // Metal and setting details
-  metal: {
-    type: { type: String }, // gold, platinum, silver
-    karat: { type: String }, // 14k, 18k, 22k
-    color: { type: String }, // yellow, white, rose
-    finish: { type: String } // polished, matte
-  },
-  
-  // Ring specific details
-  ringDetails: {
-    size: { type: Schema.Types.Mixed }, // string or number
-    width: { type: String },
-    setting: { type: String },
-    prongs: { type: Number },
-    style: { type: String }
-  },
-  
-  // Customization steps data (flexible schema)
-  stepData: {
-    step1: { type: Schema.Types.Mixed },
-    step2: { type: Schema.Types.Mixed },
-    step3: { type: Schema.Types.Mixed },
-    step4: { type: Schema.Types.Mixed },
-    step5: { type: Schema.Types.Mixed }
-  },
-  
-  // Additional customization
-  engraving: {
-    text: { type: String },
-    font: { type: String },
-    position: { type: String }
-  },
-  
-  // Special requests
-  specialRequests: { type: String },
-  notes: { type: String },
-  
-  // Completion status
-  customizationComplete: { type: Boolean, default: false },
-  completedSteps: [{ type: String }],
-  
-  // Reference IDs
-  backendJewelryId: { type: String },
-  designId: { type: String },
-  
-  // Pricing breakdown
-  priceBreakdown: {
-    basePrice: { type: Number },
-    diamondPrice: { type: Number },
-    metalPrice: { type: Number },
-    customizationFee: { type: Number },
-    engraving: { type: Number },
-    gst: { type: Number },
-    total: { type: Number }
-  }
-}, { _id: false });
+  { _id: false }
+);
 
 /**
  * Order Schema
  */
-const orderSchema = new Schema<IOrder>({
-  orderId: { 
-    type: String, 
-    required: true, 
-    unique: true, 
-    trim: true,
-    index: true
+const orderSchema = new Schema<IOrder>(
+  {
+    orderId: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      index: true,
+    },
+    orderNumber: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+    orderCategory: {
+      type: String,
+      enum: ["design-your-own", "build-your-own", "products"],
+      required: true,
+      index: true,
+    },
+    orderType: {
+      type: String,
+      enum: ["customized", "normal"],
+      required: true,
+      index: true,
+    },
+    userId: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    currency: {
+      type: String,
+      required: true,
+      default: "INR",
+      uppercase: true,
+    },
+    status: {
+      type: String,
+      enum: Object.values(OrderStatus),
+      default: OrderStatus.PENDING,
+      index: true,
+    },
+    paymentResponse: {
+      type: paymentResponseSchema,
+      default: null,
+    },
+    billingInfo: {
+      type: billingInfoSchema,
+      required: true,
+    },
+    redirectUrl: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    cancelUrl: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    // Razorpay fields
+    razorpayOrderId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
+    razorpayPaymentId: {
+      type: String,
+      trim: true,
+    },
+    razorpaySignature: {
+      type: String,
+      trim: true,
+    },
+    paidAt: {
+      type: Date,
+    },
+    // Estimated delivery information (required) from courier API
+    estimatedDelivery: { type: String, required: true },
+    // Day label for the estimated delivery (optional)
+    estimatedDeliveryDay: { type: String, default: null },
+    // Order details with all customization data (completely flexible)
+    orderDetails: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
   },
-  orderNumber: { 
-    type: String, 
-    required: true, 
-    trim: true,
-    index: true
-  },
-  orderCategory: { 
-    type: String, 
-    enum: ['design-your-own', 'build-your-own', 'products'],
-    required: true,
-    index: true
-  },
-  orderType: { 
-    type: String, 
-    enum: ['customized', 'normal'],
-    required: true,
-    index: true
-  },
-  userId: { 
-    type: String, 
-    required: true, 
-    trim: true,
-    index: true
-  },
-  amount: { 
-    type: Number, 
-    required: true, 
-    min: 0 
-  },
-  currency: { 
-    type: String, 
-    required: true, 
-    default: 'INR',
-    uppercase: true
-  },
-  status: { 
-    type: String, 
-    enum: Object.values(OrderStatus), 
-    default: OrderStatus.PENDING,
-    index: true
-  },
-  paymentResponse: { 
-    type: paymentResponseSchema, 
-    default: null 
-  },
-  billingInfo: { 
-    type: billingInfoSchema, 
-    required: true 
-  },
-  redirectUrl: { 
-    type: String, 
-    required: true, 
-    trim: true 
-  },
-  cancelUrl: { 
-    type: String, 
-    required: true, 
-    trim: true 
-  },
-  // Razorpay fields
-  razorpayOrderId: { 
-    type: String, 
-    trim: true,
-    index: true
-  },
-  razorpayPaymentId: { 
-    type: String, 
-    trim: true 
-  },
-  razorpaySignature: { 
-    type: String, 
-    trim: true 
-  },
-  paidAt: { 
-    type: Date 
-  },
-  // Estimated delivery information (required) from courier API
-  estimatedDelivery: { type: String, required: true },
-  // Day label for the estimated delivery (optional)
-  estimatedDeliveryDay: { type: String, default: null },
-  // Order details with all customization data
-  orderDetails: { 
-    type: orderDetailsSchema, 
-    default: null 
+  {
+    timestamps: true,
+    collection: "payment_orders", // Use separate collection from OrderModel
   }
-}, {
-  timestamps: true,
-  collection: 'orders'
-});
+);
 
 // Indexes for better query performance
 orderSchema.index({ orderId: 1, userId: 1 });
 orderSchema.index({ status: 1, createdAt: -1 });
-orderSchema.index({ 'billingInfo.email': 1 });
+orderSchema.index({ "billingInfo.email": 1 });
 
 // Pre-save middleware to generate orderId if not provided
-orderSchema.pre('save', function(next) {
+orderSchema.pre("save", function (next) {
   if (!this.orderId) {
-    this.orderId = `ORD_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.orderId = `ORD_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
   }
   next();
 });
 
 // Instance methods
-orderSchema.methods.updateStatus = function(newStatus: OrderStatus, paymentResponse?: IPaymentResponse) {
+orderSchema.methods.updateStatus = function (
+  newStatus: OrderStatus,
+  paymentResponse?: IPaymentResponse
+) {
   this.status = newStatus;
   if (paymentResponse) {
     this.paymentResponse = paymentResponse;
@@ -466,27 +524,36 @@ orderSchema.methods.updateStatus = function(newStatus: OrderStatus, paymentRespo
   return this.save();
 };
 
-orderSchema.methods.isSuccessful = function(): boolean {
+orderSchema.methods.isSuccessful = function (): boolean {
   return this.status === OrderStatus.SUCCESS;
 };
 
-orderSchema.methods.isFailed = function(): boolean {
+orderSchema.methods.isFailed = function (): boolean {
   return this.status === OrderStatus.FAILED;
 };
 
 // Static methods
-orderSchema.statics.findByOrderId = function(orderId: string) {
+orderSchema.statics.findByOrderId = function (orderId: string) {
   return this.findOne({ orderId });
 };
 
-orderSchema.statics.findByUserId = function(userId: string, limit: number = 10) {
+orderSchema.statics.findByUserId = function (
+  userId: string,
+  limit: number = 10
+) {
   return this.find({ userId }).sort({ createdAt: -1 }).limit(limit);
 };
 
-orderSchema.statics.findByStatus = function(status: OrderStatus, limit: number = 10) {
+orderSchema.statics.findByStatus = function (
+  status: OrderStatus,
+  limit: number = 10
+) {
   return this.find({ status }).sort({ createdAt: -1 }).limit(limit);
 };
 
-const PaymentOrder = mongoose.model<IOrder, IOrderModel>('PaymentOrder', orderSchema);
+const PaymentOrder = mongoose.model<IOrder, IOrderModel>(
+  "PaymentOrder",
+  orderSchema
+);
 
 export default PaymentOrder;
