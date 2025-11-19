@@ -133,9 +133,7 @@ const baseStyles = `
 const socialFooter = `
   <p style="margin: 6px 0 14px;">CONNECT WITH US</p>
   <div style="display:inline-flex;gap:18px;">
-    <a href="https://www.facebook.com" style="color:#0f9aa7;text-decoration:none;">Facebook</a>
-    <a href="https://www.instagram.com" style="color:#0f9aa7;text-decoration:none;">Instagram</a>
-    <a href="https://www.youtube.com" style="color:#0f9aa7;text-decoration:none;">YouTube</a>
+    <a href="https://www.instagram.com/kyna_jewels?igsh=MWZ5MWNtZHg0YnN6dA==" style="color:#0f9aa7;text-decoration:none;">Instagram</a>
   </div>
 `;
 
@@ -166,11 +164,18 @@ export const VERIFICATION_EMAIL_TEMPLATE = `
       <div class="content">
         <div class="card">
           <div class="card-title">Dear Patron,</div>
-          <p class="summary">Thank you for registering with KYNA. Please enter the verification code below to activate your account and continue your journey with us.</p>
+          <p class="summary">Thank you for registering with KYNA. Use the code below to activate your account and continue your journey with us.</p>
           <div class="highlight-box">{verificationCode}</div>
-          <p class="summary" style="font-size:14px;">The code expires in 10 minutes for your security. If you didn’t request this, simply ignore the email.</p>
+          <table class="details-table">
+            <tr><td>Expires</td><td>10 minutes from the time you received this email</td></tr>
+            <tr><td>Where to use</td><td>Enter the code on the verification screen after signing in</td></tr>
+            <tr><td>Need help?</td><td>Call +91 8928610682 or email enquiries@kynajewellery.com</td></tr>
+          </table>
+          <div style="text-align:center;">
+            <a class="primary-btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email">Verify My Email</a>
+          </div>
           <div class="note">
-            Need assistance? Write to <a class="contact-link" href="mailto:enquiries@kynajewellery.com">enquiries@kynajewellery.com</a> or call +91 8928610682.
+            If you didn’t request this, ignore the message—your account stays secure.
           </div>
         </div>
       </div>
@@ -203,13 +208,17 @@ export const WELCOME_EMAIL_TEMPLATE = `
         <div class="card">
           <div class="card-title">Welcome, {name}</div>
           <p class="summary">Your KYNA account has been verified successfully. Explore curated collections, manage your wishlist, and enjoy bespoke assistance tailored to you.</p>
+          <div class="highlight-box" style="margin-top:10px;">ACCOUNT VERIFIED</div>
           <table class="details-table">
             <tr><td>Discover</td><td>Shop new arrivals and timeless icons</td></tr>
-            <tr><td>Personalize</td><td>Save your favourites and share with loved ones</td></tr>
-            <tr><td>Track</td><td>Follow your orders end-to-end</td></tr>
+            <tr><td>Personalize</td><td>Save favourites, curate wishlists, share with loved ones</td></tr>
+            <tr><td>Track</td><td>Follow orders, manage returns, and monitor referrals</td></tr>
           </table>
           <div style="text-align:center;">
             <a class="primary-btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}">Explore KYNA</a>
+          </div>
+          <div class="note">
+            Need styling advice or gifting assistance? Our concierge is here for you—just reply to this email.
           </div>
         </div>
       </div>
@@ -242,14 +251,18 @@ export const PASSWORD_RESET_REQUEST_TEMPLATE = `
         <div class="card">
           <div class="card-title">Request Received</div>
           <p class="summary">We received a request to reset the password on your KYNA account. Use the secure link below to set a new password.</p>
+          <div class="highlight-box" style="margin-top:10px;">RESET LINK ACTIVE</div>
+          <table class="details-table">
+            <tr><td>Issued for</td><td>Your KYNA login</td></tr>
+            <tr><td>Validity</td><td>60 minutes</td></tr>
+            <tr><td>Security</td><td>Link can be used once and cannot be forwarded</td></tr>
+          </table>
           <div style="text-align:center;">
             <a class="primary-btn" href="{resetURL}">Reset Password</a>
           </div>
           <div class="note">
-            This link expires in 60 minutes and can be used only once. If you did not initiate this request, no action is required.
+            Didn’t request this? Ignore the message—your password remains unchanged.
           </div>
-          <p class="summary" style="font-size:13px;">Link not opening? Copy & paste this URL into your browser:</p>
-          <p style="word-break:break-all;background:#eef7f8;border-radius:12px;padding:14px;font-size:12px;color:#0f9aa7;">{resetURL}</p>
         </div>
       </div>
       <div class="footer">
@@ -292,9 +305,10 @@ export const PASSWORD_RESET_SUCCESS_TEMPLATE = `
         <div class="card">
           <div class="card-title">Security Confirmed</div>
           <p class="summary">Your password has been updated. You can now sign in with your new credentials and continue enjoying the KYNA experience.</p>
+          <div class="highlight-box" style="margin-top:10px;">PASSWORD UPDATED</div>
           <table class="details-table">
-            <tr><td>Next Step</td><td>Log in to your account via the button below</td></tr>
-            <tr><td>Tip</td><td>Use a strong, unique passphrase and keep it private</td></tr>
+            <tr><td>Next Step</td><td>Sign in with your new password</td></tr>
+            <tr><td>Tip</td><td>Use a unique passphrase & update it periodically</td></tr>
           </table>
           <div style="text-align:center;">
             <a class="primary-btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login">Continue to KYNA</a>
