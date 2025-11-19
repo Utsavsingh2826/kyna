@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Eye, EyeOff, Mail, User, Lock } from "lucide-react";
 import apiService from "../services/api";
 import { toast } from "sonner";
@@ -25,6 +25,14 @@ const SignUpPage: React.FC = () => {
 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation() as {
+    state?: {
+      forceVerify?: boolean;
+      email?: string;
+      message?: string;
+      from?: string;
+    };
+  };
 
   // Handle referral code from URL
   useEffect(() => {
@@ -34,6 +42,20 @@ const SignUpPage: React.FC = () => {
       toast.info(`Referral code detected: ${referralParam}. You'll get rewards after signup!`);
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    if (location.state?.forceVerify) {
+      setFormData((prev) => ({
+        ...prev,
+        email: location.state?.email || prev.email,
+      }));
+      setSuccess(
+        location.state?.message ||
+          "Please verify your email. We've sent you another code."
+      );
+      setStep("verifyOtp");
+    }
+  }, [location.state]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -77,6 +99,12 @@ const SignUpPage: React.FC = () => {
         setSuccess(
           resp.message ||
             "Registered. Please verify your email with the OTP sent."
+        );
+        setStep("verifyOtp");
+      } else if (resp.data?.requiresVerification) {
+        setSuccess(
+          resp.data.message ||
+            "Please verify your email. We've sent you another code."
         );
         setStep("verifyOtp");
       } else {

@@ -51,6 +51,7 @@ class ApiService {
         return {
           success: false,
           error: data.message || "Request failed",
+          data,
         };
       }
     } catch {

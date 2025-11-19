@@ -91,6 +91,24 @@ const LoginPage: React.FC = () => {
           },
         });
       } else {
+        if (response.data?.requiresVerification) {
+          toast.info(
+            response.data.message ||
+              "Please verify your email to continue."
+          );
+          navigate("/signup", {
+            state: {
+              forceVerify: true,
+              email: formData.email,
+              message:
+                response.data.message ||
+                "Account already exists but is not verified. We have resent the verification code.",
+              from: "login",
+            },
+          });
+          return;
+        }
+
         setError(response.error || "Login failed");
       }
     } catch (error) {
