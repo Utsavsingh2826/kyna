@@ -288,10 +288,8 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "Invalid or expired reset token" });
     }
 
-    // Update password
-    const hashedPassword = await bcryptjs.hash(password, 10);
-
-    user.password = hashedPassword;
+    // Update password - schema hook handles hashing
+    user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpiresAt = undefined;
     user.resetPasswordExpires = undefined; // For compatibility
