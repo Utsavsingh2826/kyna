@@ -25,6 +25,12 @@ interface UpdateProfileRequest {
   city?: string;
   zipCode?: string;
 }
+const generateOtpPayload = () => {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  return { otp, otpExpires };
+};
+
 // Signup with OTP verification
 export const signup = async (req: Request, res: Response) => {
   const { email, password, name, referralCode } = req.body;
@@ -38,12 +44,29 @@ export const signup = async (req: Request, res: Response) => {
     console.log("userAlreadyExists", userAlreadyExists);
 
     if (userAlreadyExists) {
+      if (!userAlreadyExists.isVerified) {
+        const { otp, otpExpires } = generateOtpPayload();
+        userAlreadyExists.otp = otp;
+        userAlreadyExists.otpExpires = otpExpires;
+        await userAlreadyExists.save();
+        await sendVerificationEmail(userAlreadyExists.email, otp);
+        return res.status(200).json({
+          success: false,
+          requiresVerification: true,
+          message: "Account already exists but is not verified. We have resent the verification code.",
+          user: {
+            id: userAlreadyExists._id,
+            firstName: userAlreadyExists.firstName,
+            lastName: userAlreadyExists.lastName,
+            email: userAlreadyExists.email,
+          },
+        });
+      }
+
       return res.status(400).json({ success: false, message: "User already exists" });
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const { otp, otpExpires } = generateOtpPayload();
 
     // Split name into firstName and lastName
     const nameParts = name.trim().split(' ');
@@ -75,6 +98,7 @@ export const signup = async (req: Request, res: Response) => {
 
     res.status(201).json({
       success: true,
+      requiresVerification: true,
       message: "Registration successful. Please check your email for OTP verification.",
       user: {
         id: user._id,
@@ -153,19 +177,31 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
     
+    if (!user.isVerified) {
+      const { otp, otpExpires } = generateOtpPayload();
+      user.otp = otp;
+      user.otpExpires = otpExpires;
+      await user.save();
+      await sendVerificationEmail(user.email, otp);
+
+      return res.status(403).json({ 
+        success: false,
+        requiresVerification: true,
+        message: "Please verify your email. We've sent a fresh verification code to your inbox.",
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        }
+      });
+    }
+    
     // Check password
     const isPasswordValid = await user.comparePassword(password);
       
     if (!isPasswordValid) {
       return res.status(400).json({ success: false, message: "Invalid credentials" });
-    }
-
-    // Check if email is verified
-    if (!user.isVerified) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Please verify your email before logging in. Check your email for OTP verification." 
-      });
     }
 
     // Generate JWT and set cookie
