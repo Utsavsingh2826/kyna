@@ -502,6 +502,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           : null;
 
       const baseOut: any = {
+        _id: d._id, // Add MongoDB _id for cart compatibility
         modelSku: d.modelSku,
         metalTypes: Array.isArray(d.metalTypes)
           ? d.metalTypes
@@ -1291,11 +1292,9 @@ export const getProductByModelSku = async (
 
       if (!firstVariantDoc && mongoose.Types.ObjectId.isValid(variantIdParam)) {
         try {
-          firstVariantDoc = (await conn
-            .collection("variants")
-            .findOne({
-              _id: new mongoose.Types.ObjectId(variantIdParam),
-            })) as VariantDoc | null;
+          firstVariantDoc = (await conn.collection("variants").findOne({
+            _id: new mongoose.Types.ObjectId(variantIdParam),
+          })) as VariantDoc | null;
         } catch {
           // ignore
         }
@@ -1950,6 +1949,7 @@ export const getProductByModelSku = async (
 
     // ----------------- Final response -----------------
     const response = {
+      _id: product._id, // Add MongoDB _id for cart compatibility
       success: true,
       modelSku,
       title,

@@ -13,6 +13,7 @@ import PaymentOrder, {
 } from "../models/PaymentOrder";
 import OrderModel from "../models/orderModel";
 import User from "../models/userModel";
+import Cart from "../models/cartModel";
 
 const router = express.Router();
 
@@ -378,32 +379,97 @@ router.post("/initiate", async (req: Request, res: Response) => {
           sameAsBilling: true,
         };
 
+        // Prepare initial order data
+        const initialOrderData: any = {
+          user: userId,
+          orderNumber: shortOrderNumber,
+          items: [],
+          billingAddress: billingAddressForOrder,
+          shippingAddress: shippingAddressForOrder,
+          paymentMethod: "CARDS",
+          paymentStatus: "pending",
+          orderStatus: "pending",
+          subtotal: parseFloat(amount),
+          gst: 0,
+          shippingCharge: 0,
+          totalAmount: parseFloat(amount),
+          orderedAt: new Date(),
+          statusHistory: [
+            {
+              status: "pending",
+              date: new Date(),
+              note: "Order created via payment initiation",
+            },
+          ],
+        };
+
+        // Add product details and items if cart data is provided
+        if (orderDetails) {
+          initialOrderData.productDetails = {
+            jewelryType: orderDetails.jewelryType || "product",
+            description: orderDetails.description || "Order placed via payment",
+            isDirectPurchase: orderDetails.isDirectPurchase || false,
+          };
+
+          // Handle cart items for multi-item orders
+          if (orderDetails.cartItems && !orderDetails.isDirectPurchase) {
+            console.log(
+              `🛒 Initial order creation with ${orderDetails.cartItems.length} cart items`
+            );
+
+            // Add cart items to productDetails
+            initialOrderData.productDetails.cartItems =
+              orderDetails.cartItems.map((item: any) => ({
+                productId: item.productId,
+                productTitle: item.productTitle,
+                productSku: item.productSku,
+                variantSku: item.variantSku,
+                variantConfig: item.variantConfig,
+                quantity: item.quantity,
+                price: item.price,
+                sellingPrice: item.sellingPrice,
+                priceBreakdown: item.priceBreakdown,
+                metalDetails: item.metalDetails,
+                diamondDetails: item.diamondDetails,
+                ringDetails: item.ringDetails,
+              }));
+
+            // Add cart items to main items array
+            initialOrderData.items = orderDetails.cartItems.map(
+              (item: any) => ({
+                product: item.productId,
+                productModel: "Product",
+                productTitle: item.productTitle,
+                productSku: item.productSku,
+                variantSku: item.variantSku,
+                variantConfig: item.variantConfig,
+                quantity: item.quantity,
+                price: item.price || item.sellingPrice,
+                total: (item.price || item.sellingPrice) * item.quantity,
+                metalDetails: item.metalDetails,
+                diamondDetails: item.diamondDetails,
+                ringDetails: item.ringDetails,
+                priceBreakdown: item.priceBreakdown,
+              })
+            );
+          }
+          // Handle direct purchase
+          else if (
+            orderDetails.directPurchaseData &&
+            orderDetails.isDirectPurchase
+          ) {
+            initialOrderData.productDetails = {
+              ...initialOrderData.productDetails,
+              product: orderDetails.directPurchaseData.product,
+              customization: orderDetails.directPurchaseData.customization,
+              // Add other direct purchase details...
+            };
+          }
+        }
+
         await OrderModel.findOneAndUpdate(
           { orderNumber: shortOrderNumber },
-          {
-            $setOnInsert: {
-              user: userId,
-              orderNumber: shortOrderNumber,
-              items: [],
-              billingAddress: billingAddressForOrder,
-              shippingAddress: shippingAddressForOrder,
-              paymentMethod: "CARDS",
-              paymentStatus: "pending",
-              orderStatus: "pending",
-              subtotal: parseFloat(amount),
-              gst: 0,
-              shippingCharge: 0,
-              totalAmount: parseFloat(amount),
-              orderedAt: new Date(),
-              statusHistory: [
-                {
-                  status: "pending",
-                  date: new Date(),
-                  note: "Order created via payment initiation",
-                },
-              ],
-            },
-          },
+          { $setOnInsert: initialOrderData },
           { upsert: true, new: true }
         );
         console.log(
@@ -870,8 +936,9 @@ router.post("/verify", async (req: Request, res: Response) => {
         }
 
         // Add detailed product information if available from PaymentOrder
+        let orderDetails: any = null; // Declare outside if block for proper scope
         if (paymentOrder.orderDetails) {
-          const orderDetails = paymentOrder.orderDetails as any; // Type assertion for extended properties
+          orderDetails = paymentOrder.orderDetails as any; // Type assertion for extended properties
 
           console.log("🔍 Full orderDetails structure:");
           console.log(JSON.stringify(orderDetails, null, 2));
@@ -930,7 +997,46 @@ router.post("/verify", async (req: Request, res: Response) => {
                 sellingPrice: orderDetails.directPurchaseData.product?.price,
               },
             }),
+            // Add cart items data for multi-item orders
+            ...(orderDetails.cartItems &&
+              !orderDetails.isDirectPurchase && {
+                cartItems: orderDetails.cartItems.map((item: any) => ({
+                  productId: item.productId,
+                  productTitle: item.productTitle,
+                  productSku: item.productSku,
+                  variantSku: item.variantSku,
+                  variantConfig: item.variantConfig,
+                  quantity: item.quantity,
+                  price: item.price,
+                  sellingPrice: item.sellingPrice,
+                  priceBreakdown: item.priceBreakdown,
+                  metalDetails: item.metalDetails,
+                  diamondDetails: item.diamondDetails,
+                  ringDetails: item.ringDetails,
+                })),
+              }),
           };
+
+          // Also update the main items array for cart orders
+          if (orderDetails.cartItems && !orderDetails.isDirectPurchase) {
+            console.log("🛒 Updating main items array with cart data...");
+            updateData.items = orderDetails.cartItems.map((item: any) => ({
+              product: item.productId,
+              productModel: "Product",
+              productTitle: item.productTitle,
+              productSku: item.productSku,
+              variantSku: item.variantSku,
+              variantConfig: item.variantConfig,
+              quantity: item.quantity,
+              price: item.price || item.sellingPrice,
+              total: (item.price || item.sellingPrice) * item.quantity,
+              metalDetails: item.metalDetails,
+              diamondDetails: item.diamondDetails,
+              ringDetails: item.ringDetails,
+              priceBreakdown: item.priceBreakdown,
+            }));
+            console.log(`🛒 Adding ${updateData.items.length} items to order`);
+          }
 
           console.log(
             "📦 Adding product details to OrderModel:",
@@ -946,6 +1052,30 @@ router.post("/verify", async (req: Request, res: Response) => {
         console.log(
           `✅ OrderModel updated with product details for payment: ${paymentOrder.orderNumber}`
         );
+
+        // Clear user's cart after successful order update (only for cart orders, not direct purchases)
+        if (orderDetails.cartItems && !orderDetails.isDirectPurchase) {
+          try {
+            const cartResult = await Cart.findOneAndDelete({
+              user: paymentOrder.userId,
+            });
+            if (cartResult) {
+              console.log(
+                `🛒 Cart cleared for user ${paymentOrder.userId} after successful order ${paymentOrder.orderNumber}`
+              );
+            } else {
+              console.log(
+                `🛒 No cart found to clear for user ${paymentOrder.userId}`
+              );
+            }
+          } catch (cartError) {
+            console.warn(
+              "Failed to clear cart after order completion:",
+              cartError
+            );
+            // Don't fail the verification if cart clearing fails
+          }
+        }
       } catch (orderUpdateError) {
         console.warn("Failed to update main order:", orderUpdateError);
         // Don't fail the verification if main order update fails

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Heart } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -45,8 +45,12 @@ interface ApiResponse {
 
 export default function ProductsPage({ category }: { category: MainCategory }) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  // Separate UI state (updates immediately while sliding) and API state (debounced)
+  const [minPriceUI, setMinPriceUI] = useState<number>(0);
+  const [maxPriceUI, setMaxPriceUI] = useState<number>(50000);
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(50000);
+  const priceDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -495,23 +499,57 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     const value = Number(e.target.value);
     console.log("🔵 MIN THUMB MOVED:", value);
     // Ensure min price doesn't exceed max price - 2000
-    const clampedValue = Math.min(value, maxPrice - 2000);
-    setMinPrice(clampedValue);
-    updatePriceFilter("min_price", clampedValue.toString());
+    const clampedValue = Math.min(value, maxPriceUI - 2000);
+
+    // Update UI immediately for smooth sliding
+    setMinPriceUI(clampedValue);
+
+    // Debounce API call
+    if (priceDebounceRef.current) {
+      clearTimeout(priceDebounceRef.current);
+    }
+
+    priceDebounceRef.current = setTimeout(() => {
+      setMinPrice(clampedValue);
+      updatePriceFilter("min_price", clampedValue.toString());
+    }, 500); // 500ms debounce for API calls
   };
 
   const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
     console.log("🔶 MAX THUMB MOVED:", value);
     // Ensure max price doesn't go below min price + 2000
-    const clampedValue = Math.max(value, minPrice + 2000);
-    setMaxPrice(clampedValue);
-    updatePriceFilter("max_price", value.toString());
+    const clampedValue = Math.max(value, minPriceUI + 2000);
+
+    // Update UI immediately for smooth sliding
+    setMaxPriceUI(clampedValue);
+
+    // Debounce API call
+    if (priceDebounceRef.current) {
+      clearTimeout(priceDebounceRef.current);
+    }
+
+    priceDebounceRef.current = setTimeout(() => {
+      setMaxPrice(clampedValue);
+      updatePriceFilter("max_price", clampedValue.toString());
+    }, 500); // 500ms debounce for API calls
   };
 
   // Clear all filters
   const clearAllFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
+
+    // Clear price debounce timeout
+    if (priceDebounceRef.current) {
+      clearTimeout(priceDebounceRef.current);
+    }
+
+    // Reset both UI and API price states
+    setMinPriceUI(0);
+    setMaxPriceUI(50000);
+    setMinPrice(0);
+    setMaxPrice(50000);
+
     setActiveFilters({
       ring_category: [],
       solitaire_diamond_shape: [],
@@ -539,9 +577,16 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       category3: "",
       centerStoneShape: "",
     });
-    setMinPrice(0);
-    setMaxPrice(50000);
   }, [setSearchParams]);
+
+  // Cleanup debounce timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (priceDebounceRef.current) {
+        clearTimeout(priceDebounceRef.current);
+      }
+    };
+  }, []);
 
   // Fetch products when category changes
   useEffect(() => {
@@ -571,8 +616,16 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       const urlMinPrice = searchParams.get("min_price");
       const urlMaxPrice = searchParams.get("max_price");
 
-      if (urlMinPrice) setMinPrice(parseInt(urlMinPrice));
-      if (urlMaxPrice) setMaxPrice(parseInt(urlMaxPrice));
+      if (urlMinPrice) {
+        const minPriceValue = parseInt(urlMinPrice);
+        setMinPrice(minPriceValue);
+        setMinPriceUI(minPriceValue);
+      }
+      if (urlMaxPrice) {
+        const maxPriceValue = parseInt(urlMaxPrice);
+        setMaxPrice(maxPriceValue);
+        setMaxPriceUI(maxPriceValue);
+      }
 
       // Parse comma-separated values from URL for all category-specific filters
       const getFilterValues = (paramName: string) => {
@@ -991,8 +1044,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1009,8 +1062,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1031,8 +1084,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1055,8 +1108,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             )}
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1073,8 +1126,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1097,8 +1150,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1121,8 +1174,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             {renderEarringLengths("Hoops / Huggies")}
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1147,8 +1200,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </div>
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1169,8 +1222,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </div>
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1197,8 +1250,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1223,8 +1276,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </div>
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1245,8 +1298,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1273,8 +1326,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1299,8 +1352,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </div>
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1318,8 +1371,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </div>
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
@@ -1337,8 +1390,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </div>
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
-              minPrice={minPrice}
-              maxPrice={maxPrice}
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />

@@ -1,5 +1,5 @@
-import { Request } from 'express';
-import { Document } from 'mongoose';
+import { Request } from "express";
+import { Document } from "mongoose";
 
 // User interface - extends Document for Mongoose methods
 export interface IUser extends Document {
@@ -18,7 +18,7 @@ export interface IUser extends Document {
   password: string; // Contains hashed password for security
   name: string; // For compatibility with new auth system
   isVerified: boolean;
-  role: 'customer' | 'admin';
+  role: "customer" | "admin";
   lastLogin?: Date;
   verificationToken?: string;
   verificationTokenExpiresAt?: Date;
@@ -97,8 +97,8 @@ export interface IOrder extends Document {
     zipCode: string;
     sameAsBilling: boolean;
   };
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
   paymentMethod: string;
   trackingNumber?: string;
   notes?: string;
@@ -134,6 +134,33 @@ export interface ICart extends Document {
   user: string | IUser;
   items: {
     product: string | IProduct;
+    variantSku: string; // Specific variant SKU (e.g., ENG1-CUS-30-18-LGEFVVS)
+    variantConfig: {
+      metalColor?: string; // e.g., 'WG' (White Gold)
+      metalType?: string; // e.g., 'GOLD', 'PLATINUM'
+      goldKarat?: string; // e.g., '18kt', '14kt'
+      diamondShape?: string; // e.g., 'ROUND', 'CUSHION'
+      diamondSize?: string; // e.g., '1.0', '0.5'
+      diamondOrigin?: string; // e.g., 'NATURAL', 'LAB'
+      diamondColor?: string;
+      diamondClarity?: string;
+      ringSize?: string;
+      centerStoneShape?: string;
+      centerStoneSize?: string;
+      variantImages?: string[]; // Array of variant image URLs
+      sellingPrice?: number; // Variant-specific selling price
+      priceBreakdown?: {
+        // Variant price breakdown
+        metalCost?: number;
+        diamondCost?: number;
+        labourCost?: number;
+        expense?: number;
+        gstPercent?: number;
+        gstAmount?: number;
+        totalBeforeGst?: number;
+        totalWithGst?: number;
+      };
+    };
     quantity: number;
     price: number;
   }[];
@@ -162,7 +189,7 @@ export interface IReferral extends Document {
   toEmails: string[];
   note?: string;
   sendReminder: boolean;
-  status: 'pending' | 'accepted' | 'expired';
+  status: "pending" | "accepted" | "expired";
   redeemedBy?: string | IUser;
   redeemedAt?: Date;
   expiresAt: Date;

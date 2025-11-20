@@ -11,8 +11,30 @@ interface CartItem {
       main: string;
       sub: string[];
     };
-    sku: string;
+    modelSku: string;
     createdAt?: string;
+  };
+  variantSku: string; // Specific variant SKU
+  variantConfig: {
+    metalColor?: string;
+    metalType?: string;
+    goldKarat?: string;
+    diamondShape?: string;
+    diamondSize?: string;
+    diamondOrigin?: string;
+    diamondColor?: string;
+    diamondClarity?: string;
+    ringSize?: string;
+    centerStoneShape?: string;
+    centerStoneSize?: string;
+    priceBreakdown?: [
+      {
+        metalCost: number;
+        gstAmount: number;
+        finalPrice: number;
+        sellingPrice: number;
+      }
+    ]; // New field for price breakdown
   };
   quantity: number;
   price: number;
@@ -67,9 +89,9 @@ export const fetchCart = () => async (dispatch: any) => {
   try {
     dispatch(setLoading(true));
     dispatch(setError(null));
-    
+
     const response = await apiService.getCart();
-    
+
     if (response.success && response.data) {
       // The response.data contains the cart object directly
       const cartData = response.data;
@@ -78,65 +100,107 @@ export const fetchCart = () => async (dispatch: any) => {
       dispatch(setCart(null));
     }
   } catch (error) {
-    dispatch(setError(error instanceof Error ? error.message : 'Failed to fetch cart'));
+    dispatch(
+      setError(error instanceof Error ? error.message : "Failed to fetch cart")
+    );
     dispatch(setCart(null));
   } finally {
     dispatch(setLoading(false));
   }
 };
 
-export const addToCart = (productId: string, quantity: number = 1) => async (dispatch: any) => {
-  try {
-    dispatch(setLoading(true));
-    dispatch(setError(null));
-    
-    const response = await apiService.addToCart(productId, quantity);
-    
-    if (response.success) {
-      dispatch(fetchCart()); // Refresh cart
-    } else {
-      dispatch(setError(response.error || 'Failed to add item to cart'));
+export const addToCart =
+  (
+    productId: string,
+    quantity: number = 1,
+    variantData?: {
+      variantSku: string;
+      variantConfig: {
+        metalColor?: string;
+        metalType?: string;
+        goldKarat?: string;
+        diamondShape?: string;
+        diamondSize?: string;
+        diamondOrigin?: string;
+        diamondColor?: string;
+        diamondClarity?: string;
+        ringSize?: string;
+        centerStoneShape?: string;
+        centerStoneSize?: string;
+      };
     }
-  } catch (error) {
-    dispatch(setError(error instanceof Error ? error.message : 'Failed to add item to cart'));
-  } finally {
-    dispatch(setLoading(false));
-  }
-};
+  ) =>
+  async (dispatch: any) => {
+    try {
+      dispatch(setLoading(true));
+      dispatch(setError(null));
 
-export const updateCartItem = (productId: string, quantity: number) => async (dispatch: any) => {
-  try {
-    dispatch(setLoading(true));
-    dispatch(setError(null));
-    
-    const response = await apiService.updateCartItem(productId, quantity);
-    
-    if (response.success) {
-      dispatch(fetchCart()); // Refresh cart
-    } else {
-      dispatch(setError(response.error || 'Failed to update cart item'));
+      const response = await apiService.addToCart(
+        productId,
+        quantity,
+        variantData
+      );
+
+      if (response.success) {
+        dispatch(fetchCart()); // Refresh cart
+      } else {
+        dispatch(setError(response.error || "Failed to add item to cart"));
+      }
+    } catch (error) {
+      dispatch(
+        setError(
+          error instanceof Error ? error.message : "Failed to add item to cart"
+        )
+      );
+    } finally {
+      dispatch(setLoading(false));
     }
-  } catch (error) {
-    dispatch(setError(error instanceof Error ? error.message : 'Failed to update cart item'));
-  } finally {
-    dispatch(setLoading(false));
-  }
-};
+  };
+
+export const updateCartItem =
+  (productId: string, quantity: number) => async (dispatch: any) => {
+    try {
+      dispatch(setLoading(true));
+      dispatch(setError(null));
+
+      const response = await apiService.updateCartItem(productId, quantity);
+
+      if (response.success) {
+        dispatch(fetchCart()); // Refresh cart
+      } else {
+        dispatch(setError(response.error || "Failed to update cart item"));
+      }
+    } catch (error) {
+      dispatch(
+        setError(
+          error instanceof Error ? error.message : "Failed to update cart item"
+        )
+      );
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
 
 export const removeFromCart = (productId: string) => async (dispatch: any) => {
   try {
     dispatch(setLoading(true));
     dispatch(setError(null));
-    
+
     const response = await apiService.removeFromCart(productId);
-    
+
     if (response.success) {
       dispatch(fetchCart()); // Refresh cart
     } else {
-      dispatch(setError(response.error || 'Failed to remove item from cart'));
+      dispatch(setError(response.error || "Failed to remove item from cart"));
     }
   } catch (error) {
-    dispatch(setError(error instanceof Error ? error.message : 'Failed to remove item from cart'));
+    dispatch(
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove item from cart"
+      )
+    );
   } finally {
     dispatch(setLoading(false));
   }
@@ -146,16 +210,18 @@ export const clearCartItems = () => async (dispatch: any) => {
   try {
     dispatch(setLoading(true));
     dispatch(setError(null));
-    
+
     const response = await apiService.clearCart();
-    
+
     if (response.success) {
       dispatch(clearCart());
     } else {
-      dispatch(setError(response.error || 'Failed to clear cart'));
+      dispatch(setError(response.error || "Failed to clear cart"));
     }
   } catch (error) {
-    dispatch(setError(error instanceof Error ? error.message : 'Failed to clear cart'));
+    dispatch(
+      setError(error instanceof Error ? error.message : "Failed to clear cart")
+    );
   } finally {
     dispatch(setLoading(false));
   }
