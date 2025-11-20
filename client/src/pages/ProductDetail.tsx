@@ -36,6 +36,7 @@ import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
 // Product interface for API data
 interface ProductData {
+  _id: string;
   success: boolean;
   modelSku: string;
   title: string;
@@ -220,22 +221,22 @@ const ProductDetail = () => {
         // Gold types
         setSelectedMetalType("GOLD");
         setSelectedGoldKarat(karatValue);
-        console.log("Set metal type: GOLD, karat:", karatValue);
+        // console.log("Set metal type: GOLD, karat:", karatValue);
       } else if (goldKarat === "950") {
         // Platinum
         setSelectedMetalType("PLATINUM");
         setSelectedGoldKarat("950");
-        console.log("Set metal type: PLATINUM, purity: 950");
+        // console.log("Set metal type: PLATINUM, purity: 950");
       } else if (goldKarat === "925") {
         // Silver
         setSelectedMetalType("SILVER");
         setSelectedGoldKarat("925");
-        console.log("Set metal type: SILVER, purity: 925");
+        // console.log("Set metal type: SILVER, purity: 925");
       } else if (productData.goldKarats.includes(karatValue)) {
         // Fallback for other gold karats
         setSelectedMetalType("GOLD");
         setSelectedGoldKarat(karatValue);
-        console.log("Set metal type: GOLD (fallback), karat:", karatValue);
+        // console.log("Set metal type: GOLD (fallback), karat:", karatValue);
       }
     },
     []
@@ -380,7 +381,6 @@ const ProductDetail = () => {
         // Apply API data to component state so the ProductDetail page renders
         // real product information (images, options, price, etc.).
         // Log the response for debugging as well.
-        console.log("Product API response:", data);
         setProductData(data);
 
         // Set initial selected metal type from API data
@@ -419,9 +419,18 @@ const ProductDetail = () => {
           }
         }
 
-        // Set metal color based on URL parameter
+        // Set metal color based on URL parameter AFTER variant parsing
+        // This ensures URL parameter takes precedence over any defaults
         if (metalColorParam && metalColorMap[metalColorParam]) {
+          console.log(
+            `Setting metal color from URL: ${metalColorParam} -> ${metalColorMap[metalColorParam]}`
+          );
           setSelectedMetalColor(metalColorMap[metalColorParam]);
+        } else {
+          console.log(
+            "No metal color in URL or invalid value:",
+            metalColorParam
+          );
         }
       } catch (err) {
         console.error("Error fetching product:", err);
@@ -433,6 +442,29 @@ const ProductDetail = () => {
 
     fetchProductData();
   }, [id, category, location.search, parseVariantSku]);
+
+  // Separate useEffect to handle URL parameter changes for metal color
+  // This ensures that URL parameters always take precedence
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const metalColorParam = params.get("metalColor");
+
+    const metalColorMap: { [key: string]: string } = {
+      WG: "White Gold",
+      YG: "Yellow Gold",
+      RG: "Rose Gold",
+    };
+
+    if (metalColorParam && metalColorMap[metalColorParam]) {
+      const targetColor = metalColorMap[metalColorParam];
+      if (selectedMetalColor !== targetColor) {
+        console.log(
+          `URL parameter override - Setting metal color: ${metalColorParam} -> ${targetColor}`
+        );
+        setSelectedMetalColor(targetColor);
+      }
+    }
+  }, [location.search, selectedMetalColor]);
 
   // Auto-select appropriate karat when metal type changes
   useEffect(() => {
@@ -736,23 +768,34 @@ const ProductDetail = () => {
     }
 
     try {
+      const variantData = {
+        variantSku: productData.chosenVariantSku,
+        variantConfig: {
+          metalColor: selectedMetalColor,
+          metalType: selectedMetalType,
+          goldKarat: selectedGoldKarat,
+          diamondShape: selectedDiamondShape,
+          diamondSize: selectedDiamondSize,
+          diamondOrigin: selectedDiamondOrigin,
+          ringSize: selectedSize,
+          variantImages: productData.variantImages || [], // Include variant images
+          sellingPrice: productData.sellingPrice || 0, // Include variant price
+          priceBreakdown: productData.priceBreakdown || null, // Include price breakdown
+        },
+      };
+
       console.log("Adding to cart - Product:", {
+        productId: productData._id,
         modelSku: productData.modelSku,
         variantSku: productData.chosenVariantSku,
         title: productData.title,
         price: productData.sellingPrice,
-        metalColor: selectedMetalColor,
-        metalType: selectedMetalType,
-        goldKarat: selectedGoldKarat,
-        diamondShape: selectedDiamondShape,
-        diamondSize: selectedDiamondSize,
-        diamondOrigin: selectedDiamondOrigin,
-        ringSize: selectedSize,
+        variantConfig: variantData.variantConfig,
+        variantImages: productData.variantImages,
       });
 
-      // In a real implementation, you would pass the product ID
-      // For now, we'll use the model SKU as a fallback
-      await dispatch(addToCart(productData.modelSku, 1));
+      // Use the product's MongoDB _id for cart operations with variant data
+      await dispatch(addToCart(productData._id, 1, variantData));
       alert("Product added to cart successfully!");
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -924,7 +967,7 @@ const ProductDetail = () => {
   const thumbnailImages = productData?.variantImages ?? [];
 
   // Debug: log the thumbnail images to see what we have
-  console.log("Thumbnail images:", thumbnailImages);
+  // console.log("Thumbnail images:", thumbnailImages);
 
   // Function to check if image is a 3D model
   const is3DModel = (imagePath: string, index: number) => {
@@ -1033,7 +1076,7 @@ const ProductDetail = () => {
                             alt={`Product ${index + 1}`}
                             className="w-full h-full object-cover"
                             onError={() => {
-                              console.log(
+                              console.error(
                                 `Failed to load desktop thumbnail ${
                                   index + 1
                                 }:`,
@@ -1041,7 +1084,7 @@ const ProductDetail = () => {
                               );
                             }}
                             onLoad={() => {
-                              console.log(
+                              console.error(
                                 `Loaded desktop thumbnail ${index + 1}`
                               );
                             }}
@@ -1063,11 +1106,12 @@ const ProductDetail = () => {
                 <div className="flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden">
                   {/* use the fetched images only */}
                   {(() => {
-                    const currentImage = thumbnailImages[selectedImage];
-                    console.log(
-                      `Main image - selectedImage: ${selectedImage}, currentImage:`,
-                      currentImage
-                    );
+                    // const currentImage = thumbnailImages[selectedImage];
+                    // console.log(
+                    //   `Main image - selectedImage: ${selectedImage}, currentImage:`,
+                    //   currentImage
+                    // );
+                    const currentImage = thumbnailImages[selectedImage] || "";
                     if (is3DModel(currentImage || "", selectedImage)) {
                       return (
                         <div className="">
@@ -1099,14 +1143,14 @@ const ProductDetail = () => {
                           alt={productData?.title || sampleProduct.name}
                           className="w-full h-full object-cover transition-opacity duration-300"
                           onError={() => {
-                            console.log(
+                            console.error(
                               `Failed to load main image:`,
                               currentImage
                             );
                           }}
-                          onLoad={() => {
-                            console.log(`Loaded main image:`, currentImage);
-                          }}
+                          // onLoad={() => {
+                          //   console.log(`Loaded main image:`, currentImage);
+                          // }}
                         />
                       );
                     }
@@ -1165,16 +1209,16 @@ const ProductDetail = () => {
                             alt={`Product ${index + 1}`}
                             className="w-full h-full object-cover"
                             onError={() => {
-                              console.log(
+                              console.error(
                                 `Failed to load mobile thumbnail ${index + 1}:`,
                                 image
                               );
                             }}
-                            onLoad={() => {
-                              console.log(
-                                `Loaded mobile thumbnail ${index + 1}`
-                              );
-                            }}
+                            // onLoad={() => {
+                            //   console.log(
+                            //     `Loaded mobile thumbnail ${index + 1}`
+                            //   );
+                            // }}
                           />
                         )}
                       </button>

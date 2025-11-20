@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ArrowLeft, X, Download, Move } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionTrigger,
+  AccordionItem,
+} from "@/components/ui/accordion";
 
 interface EngraveProps {
   onClose: () => void;
@@ -49,12 +55,15 @@ const EngravingPage: React.FC<EngraveProps> = ({
       try {
         const res = await fetch(`/motif/index.json`);
         if (!res.ok) return;
-        const list: string[] = await res.json();
-        setMotifs(list);
-        if (list.length > 0) setSelectedMotif(list[0]);
+
+        const data = await res.json();
+        setMotifs(data); // <-- data is object { category: [files] }
+
+        // Optional auto select first motif:
+        const firstCat = Object.values(data)[0];
+        if (firstCat?.length > 0) setSelectedMotif(firstCat[0]);
       } catch (err) {
-        // ignore if not present
-        console.debug("No motif index found or failed to load motifs", err);
+        console.debug("Motif load failed:", err);
       }
     };
 
@@ -300,7 +309,10 @@ const EngravingPage: React.FC<EngraveProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div
+      style={{ fontFamily: "'Poppins', cursive, sans-serif" }}
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    >
       <div className="bg-white rounded-lg shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header with selected image info */}
         <div className="bg-white shadow-sm border-b sticky top-0 z-10">
@@ -351,13 +363,13 @@ const EngravingPage: React.FC<EngraveProps> = ({
                     <h3 className="text-lg font-semibold mb-3 text-gray-800">
                       Selected Image for Engraving
                     </h3>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
                       <p className="text-sm text-blue-700">
                         <strong>Note:</strong> The engraving will be applied to
                         your {engravingData.jewelryType} based on the design
                         elements from this selected image.
                       </p>
-                    </div>
+                    </div> */}
                   </div>
                 ) : (
                   <div className="mb-4">
@@ -737,7 +749,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                     )}
 
                     {/* Instructions */}
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                    {/* <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
                       <p className="text-xs text-blue-700">
                         <strong>How it works:</strong>
                       </p>
@@ -758,81 +770,56 @@ const EngravingPage: React.FC<EngraveProps> = ({
                           image
                         </li>
                       </ul>
-                    </div>
+                    </div> */}
                   </div>
                 )}
 
                 {activeTab === "MOTIF" && (
                   <div className="space-y-4">
-                    {motifs.length === 0 ? (
+                    {!motifs || Object.keys(motifs).length === 0 ? (
                       <div className="text-center py-12">
                         <p className="text-gray-500">
                           No motifs available. Add SVG files to{" "}
                           <code>/public/motif</code> and include an{" "}
-                          <code>index.json</code> listing them.
+                          <code>index.json</code>.
                         </p>
                       </div>
                     ) : (
-                      <>
-                        <div className="text-sm text-gray-600 mb-2">
-                          Choose a motif to add near your text. Click a motif to
-                          select it.
-                        </div>
+                      <Accordion
+                        type="single"
+                        collapsible
+                        className="w-full space-y-2"
+                      >
+                        {Object.entries(motifs).map(([category, files]) => (
+                          <AccordionItem key={category} value={category}>
+                            <AccordionTrigger className="text-base font-medium">
+                              {category}
+                            </AccordionTrigger>
 
-                        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-                          {motifs.map((m) => (
-                            <button
-                              key={m}
-                              onClick={() => setSelectedMotif(m)}
-                              className={`p-1 rounded-lg border overflow-hidden bg-white transition-shadow ${
-                                selectedMotif === m
-                                  ? "ring-2 ring-teal-400 border-transparent"
-                                  : "border-neutral-200 hover:shadow"
-                              }`}
-                            >
-                              <img
-                                src={`/motif/${m}`}
-                                alt={m}
-                                className="w-full h-16 object-contain"
-                                onError={(e) => {
-                                  e.currentTarget.style.opacity = "0.5";
-                                }}
-                              />
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="flex items-center gap-4 mt-4">
-                          <div className="flex-1">
-                            <label className="block text-xs text-gray-600">
-                              Motif scale
-                            </label>
-                            <input
-                              type="range"
-                              min={0.5}
-                              max={2}
-                              step={0.05}
-                              value={motifScale}
-                              onChange={(e) =>
-                                setMotifScale(Number(e.target.value))
-                              }
-                              className="w-full"
-                            />
-                            <div className="text-xs text-gray-500 mt-1">
-                              Scale: {motifScale.toFixed(2)}× text height
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setSelectedMotif(null)}
-                              className="px-3 py-2 bg-gray-100 rounded text-sm hover:bg-gray-200"
-                            >
-                              Clear Motif
-                            </button>
-                          </div>
-                        </div>
-                      </>
+                            <AccordionContent>
+                              <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mt-2">
+                                {files.map((file: string) => (
+                                  <button
+                                    key={file}
+                                    onClick={() => setSelectedMotif(file)}
+                                    className={`p-1 rounded-lg border overflow-hidden bg-white transition-shadow ${
+                                      selectedMotif === file
+                                        ? "ring-2 ring-teal-400 border-transparent"
+                                        : "border-neutral-200 hover:shadow"
+                                    }`}
+                                  >
+                                    <img
+                                      src={`/motif/${file}`}
+                                      alt={file}
+                                      className="w-full h-16 object-contain"
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
                     )}
                   </div>
                 )}

@@ -1,12 +1,13 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
-    getCart,
-    addToCart,
-    removeFromCart,
-    updateCartItem,
-    clearCart
-} from '../controllers/cartController';
-import { verifyToken } from '../middleware/auth';
+  getCart,
+  addToCart,
+  removeFromCart,
+  updateCartItem,
+  clearCart,
+  updateCartItemRingSize,
+} from "../controllers/cartController";
+import { verifyToken } from "../middleware/auth";
 
 const router = Router();
 
@@ -14,18 +15,21 @@ const router = Router();
 router.use(verifyToken);
 
 // GET /api/cart - Get user's cart
-router.get('/', getCart);
+router.get("/", getCart);
 
 // POST /api/cart/add - Add item to cart
-router.post('/add', addToCart);
+router.post("/add", addToCart);
 
 // DELETE /api/cart/remove/:productId - Remove item from cart
-router.delete('/remove/:productId', removeFromCart);
+router.delete("/remove/:productId", removeFromCart);
 
 // PUT /api/cart/update/:productId - Update item quantity
-router.put('/update/:productId', updateCartItem);
+router.put("/update/:productId", updateCartItem);
+
+// PUT /api/cart/update-ring-size/:itemId - Update item ring size
+router.put("/update-ring-size/:itemId", updateCartItemRingSize);
 
 // DELETE /api/cart/clear - Clear entire cart
-router.delete('/clear', clearCart);
+router.delete("/clear", clearCart);
 
 export default router;

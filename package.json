@@ -39,5 +39,8 @@
     "tracking"
   ],
   "author": "Kyna Jewels",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
 }

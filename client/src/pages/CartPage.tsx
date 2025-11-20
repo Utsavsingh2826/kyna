@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+// import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Heart, Plus, Minus, ArrowLeft, ArrowRight, Edit } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
@@ -11,9 +11,10 @@ import {
   updateCartItem,
   removeFromCart,
 } from "@/store/slices/cartSlice";
-import { updateUser } from "@/store/slices/authSlice";
+// import { updateUser } from "@/store/slices/authSlice";
 import apiService from "@/services/api";
 import ReferralPromoSection from "@/components/ReferralPromoSection";
+// import { Item } from "@radix-ui/react-accordion";
 
 const CartPage = () => {
   const navigate = useNavigate();
@@ -21,11 +22,9 @@ const CartPage = () => {
   const { cart, loading, error } = useSelector(
     (state: RootState) => state.cart
   );
-  const { isAuthenticated, user } = useSelector(
-    (state: RootState) => state.auth
-  );
-  const [selectedBillingAddress, setSelectedBillingAddress] = useState("");
-  const [selectedShippingAddress, setSelectedShippingAddress] = useState("");
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  // const [setSelectedBillingAddress] = useState("");
+  // const [setSelectedShippingAddress] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Promo and referral code states
@@ -44,6 +43,7 @@ const CartPage = () => {
   useEffect(() => {
     if (isAuthenticated) {
       dispatch(fetchCart());
+
       fetchWishlistItems();
     }
   }, [dispatch, isAuthenticated]);
@@ -52,6 +52,7 @@ const CartPage = () => {
     try {
       const response = await apiService.getWishlist();
       if (response.success) {
+        console.log("Wishlist data:", response.data);
         const wishlistProductIds = response.data.wishlist.map(
           (item: any) => item._id
         );
@@ -63,19 +64,19 @@ const CartPage = () => {
   };
 
   // Handle Add Address click - redirect to profile page
-  const handleAddAddress = () => {
-    navigate("/profile");
-  };
+  // const handleAddAddress = () => {
+  //   navigate("/profile");
+  // };
 
   // Set default addresses when user data is available
-  useEffect(() => {
-    if (user?.addresses && user.addresses.length > 0) {
-      const defaultAddress =
-        user.addresses.find((addr) => addr.isDefault) || user.addresses[0];
-      setSelectedBillingAddress(defaultAddress._id || "");
-      setSelectedShippingAddress(defaultAddress._id || "");
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user?.addresses && user.addresses.length > 0) {
+  //     const defaultAddress =
+  //       user.addresses.find((addr) => addr.isDefault) || user.addresses[0];
+  //     setSelectedBillingAddress(defaultAddress._id || "");
+  //     setSelectedShippingAddress(defaultAddress._id || "");
+  //   }
+  // }, [user]);
 
   const handleQuantityChange = async (
     productId: string,
@@ -108,10 +109,58 @@ const CartPage = () => {
     }
   };
 
-  const handleEditProduct = (product: any) => {
-    // Navigate to product edit page or open edit modal
-    console.log("Edit product:", product.title);
-    // TODO: Implement edit functionality
+  const handleEditProduct = (
+    product: any,
+    variantSku: string,
+    metalColor?: string
+  ) => {
+    // Safety check to ensure product and required properties exist
+    if (!product || !product.sku) {
+      console.error("Product or SKU is missing:", product);
+      return;
+    }
+
+    // Navigate to product page with variant parameter and metal color
+    const productSku = product.sku || product.modelSku;
+    let category = product.category.toLowerCase();
+    if (product.category == "ring") {
+      category = "rings";
+    }
+
+    // Map metal color to code for URL
+    const metalColorMap: { [key: string]: string } = {
+      "White Gold": "WG",
+      "Yellow Gold": "YG",
+      "Rose Gold": "RG",
+    };
+
+    let url = `/product/${category}/${productSku}?variantId=${variantSku}`;
+
+    // Add metal color parameter if available
+    if (metalColor && metalColorMap[metalColor]) {
+      url += `&metalColor=${metalColorMap[metalColor]}`;
+    }
+
+    navigate(url);
+  };
+
+  const handleRingSizeUpdate = async (itemId: string, newRingSize: string) => {
+    try {
+      // Update ring size in cart item
+      // Note: You'll need to implement this endpoint in your backend
+      const response = await apiService.updateCartItemRingSize(
+        itemId,
+        newRingSize
+      );
+      if (response.success) {
+        dispatch(fetchCart()); // Refresh cart
+      } else {
+        alert(response.error || "Failed to update ring size");
+      }
+    } catch (error) {
+      console.error("Failed to update ring size:", error);
+      alert("Failed to update ring size");
+    }
   };
 
   if (loading) {
@@ -160,27 +209,6 @@ const CartPage = () => {
     );
   }
 
-  // Use dynamic addresses from user data
-  const addresses = user?.addresses || [];
-
-  // Check if user has address information from top-level fields
-  const hasUserAddress =
-    user?.country && user?.state && user?.city && user?.zipCode;
-
-  // Create address object from user's top-level fields
-  const userAddressFromFields = hasUserAddress
-    ? {
-        _id: "user-fields",
-        id: "user-fields",
-        label: "Default Address",
-        street: "", // We don't have street from top-level fields
-        city: user.city || "",
-        state: user.state || "",
-        postalCode: user.zipCode || "",
-        country: user.country || "",
-      }
-    : null;
-
   const subtotal = cart.totalAmount;
   const promoDiscount = appliedPromo?.discountAmount || 0;
   const referralDiscount = appliedReferral?.discountAmount || 0;
@@ -209,144 +237,397 @@ const CartPage = () => {
               </p>
 
               <div className="space-y-6">
-                {cart.items?.map((item) => (
-                  <div
-                    key={item._id}
-                    className="border-b border-gray-100 pb-6 last:border-b-0"
-                  >
-                    <div className="flex items-start space-x-4">
-                      <div className="text-xs text-gray-500 mb-2 w-full">
-                        Product Added{" "}
-                        {new Date(
-                          item.product.createdAt || Date.now()
-                        ).toLocaleDateString()}
-                      </div>
-                    </div>
-
-                    <div className="flex items-start space-x-4">
-                      <img
-                        src={
-                          item.product.images?.main ||
-                          "/product_detail/ring.jpg"
-                        }
-                        alt={item.product.title}
-                        className="w-20 h-20 object-cover rounded"
-                      />
-
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-medium text-gray-900">
-                            {item.product.title}
-                          </h3>
+                {cart.items?.map((item) => {
+                  // Handle case where product might be null
+                  if (!item.product) {
+                    return (
+                      <div
+                        key={item._id}
+                        className="border-b border-gray-100 pb-6 last:border-b-0"
+                      >
+                        <div className="text-center py-4">
+                          <p className="text-gray-500">
+                            Product information unavailable
+                          </p>
                           <button
-                            onClick={() => handleEditProduct(item.product)}
-                            className="bg-[#2a8a85] hover:bg-[#1f6b66] text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center space-x-1"
+                            onClick={() => handleRemoveItem(item._id)}
+                            className="mt-2 text-red-500 hover:text-red-700 text-sm"
                           >
-                            <Edit className="w-4 h-4" />
-                            <span className="text-sm font-medium">
-                              Edit Details
-                            </span>
+                            Remove Item
                           </button>
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {item.product.sku}
-                        </p>
+                      </div>
+                    );
+                  }
 
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <span className="px-2 py-1 bg-gray-100 text-xs text-gray-700 rounded">
-                            Quantity: {item.quantity}
-                          </span>
-                          <span className="px-2 py-1 bg-gray-100 text-xs text-gray-700 rounded">
-                            Price: ₹{item.price.toLocaleString("en-IN")}
-                          </span>
-                        </div>
+                  return (
+                    <div
+                      key={item._id}
+                      className="border-b border-gray-100 pb-6 last:border-b-0"
+                    >
+                      <div className="flex items-start space-x-4">
+                        {/* <div className="text-xs text-gray-500 mb-2 w-full">
+                          Product Added{" "}
+                          {new Date(
+                            item.product?.createdAt ||
+                              item.createdAt ||
+                              Date.now()
+                          ).toLocaleDateString()}
+                        </div> */}
+                      </div>
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-4">
+                      <div className="flex items-start space-x-4">
+                        <img
+                          src={
+                            (item.variantConfig as any)?.variantImages?.[0] ||
+                            ""
+                          }
+                          alt={item.product.title}
+                          className="w-20 h-20 object-cover rounded"
+                        />
+
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="font-medium text-gray-900">
+                              {item.product.title}
+                            </h3>
                             <button
-                              onClick={() => handleMoveToWishlist(item.product)}
-                              className={`flex items-center space-x-1 transition-colors ${
-                                wishlistItems.includes(item.product._id)
-                                  ? "text-red-500 hover:text-red-600"
-                                  : "text-gray-500 hover:text-red-500"
-                              }`}
-                            >
-                              <Heart
-                                className={`w-4 h-4 ${
-                                  wishlistItems.includes(item.product._id)
-                                    ? "fill-current"
-                                    : ""
-                                }`}
-                              />
-                              <span className="text-sm">
-                                {wishlistItems.includes(item.product._id)
-                                  ? "In Wish List"
-                                  : "Move To Wish List"}
-                              </span>
-                            </button>
-                            <button
-                              onClick={() => handleEditProduct(item.product)}
-                              className="text-gray-500 hover:text-blue-500 flex items-center space-x-1 transition-colors"
+                              onClick={() =>
+                                handleEditProduct(
+                                  item.product,
+                                  item.variantSku,
+                                  item.variantConfig?.metalColor
+                                )
+                              }
+                              className="bg-[#2a8a85] hover:bg-[#1f6b66] text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center space-x-1"
                             >
                               <Edit className="w-4 h-4" />
-                              <span className="text-sm">Edit</span>
+                              <span className="text-sm font-medium">
+                                Edit Details
+                              </span>
                             </button>
                           </div>
+                          <p className="text-sm text-gray-600 mb-2">
+                            SKU: {item.product.modelSku}
+                          </p>
 
-                          <div className="text-right">
-                            <p className="text-lg font-semibold text-gray-900">
-                              ₹
-                              {(item.price * item.quantity).toLocaleString(
-                                "en-IN"
+                          {/* Enhanced Variant Information Display */}
+                          {item.variantSku && (
+                            <div className="mb-4 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm font-semibold text-gray-800">
+                                  Variant: {item.variantSku}
+                                </p>
+                                <p className="text-lg font-bold text-green-600">
+                                  ₹
+                                  {(
+                                    item.variantConfig?.sellingPrice ||
+                                    item.price ||
+                                    0
+                                  ).toLocaleString("en-IN")}
+                                </p>
+                              </div>
+
+                              {/* Variant Images Row */}
+                              {(() => {
+                                const variantImages =
+                                  (item.variantConfig as any)?.variantImages ||
+                                  [];
+                                if (
+                                  !variantImages ||
+                                  variantImages.length === 0
+                                )
+                                  return null;
+                                return (
+                                  <div className="mb-3">
+                                    <p className="text-xs text-gray-600 mb-1">
+                                      Variant Images:
+                                    </p>
+                                    <div className="flex space-x-2 overflow-x-auto pb-1">
+                                      {variantImages
+                                        .slice(0, 4)
+                                        .map((image: any, index: number) => (
+                                          <img
+                                            key={index}
+                                            src={image}
+                                            alt={`Variant ${index + 1}`}
+                                            className="w-12 h-12 object-cover rounded border-2 border-gray-200 hover:border-[#2a8a85] transition-colors flex-shrink-0 cursor-pointer"
+                                            onError={(e) => {
+                                              console.warn(
+                                                `Failed to load variant image: ${image}`
+                                              );
+                                              e.currentTarget.style.display =
+                                                "none";
+                                            }}
+                                            title={`Variant image ${index + 1}`}
+                                          />
+                                        ))}
+                                      {variantImages.length > 4 && (
+                                        <div className="w-12 h-12 flex items-center justify-center bg-gray-100 rounded border-2 border-gray-200 text-xs text-gray-600">
+                                          +{variantImages.length - 4}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Price Breakdown */}
+                              {item.variantConfig?.priceBreakdown && (
+                                <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
+                                  <p className="text-xs font-medium text-blue-800 mb-1">
+                                    Price Breakdown:
+                                  </p>
+                                  <div className="grid grid-cols-2 gap-1 text-xs text-blue-700">
+                                    {item.variantConfig.priceBreakdown
+                                      .metalCost && (
+                                      <div>
+                                        Metal: ₹
+                                        {item.variantConfig.priceBreakdown.metalCost.toLocaleString(
+                                          "en-IN"
+                                        )}
+                                      </div>
+                                    )}
+                                    {item.variantConfig.priceBreakdown
+                                      .diamondCost && (
+                                      <div>
+                                        Diamond: ₹
+                                        {item.variantConfig.priceBreakdown.diamondCost.toLocaleString(
+                                          "en-IN"
+                                        )}
+                                      </div>
+                                    )}
+                                    {item.variantConfig.priceBreakdown
+                                      .labourCost && (
+                                      <div>
+                                        Labour: ₹
+                                        {item.variantConfig.priceBreakdown.labourCost.toLocaleString(
+                                          "en-IN"
+                                        )}
+                                      </div>
+                                    )}
+                                    {item.variantConfig.priceBreakdown
+                                      .gstAmount && (
+                                      <div>
+                                        GST (
+                                        {
+                                          item.variantConfig.priceBreakdown
+                                            .gstPercent
+                                        }
+                                        %): ₹
+                                        {item.variantConfig.priceBreakdown.gstAmount.toLocaleString(
+                                          "en-IN"
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
                               )}
-                              .00
-                            </p>
-                          </div>
-                        </div>
 
-                        <div className="flex items-center justify-between mt-4">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-600">Qty:</span>
-                            <button
-                              onClick={() =>
-                                handleQuantityChange(
-                                  item.product._id,
-                                  item.quantity - 1
-                                )
-                              }
-                              className="w-8 h-8 flex items-center justify-center border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="w-8 text-center font-medium">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() =>
-                                handleQuantityChange(
-                                  item.product._id,
-                                  item.quantity + 1
-                                )
-                              }
-                              className="w-8 h-8 flex items-center justify-center border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
+                              {item.variantConfig && (
+                                <div className="space-y-2">
+                                  <div className="grid grid-cols-2 gap-2 text-sm">
+                                    {item.variantConfig.metalType && (
+                                      <div className="flex items-center">
+                                        <span className="text-gray-600 mr-1">
+                                          Metal:
+                                        </span>
+                                        <span className="font-medium">
+                                          {item.variantConfig.metalType}{" "}
+                                          {item.variantConfig.goldKarat}
+                                          {item.variantConfig.metalColor && (
+                                            <span className="ml-1 text-xs bg-gray-200 px-1 rounded">
+                                              {item.variantConfig.metalColor}
+                                            </span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.variantConfig.diamondShape && (
+                                      <div className="flex items-center">
+                                        <span className="text-gray-600 mr-1">
+                                          Diamond:
+                                        </span>
+                                        <span className="font-medium">
+                                          {item.variantConfig.diamondShape}{" "}
+                                          {item.variantConfig.diamondSize}ct
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.variantConfig.diamondOrigin && (
+                                      <div className="flex items-center">
+                                        <span className="text-gray-600 mr-1">
+                                          Origin:
+                                        </span>
+                                        <span className="font-medium">
+                                          {item.variantConfig.diamondOrigin}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Ring Size Dropdown - Only for Rings */}
+                                  {item.product.category === "RINGS" && (
+                                    <div className="flex items-center space-x-2 pt-2 border-t border-gray-200">
+                                      <span className="text-sm text-gray-600">
+                                        Ring Size:
+                                      </span>
+                                      <select
+                                        value={
+                                          item.variantConfig.ringSize || ""
+                                        }
+                                        onChange={(e) =>
+                                          handleRingSizeUpdate(
+                                            item._id,
+                                            e.target.value
+                                          )
+                                        }
+                                        className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-[#2a8a85] bg-white min-w-[80px]"
+                                      >
+                                        <option value="">Select Size</option>
+                                        <option value="5">5</option>
+                                        <option value="5.5">5.5</option>
+                                        <option value="6">6</option>
+                                        <option value="6.5">6.5</option>
+                                        <option value="7">7</option>
+                                        <option value="7.5">7.5</option>
+                                        <option value="8">8</option>
+                                        <option value="8.5">8.5</option>
+                                        <option value="9">9</option>
+                                        <option value="9.5">9.5</option>
+                                        <option value="10">10</option>
+                                        <option value="10.5">10.5</option>
+                                        <option value="11">11</option>
+                                        <option value="11.5">11.5</option>
+                                        <option value="12">12</option>
+                                      </select>
+                                      {!item.variantConfig.ringSize && (
+                                        <span className="text-xs text-orange-600">
+                                          Please select ring size
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {!item.variantSku && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              <span className="px-2 py-1 bg-gray-100 text-xs text-gray-700 rounded">
+                                Quantity: {item.quantity}
+                              </span>
+                              <span className="px-2 py-1 bg-gray-100 text-xs text-gray-700 rounded">
+                                Price: ₹
+                                {(
+                                  item.variantConfig?.sellingPrice ||
+                                  item.price ||
+                                  0
+                                ).toLocaleString("en-IN")}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <button
+                                onClick={() =>
+                                  handleMoveToWishlist(item.product)
+                                }
+                                className={`flex items-center space-x-1 transition-colors ${
+                                  wishlistItems.includes(item.product._id)
+                                    ? "text-red-500 hover:text-red-600"
+                                    : "text-gray-500 hover:text-red-500"
+                                }`}
+                              >
+                                <Heart
+                                  className={`w-4 h-4 ${
+                                    wishlistItems.includes(item.product._id)
+                                      ? "fill-current"
+                                      : ""
+                                  }`}
+                                />
+                                <span className="text-sm">
+                                  {wishlistItems.includes(item.product._id)
+                                    ? "In Wish List"
+                                    : "Move To Wish List"}
+                                </span>
+                              </button>
+                              <button
+                                onClick={() =>
+                                  handleEditProduct(
+                                    item.product,
+                                    item.variantSku,
+                                    item.variantConfig?.metalColor
+                                  )
+                                }
+                                className="text-gray-500 hover:text-blue-500 flex items-center space-x-1 transition-colors"
+                              >
+                                <Edit className="w-4 h-4" />
+                                <span className="text-sm">Edit</span>
+                              </button>
+                            </div>
+
+                            <div className="text-right">
+                              <p className="text-lg font-semibold text-gray-900">
+                                ₹
+                                {(item.price * item.quantity).toLocaleString(
+                                  "en-IN"
+                                )}
+                                .00
+                              </p>
+                            </div>
                           </div>
 
-                          <div className="flex space-x-2">
-                            <button
-                              className="border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white bg-white px-4 py-2 rounded-md transition-colors duration-200 font-medium"
-                              onClick={() => handleRemoveItem(item.product._id)}
-                            >
-                              Remove
-                            </button>
+                          <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm text-gray-600">
+                                Qty:
+                              </span>
+                              <button
+                                onClick={() =>
+                                  handleQuantityChange(
+                                    item.product._id,
+                                    item.quantity - 1
+                                  )
+                                }
+                                className="w-8 h-8 flex items-center justify-center border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <span className="w-8 text-center font-medium">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() =>
+                                  handleQuantityChange(
+                                    item.product._id,
+                                    item.quantity + 1
+                                  )
+                                }
+                                className="w-8 h-8 flex items-center justify-center border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="flex space-x-2">
+                              <button
+                                className="border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white bg-white px-4 py-2 rounded-md transition-colors duration-200 font-medium"
+                                onClick={() =>
+                                  handleRemoveItem(item.product._id)
+                                }
+                              >
+                                Remove
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-200">

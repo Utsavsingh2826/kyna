@@ -1,4 +1,15 @@
-[
-  "805356_astro_astrology_horoscope_libra_signs_icon.svg",
-  "805359_astro_astrology_horoscope_leo_signs_icon.svg"
-]
+{
+  "Love Symbols": [
+    "love/805356_astro_astrology_horoscope_libra_signs_icon.svg",
+    "love/805356_astro_astrology_horoscope_libra_signs_icon.svg",
+    "love/805356_astro_astrology_horoscope_libra_signs_icon.svg"
+  ],
+  "Astrology": [
+    "astrology/805356_astro_astrology_horoscope_libra_signs_icon.svg",
+    "astrology/805356_astro_astrology_horoscope_libra_signs_icon.svg"
+  ],
+  "Nature": [
+    "nature/805356_astro_astrology_horoscope_libra_signs_icon.svg",
+    "nature/805356_astro_astrology_horoscope_libra_signs_icon.svg"
+  ]
+}
