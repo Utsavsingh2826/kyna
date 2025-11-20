@@ -85,7 +85,18 @@ export const signup = async (req: Request, res: Response) => {
       isVerified: false, // User must verify email before login
     };
     if (referralCode) {
-      userData.referredBy = referralCode;
+      const referringUser = await User.findOne({
+        referralCode: referralCode.toUpperCase(),
+      });
+
+      if (!referringUser) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid referral code",
+        });
+      }
+
+      userData.referredBy = referringUser.referralCode;
       userData.refDiscount = 5; // reserve 5% discount for referred user
     }
 
@@ -106,6 +117,7 @@ export const signup = async (req: Request, res: Response) => {
         lastName: user.lastName,
         email: user.email,
         isVerified: user.isVerified,
+        totalReferralEarnings: user.totalReferralEarnings,
       },
     });
   } catch (error) {
@@ -158,6 +170,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
         lastLogin: user.lastLogin,
         isActive: user.isActive,
         availableOffers: user.availableOffers,
+        totalReferralEarnings: user.totalReferralEarnings,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       },
@@ -225,6 +238,7 @@ export const login = async (req: Request, res: Response) => {
         lastLogin: user.lastLogin,
         isActive: user.isActive,
         availableOffers: user.availableOffers,
+        totalReferralEarnings: user.totalReferralEarnings,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       },
@@ -351,6 +365,7 @@ export const resetPassword = async (req: Request, res: Response) => {
         lastLogin: user.lastLogin,
         isActive: user.isActive,
         availableOffers: user.availableOffers,
+        totalReferralEarnings: user.totalReferralEarnings,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }
@@ -397,6 +412,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         lastLogin: user.lastLogin,
         isActive: user.isActive,
         availableOffers: user.availableOffers,
+        totalReferralEarnings: user.totalReferralEarnings,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       }

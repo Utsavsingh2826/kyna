@@ -111,6 +111,19 @@ const userSchema = new Schema<IUserInternal>({
   refDiscount: { type: Number, default: 0 },
   referralCount: { type: Number, default: 0 },
   totalReferralEarnings: { type: Number, default: 0 },
+  referralEarningsHistory: [
+    {
+      type: {
+        type: String,
+        enum: ["credit", "debit"],
+        required: true,
+      },
+      amount: { type: Number, required: true },
+      orderId: { type: Schema.Types.ObjectId, ref: "PaymentOrder" },
+      note: { type: String, trim: true },
+      createdAt: { type: Date, default: Date.now },
+    },
+  ],
   
   // Promo code tracking
   usedPromoCodes: [

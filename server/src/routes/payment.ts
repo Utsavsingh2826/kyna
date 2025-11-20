@@ -90,6 +90,20 @@ function detectOrderCategoryAndType(orderData: any): {
   return { category, type };
 }
 
+const getDiamondSubtotalFromOrder = (orderDetails: any): number => {
+  if (!orderDetails) return 0;
+  const summaryValue = orderDetails.pricingSummary?.diamondSubtotal;
+  if (typeof summaryValue === "number" && summaryValue > 0) {
+    return summaryValue;
+  }
+  const directDiamond =
+    orderDetails.directPurchaseData?.product?.priceBreakdown?.diamondCost;
+  if (typeof directDiamond === "number" && directDiamond > 0) {
+    return directDiamond;
+  }
+  return 0;
+};
+
 /**
  * POST /api/payment/initiate
  * Initiates payment with CCAvenue
@@ -750,6 +764,19 @@ router.post("/verify", async (req: Request, res: Response) => {
     console.log("🔍 PaymentOrder found - Full object:");
     console.log(JSON.stringify(paymentOrder, null, 2));
 
+    const purchasingUser = await User.findById(paymentOrder.userId);
+    if (!purchasingUser) {
+      console.warn(
+        "⚠️ Unable to locate purchasing user for payment order:",
+        paymentOrder.userId
+      );
+    }
+    let purchasingUserChanged = false;
+    const referralSummary: {
+      credits?: { referrerId?: any; code: string; amount: number };
+      walletRedemption?: { amount: number };
+    } = {};
+
     // Update payment order status
     paymentOrder.status = OrderStatus.SUCCESS;
     paymentOrder.razorpayPaymentId = razorpay_payment_id;
@@ -758,43 +785,124 @@ router.post("/verify", async (req: Request, res: Response) => {
 
     await paymentOrder.save();
 
-    // Add order to user's orders array & record promo usage
     const promoInfo =
       (paymentOrder.orderDetails as any)?.promo ||
       (paymentOrder.orderDetails as any)?.pricing?.promo;
-    try {
-      const userDoc = await User.findById(paymentOrder.userId);
-      if (userDoc) {
-        userDoc.orders = [...(userDoc.orders || []), paymentOrder._id];
 
-        if (
-          promoInfo?.code &&
-          !userDoc.usedPromoCodes?.some(
-            (entry) => entry.code === promoInfo.code
+    if (purchasingUser) {
+      const alreadyLinked = Array.isArray(purchasingUser.orders)
+        ? purchasingUser.orders.some(
+            (orderId: any) =>
+              orderId?.toString() === paymentOrder._id.toString()
           )
-        ) {
-          userDoc.usedPromoCodes = [
-            ...(userDoc.usedPromoCodes || []),
-            {
-              code: promoInfo.code,
-              orderId: paymentOrder._id,
-              discountValue: promoInfo.discountValue || 0,
-              appliedAt: new Date(),
-            },
-          ];
-        }
-
-        await userDoc.save();
+        : false;
+      if (!alreadyLinked) {
+        purchasingUser.orders = [
+          ...(purchasingUser.orders || []),
+          paymentOrder._id as any,
+        ];
+        purchasingUserChanged = true;
       }
+
+      if (
+        promoInfo?.code &&
+        !purchasingUser.usedPromoCodes?.some(
+          (entry) => entry.code === promoInfo.code
+        )
+      ) {
+        purchasingUser.usedPromoCodes = [
+          ...(purchasingUser.usedPromoCodes || []),
+          {
+            code: promoInfo.code,
+            orderId: paymentOrder._id,
+            discountValue: promoInfo.discountValue || 0,
+            appliedAt: new Date(),
+          },
+        ];
+        purchasingUserChanged = true;
+      }
+
       console.log(
         `Payment order ${paymentOrder._id} added to user ${paymentOrder.userId} orders array`
       );
-    } catch (userUpdateError) {
-      console.warn("Failed to update user orders array:", userUpdateError);
-      // Don't fail the verification if user update fails
     }
 
     // Create TrackingOrder for this payment order if orderCategory is not design-your-own
+    if (purchasingUser) {
+      const requestedWalletAmount = Number(
+        (paymentOrder.orderDetails as any)?.referralWallet?.amountRequested || 0
+      );
+      if (
+        requestedWalletAmount > 0 &&
+        purchasingUser.totalReferralEarnings > 0
+      ) {
+        const walletDeduction = Math.min(
+          requestedWalletAmount,
+          purchasingUser.totalReferralEarnings
+        );
+        if (walletDeduction > 0) {
+          purchasingUser.totalReferralEarnings -= walletDeduction;
+          purchasingUser.referralEarningsHistory =
+            purchasingUser.referralEarningsHistory || [];
+          purchasingUser.referralEarningsHistory.push({
+            type: "debit",
+            amount: walletDeduction,
+            orderId: paymentOrder._id,
+            note: "Redeemed at checkout",
+            createdAt: new Date(),
+          } as any);
+          purchasingUserChanged = true;
+          referralSummary.walletRedemption = { amount: walletDeduction };
+        }
+      }
+    }
+
+    const diamondSubtotal = getDiamondSubtotalFromOrder(
+      paymentOrder.orderDetails
+    );
+    if (
+      purchasingUser?.referredBy &&
+      typeof purchasingUser.referredBy === "string"
+    ) {
+      const referrer = await User.findOne({
+        referralCode: purchasingUser.referredBy.toUpperCase(),
+      });
+      if (
+        referrer &&
+        referrer._id.toString() !== purchasingUser._id.toString()
+      ) {
+        const referralCredit = Math.round(diamondSubtotal * 0.05);
+        if (referralCredit > 0) {
+          referrer.totalReferralEarnings += referralCredit;
+          referrer.referralEarningsHistory =
+            referrer.referralEarningsHistory || [];
+          referrer.referralEarningsHistory.push({
+            type: "credit",
+            amount: referralCredit,
+            orderId: paymentOrder._id,
+            note: `Referral purchase by ${
+              purchasingUser.email || purchasingUser._id
+            }`,
+            createdAt: new Date(),
+          } as any);
+          await referrer.save();
+          referralSummary.credits = {
+            referrerId: referrer._id,
+            code: referrer.referralCode,
+            amount: referralCredit,
+          };
+        }
+      }
+    }
+
+    if (purchasingUserChanged) {
+      try {
+        await purchasingUser.save();
+      } catch (userSaveError) {
+        console.warn("Failed to update purchasing user:", userSaveError);
+      }
+    }
+
     if (paymentOrder.orderCategory !== "design-your-own") {
       try {
         console.log("\n🔍 Creating TrackingOrder for payment order...");
@@ -867,6 +975,10 @@ router.post("/verify", async (req: Request, res: Response) => {
             discountValue: promoInfo.discountValue,
             appliedOn: promoInfo.appliedOn || "diamond",
           };
+        }
+
+        if (referralSummary.walletRedemption || referralSummary.credits) {
+          updateData.referralSummary = referralSummary;
         }
 
         // Add detailed product information if available from PaymentOrder

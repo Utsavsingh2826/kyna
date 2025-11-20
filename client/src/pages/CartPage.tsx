@@ -365,7 +365,6 @@ const CartPage = () => {
           <div className="space-y-6">
             {/* Promo & Referral Code Section */}
             <ReferralPromoSection
-              subtotal={cart?.totalAmount || 0}
               onPromoApplied={setAppliedPromo}
               onReferralApplied={setAppliedReferral}
               onPromoRemoved={() => setAppliedPromo(null)}

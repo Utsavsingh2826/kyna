@@ -19,6 +19,32 @@ interface PromoApiResponse {
   appliedOn?: string;
 }
 
+const extractDiamondCostFromProduct = (product: any): number => {
+  if (!product) return 0;
+  const breakdown = product.priceBreakdown;
+  if (breakdown) {
+    if (typeof breakdown.diamondCost === "number") {
+      return breakdown.diamondCost;
+    }
+    if (typeof breakdown.diamondPrice === "number") {
+      return breakdown.diamondPrice;
+    }
+  }
+  if (typeof product.diamondTotalValue === "number") {
+    return product.diamondTotalValue;
+  }
+  return 0;
+};
+
+const calculateCartDiamondSubtotal = (items: any[]): number => {
+  if (!Array.isArray(items)) return 0;
+  return items.reduce((sum, item) => {
+    const perItemDiamond = extractDiamondCostFromProduct(item.product);
+    const quantity = item.quantity || 1;
+    return sum + perItemDiamond * quantity;
+  }, 0);
+};
+
 const PaymentPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,6 +118,12 @@ const PaymentPage = () => {
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
+  const referralBalance = Math.max(
+    0,
+    Number(user?.totalReferralEarnings) || 0
+  );
+  const [walletDiscount, setWalletDiscount] = useState(0);
+  const [walletError, setWalletError] = useState("");
 
   // Determine data source (cart or direct purchase)
   const isDirectPurchase = !!directPurchaseData;
@@ -107,11 +139,31 @@ const PaymentPage = () => {
         directPurchaseData?.orderData?.product?.priceBreakdown?.diamondCost ?? 0
       )
     : 0;
+  const cartDiamondSubtotal = !isDirectPurchase
+    ? calculateCartDiamondSubtotal(itemsData)
+    : 0;
+  const diamondSubtotal = isDirectPurchase
+    ? directPurchaseDiamondCost
+    : cartDiamondSubtotal;
 
   const promoDiscount = appliedPromo?.discountValue || 0;
-  const subtotalAfterPromo = Math.max(totalAmount - promoDiscount, 0);
-  const taxAmount = Math.round(subtotalAfterPromo * 0.18);
-  const payableAmount = subtotalAfterPromo + taxAmount;
+  const maxWalletRedeemable = Math.max(
+    0,
+    Math.min(referralBalance, Math.max(totalAmount - promoDiscount, 0))
+  );
+
+  useEffect(() => {
+    if (walletDiscount > maxWalletRedeemable) {
+      setWalletDiscount(maxWalletRedeemable);
+    }
+  }, [walletDiscount, maxWalletRedeemable]);
+
+  const subtotalAfterDiscounts = Math.max(
+    totalAmount - promoDiscount - walletDiscount,
+    0
+  );
+  const taxAmount = Math.round(subtotalAfterDiscounts * 0.18);
+  const payableAmount = subtotalAfterDiscounts + taxAmount;
 
   // Get user info from Redux auth state
   const userInfo = {
@@ -140,9 +192,11 @@ const PaymentPage = () => {
   const orderPricingSummary = {
     subtotal: totalAmount,
     promoDiscount,
-    taxableAmount: subtotalAfterPromo,
+    referralWallet: walletDiscount,
+    taxableAmount: subtotalAfterDiscounts,
     tax: taxAmount,
     payableAmount,
+    diamondSubtotal,
   };
 
   // Prepare order data for payment form
@@ -194,6 +248,12 @@ const PaymentPage = () => {
           }
         : null,
       promo: promoSummary,
+      referralWallet:
+        walletDiscount > 0
+          ? {
+              amountRequested: walletDiscount,
+            }
+          : undefined,
       pricingSummary: orderPricingSummary,
     },
   };
@@ -266,6 +326,35 @@ const PaymentPage = () => {
     toast.info("Promo removed");
   };
 
+  const handleToggleWallet = () => {
+    if (walletDiscount > 0) {
+      setWalletDiscount(0);
+      setWalletError("");
+      toast.info("Referral earnings removed");
+      return;
+    }
+
+    if (referralBalance <= 0) {
+      const message = "No referral earnings available to redeem.";
+      setWalletError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (maxWalletRedeemable <= 0) {
+      const message = "No payable amount remaining to redeem referral earnings.";
+      setWalletError(message);
+      toast.warning(message);
+      return;
+    }
+
+    setWalletDiscount(maxWalletRedeemable);
+    setWalletError("");
+    toast.success(
+      `Referral earnings of ₹${maxWalletRedeemable.toLocaleString()} applied`
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -301,6 +390,12 @@ const PaymentPage = () => {
               <p className="text-sm text-green-700 mt-1">
                 Promo {appliedPromo.code} applied: now paying ₹
                 {payableAmount.toLocaleString()}
+              </p>
+            )}
+            {walletDiscount > 0 && (
+              <p className="text-sm text-indigo-700">
+                Referral wallet applied: ₹
+                {walletDiscount.toLocaleString("en-IN")}
               </p>
             )}
             {isDirectPurchase && directPurchaseData?.orderData?.product && (
@@ -383,6 +478,43 @@ const PaymentPage = () => {
           )}
         </div>
 
+        {/* Referral Wallet Section */}
+        <div className="bg-white rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            Referral Wallet
+          </h2>
+          <p className="text-sm text-gray-600">
+            Wallet balance:{" "}
+            <span className="font-semibold">
+              ₹{referralBalance.toLocaleString("en-IN")}
+            </span>
+          </p>
+          {walletDiscount > 0 ? (
+            <p className="text-sm text-green-700 mt-1">
+              Redeeming ₹{walletDiscount.toLocaleString("en-IN")} on this order.
+            </p>
+          ) : (
+            <p className="text-sm text-gray-500 mt-1">
+              You can redeem up to ₹{maxWalletRedeemable.toLocaleString("en-IN")} on
+              this order.
+            </p>
+          )}
+          <div className="mt-4">
+            <Button
+              onClick={handleToggleWallet}
+              disabled={referralBalance <= 0 && walletDiscount <= 0}
+              className="bg-[#4c4f8f] hover:bg-[#3c3f72] text-white"
+            >
+              {walletDiscount > 0
+                ? "Remove Redemption"
+                : "Redeem Referral Earnings"}
+            </Button>
+          </div>
+          {walletError && (
+            <p className="text-sm text-red-500 mt-2">{walletError}</p>
+          )}
+        </div>
+
         {/* Main content - Payment Form and Summary */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Payment Form */}
@@ -444,6 +576,12 @@ const PaymentPage = () => {
                   <div className="flex justify-between text-sm text-green-600">
                     <span>Promo ({appliedPromo.code})</span>
                     <span>-₹{promoDiscount.toLocaleString()}</span>
+                  </div>
+                )}
+                {walletDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Referral Wallet</span>
+                    <span>-₹{walletDiscount.toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-gray-600">
