@@ -118,17 +118,17 @@ class ApiService {
     // If there's an image, use FormData
     if (profileImage) {
       const formData = new FormData();
-      
+
       // Add all profile data fields
-      Object.keys(profileData).forEach(key => {
+      Object.keys(profileData).forEach((key) => {
         if (profileData[key] !== undefined && profileData[key] !== null) {
           formData.append(key, profileData[key]);
         }
       });
-      
+
       // Add the image file
-      formData.append('profileImage', profileImage);
-      
+      formData.append("profileImage", profileImage);
+
       return this.makeRequest("/auth/profile", {
         method: "PUT",
         body: formData, // Don't set Content-Type header, let browser set it with boundary
@@ -145,17 +145,15 @@ class ApiService {
     }
   }
 
-
   async checkAuth() {
     return this.makeRequest("/auth/check-auth");
   }
 
   async getProfile() {
-  return this.makeRequest("/auth/profile", {
-    method: "GET",
-  });
-}
-
+    return this.makeRequest("/auth/profile", {
+      method: "GET",
+    });
+  }
 
   // Test API connection
   async testConnection() {
@@ -174,14 +172,19 @@ class ApiService {
   }
 
   // Product APIs
-  async getProducts(params?: { category?: string; subCategory?: string; limit?: number }) {
+  async getProducts(params?: {
+    category?: string;
+    subCategory?: string;
+    limit?: number;
+  }) {
     const queryParams = new URLSearchParams();
-    if (params?.category) queryParams.append('category', params.category);
-    if (params?.subCategory) queryParams.append('subCategory', params.subCategory);
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
+    if (params?.category) queryParams.append("category", params.category);
+    if (params?.subCategory)
+      queryParams.append("subCategory", params.subCategory);
+    if (params?.limit) queryParams.append("limit", params.limit.toString());
+
     const queryString = queryParams.toString();
-    return this.makeRequest(`/products${queryString ? `?${queryString}` : ''}`);
+    return this.makeRequest(`/products${queryString ? `?${queryString}` : ""}`);
   }
 
   async getProduct(id: string) {
@@ -193,10 +196,36 @@ class ApiService {
     return this.makeRequest("/cart");
   }
 
-  async addToCart(productId: string, quantity: number = 1) {
+  async addToCart(
+    productId: string,
+    quantity: number = 1,
+    variantData?: {
+      variantSku: string;
+      variantConfig: {
+        metalColor?: string;
+        metalType?: string;
+        goldKarat?: string;
+        diamondShape?: string;
+        diamondSize?: string;
+        diamondOrigin?: string;
+        diamondColor?: string;
+        diamondClarity?: string;
+        ringSize?: string;
+        centerStoneShape?: string;
+        centerStoneSize?: string;
+      };
+    }
+  ) {
+    const requestBody: any = { productId, quantity };
+
+    if (variantData) {
+      requestBody.variantSku = variantData.variantSku;
+      requestBody.variantConfig = variantData.variantConfig;
+    }
+
     return this.makeRequest("/cart/add", {
       method: "POST",
-      body: JSON.stringify({ productId, quantity }),
+      body: JSON.stringify(requestBody),
     });
   }
 
@@ -204,6 +233,13 @@ class ApiService {
     return this.makeRequest(`/cart/update/${productId}`, {
       method: "PUT",
       body: JSON.stringify({ quantity }),
+    });
+  }
+
+  async updateCartItemRingSize(itemId: string, ringSize: string) {
+    return this.makeRequest(`/cart/update-ring-size/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify({ ringSize }),
     });
   }
 
@@ -260,15 +296,15 @@ class ApiService {
 
   // Redeem referral promo (cart flow) - supports passing either referFrdId or public code
   async redeemReferralPromo(codeOrId: string) {
-    return this.makeRequest('/referrals/promos/redeem', {
-      method: 'POST',
+    return this.makeRequest("/referrals/promos/redeem", {
+      method: "POST",
       body: JSON.stringify({ referFrdId: codeOrId, code: codeOrId }),
     });
   }
 
   async applySimpleReferral() {
-    return this.makeRequest('/referrals/apply-simple', {
-      method: 'POST',
+    return this.makeRequest("/referrals/apply-simple", {
+      method: "POST",
     });
   }
 

@@ -95,6 +95,10 @@ const PaymentPage = () => {
       quantity: item.quantity || 1,
       price: item.price || 0,
       customization: item.customization || null,
+      // Add variant details for cart items
+      variantSku: item.variantSku || null,
+      variantConfig: item.variantConfig || null,
+      productSku: item.product?.sku || item.product?.modelSku || null,
     })),
     images: itemsData.flatMap((item: any) => {
       const images = [];
@@ -118,7 +122,14 @@ const PaymentPage = () => {
       jewelryType: "product",
       description: isDirectPurchase
         ? `Direct purchase: ${directPurchaseData.orderData.product.title}`
-        : `Order with ${itemsData.length} items`,
+        : `Order with ${itemsData.length} items${
+            itemsData.length > 0
+              ? ": " +
+                itemsData
+                  .map((item: any) => item.product?.title || "Product")
+                  .join(", ")
+              : ""
+          }`,
       sku: isDirectPurchase
         ? directPurchaseData.orderData.product.sku
         : undefined,
@@ -131,6 +142,35 @@ const PaymentPage = () => {
             product: directPurchaseData.orderData.product,
             customization: directPurchaseData.orderData.customization,
           }
+        : null,
+      // Add cart items data for multi-item orders
+      cartItems: !isDirectPurchase
+        ? itemsData.map((item: any) => ({
+            productId: item.product?._id,
+            productTitle: item.product?.title,
+            productSku: item.product?.sku || item.product?.modelSku,
+            variantSku: item.variantSku,
+            variantConfig: item.variantConfig,
+            quantity: item.quantity,
+            price: item.price,
+            sellingPrice: item.variantConfig?.sellingPrice || item.price,
+            priceBreakdown: item.variantConfig?.priceBreakdown,
+            metalDetails: {
+              type: item.variantConfig?.metalType,
+              color: item.variantConfig?.metalColor,
+              karat: item.variantConfig?.goldKarat,
+            },
+            diamondDetails: {
+              shape: item.variantConfig?.diamondShape,
+              size: item.variantConfig?.diamondSize,
+              origin: item.variantConfig?.diamondOrigin,
+              color: item.variantConfig?.diamondColor,
+              clarity: item.variantConfig?.diamondClarity,
+            },
+            ringDetails: {
+              size: item.variantConfig?.ringSize || "",
+            },
+          }))
         : null,
     },
   };

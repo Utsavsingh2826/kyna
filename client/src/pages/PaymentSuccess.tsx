@@ -3,12 +3,16 @@ import { useSearchParams, Link } from "react-router-dom";
 import { CheckCircle, Package, Download, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { paymentService } from "../services/paymentService";
+import { useDispatch } from "react-redux";
+import { clearCartItems } from "../store/slices/cartSlice";
 
 const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
+  const [cartCleared, setCartCleared] = useState(false);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     // Support both `orderId` and `order_id` query param names
@@ -32,6 +36,19 @@ const PaymentSuccess: React.FC = () => {
 
       if (response.success) {
         setPaymentDetails(response.data);
+
+        // Clear cart if payment was successful and we haven't cleared it yet
+        if (response.data.status === "success" && !cartCleared) {
+          try {
+            console.log("🧹 Clearing cart after successful payment...");
+            await dispatch(clearCartItems() as any);
+            setCartCleared(true);
+            console.log("✅ Cart cleared successfully");
+          } catch (clearError) {
+            console.error("❌ Error clearing cart:", clearError);
+            // Don't set error state as this is not critical for user experience
+          }
+        }
       } else {
         setError(response.message || "Failed to get payment status");
       }
@@ -202,13 +219,13 @@ const PaymentSuccess: React.FC = () => {
             {/* Action Buttons */}
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               {isSuccess ? (
-                  <>
-                    <Link to="/track-order">
-                      <Button className="bg-[#328F94] hover:bg-[#328F94]/90 flex items-center gap-2">
-                        Track Your Order
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </Link>
+                <>
+                  <Link to="/track-order">
+                    <Button className="bg-[#328F94] hover:bg-[#328F94]/90 flex items-center gap-2">
+                      Track Your Order
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
                   <Link to="/">
                     <Button variant="outline">Continue Shopping</Button>
                   </Link>

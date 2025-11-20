@@ -15,10 +15,29 @@ export interface IOrder extends Document {
 
   items: {
     product: Schema.Types.ObjectId;
-    productModel: "Pendant" | "Earring" | "Bracelet" | "Ring";
+    productModel: "Pendant" | "Earring" | "Bracelet" | "Ring" | "Product";
+    productTitle?: string;
+    productSku?: string;
+    variantSku?: string;
+    variantConfig?: any;
     quantity: number;
     price: number;
     total: number;
+    metalDetails?: {
+      type?: string;
+      color?: string;
+      karat?: string;
+    };
+    diamondDetails?: {
+      shape?: string;
+      size?: string;
+      origin?: string;
+      carat?: string;
+    };
+    ringDetails?: {
+      size?: string;
+    };
+    priceBreakdown?: any;
   }[];
   billingAddress: {
     companyName?: string;
@@ -148,6 +167,31 @@ export interface IOrder extends Document {
       title?: string;
       sellingPrice?: number;
     };
+    cartItems?: Array<{
+      productId?: mongoose.Types.ObjectId;
+      productTitle?: string;
+      productSku?: string;
+      variantSku?: string;
+      variantConfig?: any;
+      quantity?: number;
+      price?: number;
+      sellingPrice?: number;
+      priceBreakdown?: any;
+      metalDetails?: {
+        type?: string;
+        color?: string;
+        karat?: string;
+      };
+      diamondDetails?: {
+        shape?: string;
+        size?: string;
+        origin?: string;
+        carat?: string;
+      };
+      ringDetails?: {
+        size?: string;
+      };
+    }>;
   };
   orderedAt: Date;
   shippedAt?: Date;
@@ -192,11 +236,30 @@ const orderSchema = new Schema<IOrder>(
         productModel: {
           type: String,
           required: true,
-          enum: ["Pendant", "Earring", "Bracelet", "Ring"],
+          enum: ["Pendant", "Earring", "Bracelet", "Ring", "Product"],
         },
+        productTitle: { type: String },
+        productSku: { type: String },
+        variantSku: { type: String },
+        variantConfig: { type: Schema.Types.Mixed },
         quantity: { type: Number, required: true, min: 1 },
         price: { type: Number, required: true }, // price at purchase time
         total: { type: Number, required: true },
+        metalDetails: {
+          type: { type: String },
+          color: { type: String },
+          karat: { type: String },
+        },
+        diamondDetails: {
+          shape: { type: String },
+          size: { type: String },
+          origin: { type: String },
+          carat: { type: String },
+        },
+        ringDetails: {
+          size: { type: String },
+        },
+        priceBreakdown: { type: Schema.Types.Mixed },
       },
     ],
 
@@ -357,6 +420,33 @@ const orderSchema = new Schema<IOrder>(
         title: { type: String },
         sellingPrice: { type: Number },
       },
+      cartItems: [
+        {
+          productId: { type: Schema.Types.ObjectId, ref: "Product" },
+          productTitle: { type: String },
+          productSku: { type: String },
+          variantSku: { type: String },
+          variantConfig: { type: Schema.Types.Mixed },
+          quantity: { type: Number },
+          price: { type: Number },
+          sellingPrice: { type: Number },
+          priceBreakdown: { type: Schema.Types.Mixed },
+          metalDetails: {
+            type: { type: String },
+            color: { type: String },
+            karat: { type: String },
+          },
+          diamondDetails: {
+            shape: { type: String },
+            size: { type: String },
+            origin: { type: String },
+            carat: { type: String },
+          },
+          ringDetails: {
+            size: { type: String },
+          },
+        },
+      ],
     },
 
     // Important dates
