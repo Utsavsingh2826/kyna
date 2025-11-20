@@ -1,103 +1,62 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IPromoCode extends Document {
   code: string;
-  discountType: 'percentage' | 'flat';
-  discountValue: number; // 20 for 20% or 100 for ₹100
-  minPurchase: number;
-  expiresAt?: Date;
-  usageLimit: number;
-  usedCount: number;
-  usedBy: mongoose.Types.ObjectId[];
+  discountPercent: number;
   isActive: boolean;
   description?: string;
+  createdBy: Schema.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
-  isValid(): boolean;
-  canBeUsedBy(userId: mongoose.Types.ObjectId): boolean;
-  calculateDiscount(subtotal: number): number;
 }
 
-const promoCodeSchema = new Schema<IPromoCode>({
-  code: { 
-    type: String, 
-    required: true, 
-    unique: true, 
-    uppercase: true,
-    trim: true 
+const promoCodeSchema = new Schema<IPromoCode>(
+  {
+    code: {
+      type: String,
+      required: [true, "Promo code is required"],
+      unique: true,
+      uppercase: true,
+      trim: true,
+      minlength: [3, "Promo code must be at least 3 characters"],
+      maxlength: [20, "Promo code cannot exceed 20 characters"],
+      match: [/^[A-Z0-9]+$/, "Promo code must contain only uppercase letters and numbers"],
+      index: true,
+    },
+    discountPercent: {
+      type: Number,
+      required: [true, "Discount percent is required"],
+      min: [1, "Discount percent must be at least 1"],
+      max: [100, "Discount percent cannot exceed 100"],
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Description cannot exceed 500 characters"],
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
-  discountType: { 
-    type: String, 
-    enum: ['percentage', 'flat'], 
-    default: 'flat' 
-  },
-  discountValue: { 
-    type: Number, 
-    required: true,
-    min: 0
-  },
-  minPurchase: { 
-    type: Number, 
-    default: 0,
-    min: 0
-  },
-  expiresAt: { 
-    type: Date 
-  },
-  usageLimit: { 
-    type: Number, 
-    default: 1,
-    min: 1
-  },
-  usedCount: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  usedBy: [{ 
-    type: Schema.Types.ObjectId, 
-    ref: 'User' 
-  }],
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  description: {
-    type: String,
-    trim: true
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
-}, {
-  timestamps: true
-});
+);
 
-// Index for faster lookups
-promoCodeSchema.index({ code: 1 });
-promoCodeSchema.index({ isActive: 1 });
-promoCodeSchema.index({ expiresAt: 1 });
+promoCodeSchema.index({ isActive: 1, code: 1 });
 
-// Method to check if promo code is valid
-promoCodeSchema.methods.isValid = function(): boolean {
-  if (!this.isActive) return false;
-  if (this.expiresAt && this.expiresAt < new Date()) return false;
-  if (this.usedCount >= this.usageLimit) return false;
-  return true;
-};
+const PromoCode: Model<IPromoCode> = mongoose.model<IPromoCode, Model<IPromoCode>>(
+  "PromoCode",
+  promoCodeSchema
+);
 
-// Method to check if user can use this promo code
-promoCodeSchema.methods.canBeUsedBy = function(userId: mongoose.Types.ObjectId): boolean {
-  return !this.usedBy.includes(userId);
-};
-
-// Method to calculate discount amount
-promoCodeSchema.methods.calculateDiscount = function(subtotal: number): number {
-  if (!this.isValid()) return 0;
-  if (subtotal < this.minPurchase) return 0;
-  
-  if (this.discountType === 'percentage') {
-    return Math.min(subtotal * (this.discountValue / 100), subtotal);
-  } else {
-    return Math.min(this.discountValue, subtotal);
-  }
-};
-
-export default mongoose.model<IPromoCode>('PromoCode', promoCodeSchema);
+export default PromoCode;

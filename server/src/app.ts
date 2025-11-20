@@ -415,12 +415,16 @@ const PORT: number = parseInt(process.env.PORT || "5000", 10);
 // Database error handling
 mongoose.connection.on('error', (err) => {
   console.error('❌ MongoDB connection error:', err);
-  process.exit(1);
+  // Only exit if it's a critical error that prevents connection
+  if (mongoose.connection.readyState === 0) {
+    console.error('❌ Cannot establish MongoDB connection. Exiting...');
+    process.exit(1);
+  }
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.error('❌ MongoDB disconnected');
-  process.exit(1);
+  console.warn('⚠️ MongoDB disconnected - attempting to reconnect...');
+  // Don't exit immediately - let mongoose handle reconnection
 });
 
 mongoose.connection.on('reconnected', () => {
@@ -442,11 +446,27 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
-// MongoDB connection
-mongoose
-  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels")
-  .then(async () => {
-    console.log(process.env.Mongo_URI);
+// MongoDB connection with better error handling
+const connectDB = async () => {
+  try {
+    const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels";
+    const isAtlas = mongoUri.includes("mongodb+srv://");
+    
+    await mongoose.connect(mongoUri, {
+      serverSelectionTimeoutMS: 10000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      retryWrites: true,
+      retryReads: true,
+      ...(isAtlas && {
+        ssl: true,
+        tlsAllowInvalidCertificates: true,
+        tlsAllowInvalidHostnames: true,
+      }),
+    });
+    
+    console.log(mongoUri.includes("mongodb+srv://") ? mongoUri.replace(/\/\/([^:]+):([^@]+)@/, "//***:***@") : mongoUri);
     console.log("✅ MongoDB connected");
 
     app.listen(PORT, () => {
@@ -456,10 +476,13 @@ mongoose
         `🔍 Tracking Health: http://localhost:${PORT}/api/tracking/health`
       );
     });
-  })
-  .catch((err: Error) => {
+  } catch (err) {
     console.error("❌ MongoDB connection error:", err);
+    console.error("Please check your MONGO_URI in .env file");
     process.exit(1);
-  });
+  }
+};
+
+connectDB();
 
 export default app;
