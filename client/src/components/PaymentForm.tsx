@@ -32,6 +32,20 @@ interface PaymentFormProps {
       estimatedDelivery?: string | null;
       estimatedDeliveryDay?: string | null;
       [key: string]: unknown;
+      promo?: {
+        code: string;
+        discountPercent: number;
+        discountValue: number;
+        diamondSubtotal?: number;
+        appliedOn?: string;
+      };
+      pricingSummary?: {
+        subtotal: number;
+        promoDiscount: number;
+        taxableAmount: number;
+        tax: number;
+        payableAmount: number;
+      };
     };
   };
   userInfo: {
@@ -311,6 +325,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               <span>Total Amount</span>
               <span>₹{orderData.amount.toLocaleString()}</span>
             </div>
+            {orderData.orderDetails?.promo && (
+              <p className="text-xs text-green-700 mt-1">
+                Includes promo {orderData.orderDetails.promo.code} saving ₹
+                {typeof orderData.orderDetails.promo.discountValue === "number"
+                  ? orderData.orderDetails.promo.discountValue.toLocaleString()
+                  : orderData.orderDetails.promo.discountValue}
+              </p>
+            )}
           </div>
         </div>
       </div>

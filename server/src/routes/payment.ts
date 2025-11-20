@@ -824,11 +824,34 @@ router.post("/verify", async (req: Request, res: Response) => {
 
     await paymentOrder.save();
 
-    // Add order to user's orders array
+    // Add order to user's orders array & record promo usage
+    const promoInfo =
+      (paymentOrder.orderDetails as any)?.promo ||
+      (paymentOrder.orderDetails as any)?.pricing?.promo;
     try {
-      await User.findByIdAndUpdate(paymentOrder.userId, {
-        $push: { orders: paymentOrder._id },
-      });
+      const userDoc = await User.findById(paymentOrder.userId);
+      if (userDoc) {
+        userDoc.orders = [...(userDoc.orders || []), paymentOrder._id];
+
+        if (
+          promoInfo?.code &&
+          !userDoc.usedPromoCodes?.some(
+            (entry) => entry.code === promoInfo.code
+          )
+        ) {
+          userDoc.usedPromoCodes = [
+            ...(userDoc.usedPromoCodes || []),
+            {
+              code: promoInfo.code,
+              orderId: paymentOrder._id,
+              discountValue: promoInfo.discountValue || 0,
+              appliedAt: new Date(),
+            },
+          ];
+        }
+
+        await userDoc.save();
+      }
       console.log(
         `Payment order ${paymentOrder._id} added to user ${paymentOrder.userId} orders array`
       );
@@ -902,6 +925,15 @@ router.post("/verify", async (req: Request, res: Response) => {
           transactionId: razorpay_payment_id,
           updatedAt: new Date(),
         };
+
+        if (promoInfo?.code) {
+          updateData.promoSummary = {
+            code: promoInfo.code,
+            discountPercent: promoInfo.discountPercent,
+            discountValue: promoInfo.discountValue,
+            appliedOn: promoInfo.appliedOn || "diamond",
+          };
+        }
 
         // Add detailed product information if available from PaymentOrder
         let orderDetails: any = null; // Declare outside if block for proper scope

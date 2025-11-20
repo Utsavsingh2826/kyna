@@ -113,7 +113,14 @@ const userSchema = new Schema<IUserInternal>({
   totalReferralEarnings: { type: Number, default: 0 },
   
   // Promo code tracking
-  usedPromoCodes: [{ type: Schema.Types.ObjectId, ref: "PromoCode" }],
+  usedPromoCodes: [
+    {
+      code: { type: String, uppercase: true, trim: true },
+      orderId: { type: Schema.Types.ObjectId, ref: "PaymentOrder" },
+      discountValue: { type: Number, default: 0 },
+      appliedAt: { type: Date, default: Date.now },
+    },
+  ],
   usedReferralCodes: [{ type: String }]
 
 }, {

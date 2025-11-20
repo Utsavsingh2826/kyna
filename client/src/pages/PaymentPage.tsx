@@ -1,11 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { fetchCart } from "@/store/slices/cartSlice";
 import PaymentForm from "@/components/PaymentForm";
 import { Loader, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { RootState, AppDispatch } from "@/store";
+import { toast } from "sonner";
+import apiService from "@/services/api";
+
+interface PromoApiResponse {
+  code: string;
+  discountPercent: number;
+  discountValue: number;
+  diamondSubtotal: number;
+  description?: string;
+  appliedOn?: string;
+}
 
 const PaymentPage = () => {
   const navigate = useNavigate();
@@ -75,6 +87,12 @@ const PaymentPage = () => {
     );
   }
 
+  // Promo code UI state
+  const [promoCode, setPromoCode] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+
   // Determine data source (cart or direct purchase)
   const isDirectPurchase = !!directPurchaseData;
   const itemsData = isDirectPurchase
@@ -84,12 +102,55 @@ const PaymentPage = () => {
     ? directPurchaseData.totalAmount
     : cart?.totalAmount || 0;
 
+  const directPurchaseDiamondCost = isDirectPurchase
+    ? Number(
+        directPurchaseData?.orderData?.product?.priceBreakdown?.diamondCost ?? 0
+      )
+    : 0;
+
+  const promoDiscount = appliedPromo?.discountValue || 0;
+  const subtotalAfterPromo = Math.max(totalAmount - promoDiscount, 0);
+  const taxAmount = Math.round(subtotalAfterPromo * 0.18);
+  const payableAmount = subtotalAfterPromo + taxAmount;
+
+  // Get user info from Redux auth state
+  const userInfo = {
+    userId: typeof user?.id === "string" ? user.id : "",
+    firstName: typeof user?.firstName === "string" ? user.firstName : "",
+    lastName: typeof user?.lastName === "string" ? user.lastName : "",
+    email: typeof user?.email === "string" ? user.email : "",
+    phone: typeof user?.phone === "string" ? user.phone : "",
+    address: typeof user?.address === "string" ? user.address : "",
+    city: typeof user?.city === "string" ? user.city : "",
+    state: typeof user?.state === "string" ? user.state : "",
+    zipCode: typeof user?.zipCode === "string" ? user.zipCode : "",
+    country: typeof user?.country === "string" ? user.country : "India",
+  };
+
+  const promoSummary = appliedPromo
+    ? {
+        code: appliedPromo.code,
+        discountPercent: appliedPromo.discountPercent,
+        discountValue: appliedPromo.discountValue,
+        diamondSubtotal: appliedPromo.diamondSubtotal,
+        appliedOn: appliedPromo.appliedOn || "diamond",
+      }
+    : undefined;
+
+  const orderPricingSummary = {
+    subtotal: totalAmount,
+    promoDiscount,
+    taxableAmount: subtotalAfterPromo,
+    tax: taxAmount,
+    payableAmount,
+  };
+
   // Prepare order data for payment form
   const orderData = {
     orderId: isDirectPurchase
       ? directPurchaseData.orderData.orderId
       : `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    amount: totalAmount,
+    amount: payableAmount,
     items: itemsData.map((item: any) => ({
       name: item.product?.title || item.product?.name || "Product",
       quantity: item.quantity || 1,
@@ -175,20 +236,6 @@ const PaymentPage = () => {
     },
   };
 
-  // Get user info from Redux auth state
-  const userInfo = {
-    userId: typeof user?.id === "string" ? user.id : "",
-    firstName: typeof user?.firstName === "string" ? user.firstName : "",
-    lastName: typeof user?.lastName === "string" ? user.lastName : "",
-    email: typeof user?.email === "string" ? user.email : "",
-    phone: typeof user?.phone === "string" ? user.phone : "",
-    address: typeof user?.address === "string" ? user.address : "",
-    city: typeof user?.city === "string" ? user.city : "",
-    state: typeof user?.state === "string" ? user.state : "",
-    zipCode: typeof user?.zipCode === "string" ? user.zipCode : "",
-    country: typeof user?.country === "string" ? user.country : "India",
-  };
-
   const handlePaymentInitiated = async (orderId: string) => {
     try {
       console.log("Payment initiated for order:", orderId);
@@ -204,13 +251,72 @@ const PaymentPage = () => {
     // Error will be shown to user by PaymentForm component
   };
 
+  const promoContext = isDirectPurchase ? "direct" : "cart";
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoError("");
+
+    try {
+      const payload: any = {
+        code: promoCode.trim().toUpperCase(),
+        context: promoContext,
+      };
+
+      if (promoContext === "direct") {
+        if (!directPurchaseDiamondCost) {
+          throw new Error(
+            "Diamond value is unavailable for this product. Promo cannot be applied."
+          );
+        }
+        payload.directPurchase = { diamondCost: directPurchaseDiamondCost };
+      }
+
+      const response = await apiService.validatePromoCode(payload);
+
+      if (response.success && response.data) {
+        const promoData = response.data as PromoApiResponse;
+        setAppliedPromo(promoData);
+        setPromoCode("");
+        toast.success(
+          `Promo ${promoData.code} applied. You saved ₹${promoData.discountValue}`
+        );
+      } else {
+        const fallbackMessage =
+          response.error || response.message || "Promo invalid";
+        setPromoError(fallbackMessage);
+        toast.error(fallbackMessage);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to apply promo";
+      setPromoError(message);
+      toast.error(message);
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoError("");
+    toast.info("Promo removed");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header with back button */}
         <div className="mb-8">
           <Button
-            onClick={() => navigate(isDirectPurchase ? -1 : "/cart")}
+            onClick={() => {
+              if (isDirectPurchase) {
+                navigate(-1);
+              } else {
+                navigate("/cart");
+              }
+            }}
             variant="ghost"
             className="mb-6 flex items-center gap-2 text-gray-600 hover:text-gray-900"
           >
@@ -229,6 +335,12 @@ const PaymentPage = () => {
                 ₹{totalAmount.toLocaleString()}
               </span>
             </p>
+            {appliedPromo && (
+              <p className="text-sm text-green-700 mt-1">
+                Promo {appliedPromo.code} applied: now paying ₹
+                {payableAmount.toLocaleString()}
+              </p>
+            )}
             {isDirectPurchase && directPurchaseData?.orderData?.product && (
               <div className="mt-3 text-sm text-gray-600">
                 <strong>Product:</strong>{" "}
@@ -253,6 +365,60 @@ const PaymentPage = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Promo Code Section */}
+        <div className="bg-white rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            Coupon Code
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Apply a promo to get additional savings on the diamond value of your
+            order.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Input
+              placeholder="Enter promo code"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              disabled={promoLoading || !!appliedPromo}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleApplyPromo}
+              disabled={
+                promoLoading || !promoCode.trim() || !!appliedPromo
+              }
+              className="bg-[#328F94] hover:bg-[#28777b]"
+            >
+              {promoLoading ? "Applying..." : "Apply Coupon"}
+            </Button>
+          </div>
+          {promoError && (
+            <p className="text-sm text-red-500 mt-2">{promoError}</p>
+          )}
+          {appliedPromo && (
+            <div className="mt-4 flex flex-col gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-semibold">
+                  Promo {appliedPromo.code} applied
+                </p>
+                <p>
+                  Savings: ₹{appliedPromo.discountValue.toLocaleString()} on
+                  diamond value ₹
+                  {appliedPromo.diamondSubtotal.toLocaleString()}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRemovePromo}
+                className="text-red-600 hover:text-red-700"
+              >
+                Remove
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Main content - Payment Form and Summary */}
@@ -312,17 +478,21 @@ const PaymentPage = () => {
                   <span>Shipping</span>
                   <span>Free</span>
                 </div>
+                {appliedPromo && (
+                  <div className="flex justify-between text-sm text-green-600">
+                    <span>Promo ({appliedPromo.code})</span>
+                    <span>-₹{promoDiscount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Tax (18%)</span>
-                  <span>
-                    ₹{Math.round(totalAmount * 0.18).toLocaleString()}
-                  </span>
+                  <span>₹{taxAmount.toLocaleString()}</span>
                 </div>
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between font-semibold text-gray-900">
-                    <span>Total</span>
+                    <span>Total Payable</span>
                     <span className="text-lg text-teal-600">
-                      ₹{Math.round(totalAmount * 1.18).toLocaleString()}
+                      ₹{payableAmount.toLocaleString()}
                     </span>
                   </div>
                 </div>
