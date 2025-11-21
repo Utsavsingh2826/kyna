@@ -40,7 +40,11 @@ export const createCustomizationRequestWithPayment = async (
       metalType,
       metalKarat,
       metalColor,
+      // size normalization candidates
+      size,
       ringSize,
+      braceletSize,
+      bangleSize,
       dimensions,
       engraving,
       specialInstructions,
@@ -70,6 +74,9 @@ export const createCustomizationRequestWithPayment = async (
       });
     }
 
+    // Normalize size across jewelry types
+    const normalizedSize = size || ringSize || braceletSize || bangleSize;
+
     // Create customization request
     const customizationRequest = new CustomizationRequest({
       userId,
@@ -89,7 +96,9 @@ export const createCustomizationRequestWithPayment = async (
       metalType,
       metalKarat,
       metalColor,
-      ringSize,
+      // Save generic size; keep ringSize only for backward-compat when provided
+      size: normalizedSize,
+      ...(ringSize ? { ringSize } : {}),
       dimensions,
       engraving,
       specialInstructions,
@@ -146,6 +155,9 @@ export const createCustomizationRequestWithPayment = async (
         status: customizationRequest.status,
         progress: customizationRequest.progress,
         createdAt: customizationRequest.createdAt,
+        size:
+          customizationRequest.size || customizationRequest.ringSize || null,
+        ringSize: customizationRequest.ringSize || null,
         amount: customizationRequest.paymentAmount || 1000, // Use actual payment amount or default
         estimatedDelivery: customizationRequest.estimatedDelivery,
         estimatedDeliveryDay: customizationRequest.estimatedDeliveryDay,
@@ -200,7 +212,11 @@ export const createCustomizationRequest = async (
       metalType,
       metalKarat,
       metalColor,
+      // size normalization candidates
+      size,
       ringSize,
+      braceletSize,
+      bangleSize,
       dimensions,
       engraving,
       specialInstructions,
@@ -224,6 +240,9 @@ export const createCustomizationRequest = async (
       });
     }
 
+    // Normalize size across jewelry types
+    const normalizedSize2 = size || ringSize || braceletSize || bangleSize;
+
     // Create customization request
     const customizationRequest = new CustomizationRequest({
       userId,
@@ -243,7 +262,8 @@ export const createCustomizationRequest = async (
       metalType,
       metalKarat,
       metalColor,
-      ringSize,
+      size: normalizedSize2,
+      ...(ringSize ? { ringSize } : {}),
       dimensions,
       engraving,
       specialInstructions,
@@ -290,6 +310,9 @@ export const createCustomizationRequest = async (
         status: customizationRequest.status,
         progress: customizationRequest.progress,
         createdAt: customizationRequest.createdAt,
+        size:
+          customizationRequest.size || customizationRequest.ringSize || null,
+        ringSize: customizationRequest.ringSize || null,
       },
     });
   } catch (error) {

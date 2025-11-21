@@ -51,7 +51,8 @@ export interface ICustomizationRequest extends Document {
   metalColor: string; // Yellow, White, Rose Gold
 
   // Size and Dimensions
-  ringSize?: string; // Ring size if applicable
+  size?: string; // Generic size for any jewelry type
+  ringSize?: string; // Deprecated: use `size` instead
   dimensions?: {
     // Custom dimensions
     width?: number;
@@ -276,6 +277,12 @@ const customizationRequestSchema = new Schema<ICustomizationRequest>(
       type: String,
       trim: true,
     },
+    // Generic size field (new)
+    size: {
+      type: String,
+      trim: true,
+    },
+    // Backward-compat ring size (deprecated)
     ringSize: {
       type: String,
       trim: true,

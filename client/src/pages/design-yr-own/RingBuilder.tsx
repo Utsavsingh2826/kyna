@@ -16,7 +16,7 @@ import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import EngravingPage from "../Engrave";
-import PaymentForm from "../../components/PaymentForm";
+import CustomizationPaymentForm from "@/components/CustomizationPaymentForm";
 
 const steps = [
   { number: 1, title: "Inspiration Upload", active: true },
@@ -58,6 +58,41 @@ const diamondShapes = [
 const goldKarat = ["22KT", "18KT", "14KT", "10KT"];
 
 export default function RingBuilder() {
+  type CustomizationDataType = {
+    title: string;
+    description: string;
+    category: string;
+    subCategory: string;
+    jewelryType: string;
+    stylingName: string;
+    referenceImages: string[];
+    inspirationImages: string[];
+    diamondShape: string;
+    diamondSize: string;
+    diamondColor: string;
+    metalType: string;
+    metalKarat: string;
+    metalColor: string;
+    contactInfo: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phoneNumber: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      country: string;
+    };
+    customData: {
+      sameAsImage: boolean;
+      modificationRequest: string;
+      priority: string;
+    };
+    tags: string[];
+    estimatedDelivery: string;
+    estimatedDeliveryDay: string;
+  } | null;
   const [currentStep, setCurrentStep] = useState(1);
   const authUser = useSelector((state: RootState) => state.auth.user);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -67,29 +102,22 @@ export default function RingBuilder() {
     useState<string>("");
   const [showEngravingPopup, setShowEngravingPopup] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
-  
-  // Store engraved images as blobs for batch upload
-  const [engravingBlobs, setEngravingBlobs] = useState<{ blob: Blob; url: string }[]>([]);
-  // Define a minimal type for payment order data to avoid 'any'
-  type PaymentOrderType = {
-    orderId: string;
-    orderNumber?: string;
-    orderCategory?: 'design-your-own' | 'build-your-own' | 'products';
-    orderType?: 'customized' | 'normal';
-    amount: number;
-    items: Array<{ name: string; quantity: number; price: number }>;
-    jewelryId?: string;
-    userId?: string;
-    images?: Array<{ url: string; publicId?: string; source?: string }>;
-    customData?: Record<string, unknown>;
-    orderDetails?: Record<string, unknown>;
-  } | null;
 
-  const [orderData, setOrderData] = useState<PaymentOrderType>(null);
+  // Store engraved images as blobs for batch upload
+  const [engravingBlobs, setEngravingBlobs] = useState<
+    { blob: Blob; url: string }[]
+  >([]);
+
+  // Add customization data state for payment
+  const [customizationData, setCustomizationData] =
+    useState<CustomizationDataType>(null);
   // const [createdOrderId, setCreatedOrderId] = useState<string>("");
   const [Loading, setLoading] = useState<boolean>(false);
-  const [serviceabilityStatus, setServiceabilityStatus] = useState<'idle' | 'checking' | 'serviceable' | 'not-serviceable'>('idle');
-  const [serviceabilityMessage, setServiceabilityMessage] = useState<string>('');
+  const [serviceabilityStatus, setServiceabilityStatus] = useState<
+    "idle" | "checking" | "serviceable" | "not-serviceable"
+  >("idle");
+  const [serviceabilityMessage, setServiceabilityMessage] =
+    useState<string>("");
   const [formData, setFormData] = useState({
     // API matching fields - Use getUserId for consistent userId
     userId: "",
@@ -186,9 +214,17 @@ export default function RingBuilder() {
       phoneNumber: formData.phoneNumber,
       address: formData.address,
       city: formData.city,
-      zipCode: formData.zipCode
+      zipCode: formData.zipCode,
     });
-  }, [formData.firstName, formData.lastName, formData.email, formData.phoneNumber, formData.address, formData.city, formData.zipCode]);
+  }, [
+    formData.firstName,
+    formData.lastName,
+    formData.email,
+    formData.phoneNumber,
+    formData.address,
+    formData.city,
+    formData.zipCode,
+  ]);
 
   // Debug: Log authUser data
   useEffect(() => {
@@ -200,7 +236,7 @@ export default function RingBuilder() {
       phone: authUser?.phone,
       country: authUser?.country,
       state: authUser?.state,
-      zipCode: authUser?.zipCode
+      zipCode: authUser?.zipCode,
     });
   }, [authUser]);
 
@@ -322,12 +358,84 @@ export default function RingBuilder() {
           phoneNumber: formData.phoneNumber,
         },
       };
-
       console.log("💳 Step 3 - Complete API Payload:", completePayload);
       console.log(
         "📋 Ready for API call to: POST /api/upload-you-own/complete"
       );
     }
+  };
+
+  // Validation per-step: ensure required fields before advancing
+  const validateForStep = (targetStep: number): boolean => {
+    // Moving from step 1 -> 2: require at least one image and basic text
+    if (targetStep === 2) {
+      const hasAnyImage =
+        uploadedFiles.length > 0 || uploadedImages.length > 0 || !!formData.url;
+
+      if (!hasAnyImage) {
+        alert("Please upload at least 1 image before proceeding.");
+        return false;
+      }
+
+      if (
+        !formData.modificationRequest ||
+        formData.modificationRequest.trim().length < 15
+      ) {
+        alert("Please provide a modification description (min 15 characters).");
+        return false;
+      }
+
+      if (!formData.description || formData.description.trim() === "") {
+        alert("Please provide a description (max 100 words).");
+        return false;
+      }
+
+      const descWords = formData.description
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean).length;
+      if (descWords > 100) {
+        alert("The description field must not exceed 100 words.");
+        return false;
+      }
+
+      return true;
+    }
+
+    // Moving from step 2 -> 3: ensure customization fields are selected
+    if (targetStep === 3) {
+      // Ensure step1 requirements are met first
+      if (!validateForStep(2)) return false;
+
+      const customizationFields: Array<keyof typeof formData> = [
+        "diamondShape",
+        "diamondSize",
+        "diamondColor",
+        "metal",
+        "metalColor",
+        "goldKarat",
+        "ringSize",
+      ];
+
+      for (const field of customizationFields) {
+        const valueRaw = (formData as Record<string, unknown>)[
+          field as unknown as string
+        ];
+        const value = typeof valueRaw === "string" ? valueRaw : "";
+        if (!value || value.trim() === "") {
+          alert(`Please fill out the ${field} field.`);
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    return true;
+  };
+
+  const handleNextStep = (step: number) => {
+    if (validateForStep(step)) setCurrentStep(step);
   };
 
   // removed unused same_as_image state
@@ -535,7 +643,7 @@ export default function RingBuilder() {
 
       <div className="flex justify-end mt-8">
         <Button
-          onClick={() => updateSteps(2)}
+          onClick={() => handleNextStep(2)}
           className="px-8 bg-[#328F94] hover:bg-[#328F94]/90 text-white"
         >
           Next
@@ -612,12 +720,16 @@ export default function RingBuilder() {
               >
                 Select Diamond Shape * : {formData.diamondShape}
                 {formData.sameAsImage && (
-                  <span className="text-xs text-gray-500 ml-2">(Same as Image)</span>
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Same as Image)
+                  </span>
                 )}
               </h3>
-              <div className={`grid grid-cols-5 gap-2 ${
-                formData.sameAsImage ? "pointer-events-none opacity-50" : ""
-              }`}>
+              <div
+                className={`grid grid-cols-5 gap-2 ${
+                  formData.sameAsImage ? "pointer-events-none opacity-50" : ""
+                }`}
+              >
                 {diamondShapes.map((shape) => (
                   <button
                     key={shape.name}
@@ -758,12 +870,16 @@ export default function RingBuilder() {
           <div className="space-y-6">
             {/* Metal Color */}
             <div>
-              <label className={`text-sm text-muted-foreground ${
-                formData.sameAsImage ? "text-gray-400" : ""
-              }`}>
+              <label
+                className={`text-sm text-muted-foreground ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
+              >
                 Metal Color: Same as Image
                 {formData.sameAsImage && (
-                  <span className="text-xs text-gray-500 ml-2">(Same as Image)</span>
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Same as Image)
+                  </span>
                 )}
               </label>
               <Select
@@ -773,7 +889,9 @@ export default function RingBuilder() {
                 }
                 disabled={formData.sameAsImage}
               >
-                <SelectTrigger className={formData.sameAsImage ? "opacity-50" : ""}>
+                <SelectTrigger
+                  className={formData.sameAsImage ? "opacity-50" : ""}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
@@ -797,13 +915,15 @@ export default function RingBuilder() {
                   setFormData({ ...formData, ringSize: e.target.value })
                 }
               />
-              <Link to="/RingSize-Education"><Button
-                variant="link"
-                size="sm"
-                className="text-[#328F94] p-0 mt-1"
-              >
-                Ring Size Guide
-              </Button></Link>
+              <Link to="/RingSize-Education">
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-[#328F94] p-0 mt-1"
+                >
+                  Ring Size Guide
+                </Button>
+              </Link>
             </div>
 
             {/* Add Engraving - Updated with Popup */}
@@ -947,7 +1067,7 @@ export default function RingBuilder() {
           Back
         </Button>
         <Button
-          onClick={() => updateSteps(3)}
+          onClick={() => handleNextStep(3)}
           className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
         >
           Next
@@ -966,9 +1086,10 @@ export default function RingBuilder() {
           </p>
         </div>
       )}
-      {showPaymentForm && orderData && authUser ? (
-        <PaymentForm
-          orderData={orderData}
+      {showPaymentForm && customizationData && authUser ? (
+        <CustomizationPaymentForm
+          customizationData={customizationData}
+          amount={1800}
           userInfo={{
             userId: authUser.id || "",
             firstName: authUser.firstName || formData.firstName,
@@ -981,8 +1102,9 @@ export default function RingBuilder() {
             zipCode: formData.zipCode,
             country: formData.country,
           }}
-          onPaymentInitiated={handlePaymentInitiated}
+          onPaymentSuccess={handlePaymentSuccess}
           onError={handlePaymentError}
+          onCancel={handlePaymentCancel}
         />
       ) : (
         <>
@@ -1154,7 +1276,7 @@ export default function RingBuilder() {
                         <SelectTrigger>
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value="maharashtra">
                             Maharashtra
                           </SelectItem>
@@ -1177,7 +1299,7 @@ export default function RingBuilder() {
                         <SelectTrigger>
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value="mumbai">Mumbai</SelectItem>
                           <SelectItem value="pune">Pune</SelectItem>
                           <SelectItem value="delhi">Delhi</SelectItem>
@@ -1194,12 +1316,17 @@ export default function RingBuilder() {
                         pattern="\d{6}"
                       />
                       {serviceabilityMessage && (
-                        <div className={`text-xs mt-1 ${
-                          serviceabilityStatus === 'serviceable' ? 'text-green-600' : 
-                          serviceabilityStatus === 'not-serviceable' ? 'text-red-600' : 
-                          serviceabilityStatus === 'checking' ? 'text-blue-600' : 
-                          'text-gray-600'
-                        }`}>
+                        <div
+                          className={`text-xs mt-1 ${
+                            serviceabilityStatus === "serviceable"
+                              ? "text-green-600"
+                              : serviceabilityStatus === "not-serviceable"
+                              ? "text-red-600"
+                              : serviceabilityStatus === "checking"
+                              ? "text-blue-600"
+                              : "text-gray-600"
+                          }`}
+                        >
                           {serviceabilityMessage}
                         </div>
                       )}
@@ -1282,14 +1409,23 @@ export default function RingBuilder() {
               <Button
                 onClick={requestCustomization}
                 className="w-full mt-3 bg-[#328F94] hover:bg-[#328F94]/90 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
-                disabled={Loading || !formData.zipCode || serviceabilityStatus !== 'serviceable'}
+                disabled={
+                  Loading ||
+                  !formData.zipCode ||
+                  serviceabilityStatus !== "serviceable"
+                }
               >
-                {Loading ? "Creating Request..." : 
-                 !formData.zipCode ? "Enter Pincode First" :
-                 serviceabilityStatus === 'checking' ? "Checking Area..." :
-                 serviceabilityStatus === 'not-serviceable' ? "Area Not Serviceable" :
-                 serviceabilityStatus !== 'serviceable' ? "Check Pincode Serviceability" :
-                 "Request Customization →"}
+                {Loading
+                  ? "Creating Request..."
+                  : !formData.zipCode
+                  ? "Enter Pincode First"
+                  : serviceabilityStatus === "checking"
+                  ? "Checking Area..."
+                  : serviceabilityStatus === "not-serviceable"
+                  ? "Area Not Serviceable"
+                  : serviceabilityStatus !== "serviceable"
+                  ? "Check Pincode Serviceability"
+                  : "Request Customization →"}
               </Button>
 
               <div className="text-xs text-muted-foreground space-y-1">
@@ -1397,9 +1533,12 @@ export default function RingBuilder() {
         // Fetch the blob from the blob URL
         const response = await fetch(engravingImageUrl);
         const blob = await response.blob();
-        
+
         // Store both blob and display URL
-        setEngravingBlobs((prev) => [...prev, { blob, url: engravingImageUrl }]);
+        setEngravingBlobs((prev) => [
+          ...prev,
+          { blob, url: engravingImageUrl },
+        ]);
         setUploadedImages((prev) => [...prev, engravingImageUrl]);
         setFormData((prev) => ({
           ...prev,
@@ -1409,7 +1548,7 @@ export default function RingBuilder() {
         console.log("🖼️ Added engraved image blob to collection:", {
           blobSize: blob.size,
           blobType: blob.type,
-          displayUrl: engravingImageUrl
+          displayUrl: engravingImageUrl,
         });
       } catch (error) {
         console.error("❌ Error converting engraved image to blob:", error);
@@ -1422,47 +1561,61 @@ export default function RingBuilder() {
   // Function to check serviceability using Sequel247 API
   const checkServiceability = async (pinCode: string): Promise<boolean> => {
     if (!pinCode || pinCode.length !== 6 || !/^\d{6}$/.test(pinCode)) {
-      setServiceabilityStatus('idle');
-      setServiceabilityMessage('');
+      setServiceabilityStatus("idle");
+      setServiceabilityMessage("");
       return false;
     }
 
     try {
-      setServiceabilityStatus('checking');
-      setServiceabilityMessage('Checking serviceability...');
+      setServiceabilityStatus("checking");
+      setServiceabilityMessage("Checking serviceability...");
       console.log("🚀 Checking serviceability for pincode:", pinCode);
-      
-      const response = await fetch("https://test.sequel247.com/api/checkServiceability", {
-        method: "POST",
-        body: JSON.stringify({
-          token: "b228a27399f07927985d57c0f7d94ce8",
-          pin_code: pinCode,
-        }),
-      });
+
+      const response = await fetch(
+        "https://test.sequel247.com/api/checkServiceability",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            token: "b228a27399f07927985d57c0f7d94ce8",
+            pin_code: pinCode,
+          }),
+        }
+      );
 
       const result = await response.json();
       console.log("📍 Serviceability check result:", result);
 
       // Handle API returning boolean true or string variants like 'true', 'True', '1'
       const statusRaw = result?.status;
-      console.debug('🔎 Raw serviceability status from API:', statusRaw, typeof statusRaw);
-      const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
+      console.debug(
+        "🔎 Raw serviceability status from API:",
+        statusRaw,
+        typeof statusRaw
+      );
+      const statusStr =
+        statusRaw == null ? "" : String(statusRaw).trim().toLowerCase();
       const isServiceableApi =
-        statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
+        statusRaw === true || ["true", "1", "yes"].includes(statusStr);
 
       if (isServiceableApi) {
-        setServiceabilityStatus('serviceable');
-        setServiceabilityMessage('✅ Great! This area is serviceable for delivery.');
+        setServiceabilityStatus("serviceable");
+        setServiceabilityMessage(
+          "✅ Great! This area is serviceable for delivery."
+        );
         return true;
       } else {
-        setServiceabilityStatus('not-serviceable');
-        setServiceabilityMessage('❌ Sorry, this area is not serviceable for delivery.');
+        setServiceabilityStatus("not-serviceable");
+        setServiceabilityMessage(
+          "❌ Sorry, this area is not serviceable for delivery."
+        );
         return false;
       }
     } catch (error) {
       console.error("❌ Error checking serviceability:", error);
-      setServiceabilityStatus('idle');
-      setServiceabilityMessage('⚠️ Unable to check serviceability. Please try again.');
+      setServiceabilityStatus("idle");
+      setServiceabilityMessage(
+        "⚠️ Unable to check serviceability. Please try again."
+      );
       return false;
     }
   };
@@ -1470,13 +1623,13 @@ export default function RingBuilder() {
   // Handle zip code change with real-time serviceability check
   const handleZipCodeChange = async (value: string) => {
     setFormData({ ...formData, zipCode: value });
-    
+
     // Check serviceability when user enters a valid 6-digit pincode
     if (value.length === 6 && /^\d{6}$/.test(value)) {
       await checkServiceability(value);
     } else if (value.length < 6) {
-      setServiceabilityStatus('idle');
-      setServiceabilityMessage('');
+      setServiceabilityStatus("idle");
+      setServiceabilityMessage("");
     }
   };
 
@@ -1495,7 +1648,9 @@ export default function RingBuilder() {
 
       // Check if zip code is provided and valid
       if (!formData.zipCode) {
-        alert("Please enter your zip code before creating the customization request.");
+        alert(
+          "Please enter your zip code before creating the customization request."
+        );
         setLoading(false);
         return;
       }
@@ -1507,29 +1662,38 @@ export default function RingBuilder() {
       }
 
       // Check if serviceability has been verified
-      if (serviceabilityStatus !== 'serviceable') {
-        if (serviceabilityStatus === 'not-serviceable') {
-          alert("❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.");
+      if (serviceabilityStatus !== "serviceable") {
+        if (serviceabilityStatus === "not-serviceable") {
+          alert(
+            "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+          );
           setLoading(false);
           return;
-        } else if (serviceabilityStatus === 'checking') {
+        } else if (serviceabilityStatus === "checking") {
           alert("Please wait while we check if your area is serviceable.");
           setLoading(false);
           return;
         } else {
           // Status is 'idle' - need to check serviceability
-          console.log("📍 Checking serviceability for pincode:", formData.zipCode);
+          console.log(
+            "📍 Checking serviceability for pincode:",
+            formData.zipCode
+          );
           const isServiceable = await checkServiceability(formData.zipCode);
-          
+
           if (!isServiceable) {
-            alert("❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.");
+            alert(
+              "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+            );
             setLoading(false);
             return;
           }
         }
       }
 
-      console.log("✅ Area is serviceable, proceeding with customization request...");
+      console.log(
+        "✅ Area is serviceable, proceeding with customization request..."
+      );
 
       // Calculate Estimated Delivery Date (EDD) via Sequel247 before sending request
       // let eddResult: { estimated_delivery?: string; estimated_day?: string } | null = null;
@@ -1553,7 +1717,7 @@ export default function RingBuilder() {
       //     const statusRaw = eddJson?.status;
       //     const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
       //     const ok = statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
-          
+
       //     if (ok && eddJson?.data?.estimated_delivery) {
       //       eddResult = {
       //         estimated_delivery: eddJson.data.estimated_delivery,
@@ -1572,19 +1736,25 @@ export default function RingBuilder() {
       //   console.error('❌ [EDD] Error fetching EDD:', eddError);
       //   alert('⚠️ Failed to fetch estimated delivery date. Customization request will be created without EDD.');
       // }
-      const eddResult: { estimated_delivery?: string; estimated_day?: string } = {
-        estimated_delivery: "2025-10-24",
-        estimated_day: "monday"
-      };
+      const eddResult: { estimated_delivery?: string; estimated_day?: string } =
+        {
+          estimated_delivery: "2025-10-24",
+          estimated_day: "monday",
+        };
 
       // Prepare customization request data for payment
       const customizationRequestData = {
         title: `Custom ${formData.jewelryType} Design Request`,
-        description: formData.description?.trim() || `Custom ${formData.jewelryType} with ${formData.diamondShape} diamond`,
+        description:
+          formData.description?.trim() ||
+          `Custom ${formData.jewelryType} with ${formData.diamondShape} diamond`,
         category: formData.jewelryType.toUpperCase(),
-        subCategory: formData.jewelryType === 'ring' ? 'Custom Rings' : `Custom ${formData.jewelryType}`,
+        subCategory:
+          formData.jewelryType === "ring"
+            ? "Custom Rings"
+            : `Custom ${formData.jewelryType}`,
         jewelryType: formData.jewelryType,
-        stylingName: 'CUSTOM',
+        stylingName: "CUSTOM",
         referenceImages: uploadedImages,
         inspirationImages: uploadedImages,
         diamondShape: formData.diamondShape,
@@ -1595,12 +1765,15 @@ export default function RingBuilder() {
         metalKarat: formData.goldKarat,
         metalColor: formData.metalColor,
         ringSize: formData.ringSize,
-        engraving: formData.engraving ? {
-          text: formData.engraving,
-          font: 'Classic',
-          position: 'Inside'
-        } : undefined,
-        specialInstructions: formData.specialInstructions || formData.modificationRequest,
+        engraving: formData.engraving
+          ? {
+              text: formData.engraving,
+              font: "Classic",
+              position: "Inside",
+            }
+          : undefined,
+        specialInstructions:
+          formData.specialInstructions || formData.modificationRequest,
         // Add user contact information
         contactInfo: {
           firstName: formData.firstName,
@@ -1611,7 +1784,7 @@ export default function RingBuilder() {
           city: formData.city,
           state: formData.region,
           zipCode: formData.zipCode,
-          country: formData.country
+          country: formData.country,
         },
         customData: {
           sameAsImage: formData.sameAsImage,
@@ -1622,7 +1795,7 @@ export default function RingBuilder() {
               jewelryType: formData.jewelryType,
               images: uploadedImages,
               sameAsImage: formData.sameAsImage,
-              modificationRequest: formData.modificationRequest
+              modificationRequest: formData.modificationRequest,
             },
             step2: {
               diamondShape: formData.diamondShape,
@@ -1631,17 +1804,20 @@ export default function RingBuilder() {
               metal: formData.metal,
               metalColor: formData.metalColor,
               goldKarat: formData.goldKarat,
-              ringSize: formData.ringSize
-            }
-          }
+              ringSize: formData.ringSize,
+            },
+          },
         },
-        tags: ['custom', 'design-your-own', formData.jewelryType],
+        tags: ["custom", "design-your-own", formData.jewelryType],
         // Add EDD information
         estimatedDelivery: eddResult?.estimated_delivery || null,
-        estimatedDeliveryDay: eddResult?.estimated_day || null
+        estimatedDeliveryDay: eddResult?.estimated_day || null,
       };
 
-      console.log("📤 Creating customization request with payment:", customizationRequestData);
+      console.log(
+        "📤 Creating customization request with payment:",
+        customizationRequestData
+      );
       console.log("📋 Current formData state:", {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -1651,20 +1827,23 @@ export default function RingBuilder() {
         city: formData.city,
         region: formData.region,
         zipCode: formData.zipCode,
-        country: formData.country
+        country: formData.country,
       });
 
-      // First upload images using the same endpoint as order creation
+      // First upload all images (including engraving blobs) to Cloudinary
       let uploadedImageUrls: string[] = [];
-      
-      if (uploadedFiles.length > 0) {
+
+      if (uploadedFiles.length > 0 || engravingBlobs.length > 0) {
         console.log("📤 Uploading images to Cloudinary first...");
-        
+        console.log(
+          `📎 Files to upload: ${uploadedFiles.length} original + ${engravingBlobs.length} engraving`
+        );
+
         // Prepare FormData for image upload (same as order creation)
         const imageFormData = new FormData();
         imageFormData.append("userId", currentUserId);
         imageFormData.append("jewelryType", formData.jewelryType);
-        
+
         // Add uploaded files
         uploadedFiles.forEach((file, index) => {
           imageFormData.append("images", file);
@@ -1675,14 +1854,34 @@ export default function RingBuilder() {
           });
         });
 
-        // Upload images using the same endpoint as order creation
-        const imageResponse = await fetch("http://localhost:5000/api/rings/upload", {
-          method: "POST",
-          body: imageFormData,
+        // Add engraving blobs as files
+        engravingBlobs.forEach((engravingBlob, index) => {
+          const engravingFile = new File(
+            [engravingBlob.blob],
+            `engraving-${index + 1}.png`,
+            {
+              type: "image/png",
+            }
+          );
+          imageFormData.append("images", engravingFile);
+          console.log(`🖼️ Adding engraving file ${index + 1}:`, {
+            name: engravingFile.name,
+            size: engravingFile.size,
+            type: engravingFile.type,
+          });
         });
 
+        // Upload images using the same endpoint as order creation
+        const imageResponse = await fetch(
+          "http://localhost:5000/api/rings/upload",
+          {
+            method: "POST",
+            body: imageFormData,
+          }
+        );
+
         const imageResult = await imageResponse.json();
-        
+
         if (imageResult.success && imageResult.data?.images) {
           uploadedImageUrls = imageResult.data.images;
           console.log("✅ Images uploaded successfully:", uploadedImageUrls);
@@ -1701,140 +1900,199 @@ export default function RingBuilder() {
         inspirationImages: uploadedImageUrls, // Same as reference images for now
       };
 
-      console.log("📤 Creating customization request with uploaded images:", customizationRequestDataWithImages);
+      console.log(
+        "📤 Creating customization request with uploaded images:",
+        customizationRequestDataWithImages
+      );
       console.log("🔍 Required fields check:", {
         title: customizationRequestDataWithImages.title,
         description: customizationRequestDataWithImages.description,
         category: customizationRequestDataWithImages.category,
         subCategory: customizationRequestDataWithImages.subCategory,
-        jewelryType: customizationRequestDataWithImages.jewelryType
+        jewelryType: customizationRequestDataWithImages.jewelryType,
       });
-      console.log("📞 Contact information being sent:", customizationRequestDataWithImages.contactInfo);
+      console.log(
+        "📞 Contact information being sent:",
+        customizationRequestDataWithImages.contactInfo
+      );
 
       // Validate required fields before sending
-      if (!customizationRequestDataWithImages.title || 
-          !customizationRequestDataWithImages.description || 
-          !customizationRequestDataWithImages.category || 
-          !customizationRequestDataWithImages.subCategory || 
-          !customizationRequestDataWithImages.jewelryType) {
+      if (
+        !customizationRequestDataWithImages.title ||
+        !customizationRequestDataWithImages.description ||
+        !customizationRequestDataWithImages.category ||
+        !customizationRequestDataWithImages.subCategory ||
+        !customizationRequestDataWithImages.jewelryType
+      ) {
         console.error("❌ Missing required fields:", {
           title: !!customizationRequestDataWithImages.title,
           description: !!customizationRequestDataWithImages.description,
           category: !!customizationRequestDataWithImages.category,
           subCategory: !!customizationRequestDataWithImages.subCategory,
-          jewelryType: !!customizationRequestDataWithImages.jewelryType
+          jewelryType: !!customizationRequestDataWithImages.jewelryType,
         });
-        alert("Missing required information. Please fill in all required fields.");
+        alert(
+          "Missing required information. Please fill in all required fields."
+        );
         setLoading(false);
         return;
       }
 
       // Validate contact information
-      if (!customizationRequestDataWithImages.contactInfo || 
-          !customizationRequestDataWithImages.contactInfo.firstName ||
-          !customizationRequestDataWithImages.contactInfo.lastName ||
-          !customizationRequestDataWithImages.contactInfo.email ||
-          !customizationRequestDataWithImages.contactInfo.phoneNumber ||
-          !customizationRequestDataWithImages.contactInfo.address ||
-          !customizationRequestDataWithImages.contactInfo.city ||
-          !customizationRequestDataWithImages.contactInfo.zipCode) {
-        console.error("❌ Missing contact information:", customizationRequestDataWithImages.contactInfo);
-        alert("Please fill in all contact information fields (name, email, phone, address, city, pincode).");
+      if (
+        !customizationRequestDataWithImages.contactInfo ||
+        !customizationRequestDataWithImages.contactInfo.firstName ||
+        !customizationRequestDataWithImages.contactInfo.lastName ||
+        !customizationRequestDataWithImages.contactInfo.email ||
+        !customizationRequestDataWithImages.contactInfo.phoneNumber ||
+        !customizationRequestDataWithImages.contactInfo.address ||
+        !customizationRequestDataWithImages.contactInfo.city ||
+        !customizationRequestDataWithImages.contactInfo.zipCode
+      ) {
+        console.error(
+          "❌ Missing contact information:",
+          customizationRequestDataWithImages.contactInfo
+        );
+        alert(
+          "Please fill in all contact information fields (name, email, phone, address, city, pincode)."
+        );
         setLoading(false);
         return;
       }
 
       // Create customization request with payment integration
-      console.log("🔑 Auth token:", localStorage.getItem('token') ? 'Present' : 'Missing');
-      
+      console.log(
+        "🔑 Auth token:",
+        localStorage.getItem("token") ? "Present" : "Missing"
+      );
+
       // Test server connectivity first
       try {
-        const testResponse = await fetch('http://localhost:5000/api/customization/my-requests', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        const testResponse = await fetch(
+          "http://localhost:5000/api/customization/my-requests",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
           }
-        });
+        );
         console.log("🔗 Server connectivity test:", testResponse.status);
       } catch (error) {
         console.error("❌ Server connectivity error:", error);
-        alert("Cannot connect to server. Please make sure the server is running.");
+        alert(
+          "Cannot connect to server. Please make sure the server is running."
+        );
         setLoading(false);
         return;
       }
-      
-      const response = await fetch('http://localhost:5000/api/customization/request-with-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(customizationRequestDataWithImages)
-      });
+
+      const response = await fetch(
+        "http://localhost:5000/api/customization/request-with-payment",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(customizationRequestDataWithImages),
+        }
+      );
 
       const result = await response.json();
-      
+
       console.log("📥 Server response:", {
         status: response.status,
         success: result.success,
         message: result.message,
-        data: result.data
+        data: result.data,
       });
 
       if (result.success) {
-        console.log("✅ Customization request created successfully:", result.data);
-        
-        // Prepare payment order data similar to createOrder
-        const paymentOrderData = {
-          orderId: result.data.requestId,
-          orderNumber: result.data.requestNumber,
-          orderCategory: 'design-your-own' as const,
-          orderType: 'customized' as const,
-          amount: result.data.amount || 1000, // Default amount for customization request
-          items: [{
-            name: `Custom ${formData.jewelryType} Design Request`,
-            quantity: 1,
-            price: result.data.amount || 1800
-          }],
-          userId: currentUserId,
-          images: uploadedImages.map(url => ({
-            url,
-            source: 'upload',
-            uploadedAt: new Date().toISOString()
-          })),
-          customData: customizationRequestData,
-          orderDetails: {
-            jewelryType: formData.jewelryType,
-            description: formData.description,
-            estimatedDelivery: eddResult?.estimated_delivery || null,
-            estimatedDeliveryDay: eddResult?.estimated_day || null,
-            customizationRequest: true
-          }
+        console.log(
+          "✅ Customization request created successfully:",
+          result.data
+        );
+
+        // Prepare customization request data for payment
+        const customizationRequestDataForPayment = {
+          title: `Custom ${formData.jewelryType} Design Request`,
+          description:
+            formData.description?.trim() ||
+            `Custom ${formData.jewelryType} with ${formData.diamondShape} diamond`,
+          category: formData.jewelryType.toUpperCase(),
+          subCategory:
+            formData.jewelryType === "ring"
+              ? "Custom Rings"
+              : `Custom ${formData.jewelryType}`,
+          jewelryType: formData.jewelryType,
+          stylingName: "CUSTOM",
+          referenceImages: uploadedImageUrls,
+          inspirationImages: uploadedImageUrls,
+          diamondShape: formData.diamondShape,
+          diamondSize: formData.diamondSize,
+          diamondColor: formData.diamondColor,
+          metalType: formData.metal,
+          metalKarat: formData.goldKarat,
+          metalColor: formData.metalColor,
+          contactInfo: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber,
+            address: formData.address,
+            city: formData.city,
+            state: formData.region,
+            zipCode: formData.zipCode,
+            country: formData.country,
+          },
+          customData: {
+            sameAsImage: formData.sameAsImage,
+            modificationRequest: formData.modificationRequest,
+            priority: formData.priority,
+          },
+          tags: ["custom", "design-your-own", formData.jewelryType],
+          // Add EDD information (ensure strings to satisfy CustomizationDataType)
+          estimatedDelivery: eddResult?.estimated_delivery || "",
+          estimatedDeliveryDay: eddResult?.estimated_day || "",
         };
 
-        console.log('💳 [PAYMENT] Setting customization request payment data:', paymentOrderData);
-        setOrderData(paymentOrderData as PaymentOrderType);
+        console.log(
+          "💳 [PAYMENT] Preparing customization data for payment:",
+          customizationRequestDataForPayment
+        );
+
+        // Set customization data and show payment form
+        setCustomizationData(
+          customizationRequestDataForPayment as CustomizationDataType
+        );
         setShowPaymentForm(true);
         setCurrentStep(3);
 
-        const eddInfo = eddResult?.estimated_delivery ? 
-          `EDD: ${eddResult.estimated_delivery} (${eddResult.estimated_day || 'N/A'})` : 
-          'No EDD';
-          
+        const eddInfo = eddResult?.estimated_delivery
+          ? `EDD: ${eddResult.estimated_delivery} (${
+              eddResult.estimated_day || "N/A"
+            })`
+          : "No EDD";
+
         alert(
           `Customization request created successfully! ${eddInfo}\n\nProceeding to payment...`
         );
-        
+
         setLoading(false);
       } else {
-        console.error("❌ Failed to create customization request:", result.message);
+        console.error(
+          "❌ Failed to create customization request:",
+          result.message
+        );
         alert(`❌ Failed to submit customization request: ${result.message}`);
         setLoading(false);
       }
-
     } catch (error) {
       console.error("❌ Error creating customization request:", error);
-      alert("❌ An error occurred while submitting your customization request. Please try again.");
+      alert(
+        "❌ An error occurred while submitting your customization request. Please try again."
+      );
       setLoading(false);
     }
   };
@@ -1879,7 +2137,7 @@ export default function RingBuilder() {
   //         // Status is 'idle' - need to check serviceability
   //         console.log("📍 Checking serviceability for pincode:", formData.zipCode);
   //         const isServiceable = await checkServiceability(formData.zipCode);
-          
+
   //         if (!isServiceable) {
   //           alert("❌ Sorry, we cannot process orders to your area as it is not serviceable. Please contact customer support for more information.");
   //           setLoading(false);
@@ -1889,7 +2147,6 @@ export default function RingBuilder() {
   //     }
 
   //     console.log("✅ Area is serviceable, proceeding with order creation...");
-      
 
   //     // Update formData with current userId
   //     const updatedFormData = { ...formData, userId: currentUserId };
@@ -1916,7 +2173,7 @@ export default function RingBuilder() {
   //         const statusRaw = eddJson?.status;
   //         const statusStr = statusRaw == null ? '' : String(statusRaw).trim().toLowerCase();
   //         const ok = statusRaw === true || ['true', '1', 'yes'].includes(statusStr);
-          
+
   //         if (ok && eddJson?.data?.estimated_delivery) {
   //           // API returns estimated_delivery in dd-mm-yyyy (example). Keep as-is and also attempt to convert to ISO.
   //           eddResult = {
@@ -1951,7 +2208,7 @@ export default function RingBuilder() {
   //     } else {
   //       console.warn('⚠️ [EDD] No estimatedDelivery to append to FormData');
   //     }
-      
+
   //     if (eddResult?.estimated_day) {
   //       formDataPayload.append('estimatedDeliveryDay', eddResult.estimated_day);
   //       console.log('📦 [EDD] Added estimatedDeliveryDay to FormData:', eddResult.estimated_day);
@@ -1976,8 +2233,8 @@ export default function RingBuilder() {
   //       engravingBlobs.forEach((engravingData, index) => {
   //         // Convert blob to File object with proper name
   //         const engravingFile = new File(
-  //           [engravingData.blob], 
-  //           `engraved-image-${index + 1}.png`, 
+  //           [engravingData.blob],
+  //           `engraved-image-${index + 1}.png`,
   //           { type: 'image/png' }
   //         );
   //         formDataPayload.append("images", engravingFile);
@@ -2150,7 +2407,7 @@ export default function RingBuilder() {
   //         orderDetails: {
   //           jewelryType: updatedFormData.jewelryType,
   //           description: formData.description || `Custom ${updatedFormData.jewelryType} Design`,
-            
+
   //           // Images from all steps
   //           images: result.data?.images?.map((url: string, index: number) => ({
   //             url,
@@ -2159,7 +2416,7 @@ export default function RingBuilder() {
   //             alt: `Custom ${updatedFormData.jewelryType} design image ${index + 1}`,
   //             uploadedAt: new Date().toISOString(),
   //           })) || [],
-            
+
   //           // Diamond selection details from form
   //           diamond: {
   //             shape: formData.diamondShape,
@@ -2167,20 +2424,20 @@ export default function RingBuilder() {
   //             color: formData.diamondColor,
   //             clarity: formData.diamondClarity,
   //           },
-            
+
   //           // Metal and setting details
   //           metal: {
   //             type: formData.metal || "Gold",
   //             color: formData.metalColor || "Same as Image",
   //             karat: formData.goldKarat || "22KT",
   //           },
-            
+
   //           // Ring specific details
   //           ringDetails: {
   //             size: formData.ringSize,
   //             jewelryType: updatedFormData.jewelryType,
   //           },
-            
+
   //           // All step data for complete history
   //           stepData: {
   //             step1: {
@@ -2211,16 +2468,16 @@ export default function RingBuilder() {
   //               timestamp: new Date().toISOString()
   //             }
   //           },
-            
+
   //           // Additional customization
   //           engraving: {
   //             text: formData.engraving,
   //           },
-            
+
   //           // Special requests and notes
   //           specialRequests: formData.specialInstructions || "",
   //           notes: `Custom ${updatedFormData.jewelryType} designed through ring builder. Priority: ${formData.priority}`,
-            
+
   //           // Contact information included
   //           contactInfo: {
   //             firstName: formData.firstName,
@@ -2234,15 +2491,15 @@ export default function RingBuilder() {
   //           // Estimated Delivery Date from courier API
   //           estimatedDelivery: eddResult?.estimated_delivery || null,
   //           estimatedDeliveryDay: eddResult?.estimated_day || null,
-            
+
   //           // Completion status
   //           customizationComplete: true,
   //           completedSteps: ["step1", "step2", "step3", "step4", "step5"],
-            
+
   //           // Reference IDs
   //           backendJewelryId: jewelryId,
   //           designId: `design_${timestamp}`,
-            
+
   //           // Pricing breakdown
   //           priceBreakdown: {
   //             basePrice: basePrice,
@@ -2267,7 +2524,7 @@ export default function RingBuilder() {
   //         "💳 [PAYMENT] PAYMENT ORDER DATA IMAGES COUNT:",
   //         paymentOrderData.images?.length || 0
   //       );
-        
+
   //       // Log EDD data being included in payment order
   //       console.log('📦 [EDD] EDD data in payment order:', {
   //         estimatedDelivery: paymentOrderData.orderDetails?.estimatedDelivery,
@@ -2299,16 +2556,16 @@ export default function RingBuilder() {
   //       // Automatically navigate to step 3 to show the PaymentForm
   //       setCurrentStep(3);
 
-  //       const eddInfo = eddResult?.estimated_delivery ? 
-  //         `EDD: ${eddResult.estimated_delivery} (${eddResult.estimated_day || 'N/A'})` : 
+  //       const eddInfo = eddResult?.estimated_delivery ?
+  //         `EDD: ${eddResult.estimated_delivery} (${eddResult.estimated_day || 'N/A'})` :
   //         'No EDD';
-          
+
   //       alert(
   //         `Order created successfully! ${
   //           jewelryId ? `Jewelry ID: ${jewelryId}` : "Ready for payment"
   //         } | ${eddInfo}`
   //       );
-        
+
   //       console.log('📦 [EDD] Final order creation summary:', {
   //         orderCreated: true,
   //         jewelryId: jewelryId,
@@ -2332,11 +2589,33 @@ export default function RingBuilder() {
   // };
 
   // Add the missing payment handler functions
-  const handlePaymentInitiated = (orderId: string, ...rest: unknown[]) => {
-    // PaymentForm may call with an optional second argument (orderNumber); capture it via rest params
-    const orderNumber = rest[0] as string | undefined;
-    console.log("✅ Payment initiated for order:", orderId, orderNumber);
-    // Could save order info locally or send to backend
+  const handlePaymentSuccess = async (customizationResult: {
+    requestId: string;
+    requestNumber: string;
+  }) => {
+    try {
+      console.log(
+        "🎉 Customization request saved successfully:",
+        customizationResult
+      );
+      alert(
+        "🎉 Payment successful! Your customization request has been submitted successfully."
+      );
+
+      // Navigate to success page or dashboard
+      navigate("/");
+    } catch (error) {
+      console.error("❌ Error handling payment success:", error);
+      alert(
+        "Payment successful but there was an issue. Please contact support."
+      );
+    }
+  };
+
+  const handlePaymentCancel = () => {
+    console.log("❌ Payment cancelled by user");
+    setShowPaymentForm(false);
+    setCustomizationData(null);
   };
 
   const handlePaymentError = (error: string) => {

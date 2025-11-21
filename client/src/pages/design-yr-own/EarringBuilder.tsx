@@ -259,8 +259,8 @@ export default function EarringBuilder() {
   const validateForStep = (targetStep: number): boolean => {
     // Moving from step 1 -> 2: check uploads and basic inputs on right column
     if (targetStep === 2) {
-      if (uploadedImages.length < 2) {
-        alert("Please upload at least 2 images before proceeding.");
+      if (uploadedImages.length < 1) {
+        alert("Please upload at least 1 image before proceeding.");
         return false;
       }
 
@@ -933,7 +933,7 @@ export default function EarringBuilder() {
                         <SelectTrigger>
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value="india">India</SelectItem>
                           <SelectItem value="usa">USA</SelectItem>
                           <SelectItem value="uk">UK</SelectItem>
@@ -951,7 +951,7 @@ export default function EarringBuilder() {
                         <SelectTrigger>
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value="maharashtra">
                             Maharashtra
                           </SelectItem>
@@ -974,7 +974,7 @@ export default function EarringBuilder() {
                         <SelectTrigger>
                           <SelectValue placeholder="Select..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value="mumbai">Mumbai</SelectItem>
                           <SelectItem value="pune">Pune</SelectItem>
                           <SelectItem value="delhi">Delhi</SelectItem>
@@ -1307,6 +1307,7 @@ export default function EarringBuilder() {
         diamondShape: formData.diamondShape,
         diamondSize: formData.diamondSize,
         diamondColor: formData.diamondColor,
+        metalType: formData.metalType,
         metalKarat: formData.goldKarat,
         metalColor: formData.metalColor,
         engraving: formData.engraving
@@ -1345,16 +1346,16 @@ export default function EarringBuilder() {
               diamondShape: formData.diamondShape,
               diamondSize: formData.diamondSize,
               diamondColor: formData.diamondColor,
-              etalType: formData.metalType,
+              metalType: formData.metalType,
               metalColor: formData.metalColor,
               goldKarat: formData.goldKarat,
             },
           },
         },
         tags: ["custom", "design-your-own", formData.jewelryType],
-        // Add EDD information
-        estimatedDelivery: eddResult?.estimated_delivery || null,
-        estimatedDeliveryDay: eddResult?.estimated_day || null,
+        // Add EDD information (ensure strings to satisfy CustomizationDataType)
+        estimatedDelivery: eddResult?.estimated_delivery || "",
+        estimatedDeliveryDay: eddResult?.estimated_day || "",
       };
 
       console.log(

@@ -476,6 +476,9 @@ router.post("/initiate", async (req: Request, res: Response) => {
               ...initialOrderData.productDetails,
               product: orderDetails.directPurchaseData.product,
               customization: orderDetails.directPurchaseData.customization,
+              size:
+                orderDetails.directPurchaseData.customization?.size ||
+                orderDetails.directPurchaseData.customization?.ringSize,
               // Add other direct purchase details...
             };
           }
@@ -1081,9 +1084,11 @@ router.post("/verify", async (req: Request, res: Response) => {
                   orderDetails.directPurchaseData.customization?.metalColor,
                 karat: orderDetails.directPurchaseData.customization?.goldKarat,
               },
-              // Add structured ring details
+              // Add structured ring/general size details
               ringDetails: {
-                size: orderDetails.directPurchaseData.customization?.ringSize,
+                size:
+                  orderDetails.directPurchaseData.customization?.size ||
+                  orderDetails.directPurchaseData.customization?.ringSize,
               },
               // Add structured engraving details
               engravingDetails: {
