@@ -1,4 +1,4 @@
-  import dotenv from "dotenv";
+import dotenv from "dotenv";
 
 // Load environment variables as early as possible so modules that import config get them
 dotenv.config();
@@ -35,6 +35,7 @@ import subProductRoutes from "./routes/subProduct";
 import blogRoutes from "./routes/blog";
 import addressRoutes from "./routes/address";
 import customizationRoutes from "./routes/customization";
+import uploadRoutes from "./routes/upload";
 
 // Import tracking services
 import { TrackingController } from "./controllers/trackingController";
@@ -45,53 +46,59 @@ dotenv.config();
 
 // Environment variable validation
 // Require core variables; payment provider credentials can be either CCAvenue or Razorpay.
-const requiredCoreVars = ['JWT_SECRET', 'MONGO_URI'];
-const missingCore = requiredCoreVars.filter(v => !process.env[v]);
+const requiredCoreVars = ["JWT_SECRET", "MONGO_URI"];
+const missingCore = requiredCoreVars.filter((v) => !process.env[v]);
 if (missingCore.length > 0) {
-  console.error('❌ Missing required environment variables:', missingCore);
-  console.error('Please set these variables in your .env file');
-  console.error('Current .env file location:', process.cwd() + '/.env');
+  console.error("❌ Missing required environment variables:", missingCore);
+  console.error("Please set these variables in your .env file");
+  console.error("Current .env file location:", process.cwd() + "/.env");
   process.exit(1);
 }
 
 // Payment provider check: accept either CCAvenue or Razorpay env vars
-const hasCCAvenue = !!(process.env.CCAVENUE_ACCESS_CODE && process.env.CCAVENUE_WORKING_KEY);
-const hasRazorpay = !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+const hasCCAvenue = !!(
+  process.env.CCAVENUE_ACCESS_CODE && process.env.CCAVENUE_WORKING_KEY
+);
+const hasRazorpay = !!(
+  process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+);
 if (!hasCCAvenue && !hasRazorpay) {
-  console.warn('⚠️ No payment provider configured. Set CCAvenue or Razorpay environment variables if you need payment features.');
+  console.warn(
+    "⚠️ No payment provider configured. Set CCAvenue or Razorpay environment variables if you need payment features."
+  );
 }
 
 // Set default environment variables for development only
-if (process.env.NODE_ENV !== 'production') {
-if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = "development";
-}
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = "dev-secret-key-change-in-production";
-}
-if (!process.env.PORT) {
-  process.env.PORT = "5000";
-}
-// if (!process.env.MONGO_URI) {
-//   process.env.MONGO_URI = "mongodb://localhost:27017/kyna-jewels";
-//   }
+if (process.env.NODE_ENV !== "production") {
+  if (!process.env.NODE_ENV) {
+    process.env.NODE_ENV = "development";
+  }
+  if (!process.env.JWT_SECRET) {
+    process.env.JWT_SECRET = "dev-secret-key-change-in-production";
+  }
+  if (!process.env.PORT) {
+    process.env.PORT = "5000";
+  }
+  // if (!process.env.MONGO_URI) {
+  //   process.env.MONGO_URI = "mongodb://localhost:27017/kyna-jewels";
+  //   }
 }
 
 // Sequel247 configuration - NO DEFAULT VALUES FOR PRODUCTION
 if (!process.env.SEQUEL247_TEST_ENDPOINT) {
-  console.warn('⚠️ SEQUEL247_TEST_ENDPOINT not set');
+  console.warn("⚠️ SEQUEL247_TEST_ENDPOINT not set");
 }
 if (!process.env.SEQUEL247_TEST_TOKEN) {
-  console.warn('⚠️ SEQUEL247_TEST_TOKEN not set');
+  console.warn("⚠️ SEQUEL247_TEST_TOKEN not set");
 }
 if (!process.env.SEQUEL247_PROD_ENDPOINT) {
-  console.warn('⚠️ SEQUEL247_PROD_ENDPOINT not set');
+  console.warn("⚠️ SEQUEL247_PROD_ENDPOINT not set");
 }
 if (!process.env.SEQUEL247_PROD_TOKEN) {
-  console.warn('⚠️ SEQUEL247_PROD_TOKEN not set');
+  console.warn("⚠️ SEQUEL247_PROD_TOKEN not set");
 }
 if (!process.env.SEQUEL247_STORE_CODE) {
-  console.warn('⚠️ SEQUEL247_STORE_CODE not set');
+  console.warn("⚠️ SEQUEL247_STORE_CODE not set");
 }
 
 const app: Express = express();
@@ -107,7 +114,11 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "http://localhost:5000", "http://localhost:5173"],
+        connectSrc: [
+          "'self'",
+          "http://localhost:5000",
+          "http://localhost:5173",
+        ],
       },
     },
   })
@@ -117,21 +128,21 @@ app.use(
 const corsOptions = {
   origin: (origin, callback) => {
     // Allow all origins in development
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       callback(null, true);
       return;
     }
-    
+
     // Production origins
     const allowedOrigins = [
-      'https://kynajewels.com',
-      'https://www.kynajewels.com',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:3000',
-      'http://127.0.0.1:3000'
+      "https://kynajewels.com",
+      "https://www.kynajewels.com",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
     ];
-    
+
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -139,10 +150,9 @@ const corsOptions = {
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
-
 
 app.use(cors(corsOptions)); // ✅ Must be before routes
 app.options("*", cors(corsOptions)); // ✅ Handles preflight requests
@@ -150,10 +160,10 @@ app.options("*", cors(corsOptions)); // ✅ Handles preflight requests
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // limit each IP to 100 requests per windowMs in production
+  max: process.env.NODE_ENV === "production" ? 100 : 1000, // limit each IP to 100 requests per windowMs in production
   message: {
-    error: 'Too many requests from this IP, please try again later.',
-    retryAfter: '15 minutes'
+    error: "Too many requests from this IP, please try again later.",
+    retryAfter: "15 minutes",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -167,8 +177,8 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // limit each IP to 5 requests per windowMs
   message: {
-    error: 'Too many authentication attempts, please try again later.',
-    retryAfter: '15 minutes'
+    error: "Too many authentication attempts, please try again later.",
+    retryAfter: "15 minutes",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -192,8 +202,8 @@ app.use(cookieParser());
 // Request metrics middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
   const startTime = Date.now();
-  
-  res.on('finish', () => {
+
+  res.on("finish", () => {
     const duration = Date.now() - startTime;
     const success = res.statusCode < 400;
     // Simplified: just log request duration
@@ -201,7 +211,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       console.log(`Slow request: ${req.method} ${req.path} - ${duration}ms`);
     }
   });
-  
+
   next();
 });
 
@@ -226,18 +236,21 @@ initializeTrackingServices();
 
 // Startup validation
 const validateStartup = () => {
-  console.log('🔍 Validating startup configuration...');
-  
+  console.log("🔍 Validating startup configuration...");
+
   // Check required environment variables
-  const requiredVars = ['JWT_SECRET', 'MONGO_URI'];
-  const missing = requiredVars.filter(v => !process.env[v]);
-  
+  const requiredVars = ["JWT_SECRET", "MONGO_URI"];
+  const missing = requiredVars.filter((v) => !process.env[v]);
+
   if (missing.length > 0) {
-    console.error('❌ Missing required environment variables:', missing.join(', '));
+    console.error(
+      "❌ Missing required environment variables:",
+      missing.join(", ")
+    );
     process.exit(1);
   }
-  
-  console.log('✅ Startup validation completed');
+
+  console.log("✅ Startup validation completed");
 };
 
 // Run startup validation
@@ -252,9 +265,10 @@ app.get("/api/test", (req: Request, res: Response) => {
 app.get("/api/health", async (req: Request, res: Response) => {
   res.json({
     success: true,
-    status: 'healthy',
+    status: "healthy",
     timestamp: new Date().toISOString(),
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    database:
+      mongoose.connection.readyState === 1 ? "connected" : "disconnected",
   });
 });
 
@@ -262,8 +276,8 @@ app.get("/api/health", async (req: Request, res: Response) => {
 app.get("/api/health/simple", async (req: Request, res: Response) => {
   res.json({
     success: true,
-    status: 'healthy',
-    timestamp: new Date().toISOString()
+    status: "healthy",
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -300,8 +314,8 @@ app.get("/api", (req: Request, res: Response) => {
 app.get("/api/version", (req: Request, res: Response) => {
   res.json({
     success: true,
-    version: '1.0.0',
-    environment: process.env.NODE_ENV || 'development'
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || "development",
   });
 });
 
@@ -329,6 +343,7 @@ app.use("/api/sub-products", subProductRoutes);
 app.use("/api/blogs", blogRoutes);
 app.use("/api/address", addressRoutes);
 app.use("/api/customization", customizationRoutes);
+app.use("/api/upload", uploadRoutes);
 
 // Home route
 app.get("/", (req: Request, res: Response) => {
@@ -336,76 +351,76 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 // System health check endpoint
-app.get('/api/system/health', async (req: Request, res: Response) => {
+app.get("/api/system/health", async (req: Request, res: Response) => {
   try {
-    const { TrackingOrder } = await import('./models/TrackingOrder');
-    const { OrderModel } = await import('./models/orderModel');
-    
+    const { TrackingOrder } = await import("./models/TrackingOrder");
+    const { OrderModel } = await import("./models/orderModel");
+
     // Check orders pending updates
     const ordersToUpdate = await TrackingOrder.countDocuments({
       docketNumber: { $exists: true, $ne: null },
-      status: { $nin: ['DELIVERED', 'CANCELLED'] }
+      status: { $nin: ["DELIVERED", "CANCELLED"] },
     });
-    
+
     // Get last 5 successful updates
     const recentUpdates = await TrackingOrder.find({
-      status: { $nin: ['ORDER_PLACED'] }
+      status: { $nin: ["ORDER_PLACED"] },
     })
-    .sort({ updatedAt: -1 })
-    .limit(5)
-    .select('orderNumber status updatedAt');
-    
+      .sort({ updatedAt: -1 })
+      .limit(5)
+      .select("orderNumber status updatedAt");
+
     // Basic database connectivity check
     const totalOrders = await OrderModel.countDocuments();
     const totalTracking = await TrackingOrder.countDocuments();
-    
+
     res.json({
       success: true,
-      message: 'System is healthy',
+      message: "System is healthy",
       timestamp: new Date().toISOString(),
       cronJob: {
-        status: 'running',
-        frequency: 'Every 30 minutes',
-        nextUpdate: 'Within 30 minutes'
+        status: "running",
+        frequency: "Every 30 minutes",
+        nextUpdate: "Within 30 minutes",
       },
       database: {
         connected: true,
         totalOrders,
         totalTracking,
-        ordersToUpdate
+        ordersToUpdate,
       },
       recentActivity: recentUpdates,
       systemInfo: {
         environment: process.env.NODE_ENV,
-        uptime: process.uptime() + ' seconds'
-      }
+        uptime: process.uptime() + " seconds",
+      },
     });
   } catch (error) {
-    console.error('Health check error:', error);
+    console.error("Health check error:", error);
     res.status(500).json({
       success: false,
-      message: 'System health check failed',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
+      message: "System health check failed",
+      error: error instanceof Error ? error.message : "Unknown error",
+      timestamp: new Date().toISOString(),
     });
   }
 });
 
 // 404 handler for undefined routes
-app.use('*', (req: Request, res: Response) => {
+app.use("*", (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
-    error: 'Endpoint not found'
+    error: "Endpoint not found",
   });
 });
 
 // Global error handling middleware
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
-  console.error('Global error:', err);
+  console.error("Global error:", err);
   res.status(500).json({
     success: false,
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    error: "Internal server error",
+    message: process.env.NODE_ENV === "development" ? err.message : undefined,
   });
 });
 
@@ -413,32 +428,32 @@ app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
 const PORT: number = parseInt(process.env.PORT || "5000", 10);
 
 // Database error handling
-mongoose.connection.on('error', (err) => {
-  console.error('❌ MongoDB connection error:', err);
+mongoose.connection.on("error", (err) => {
+  console.error("❌ MongoDB connection error:", err);
   process.exit(1);
 });
 
-mongoose.connection.on('disconnected', () => {
-  console.error('❌ MongoDB disconnected');
+mongoose.connection.on("disconnected", () => {
+  console.error("❌ MongoDB disconnected");
   process.exit(1);
 });
 
-mongoose.connection.on('reconnected', () => {
-  console.log('✅ MongoDB reconnected');
+mongoose.connection.on("reconnected", () => {
+  console.log("✅ MongoDB reconnected");
 });
 
 // Graceful shutdown handling
-process.on('SIGINT', async () => {
-  console.log('\n🛑 Received SIGINT. Graceful shutdown...');
+process.on("SIGINT", async () => {
+  console.log("\n🛑 Received SIGINT. Graceful shutdown...");
   await mongoose.connection.close();
-  console.log('✅ MongoDB connection closed');
+  console.log("✅ MongoDB connection closed");
   process.exit(0);
 });
 
-process.on('SIGTERM', async () => {
-  console.log('\n🛑 Received SIGTERM. Graceful shutdown...');
+process.on("SIGTERM", async () => {
+  console.log("\n🛑 Received SIGTERM. Graceful shutdown...");
   await mongoose.connection.close();
-  console.log('✅ MongoDB connection closed');
+  console.log("✅ MongoDB connection closed");
   process.exit(0);
 });
 
