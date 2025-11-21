@@ -272,17 +272,14 @@ class ApiService {
   }
 
   // Promo Code APIs
-  async applyPromoCode(code: string, subtotal: number) {
-    return this.makeRequest("/promo-code/apply", {
-      method: "POST",
-      body: JSON.stringify({ code, subtotal }),
-    });
-  }
-
-  async validatePromoCode(code: string, subtotal: number) {
+  async validatePromoCode(payload: {
+    code: string;
+    context?: "cart" | "direct";
+    directPurchase?: { diamondCost?: number };
+  }) {
     return this.makeRequest("/promo-code/validate", {
       method: "POST",
-      body: JSON.stringify({ code, subtotal }),
+      body: JSON.stringify(payload),
     });
   }
 

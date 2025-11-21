@@ -193,6 +193,12 @@ export interface IOrder extends Document {
       };
     }>;
   };
+  promoSummary?: {
+    code: string;
+    discountPercent: number;
+    discountValue: number;
+    appliedOn?: string;
+  };
   orderedAt: Date;
   shippedAt?: Date;
   deliveredAt?: Date;
@@ -447,6 +453,12 @@ const orderSchema = new Schema<IOrder>(
           },
         },
       ],
+    },
+    promoSummary: {
+      code: { type: String, uppercase: true, trim: true },
+      discountPercent: { type: Number },
+      discountValue: { type: Number },
+      appliedOn: { type: String },
     },
 
     // Important dates

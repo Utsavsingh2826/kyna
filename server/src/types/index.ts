@@ -57,7 +57,12 @@ export interface IUser extends Document {
   refDiscount?: number; // percentage discount available to user (e.g., 5 for 5%)
   referralCount: number;
   totalReferralEarnings: number;
-  usedPromoCodes: string[];
+  usedPromoCodes: Array<{
+    code: string;
+    orderId?: string;
+    discountValue?: number;
+    appliedAt?: Date;
+  }>;
   usedReferralCodes: string[];
   comparePassword(candidatePassword: string): Promise<boolean>;
   createdAt: Date;

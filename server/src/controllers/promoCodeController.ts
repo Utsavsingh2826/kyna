@@ -1,112 +1,50 @@
 import { Response } from "express";
-import mongoose from "mongoose";
 import PromoCode from "../models/promoCodeModel";
 import User from "../models/userModel";
+import Cart from "../models/cartModel";
 import { AuthRequest } from "../types";
 
-// Apply promo code
-export const applyPromoCode = async (req: AuthRequest, res: Response) => {
-  try {
-    const { code, subtotal } = req.body;
-    const userId = req.user?._id;
+type PromoContext = "cart" | "direct";
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "User not authenticated",
-      });
-    }
+const getDiamondValueFromProduct = (product: any): number => {
+  if (!product) return 0;
 
-    if (!code || !subtotal) {
-      return res.status(400).json({
-        success: false,
-        message: "Promo code and subtotal are required",
-      });
-    }
+  const breakdownDiamond =
+    product.priceBreakdown?.diamondCost ??
+    product.priceBreakdown?.diamondPrice ??
+    product.diamondTotalValue;
 
-    // Find promo code
-    const promoCode = await PromoCode.findOne({
-      code: code.toUpperCase(),
-      isActive: true,
-    });
-
-    if (!promoCode) {
-      return res.status(404).json({
-        success: false,
-        message: "Invalid promo code",
-      });
-    }
-
-    // Check if promo code is valid
-    if (!promoCode.isValid()) {
-      return res.status(400).json({
-        success: false,
-        message: "Promo code has expired or reached usage limit",
-      });
-    }
-
-    // Check if user has already used this code
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    if (user.usedPromoCodes.includes(promoCode._id)) {
-      return res.status(400).json({
-        success: false,
-        message: "You have already used this promo code",
-      });
-    }
-
-    // Check minimum purchase requirement
-    if (subtotal < promoCode.minPurchase) {
-      return res.status(400).json({
-        success: false,
-        message: `Minimum purchase of ₹${promoCode.minPurchase} required for this promo code`,
-      });
-    }
-
-    // Calculate discount
-    const discountAmount = promoCode.calculateDiscount(subtotal);
-
-    // Update database - mark promo code as used
-    user.usedPromoCodes.push(promoCode._id);
-    await user.save();
-
-    // Update promo code usage count
-    promoCode.usedBy.push(new mongoose.Types.ObjectId(userId));
-    promoCode.usedCount += 1;
-    await promoCode.save();
-
-    res.json({
-      success: true,
-      message: "Promo code applied successfully",
-      data: {
-        code: promoCode.code,
-        discountType: promoCode.discountType,
-        discountValue: promoCode.discountValue,
-        discountAmount,
-        description: promoCode.description,
-        promoCodeId: promoCode._id,
-      },
-    });
-  } catch (error) {
-    console.error("Apply promo code error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to apply promo code",
-    });
-  }
+  return typeof breakdownDiamond === "number" && breakdownDiamond > 0
+    ? breakdownDiamond
+    : 0;
 };
 
-// Validate promo code (without applying)
+const calculateDiamondSubtotalFromCart = async (userId: string) => {
+  const cart = await Cart.findOne({ user: userId }).populate("items.product");
+  if (!cart || !cart.items.length) {
+    return { diamondSubtotal: 0, itemCount: 0 };
+  }
+
+  const diamondSubtotal = cart.items.reduce((sum, item: any) => {
+    const perUnitDiamond = getDiamondValueFromProduct(item.product);
+    return sum + perUnitDiamond * (item.quantity || 1);
+  }, 0);
+
+  return { diamondSubtotal, itemCount: cart.items.length };
+};
+
 export const validatePromoCode = async (req: AuthRequest, res: Response) => {
   try {
-    const { code, subtotal } = req.body;
     const userId = req.user?._id;
+    const {
+      code,
+      context = "cart",
+      directPurchase,
+    }: {
+      code?: string;
+      context?: PromoContext;
+      directPurchase?: { diamondCost?: number };
+    } = req.body || {};
 
     if (!userId) {
       return res.status(401).json({
@@ -115,14 +53,13 @@ export const validatePromoCode = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (!code || !subtotal) {
+    if (!code) {
       return res.status(400).json({
         success: false,
-        message: "Promo code and subtotal are required",
+        message: "Promo code is required",
       });
     }
 
-    // Find promo code
     const promoCode = await PromoCode.findOne({
       code: code.toUpperCase(),
       isActive: true,
@@ -131,20 +68,11 @@ export const validatePromoCode = async (req: AuthRequest, res: Response) => {
     if (!promoCode) {
       return res.status(404).json({
         success: false,
-        message: "Invalid promo code",
+        message: "Promo code not found or inactive",
       });
     }
 
-    // Check if promo code is valid
-    if (!promoCode.isValid()) {
-      return res.status(400).json({
-        success: false,
-        message: "Promo code has expired or reached usage limit",
-      });
-    }
-
-    // Check if user has already used this code
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).select("usedPromoCodes");
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -152,65 +80,79 @@ export const validatePromoCode = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (user.usedPromoCodes.includes(promoCode._id)) {
+    const alreadyUsed = user.usedPromoCodes?.some(
+      (entry) => entry.code === promoCode.code
+    );
+    if (alreadyUsed) {
       return res.status(400).json({
         success: false,
-        message: "You have already used this promo code",
+        message: "You have already redeemed this promo",
       });
     }
 
-    // Check minimum purchase requirement
-    if (subtotal < promoCode.minPurchase) {
+    let diamondSubtotal = 0;
+
+    if (context === "direct") {
+      const directDiamondCost = directPurchase?.diamondCost;
+      if (typeof directDiamondCost !== "number" || directDiamondCost <= 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Diamond cost is required for direct purchases to apply this promo",
+        });
+      }
+      diamondSubtotal = directDiamondCost;
+    } else {
+      const { diamondSubtotal: cartDiamondSubtotal, itemCount } =
+        await calculateDiamondSubtotalFromCart(userId.toString());
+
+      if (!itemCount) {
+        return res.status(400).json({
+          success: false,
+          message: "Add items to your cart before applying a promo",
+        });
+      }
+
+      diamondSubtotal = cartDiamondSubtotal;
+    }
+
+    if (!diamondSubtotal || diamondSubtotal <= 0) {
       return res.status(400).json({
         success: false,
-        message: `Minimum purchase of ₹${promoCode.minPurchase} required for this promo code`,
+        message:
+          "This promo applies only to diamond components. Eligible diamond value was not found.",
       });
     }
 
-    // Calculate discount
-    const discountAmount = promoCode.calculateDiscount(subtotal);
+    const discountValue = Math.round(
+      (diamondSubtotal * promoCode.discountPercent) / 100
+    );
 
-    res.json({
+    if (discountValue <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Promo discount could not be calculated for this order",
+      });
+    }
+
+    return res.json({
       success: true,
-      message: "Promo code is valid",
+      message: "Promo code applied to diamond total",
       data: {
+        promoId: promoCode._id,
         code: promoCode.code,
-        discountType: promoCode.discountType,
-        discountValue: promoCode.discountValue,
-        discountAmount,
+        discountPercent: promoCode.discountPercent,
+        discountValue,
+        diamondSubtotal,
         description: promoCode.description,
-        promoCodeId: promoCode._id,
+        appliedOn: "diamond",
       },
     });
   } catch (error) {
-    console.error("Validate promo code error:", error);
-    res.status(500).json({
+    console.error("validatePromoCode error:", error);
+    return res.status(500).json({
       success: false,
       message: "Failed to validate promo code",
     });
-  }
-};
-
-// Mark promo code as used (called after successful order)
-export const markPromoCodeUsed = async (
-  userId: string,
-  promoCodeId: string
-) => {
-  try {
-    const promoCode = await PromoCode.findById(promoCodeId);
-    const user = await User.findById(userId);
-
-    if (promoCode && user) {
-      // Add to user's used promo codes
-      user.usedPromoCodes.push(promoCode._id);
-      await user.save();
-
-      // Update promo code usage
-      promoCode.usedBy.push(new mongoose.Types.ObjectId(userId));
-      promoCode.usedCount += 1;
-      await promoCode.save();
-    }
-  } catch (error) {
-    console.error("Mark promo code used error:", error);
   }
 };

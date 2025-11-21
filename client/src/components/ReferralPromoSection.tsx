@@ -42,10 +42,19 @@ export const ReferralPromoSection: React.FC<ReferralPromoSectionProps> = ({
     setPromoError('');
     
     try {
-      const response = await apiService.applyPromoCode(promoCode, subtotal);
+      const response = await apiService.validatePromoCode({
+        code: promoCode,
+        context: "cart",
+      });
       
       if (response.success) {
-        const payload: any = response.data as any;
+        const payload: any = {
+          code: response.data.code,
+          discountAmount: response.data.discountValue,
+          description:
+            response.data.description ||
+            `Promo ${response.data.code} applied on diamond value`,
+        };
         onPromoApplied?.(payload);
         setPromoCode('');
         toast.success(`Promo code applied! You saved ₹${payload.discountAmount}`);

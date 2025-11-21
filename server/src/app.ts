@@ -41,9 +41,6 @@ import uploadRoutes from "./routes/upload";
 import { TrackingController } from "./controllers/trackingController";
 import { TrackingService } from "./services/TrackingService";
 
-// Load environment variables FIRST
-dotenv.config();
-
 // Environment variable validation
 // Require core variables; payment provider credentials can be either CCAvenue or Razorpay.
 const requiredCoreVars = ["JWT_SECRET", "MONGO_URI"];
@@ -87,18 +84,6 @@ if (process.env.NODE_ENV !== "production") {
 // Sequel247 configuration - NO DEFAULT VALUES FOR PRODUCTION
 if (!process.env.SEQUEL247_TEST_ENDPOINT) {
   console.warn("⚠️ SEQUEL247_TEST_ENDPOINT not set");
-}
-if (!process.env.SEQUEL247_TEST_TOKEN) {
-  console.warn("⚠️ SEQUEL247_TEST_TOKEN not set");
-}
-if (!process.env.SEQUEL247_PROD_ENDPOINT) {
-  console.warn("⚠️ SEQUEL247_PROD_ENDPOINT not set");
-}
-if (!process.env.SEQUEL247_PROD_TOKEN) {
-  console.warn("⚠️ SEQUEL247_PROD_TOKEN not set");
-}
-if (!process.env.SEQUEL247_STORE_CODE) {
-  console.warn("⚠️ SEQUEL247_STORE_CODE not set");
 }
 
 const app: Express = express();
@@ -458,22 +443,20 @@ process.on("SIGTERM", async () => {
 });
 
 // MongoDB connection
+// MongoDB connection
 mongoose
   .connect(process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels")
-  .then(async () => {
-    console.log(process.env.Mongo_URI);
+  .then(() => {
     console.log("✅ MongoDB connected");
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api`);
-      console.log(
-        `🔍 Tracking Health: http://localhost:${PORT}/api/tracking/health`
-      );
     });
   })
-  .catch((err: Error) => {
+  .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
+    console.error("Please check your MONGO_URI in .env file");
     process.exit(1);
   });
 
