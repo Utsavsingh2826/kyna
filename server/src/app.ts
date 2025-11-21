@@ -42,9 +42,6 @@ import uploadRoutes from "./routes/upload";
 import { TrackingController } from "./controllers/trackingController";
 import { TrackingService } from "./services/TrackingService";
 
-// Load environment variables FIRST
-dotenv.config();
-
 // Environment variable validation
 // Require core variables; payment provider credentials can be either CCAvenue or Razorpay.
 const requiredCoreVars = ["JWT_SECRET", "MONGO_URI"];
@@ -88,18 +85,6 @@ if (process.env.NODE_ENV !== "production") {
 // Sequel247 configuration - NO DEFAULT VALUES FOR PRODUCTION
 if (!process.env.SEQUEL247_TEST_ENDPOINT) {
   console.warn("⚠️ SEQUEL247_TEST_ENDPOINT not set");
-}
-if (!process.env.SEQUEL247_TEST_TOKEN) {
-  console.warn("⚠️ SEQUEL247_TEST_TOKEN not set");
-}
-if (!process.env.SEQUEL247_PROD_ENDPOINT) {
-  console.warn("⚠️ SEQUEL247_PROD_ENDPOINT not set");
-}
-if (!process.env.SEQUEL247_PROD_TOKEN) {
-  console.warn("⚠️ SEQUEL247_PROD_TOKEN not set");
-}
-if (!process.env.SEQUEL247_STORE_CODE) {
-  console.warn("⚠️ SEQUEL247_STORE_CODE not set");
 }
 
 const app: Express = express();
@@ -434,16 +419,12 @@ const PORT: number = parseInt(process.env.PORT || "5000", 10);
 // Database error handling
 mongoose.connection.on("error", (err) => {
   console.error("❌ MongoDB connection error:", err);
-  // Only exit if it's a critical error that prevents connection
-  if (mongoose.connection.readyState === 0) {
-    console.error("❌ Cannot establish MongoDB connection. Exiting...");
-    process.exit(1);
-  }
+  process.exit(1);
 });
 
 mongoose.connection.on("disconnected", () => {
-  console.warn("⚠️ MongoDB disconnected - attempting to reconnect...");
-  // Don't exit immediately - let mongoose handle reconnection
+  console.error("❌ MongoDB disconnected");
+  process.exit(1);
 });
 
 mongoose.connection.on("reconnected", () => {
@@ -465,48 +446,22 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
-// MongoDB connection with better error handling
-const connectDB = async () => {
-  try {
-    const mongoUri =
-      process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels";
-    const isAtlas = mongoUri.includes("mongodb+srv://");
-
-    await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-      maxPoolSize: 10,
-      minPoolSize: 1,
-      retryWrites: true,
-      retryReads: true,
-      ...(isAtlas && {
-        ssl: true,
-        tlsAllowInvalidCertificates: true,
-        tlsAllowInvalidHostnames: true,
-      }),
-    });
-
-    console.log(
-      mongoUri.includes("mongodb+srv://")
-        ? mongoUri.replace(/\/\/([^:]+):([^@]+)@/, "//***:***@")
-        : mongoUri
-    );
+// MongoDB connection
+// MongoDB connection
+mongoose
+  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels")
+  .then(() => {
     console.log("✅ MongoDB connected");
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📚 API Documentation: http://localhost:${PORT}/api`);
-      console.log(
-        `🔍 Tracking Health: http://localhost:${PORT}/api/tracking/health`
-      );
     });
-  } catch (err) {
+  })
+  .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
     console.error("Please check your MONGO_URI in .env file");
     process.exit(1);
-  }
-};
-
-connectDB();
+  });
 
 export default app;
