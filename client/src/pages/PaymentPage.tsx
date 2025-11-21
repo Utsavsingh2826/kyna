@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import type { RootState, AppDispatch } from "@/store";
 import { toast } from "sonner";
 import apiService from "@/services/api";
+import { updateUser } from "@/store/slices/authSlice";
 
 interface PromoApiResponse {
   code: string;
@@ -75,6 +76,7 @@ const PaymentPage = () => {
     }
   }, [dispatch, isAuthenticated, user, directPurchaseData]);
 
+
   // Check if cart is empty (only for cart-based purchases)
   if (!directPurchaseData && cartLoading) {
     return (
@@ -118,12 +120,46 @@ const PaymentPage = () => {
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
-  const referralBalance = Math.max(
-    0,
-    Number(user?.totalReferralEarnings) || 0
-  );
+  
+  // Make referralBalance reactive to user state changes
+  const [referralBalance, setReferralBalance] = useState(0);
   const [walletDiscount, setWalletDiscount] = useState(0);
   const [walletError, setWalletError] = useState("");
+
+  // Fetch fresh user data to get latest referral balance
+  useEffect(() => {
+    const fetchFreshUserData = async () => {
+      if (isAuthenticated && user) {
+        try {
+          const response = await apiService.getProfile() as any;
+          if (response.success) {
+            // Handle both response.data.user and response.user formats
+            const freshUserData = response.data?.user || response.user;
+            if (freshUserData) {
+              // Update Redux state with fresh user data including latest totalReferralEarnings
+              dispatch(updateUser(freshUserData));
+              // Also update local state immediately for reactive UI
+              const balance = Math.max(0, Number(freshUserData.totalReferralEarnings) || 0);
+              setReferralBalance(balance);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch fresh user data:", error);
+          // Fallback to Redux state if API call fails
+          const balance = Math.max(0, Number(user?.totalReferralEarnings) || 0);
+          setReferralBalance(balance);
+        }
+      }
+    };
+
+    fetchFreshUserData();
+  }, [isAuthenticated, dispatch]); // Fetch on mount and when auth state changes
+
+  // Update referralBalance when user data in Redux changes (reactive to state updates)
+  useEffect(() => {
+    const balance = Math.max(0, Number(user?.totalReferralEarnings) || 0);
+    setReferralBalance(balance);
+  }, [user?.totalReferralEarnings]);
 
   // Determine data source (cart or direct purchase)
   const isDirectPurchase = !!directPurchaseData;
