@@ -10,7 +10,8 @@
     "prod": "npm run build && npm run start",
     "test:email": "ts-node test-email.ts",
     "test:gmail": "ts-node test-gmail.ts",
-    "init:build-jewelry": "ts-node src/scripts/initializeBuildYourJewelry.ts"
+    "init:build-jewelry": "ts-node src/scripts/initializeBuildYourJewelry.ts",
+    "seed:aditya-orders": "ts-node src/scripts/seedAdityaOrders.ts"
   },
   "keywords": [],
   "author": "",

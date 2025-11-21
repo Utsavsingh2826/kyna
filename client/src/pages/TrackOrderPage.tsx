@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Package, Search, Mail, AlertCircle, Clock, RefreshCw, XCircle, FileText } from "lucide-react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import TrackingProgress from "@/components/tracking/TrackingProgress";
 import TrackingTimeline from "@/components/tracking/TrackingTimeline";
 import TrackingCard from "@/components/tracking/TrackingCard";
@@ -14,6 +14,14 @@ interface TrackingData {
   orderType?: 'normal' | 'customized';
   estimatedDelivery?: string;
   docketNumber?: string;
+  createdAt?: string; // ✅ For 2-day cancellation policy
+  orderedAt?: string; // ✅ For 2-day cancellation policy
+  returnRequest?: {
+    requested: boolean;
+    reason: string;
+    hasManufacturerFault: boolean;
+    requestedAt: string;
+  }; // ✅ For return request notice
   shippingAddress?: {
     name: string;
     line1: string;
@@ -106,10 +114,22 @@ const trackingApi = {
     });
     return response.json();
   },
+  returnOrder: async (data: any) => {
+    const token = getAccessToken();
+    const response = await fetch(`http://localhost:5000/api/tracking/return-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      credentials: 'include',
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
 };
 
 export default function TrackOrderPage() {
-  const navigate = useNavigate();
   const location = useLocation();
   const [orderNumber, setOrderNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -122,6 +142,10 @@ export default function TrackOrderPage() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [isDownloadingPOD, setIsDownloadingPOD] = useState(false);
+  const [showReturnDialog, setShowReturnDialog] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [isReturning, setIsReturning] = useState(false);
+  const [hasManufacturerFault, setHasManufacturerFault] = useState(false);
 
   // Check if we have pre-filled data from navigation state
   useEffect(() => {
@@ -299,15 +323,50 @@ export default function TrackOrderPage() {
   const canCancelOrder = () => {
     if (!trackingData) return false;
     const status = trackingData.status.toUpperCase();
-    const orderType = trackingData.orderType || 'normal';
     
-    // Allow cancellation for normal orders that are not delivered or already cancelled
-    // Docket number check removed - users can cancel before shipment (no docket yet)
+    // NEW POLICY: Check if order is within 2 days of creation (applies to ALL orders)
+    const orderCreatedAt = trackingData.createdAt || trackingData.orderedAt;
+    if (!orderCreatedAt) return false;
+    
+    const currentTime = new Date();
+    const orderTime = new Date(orderCreatedAt);
+    const hoursSinceOrder = (currentTime.getTime() - orderTime.getTime()) / (1000 * 60 * 60);
+    const twoDaysInHours = 48;
+    
+    // Can cancel if: not delivered, not cancelled, and within 2 days
     return (
       status !== "DELIVERED" &&
       status !== "CANCELLED" &&
-      orderType === 'normal'
+      hoursSinceOrder <= twoDaysInHours
     );
+  };
+
+  const getCancellationMessage = () => {
+    if (!trackingData) return '';
+    
+    const status = trackingData.status.toUpperCase();
+    if (status === "DELIVERED" || status === "CANCELLED") return '';
+    
+    const orderCreatedAt = trackingData.createdAt || trackingData.orderedAt;
+    if (!orderCreatedAt) return '';
+    
+    const currentTime = new Date();
+    const orderTime = new Date(orderCreatedAt);
+    const hoursSinceOrder = (currentTime.getTime() - orderTime.getTime()) / (1000 * 60 * 60);
+    const hoursRemaining = 48 - hoursSinceOrder;
+    
+    if (hoursRemaining > 0 && hoursRemaining <= 48) {
+      const daysRemaining = Math.floor(hoursRemaining / 24);
+      const hoursRemainingInDay = Math.floor(hoursRemaining % 24);
+      
+      if (daysRemaining > 0) {
+        return `⏰ Cancellation available for ${daysRemaining}d ${hoursRemainingInDay}h`;
+      } else {
+        return `⏰ Cancellation available for ${hoursRemainingInDay}h`;
+      }
+    }
+    
+    return '⚠️ Cancellation window expired (2-day limit)';
   };
 
   const handleDownloadPOD = async () => {
@@ -339,6 +398,53 @@ export default function TrackOrderPage() {
       alert("Failed to download Proof of Delivery. Please try again later.");
     } finally {
       setIsDownloadingPOD(false);
+    }
+  };
+
+  const handleReturnOrder = async () => {
+    if (!returnReason.trim()) {
+      setError("Please provide a return reason");
+      return;
+    }
+
+    if (!trackingData?.orderNumber) {
+      setError("Order information is incomplete. Please try again.");
+      return;
+    }
+
+    setIsReturning(true);
+    setError("");
+
+    try {
+      const response = await trackingApi.returnOrder({
+        orderNumber: trackingData.orderNumber,
+        email: trackingData.customerEmail || email, // Use email from form if customerEmail not available
+        reason: returnReason,
+        hasManufacturerFault: hasManufacturerFault,
+        customerName: trackingData.shippingAddress?.name || 'Customer',
+        orderAmount: trackingData.totalAmount || 0,
+      });
+
+      if (response.success) {
+        setShowReturnDialog(false);
+        setReturnReason("");
+        setHasManufacturerFault(false);
+        alert(
+          hasManufacturerFault
+            ? "Return request submitted successfully! ✅\n\nNo charges will be applied as this is a manufacturer fault.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
+            : "Return request submitted successfully! ✅\n\n₹1,800 return charges will be deducted from your refund.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
+        );
+        
+        // Refresh tracking data to show the return request notice
+        await fetchTrackingData(false);
+      } else {
+        setError(response.error || "Failed to submit return request");
+      }
+    } catch (err) {
+      setError("Failed to submit return request. Please try again.");
+      console.error("Return order error:", err);
+    } finally {
+      setIsReturning(false);
     }
   };
 
@@ -512,9 +618,16 @@ export default function TrackOrderPage() {
 
                 {/* Last Updated */}
                 <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center text-gray-600">
-                    <Clock className="w-4 h-4 mr-2" />
-                    Last updated: {new Date(trackingData.updatedAt).toLocaleString()}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center text-gray-600">
+                      <Clock className="w-4 h-4 mr-2" />
+                      Last updated: {new Date(trackingData.updatedAt).toLocaleString()}
+                    </div>
+                    {getCancellationMessage() && (
+                      <div className="text-xs text-teal-600 font-medium ml-6">
+                        {getCancellationMessage()}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -539,23 +652,34 @@ export default function TrackOrderPage() {
                       </button>
                     )}
                     {trackingData.status.toUpperCase() === "DELIVERED" && (
-                      <button
-                        onClick={handleDownloadPOD}
-                        disabled={isDownloadingPOD}
-                        className="flex items-center text-teal-600 hover:text-teal-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isDownloadingPOD ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
-                            Loading...
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="w-4 h-4 mr-1" />
-                            Proof of Delivery
-                          </>
+                      <>
+                        <button
+                          onClick={handleDownloadPOD}
+                          disabled={isDownloadingPOD}
+                          className="flex items-center text-teal-600 hover:text-teal-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isDownloadingPOD ? (
+                            <>
+                              <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="w-4 h-4 mr-1" />
+                              Proof of Delivery
+                            </>
+                          )}
+                        </button>
+                        {!trackingData.returnRequest?.requested && (
+                          <button
+                            onClick={() => setShowReturnDialog(true)}
+                            className="flex items-center text-orange-600 hover:text-orange-700 font-medium"
+                          >
+                            <Package className="w-4 h-4 mr-1" />
+                            Return Order
+                          </button>
                         )}
-                      </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -563,6 +687,43 @@ export default function TrackOrderPage() {
 
               {/* Progress Bar */}
               <TrackingProgress status={trackingData.status} />
+
+              {/* Return Request Notice */}
+              {trackingData.returnRequest?.requested && (
+                <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-lg mb-4">
+                  <div className="flex items-start">
+                    <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-orange-800 mb-1">
+                        🔄 Return Request Submitted
+                      </p>
+                      <p className="text-sm text-orange-700">
+                        You have submitted a return request for this order on{' '}
+                        <strong>
+                          {new Date(trackingData.returnRequest.requestedAt).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </strong>
+                        . Our team will review your request and contact you soon.
+                        {trackingData.returnRequest.hasManufacturerFault && (
+                          <span className="block mt-1 text-green-700 font-medium">
+                            ✓ No return charges will be applied (Manufacturer's Fault)
+                          </span>
+                        )}
+                        {!trackingData.returnRequest.hasManufacturerFault && (
+                          <span className="block mt-1 text-orange-800">
+                            • ₹1,800 return charges will be deducted from your refund
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Order Details and Timeline */}
               <div className="grid md:grid-cols-2 gap-4">
@@ -624,8 +785,34 @@ export default function TrackOrderPage() {
                       <p className="text-gray-600">
                         Tracking: {trackingData.docketNumber}
                       </p>
+                      {trackingData.totalAmount && (
+                        <p className="text-gray-600">
+                          Amount: ₹{trackingData.totalAmount.toLocaleString('en-IN')}
+                        </p>
+                      )}
                     </div>
                   )}
+
+                  {/* Cancellation Fee Notice */}
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                    <div className="flex items-start">
+                      <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-yellow-800 mb-1">
+                          Cancellation Fee Notice
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          2% of total order amount will be deducted as cancellation charges. The remaining amount will be refunded to you.
+                        </p>
+                        {trackingData?.totalAmount && (
+                          <p className="text-sm text-yellow-800 font-medium mt-2">
+                            Cancellation Fee: ₹{(trackingData.totalAmount * 0.02).toFixed(2)} | 
+                            Refund Amount: ₹{(trackingData.totalAmount * 0.98).toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   <label
                     htmlFor="cancelReason"
@@ -643,6 +830,7 @@ export default function TrackOrderPage() {
                     required
                   />
                 </div>
+                
 
                 {error && (
                   <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
@@ -681,6 +869,140 @@ export default function TrackOrderPage() {
               </div>
             </div>
           )}
+
+          {/* Return Order Dialog */}
+          {showReturnDialog && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">Return Order</h3>
+                  <button
+                    onClick={() => {
+                      setShowReturnDialog(false);
+                      setReturnReason("");
+                      setHasManufacturerFault(false);
+                      setError("");
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <XCircle className="w-6 h-6" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto pr-1">
+                  <div className="mb-4">
+                    <p className="text-gray-600 mb-4">
+                      Submit a return request for this delivered order. Our admin team will review and contact you.
+                    </p>
+
+                    {trackingData && (
+                      <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
+                        <p className="font-medium text-gray-900">Order: {trackingData.orderNumber}</p>
+                        <p className="text-gray-600">Tracking: {trackingData.docketNumber}</p>
+                        {trackingData.totalAmount && (
+                          <p className="text-gray-600">
+                            Amount: ₹{trackingData.totalAmount.toLocaleString("en-IN")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {!hasManufacturerFault && (
+                      <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-4">
+                        <div className="flex items-start">
+                          <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-orange-800 mb-1">Return Charges Notice</p>
+                            <p className="text-sm text-orange-700">
+                              ₹1,800 return charges will be deducted if there is no manufacturer's fault. Please select the checkbox below if this is a manufacturer defect.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {hasManufacturerFault && (
+                      <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-4">
+                        <div className="flex items-start">
+                          <AlertCircle className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm font-semibold text-green-800 mb-1">Manufacturer Fault - No Charges</p>
+                            <p className="text-sm text-green-700">
+                              No return charges will be applied for manufacturer defects. Our team will verify and process your return.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mb-4">
+                      <label className="flex items-start space-x-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={hasManufacturerFault}
+                          onChange={(e) => setHasManufacturerFault(e.target.checked)}
+                          className="mt-1 w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                        />
+                        <span className="text-sm text-gray-700">
+                          This is a manufacturer's fault (defect, damage, wrong item, etc.)
+                        </span>
+                      </label>
+                    </div>
+
+                    <label htmlFor="returnReason" className="block text-sm font-medium text-gray-700 mb-2">
+                      Reason for Return *
+                    </label>
+                    <textarea
+                      id="returnReason"
+                      value={returnReason}
+                      onChange={(e) => setReturnReason(e.target.value)}
+                      placeholder="Please describe why you want to return this order (e.g., Size issue, Quality concern, Manufacturer defect, etc.)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                      rows={4}
+                      required
+                    />
+                  </div>
+
+                  {error && (
+                    <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-red-800">{error}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4 mt-4 border-t border-gray-100">
+                  <button
+                    onClick={() => {
+                      setShowReturnDialog(false);
+                      setReturnReason("");
+                      setHasManufacturerFault(false);
+                      setError("");
+                    }}
+                    disabled={isReturning}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleReturnOrder}
+                    disabled={isReturning || !returnReason.trim()}
+                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isReturning ? (
+                      <span className="flex items-center justify-center">
+                        <RefreshCw className="animate-spin h-4 w-4 mr-2" />
+                        Submitting...
+                      </span>
+                    ) : (
+                      "Submit Return Request"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </>

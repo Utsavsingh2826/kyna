@@ -259,20 +259,39 @@ export class TrackingController {
         return;
       }
 
-      // Check 3: Only 'normal' orders can be cancelled (not 'customized')
+      // Check 3: Order must be within 2 days of creation (NEW POLICY: All orders can be cancelled within 2 days)
       if (trackingOrder.order) {
         const order = trackingOrder.order as any;
-        if (order.orderType === 'customized') {
+        const orderCreatedAt = order.orderedAt || order.createdAt;
+        
+        if (!orderCreatedAt) {
           const response: ApiResponse = createErrorResponse(
-            'Cannot cancel customized orders. Customized products (Build Your Own, Upload Your Own, Engraved) cannot be cancelled once placed.'
+            'Cannot determine order creation date. Please contact support.'
+          );
+          res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+          return;
+        }
+
+        const currentTime = new Date();
+        const orderTime = new Date(orderCreatedAt);
+        const hoursSinceOrder = (currentTime.getTime() - orderTime.getTime()) / (1000 * 60 * 60);
+        const twoDaysInHours = 48;
+
+        if (hoursSinceOrder > twoDaysInHours) {
+          const daysSinceOrder = Math.floor(hoursSinceOrder / 24);
+          const response: ApiResponse = createErrorResponse(
+            `Cannot cancel order. Cancellation is only allowed within 2 days of order placement. This order was placed ${daysSinceOrder} days ago.`
           );
           res.status(HTTP_STATUS.FORBIDDEN).json(response);
           return;
         }
+        
+        console.log(`✅ Order within cancellation window: ${hoursSinceOrder.toFixed(1)} hours since order (${(48 - hoursSinceOrder).toFixed(1)} hours remaining)`);
       }
 
       // Cancel the shipment
       let success = true;
+      let cancelMessage = '';
       
       // If order has docket number (already shipped), call Sequel247 API
       if (trackingOrder.docketNumber) {
@@ -281,41 +300,53 @@ export class TrackingController {
         
         if (!success) {
           const response: ApiResponse = createErrorResponse(
-            'Failed to cancel shipment with courier. Please contact support.'
+            'Failed to cancel shipment with courier. The shipment may have already been picked up or is in transit. Please contact support.'
           );
           res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(response);
           return;
         }
+        cancelMessage = 'Shipment cancelled successfully with courier';
       } else {
-        // Order not yet shipped - no need to call courier API
+        // Order not yet shipped - update database only
         console.log(`✅ Order not yet shipped (no docket). Cancelling in database only.`);
+        
+        try {
+          trackingOrder.status = OrderStatus.CANCELLED;
+          trackingOrder.addTrackingEvent(
+            OrderStatus.CANCELLED,
+            `Order cancelled before shipment: ${reason}`
+          );
+          await trackingOrder.save();
+
+          // Sync with main order model
+          await this.trackingService.syncOrderStatus(trackingOrder, OrderStatus.CANCELLED);
+        } catch (dbError) {
+          console.error('❌ Failed to update tracking status in database:', dbError);
+          const response: ApiResponse = createErrorResponse(
+            'Failed to cancel order in database. Please try again or contact support.'
+          );
+          res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(response);
+          return;
+        }
+        
+        cancelMessage = 'Order cancelled successfully';
       }
 
-      // Update the tracking order status in database
+      // If Sequel247 cancellation was successful, the database is already updated in cancelShipment method
+      // Just return success response
       try {
-        trackingOrder.status = OrderStatus.CANCELLED;
-        trackingOrder.addTrackingEvent(
-          OrderStatus.CANCELLED,
-          trackingOrder.docketNumber 
-            ? `Shipment cancelled with courier: ${reason}` 
-            : `Order cancelled before shipment: ${reason}`
-        );
-        await trackingOrder.save();
-
-        // Sync with main order model
-        await this.trackingService.syncOrderStatus(trackingOrder, trackingOrder.status);
 
         const response: ApiResponse = createSuccessResponse(
           { cancelled: true, orderNumber: trackingOrder.order?.orderNumber || orderNumber },
-          trackingOrder.docketNumber 
+          cancelMessage || (trackingOrder.docketNumber 
             ? 'Shipment cancelled successfully' 
-            : 'Order cancelled successfully'
+            : 'Order cancelled successfully')
         );
         res.status(HTTP_STATUS.OK).json(response);
       } catch (dbError) {
-        console.error('❌ Failed to update tracking status in database:', dbError);
+        console.error('❌ Failed to create response:', dbError);
         const response: ApiResponse = createErrorResponse(
-          'Failed to cancel order. Please try again or contact support.'
+          'Order cancellation completed but failed to generate response.'
         );
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(response);
       }
@@ -466,12 +497,12 @@ export class TrackingController {
         return;
       }
 
-      // Get delivery date
+      // Get delivery date in YYYY-MM-DD format for POD request
       const deliveryDate = trackingOrder.deliveredAt 
         ? new Date(trackingOrder.deliveredAt).toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
 
-      // Fetch POD from Sequel247 (or set to null if not available)
+      // Fetch POD from Sequel247 API
       const podLink = await this.trackingService.downloadPOD(
         [docketNumber],
         deliveryDate,
@@ -497,6 +528,199 @@ export class TrackingController {
 
     } catch (error) {
       logError(error as Error, 'downloadProofOfDelivery');
+      next(error);
+    }
+  };
+
+  /**
+   * Handle return order request
+   * Send email notification to admin
+   */
+  returnOrder = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { orderNumber, email, reason, hasManufacturerFault, customerName, orderAmount } = req.body;
+
+      // Validate required fields
+      if (!orderNumber || !email || !reason) {
+        const response: ApiResponse = createErrorResponse(
+          'Order number, email, and reason are required'
+        );
+        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        return;
+      }
+
+      // Find the order
+      const { TrackingOrder } = await import('../models/TrackingOrder');
+      const { UserModel } = await import('../models/userModel');
+      
+      const user = await UserModel.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        const response: ApiResponse = createErrorResponse('User not found');
+        res.status(HTTP_STATUS.NOT_FOUND).json(response);
+        return;
+      }
+
+      const trackingOrder = await TrackingOrder.findOne({ 
+        orderNumber: new RegExp(`^${orderNumber}$`, 'i')
+      }).populate('order');
+
+      if (!trackingOrder) {
+        const response: ApiResponse = createErrorResponse('Order not found');
+        res.status(HTTP_STATUS.NOT_FOUND).json(response);
+        return;
+      }
+
+      // Check if order is delivered
+      if (trackingOrder.status !== OrderStatus.DELIVERED) {
+        const response: ApiResponse = createErrorResponse(
+          'Returns are only available for delivered orders'
+        );
+        res.status(HTTP_STATUS.BAD_REQUEST).json(response);
+        return;
+      }
+
+      // Send email notification to admin
+      try {
+        const nodemailer = await import('nodemailer');
+        
+        // Create transporter
+        const transporter = nodemailer.default.createTransport({
+          host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.EMAIL_PORT || '587'),
+          secure: false,
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+          tls: {
+            rejectUnauthorized: false // Fix for self-signed certificate error
+          },
+        });
+
+        // Email content
+        const returnCharges = hasManufacturerFault ? 0 : 1800;
+        const refundAmount = hasManufacturerFault ? orderAmount : (orderAmount - returnCharges);
+
+        const mailOptions = {
+          from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
+          to: 'addytiwari1810@gmail.com', // Admin email
+          subject: `🔄 Return Request - Order ${orderNumber}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #f97316;">Return Order Request</h2>
+              
+              <div style="background-color: #fff7ed; padding: 15px; border-left: 4px solid #f97316; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #ea580c;">Order Details</h3>
+                <p><strong>Order Number:</strong> ${orderNumber}</p>
+                <p><strong>Customer Name:</strong> ${customerName}</p>
+                <p><strong>Customer Email:</strong> ${email}</p>
+                <p><strong>Order Amount:</strong> ₹${orderAmount?.toLocaleString('en-IN') || 'N/A'}</p>
+                ${trackingOrder.docketNumber ? `<p><strong>Docket Number:</strong> ${trackingOrder.docketNumber}</p>` : ''}
+              </div>
+
+              <div style="background-color: #f0fdf4; padding: 15px; border-left: 4px solid #22c55e; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #16a34a;">Return Information</h3>
+                <p><strong>Manufacturer Fault:</strong> ${hasManufacturerFault ? 'YES ✅' : 'NO ❌'}</p>
+                <p><strong>Return Charges:</strong> ₹${returnCharges.toLocaleString('en-IN')}</p>
+                <p><strong>Refund Amount:</strong> ₹${refundAmount.toLocaleString('en-IN')}</p>
+              </div>
+
+              <div style="background-color: #fef3c7; padding: 15px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #d97706;">Return Reason</h3>
+                <p style="white-space: pre-wrap;">${reason}</p>
+              </div>
+
+              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>Action Required:</strong></p>
+                <p style="margin: 5px 0 0 0;">Please contact the customer and arrange the return pickup.</p>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+              
+              <p style="color: #6b7280; font-size: 12px;">
+                This is an automated notification from Kyna Jewels Return Management System.<br>
+                Received: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+              </p>
+            </div>
+          `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`✅ Return request email sent to admin for order ${orderNumber}`);
+
+        // Send confirmation email to customer
+        const customerMailOptions = {
+          from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
+          to: email,
+          subject: `Return Request Received - Order ${orderNumber}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #f97316;">Return Request Received</h2>
+              
+              <p>Dear ${customerName},</p>
+              
+              <p>We have received your return request for order <strong>${orderNumber}</strong>.</p>
+
+              <div style="background-color: #fff7ed; padding: 15px; border-left: 4px solid #f97316; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #ea580c;">Return Details</h3>
+                <p><strong>Order Number:</strong> ${orderNumber}</p>
+                <p><strong>Order Amount:</strong> ₹${orderAmount?.toLocaleString('en-IN') || 'N/A'}</p>
+                <p><strong>Return Charges:</strong> ${hasManufacturerFault ? '₹0 (Manufacturer Fault)' : '₹1,800'}</p>
+                <p><strong>Expected Refund:</strong> ₹${hasManufacturerFault ? orderAmount?.toLocaleString('en-IN') : (orderAmount - 1800).toLocaleString('en-IN')}</p>
+              </div>
+
+              <div style="background-color: #dbeafe; padding: 15px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+                <p style="margin: 0;"><strong>📧 We're on it!</strong></p>
+                <p style="margin: 5px 0 0 0;">Our team is reviewing your return request and will contact you shortly to arrange the pickup.</p>
+              </div>
+
+              <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0;"><strong>Your Return Reason:</strong></p>
+                <p style="margin: 5px 0 0 0; white-space: pre-wrap;">${reason}</p>
+              </div>
+
+              <p>If you have any questions, please don't hesitate to contact us.</p>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+              
+              <p style="color: #6b7280; font-size: 12px;">
+                Thank you for shopping with Kyna Jewels.<br>
+                This is an automated confirmation email.<br>
+                Sent: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+              </p>
+            </div>
+          `,
+        };
+
+        await transporter.sendMail(customerMailOptions);
+        console.log(`✅ Return confirmation email sent to customer: ${email}`);
+
+      } catch (emailError) {
+        console.error('Failed to send return request email:', emailError);
+        // Don't fail the request if email fails
+      }
+
+      // Update the tracking order to mark return request
+      trackingOrder.returnRequest = {
+        requested: true,
+        reason: reason,
+        hasManufacturerFault: hasManufacturerFault || false,
+        requestedAt: new Date()
+      };
+      await trackingOrder.save();
+      console.log(`✅ Return request marked in database for order ${orderNumber}`);
+
+      const response: ApiResponse = createSuccessResponse(
+        { 
+          orderNumber,
+          returnCharges: hasManufacturerFault ? 0 : 1800 
+        },
+        'Return request submitted successfully. We have sent you a confirmation email. Our team will contact you soon.'
+      );
+      res.status(HTTP_STATUS.OK).json(response);
+
+    } catch (error) {
+      logError(error as Error, 'returnOrder');
       next(error);
     }
   };
