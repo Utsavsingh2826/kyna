@@ -135,6 +135,7 @@ export interface IOrder extends Document {
       diamondShape?: string;
       diamondSize?: string;
       diamondOrigin?: string;
+      size?: string; // generic size
       ringSize?: string;
       engraving?: string;
       engravingImageUrl?: string;
@@ -404,6 +405,7 @@ const orderSchema = new Schema<IOrder>(
         diamondShape: { type: String },
         diamondSize: { type: String },
         diamondOrigin: { type: String },
+        size: { type: String },
         ringSize: { type: String },
         engraving: { type: String },
         engravingImageUrl: { type: String },

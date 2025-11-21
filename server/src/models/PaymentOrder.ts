@@ -303,6 +303,7 @@ const orderDetailsSchema = new Schema(
         diamondShape: { type: String },
         diamondSize: { type: String },
         diamondOrigin: { type: String },
+        size: { type: String }, // generic size
         ringSize: { type: String },
         engraving: { type: String },
         engravingImageUrl: { type: String },
