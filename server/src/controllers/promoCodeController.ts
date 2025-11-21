@@ -40,8 +40,11 @@ export const validatePromoCode = async (req: AuthRequest, res: Response) => {
       code,
       context = "cart",
       directPurchase,
-    }: { code?: string; context?: PromoContext; directPurchase?: { diamondCost?: number } } =
-      req.body || {};
+    }: {
+      code?: string;
+      context?: PromoContext;
+      directPurchase?: { diamondCost?: number };
+    } = req.body || {};
 
     if (!userId) {
       return res.status(401).json({

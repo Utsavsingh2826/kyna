@@ -13,7 +13,13 @@ interface EngraveProps {
   selectedImage?: string;
   jewelryType?: string;
   userId?: string;
-  onSave?: (engravingText: string, engravingImageUrl?: string) => void;
+  onSave?: (
+    engravingText: string,
+    engravingImageUrl?: string,
+    motifPath?: string
+  ) => void;
+  initialText?: string;
+  initialMotif?: string;
 }
 
 const EngravingPage: React.FC<EngraveProps> = ({
@@ -22,6 +28,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
   jewelryType = "ring",
   userId = "",
   onSave,
+  initialText = "",
+  initialMotif = "",
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,7 +43,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
   });
   const [selectedFont, setSelectedFont] = useState("My Script One");
   const [fontSize, setFontSize] = useState(24);
-  const [engravingText, setEngravingText] = useState("");
+  const [engravingText, setEngravingText] = useState(initialText);
   const [activeTab, setActiveTab] = useState("FONT");
   const [textPosition, setTextPosition] = useState({ x: 50, y: 70 });
   const [isDragging, setIsDragging] = useState(false);
@@ -44,7 +52,9 @@ const EngravingPage: React.FC<EngraveProps> = ({
     vertical: 0,
   });
   const [motifs, setMotifs] = useState<string[]>([]);
-  const [selectedMotif, setSelectedMotif] = useState<string | null>(null);
+  const [selectedMotif, setSelectedMotif] = useState<string | null>(
+    initialMotif || null
+  );
   const [motifScale, setMotifScale] = useState<number>(1); // multiplier of fontSize (1 = same height as text)
   const maxCount = 12; // maximum total units (characters + motif cost)
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -59,9 +69,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
         const data = await res.json();
         setMotifs(data); // <-- data is object { category: [files] }
 
-        // Optional auto select first motif:
-        const firstCat = Object.values(data)[0];
-        if (firstCat?.length > 0) setSelectedMotif(firstCat[0]);
+        // No auto-selection - user must manually choose a motif
       } catch (err) {
         console.debug("Motif load failed:", err);
       }
@@ -290,7 +298,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
 
     // If we have an onSave callback (from popup), use it
     if (onSave) {
-      onSave(text, engravingImageUrl || undefined);
+      onSave(text, engravingImageUrl || undefined, selectedMotif || undefined);
       return;
     }
 

@@ -188,6 +188,14 @@ const ProductDetail = () => {
   const [showEngraveModal, setShowEngraveModal] = useState(false);
   const [engravingText, setEngravingText] = useState("");
   const [engravingImageUrl, setEngravingImageUrl] = useState("");
+  const [engravingMotifPath, setEngravingMotifPath] = useState("");
+  const [hasEngraving, setHasEngraving] = useState(false);
+  const [isUploadingEngraving, setIsUploadingEngraving] = useState(false);
+  const [savedEngravingData, setSavedEngravingData] = useState<{
+    text: string;
+    motif: string;
+    imageUrl: string;
+  } | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
@@ -815,6 +823,69 @@ const ProductDetail = () => {
     dispatch,
   ]);
 
+  // Upload engraving data to backend
+  const uploadEngravingToBackend = useCallback(
+    async (text: string, motifPath: string): Promise<string | null> => {
+      try {
+        // Use a placeholder image for now - in real implementation this would be the generated engraving
+        const formData = new FormData();
+
+        // Add a placeholder image file (you can replace this with actual engraving generation later)
+        const response = await fetch("/rings.jpg");
+        const blob = await response.blob();
+        formData.append("image", blob, "engraving.png");
+        formData.append("text", text);
+        formData.append("motifPath", motifPath);
+
+        const uploadResponse = await fetch("/api/upload/engraving", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.status}`);
+        }
+
+        const result = await uploadResponse.json();
+        return result.data.imageUrl;
+      } catch (error) {
+        console.error("Error uploading engraving to backend:", error);
+        return null;
+      }
+    },
+    []
+  );
+
+  // Generate and upload engraving data
+  const generateAndUploadEngravingImage = useCallback(async (): Promise<
+    string | null
+  > => {
+    if (!hasEngraving) return null;
+
+    try {
+      console.log("🎨 Uploading engraving data:", {
+        engravingText,
+        motifPath: engravingMotifPath,
+      });
+
+      // Upload engraving data to backend
+      const uploadedUrl = await uploadEngravingToBackend(
+        engravingText,
+        engravingMotifPath
+      );
+      return uploadedUrl;
+    } catch (error) {
+      console.error("Error generating and uploading engraving image:", error);
+      return null;
+    }
+  }, [
+    hasEngraving,
+    engravingText,
+    engravingMotifPath,
+    productData,
+    uploadEngravingToBackend,
+  ]);
+
   // Handle Buy Now
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
@@ -833,6 +904,31 @@ const ProductDetail = () => {
     if (!productData || !productData.chosenVariantSku) {
       alert("Please select all product options");
       return;
+    }
+
+    // Upload engraving image to Cloudinary if engraving is applied
+    let cloudinaryEngravingUrl = null;
+    if (hasEngraving) {
+      console.log("🎨 Uploading engraving image to Cloudinary...");
+      setIsUploadingEngraving(true);
+
+      try {
+        cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
+        if (!cloudinaryEngravingUrl) {
+          alert("Failed to upload engraving image. Please try again.");
+          return;
+        }
+        console.log(
+          "✅ Engraving uploaded successfully:",
+          cloudinaryEngravingUrl
+        );
+      } catch (error) {
+        console.error("❌ Engraving upload error:", error);
+        alert("Failed to upload engraving image. Please try again.");
+        return;
+      } finally {
+        setIsUploadingEngraving(false);
+      }
     }
 
     // Create order data for console logging and payment
@@ -862,8 +958,9 @@ const ProductDetail = () => {
         diamondOrigin: selectedDiamondOrigin,
         ringSize: selectedSize,
         engraving: engravingText,
-        engravingImageUrl: engravingImageUrl,
-        hasEngraving: !!engravingText,
+        engravingImageUrl: cloudinaryEngravingUrl || engravingImageUrl, // Use Cloudinary URL if available
+        engravingMotifPath: engravingMotifPath, // Include motif path
+        hasEngraving: hasEngraving,
       },
       quantity: 1,
       totalAmount: productData.sellingPrice,
@@ -883,7 +980,9 @@ const ProductDetail = () => {
     console.log("Diamond Shape:", selectedDiamondShape);
     console.log("Diamond Size:", selectedDiamondSize);
     console.log("Engraving Text:", engravingText);
-    console.log("Has Engraving:", !!engravingText);
+    console.log("Engraving Motif Path:", engravingMotifPath);
+    console.log("Cloudinary Engraving URL:", cloudinaryEngravingUrl);
+    console.log("Has Engraving:", hasEngraving);
     console.log("===================");
 
     // Navigate to payment page with product data
@@ -915,8 +1014,9 @@ const ProductDetail = () => {
               diamondOrigin: selectedDiamondOrigin,
               ringSize: selectedSize,
               engraving: engravingText,
-              engravingImageUrl: engravingImageUrl,
-              hasEngraving: !!engravingText,
+              engravingImageUrl: cloudinaryEngravingUrl || engravingImageUrl,
+              engravingMotifPath: engravingMotifPath,
+              hasEngraving: hasEngraving,
             },
           },
         ],
@@ -937,14 +1037,40 @@ const ProductDetail = () => {
     user,
     engravingText,
     engravingImageUrl,
+    engravingMotifPath,
+    hasEngraving,
+    generateAndUploadEngravingImage,
   ]);
 
   // Handle engraving save callback
-  const handleEngravingSave = useCallback((text: string, imageUrl?: string) => {
-    setEngravingText(text);
-    setEngravingImageUrl(imageUrl || "");
-    setShowEngraveModal(false);
-    console.log("Engraving saved:", { text, imageUrl });
+  const handleEngravingSave = useCallback(
+    (text: string, imageUrl?: string, motifPath?: string) => {
+      setEngravingText(text);
+      setEngravingImageUrl(imageUrl || "");
+      setEngravingMotifPath(motifPath || "");
+      setHasEngraving(!!(text || motifPath));
+
+      // Save engraving data for undo functionality
+      setSavedEngravingData({
+        text: text,
+        motif: motifPath || "",
+        imageUrl: imageUrl || "",
+      });
+
+      setShowEngraveModal(false);
+      console.log("Engraving saved:", { text, imageUrl, motifPath });
+    },
+    []
+  );
+
+  // Handle undo engraving
+  const handleUndoEngraving = useCallback(() => {
+    setEngravingText("");
+    setEngravingImageUrl("");
+    setEngravingMotifPath("");
+    setHasEngraving(false);
+    setSavedEngravingData(null);
+    console.log("Engraving undone");
   }, []);
 
   const ringSizes = [
@@ -1546,20 +1672,58 @@ const ProductDetail = () => {
 
                 {/* Free Engraving - Only show if engraving is available */}
                 {productData.isEngraving && (
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="engraving"
-                      checked={showEngraveModal}
-                      onChange={(e) => setShowEngraveModal(e.target.checked)}
-                      className="border-primary accent-[#68C5C0] w-4 h-4"
-                    />
-                    <label
-                      htmlFor="engraving"
-                      className="text-sm text-primary cursor-pointer"
-                    >
-                      Add Free Engraving
-                    </label>
+                  <div className="space-y-3">
+                    {!hasEngraving ? (
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="engraving"
+                          checked={showEngraveModal}
+                          onChange={(e) =>
+                            setShowEngraveModal(e.target.checked)
+                          }
+                          className="border-primary accent-[#68C5C0] w-4 h-4"
+                        />
+                        <label
+                          htmlFor="engraving"
+                          className="text-sm text-primary cursor-pointer"
+                        >
+                          Add Free Engraving
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            <span className="text-sm font-medium text-green-700">
+                              Engraving Added
+                            </span>
+                          </div>
+                          <button
+                            onClick={handleUndoEngraving}
+                            className="text-xs text-red-600 hover:text-red-800 underline"
+                          >
+                            Undo
+                          </button>
+                        </div>
+                        {savedEngravingData && (
+                          <div className="mt-2 text-xs text-gray-600">
+                            {savedEngravingData.text && (
+                              <div>Text: {savedEngravingData.text}</div>
+                            )}
+                            {savedEngravingData.motif && (
+                              <div>
+                                Motif:{" "}
+                                {savedEngravingData.motif
+                                  .replace("/motif/", "")
+                                  .replace(".svg", "")}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1592,10 +1756,14 @@ const ProductDetail = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <Button
                     onClick={handleBuyNow}
-                    disabled={cartLoading}
+                    disabled={cartLoading || isUploadingEngraving}
                     className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3"
                   >
-                    {cartLoading ? "Processing..." : "Buy Now"}
+                    {isUploadingEngraving
+                      ? "Uploading Engraving..."
+                      : cartLoading
+                      ? "Processing..."
+                      : "Buy Now"}
                   </Button>
                   <Button
                     onClick={handleAddToCart}
@@ -1952,19 +2120,36 @@ const ProductDetail = () => {
         </div>
 
         {/* Engrave Modal Overlay - Show as full-screen overlay */}
-        {showEngraveModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="relative w-full h-full bg-white overflow-auto">
-              <Engrave
-                onClose={() => setShowEngraveModal(false)}
-                onSave={handleEngravingSave}
-                selectedImage={productData?.variantImages?.[0]}
-                jewelryType={productData?.title}
-                userId={user?.id}
-              />
-            </div>
-          </div>
-        )}
+        {showEngraveModal &&
+          (() => {
+            const originalImage = productData?.variantImages?.[0];
+            const evImage =
+              originalImage?.replace(
+                /-(FV|SV|TV|BV|LV|RV|GP)\.webp$/i,
+                "-EV.webp"
+              ) || originalImage;
+
+            console.log("🎨 ENGRAVE COMPONENT - Image URLs:");
+            console.log("📸 Original image:", originalImage);
+            console.log("🖼️ EV image passed to Engrave:", evImage);
+            console.log("✅ Conversion applied:", originalImage !== evImage);
+
+            return (
+              <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                <div className="relative w-full h-full bg-white overflow-auto">
+                  <Engrave
+                    onClose={() => setShowEngraveModal(false)}
+                    onSave={handleEngravingSave}
+                    selectedImage={evImage}
+                    jewelryType={productData?.title}
+                    userId={user?.id}
+                    initialText={engravingText}
+                    initialMotif={engravingMotifPath}
+                  />
+                </div>
+              </div>
+            );
+          })()}
       </main>
     </div>
   );

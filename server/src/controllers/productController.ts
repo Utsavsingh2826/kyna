@@ -250,12 +250,6 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       });
     }
 
-    // NEW: isEngraving DB-level filter (only for RINGS)
-    if (category === "RINGS" && isEngraving) {
-      // require engraving.maxCharacters > 0
-      pipeline.push({ $match: { "engraving.maxCharacters": { $gt: 0 } } });
-    }
-
     // DB-level shape match only for categories where attributes.centerStoneShape is authoritative
     if (
       shapesUpper.length > 0 &&
@@ -294,7 +288,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           "attributes.category2": 1,
           "attributes.category3": 1,
           "seo.metaTitle": 1,
-          engraving: 1, // include engraving object (so we can return fontSize/maxCharacters)
+          engraving: 1,
+          engravingDetailIds: 1, // left for compatibility but NOT used for engraving decision anymore
           firstVariantSku: { $arrayElemAt: ["$variantIds", 0] },
           variantCount: { $size: { $ifNull: ["$variantIds", []] } },
         },
@@ -330,9 +325,23 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           attributesCategory2: "$attributes.category2",
           attributesCategory3: "$attributes.category3",
           engraving: 1,
+          engravingDetailIds: 1,
         },
       }
     );
+
+    // NEW: if isEngraving=true and category is RINGS, enforce DB-level filter now that variant is available
+    // BUT per your instruction: only check product engraving object presence — do NOT check ids or variant fields.
+    if (category === "RINGS" && isEngraving) {
+      pipeline.push({
+        $match: {
+          $expr: {
+            // require the product-level 'engraving' field to be an object
+            $eq: [{ $type: "$engraving" }, "object"],
+          },
+        },
+      });
+    }
 
     pipeline.push({ $sort: { modelSku: 1 } });
     if (!variantDependentFilterPresent)
@@ -523,10 +532,10 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
         priceIncomplete: true,
       };
 
-      // If isEngraving filter requested but engraving info missing or maxCharacters <= 0, skip.
+      // If isEngraving filter requested but engraving info missing, skip.
       if (category === "RINGS" && isEngraving) {
-        if (!engravingMaxChars || engravingMaxChars <= 0) {
-          // product should have been filtered out at DB-level, but double-check here and skip
+        // Per requirement: only consider product-level engraving object presence.
+        if (!d.engraving || typeof d.engraving !== "object") {
           continue;
         }
       }
@@ -874,6 +883,7 @@ export const getProductByModelSku = async (
         netWeightGrams?: number | string | null;
         metalType?: string | null;
         metalKt?: string | number | null;
+        engraving?: any;
         [key: string]: any;
       };
       stones?: Stone[];
@@ -881,6 +891,7 @@ export const getProductByModelSku = async (
       metalKt?: string | number | null;
       netWeightGrams?: number | string | null;
       images?: any[];
+      engraving?: any;
       [key: string]: any;
     }
 
@@ -899,7 +910,8 @@ export const getProductByModelSku = async (
         diamondSizes?: string[] | string;
         [key: string]: any;
       };
-      engravingDetailIds?: any[];
+      engravingDetailIds?: any[]; // keep legacy field name if present
+      engraving?: any; // object-based engraving storage (your screenshots)
       variantIds?: string[];
       [key: string]: any;
     }
@@ -1072,11 +1084,26 @@ export const getProductByModelSku = async (
       ? attributes.diamondColors.map(String)
       : [];
 
+    // ----------------- ENGRAVING: maintain legacy behavior AND return object fields ----------
+    // Legacy: keep engravingDetailIds array available as `engraving` for compatibility
     const engravingIds = Array.isArray(product?.engravingDetailIds)
       ? product.engravingDetailIds
       : [];
-    const isEngraving = engravingIds.length > 0;
-    const engraving = engravingIds;
+
+    // New/actual model (from your screenshots): engraving object on product
+    const productEngravingObj =
+      product &&
+      typeof product.engraving === "object" &&
+      product.engraving !== null
+        ? product.engraving
+        : null;
+
+    // ----------------- Variant metadata (will be used later) -----------------
+    const engravingPlaceholderFromVariant = null; // defined later after variant fetch if needed
+
+    const isEngravingFromLegacyArray = engravingIds.length > 0;
+
+    // We'll compute final isEngraving and engravingInfo after variant fetch so variant fields can override product ones.
 
     const variantIds = Array.isArray(product?.variantIds)
       ? product.variantIds
@@ -1947,6 +1974,43 @@ export const getProductByModelSku = async (
       );
     }
 
+    // ----------------- ENGRAVING: finalize detection & extraction ----------
+    // Variant-level engraving override (if present)
+    const variantEngravingObj =
+      firstVariantDoc &&
+      typeof (firstVariantDoc.meta?.engraving ?? firstVariantDoc.engraving) ===
+        "object"
+        ? firstVariantDoc.meta?.engraving ?? firstVariantDoc.engraving
+        : null;
+
+    // Final engraving object: prefer variant engraving object, else product engraving object
+    const finalEngravingObj =
+      variantEngravingObj ?? productEngravingObj ?? null;
+
+    // Extract numeric-like fontSize and maxCharacters robustly
+    const engravingFontSize =
+      finalEngravingObj && finalEngravingObj.fontSize != null
+        ? (() => {
+            const n = toNumberRobust(finalEngravingObj.fontSize);
+            return Number.isNaN(n) ? undefined : n;
+          })()
+        : undefined;
+
+    const engravingMaxCharacters =
+      finalEngravingObj && finalEngravingObj.maxCharacters != null
+        ? (() => {
+            const n = toNumberRobust(finalEngravingObj.maxCharacters);
+            return Number.isNaN(n) ? undefined : n;
+          })()
+        : undefined;
+
+    // isEngraving: true if legacy array exists OR the final engraving object has meaningful fields
+    const isEngraving =
+      isEngravingFromLegacyArray ||
+      (!!finalEngravingObj &&
+        (engravingFontSize !== undefined ||
+          engravingMaxCharacters !== undefined));
+
     // ----------------- Final response -----------------
     const response = {
       _id: product._id, // Add MongoDB _id for cart compatibility
@@ -1960,7 +2024,19 @@ export const getProductByModelSku = async (
       diamondSize,
       diamondColorClarity,
       isEngraving,
-      engraving,
+      // new structured engraving info (from variant if available, else product)
+      engravingInfo: finalEngravingObj
+        ? {
+            fontSize:
+              engravingFontSize !== undefined ? engravingFontSize : null,
+            maxCharacters:
+              engravingMaxCharacters !== undefined
+                ? engravingMaxCharacters
+                : null,
+            // include the raw object for troubleshooting if you want:
+            // raw: finalEngravingObj
+          }
+        : null,
       variantCount,
       firstVariantSku,
       sellingPrice,
@@ -1971,7 +2047,7 @@ export const getProductByModelSku = async (
       variantImages,
     };
 
-    // response stays exactly as before
+    // response stays exactly as before plus engravingInfo
     return res.status(200).json(response);
   } catch (err) {
     console.error("getProductByModelSku error:", err);

@@ -1,92 +1,489 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Heart } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import productsData from "@/data/products.json";
-import { FilterGroup, PriceRangeSlider } from "@/components/Engravings";
-import "./Engravings.css";
+import {
+  FilterGroup,
+  // DiamondShapeSelector,
+  PriceRangeSlider,
+} from "@/components/Engravings";
+import "./ProductPage.css";
 
-type ColorOption = "white" | "gold" | "rosegold";
+type MainCategory = "rings";
 
 interface Product {
-  id: number;
+  modelSku: string;
+  metalTypes: string[];
   title: string;
-  oldPrice: string;
-  price: string;
-  img: string;
-  discount: string;
-  availableColors: ColorOption[];
-  category: "rings" | "earrings" | "pendants";
+  slug: string;
+  variantCount: number;
+  firstVariantSku: string;
+  firstVariantImageUrl: string;
+  sellingPrice: number;
+  priceIncomplete: boolean;
 }
 
-interface APIProduct {
-  id: string;
-  name: string;
-  sku: string;
-  category: string;
-  mainImage: string;
-  price: number;
+interface ApiResponse {
+  success: boolean;
+  count: number;
+  total: number;
+  pagination: {
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+  };
+  appliedFilters?: {
+    category?: string;
+    centerStoneShape?: string[];
+    ringTypeRequested?: string[];
+    ringPrefixesApplied?: string[];
+    earringType?: string[];
+    pendantType?: string[];
+    braceletType?: string[];
+  };
+  products: Product[];
 }
 
-const products: Product[] = productsData as unknown as Product[];
+export default function EngravingsPage() {
+  const category: MainCategory = "rings"; // Fixed to rings only
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  // Separate UI state (updates immediately while sliding) and API state (debounced)
+  const [minPriceUI, setMinPriceUI] = useState<number>(0);
+  const [maxPriceUI, setMaxPriceUI] = useState<number>(50000);
+  const [minPrice, setMinPrice] = useState<number>(0);
+  const [maxPrice, setMaxPrice] = useState<number>(50000);
+  const priceDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    totalPages: 1,
+    currentPage: 1,
+    limit: 5,
+    total: 0,
+  });
+  const [appliedFilters, setAppliedFilters] = useState<
+    ApiResponse["appliedFilters"] | null
+  >(null);
 
-const COLOR_ICONS: Record<ColorOption, JSX.Element> = {
-  white: <img src="/colors/white.png" className="h-7" alt="White color" />,
-  gold: <img src="/colors/gold.png" className="h-7" alt="Gold color" />,
-  rosegold: (
-    <img src="/colors/rosegold.png" className="h-7" alt="Rose Gold color" />
-  ),
-};
+  // Filter state management with backend parameter names - only for rings with engraving
+  const [activeFilters, setActiveFilters] = useState({
+    // Ring categories and filters
+    ring_category: [] as string[],
+    solitaire_diamond_shape: [] as string[],
+    engagement_diamond_shape: [] as string[],
+    fashion_diamond_shape: [] as string[],
+    mens_diamond_shape: [] as string[],
 
-// Comprehensive Filter Sidebar Component for Jewellery
-const JewelleryFilterSidebar: React.FC<{
-  minPrice: number;
-  maxPrice: number;
-  onMinChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onMaxChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  activeFilters: Record<string, string[] | string>;
-  updateUrlFilters: (
+    // Common filters
+    style: [] as string[],
+    min_price: "0",
+    max_price: "50000",
+  });
+
+  // API function to fetch products
+  const fetchProducts = useCallback(
+    async (page: number = 1, limit: number = 20) => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Only handle rings with engraving
+        const apiCategory = "RINGS";
+
+        // Build filter parameters for rings with engraving
+        const buildApiFilters = () => {
+          const params = new URLSearchParams();
+          params.set("page", page.toString());
+          params.set("limit", limit.toString());
+          params.set("isEngraving", "true"); // Add engraving filter
+
+          // Handle diamond shapes - collect all selected shapes from ring subcategories
+          const allSelectedShapes = new Set<string>();
+
+          // Collect shapes from all ring subcategories
+          activeFilters.solitaire_diamond_shape.forEach((shape) =>
+            allSelectedShapes.add(shape)
+          );
+          activeFilters.engagement_diamond_shape.forEach((shape) =>
+            allSelectedShapes.add(shape)
+          );
+          activeFilters.fashion_diamond_shape.forEach((shape) =>
+            allSelectedShapes.add(shape)
+          );
+          activeFilters.mens_diamond_shape.forEach((shape) =>
+            allSelectedShapes.add(shape)
+          );
+
+          // Add centerStoneShape parameter if any shapes are selected
+          if (allSelectedShapes.size > 0) {
+            params.set(
+              "centerStoneShape",
+              Array.from(allSelectedShapes)
+                .map((s) => s.toLowerCase())
+                .join(",")
+            );
+          }
+
+          // Handle ring types based on selected categories
+          const ringTypes = new Set<string>();
+          if (
+            activeFilters.ring_category.includes("Solitaire Rings") ||
+            activeFilters.solitaire_diamond_shape.length > 0
+          ) {
+            ringTypes.add("solitaire");
+          }
+          if (
+            activeFilters.ring_category.includes("Engagement Rings") ||
+            activeFilters.engagement_diamond_shape.length > 0
+          ) {
+            ringTypes.add("engagement");
+          }
+          if (
+            activeFilters.ring_category.includes("Fashion Rings") ||
+            activeFilters.fashion_diamond_shape.length > 0
+          ) {
+            ringTypes.add("fashion");
+          }
+          if (
+            activeFilters.ring_category.includes("Men's Rings") ||
+            activeFilters.mens_diamond_shape.length > 0
+          ) {
+            ringTypes.add("men");
+          }
+
+          if (ringTypes.size > 0) {
+            params.set("ringType", Array.from(ringTypes).join(","));
+          }
+
+          // Handle styles
+          if (activeFilters.style.length > 0) {
+            params.set("style", activeFilters.style.join(","));
+          }
+
+          // Handle price range - use current slider values directly
+          if (minPrice !== 0) {
+            params.set("minPrice", minPrice.toString());
+          }
+          if (maxPrice !== 50000) {
+            params.set("maxPrice", maxPrice.toString());
+          }
+
+          return params;
+        };
+
+        const filterParams = buildApiFilters();
+        const response = await fetch(
+          `http://localhost:5000/api/products/category/${apiCategory}?${filterParams.toString()}`
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data: ApiResponse = await response.json();
+
+        console.log("API Response:", data);
+        console.log("Pagination from API:", data.pagination);
+        console.log("Total from API:", data.total);
+
+        if (data.success) {
+          console.log("🔍 DEBUG - Products from API:", data.products);
+          console.log(
+            "🔍 DEBUG - First product image URLs:",
+            data.products.slice(0, 3).map((p) => ({
+              modelSku: p.modelSku,
+              firstVariantImageUrl: p.firstVariantImageUrl,
+            }))
+          );
+
+          setProducts(data.products);
+          setPagination({
+            totalPages: data.pagination.totalPages,
+            currentPage: data.pagination.currentPage,
+            limit: data.pagination.limit,
+            total: data.total,
+          });
+          console.log("Pagination state set to:", {
+            totalPages: data.pagination.totalPages,
+            currentPage: data.pagination.currentPage,
+            limit: data.pagination.limit,
+            total: data.total,
+          });
+          setAppliedFilters(data.appliedFilters || null);
+        } else {
+          throw new Error("API returned success: false");
+        }
+      } catch (err) {
+        console.error("Error fetching products:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch products"
+        );
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [activeFilters, minPrice, maxPrice]
+  );
+
+  // Update URL when filters change - use comma-separated values
+  const updateUrlFilters = (
     filterType: string,
     value: string,
     checked: boolean
-  ) => void;
-}> = ({
-  minPrice,
-  maxPrice,
-  onMinChange,
-  onMaxChange,
-  activeFilters,
-  updateUrlFilters,
-}) => {
-  // Enhanced DiamondShapeSelector with URL updates
-  const EnhancedDiamondShapeSelector = ({
-    showImages,
-    category,
-    diamondShapeFilterKey,
-  }: {
-    showImages: boolean;
-    category: string;
-    diamondShapeFilterKey: string;
-  }) => {
-    const shapes = [
-      "Round",
-      "Oval",
-      "Princess",
-      "Emerald",
-      "Cushion",
-      "Marquise",
-      "Pear",
-      "Heart",
-    ];
+  ) => {
+    const currentParams = new URLSearchParams(searchParams);
 
-    const categoryDiamondShapes =
-      (activeFilters[diamondShapeFilterKey] as string[]) || [];
+    // Get existing values as comma-separated string
+    const existingParam = currentParams.get(filterType);
+    const existingValues = existingParam ? existingParam.split(",") : [];
 
-    return (
-      <div>
-        {/* Add helper text to clarify multiple selection */}
-        <p className="text-xs text-gray-500 mb-2 italic">
-          Select multiple shapes (hold Ctrl/Cmd for multiple)
-        </p>
+    if (checked) {
+      // Add value if not already present
+      if (!existingValues.includes(value)) {
+        existingValues.push(value);
+      }
+    } else {
+      // Remove value
+      const index = existingValues.indexOf(value);
+      if (index > -1) {
+        existingValues.splice(index, 1);
+      }
+    }
+
+    // Update URL parameter
+    if (existingValues.length > 0) {
+      currentParams.set(filterType, existingValues.join(","));
+    } else {
+      currentParams.delete(filterType);
+    }
+
+    setSearchParams(currentParams);
+
+    // Update local state
+    setActiveFilters((prev) => ({
+      ...prev,
+      [filterType]: existingValues,
+    }));
+  };
+
+  const updatePriceFilter = (
+    type: "min_price" | "max_price",
+    value: string
+  ) => {
+    const currentParams = new URLSearchParams(searchParams);
+
+    // Only update URL if value is different from default
+    if (
+      (type === "min_price" && value !== "0") ||
+      (type === "max_price" && value !== "50000")
+    ) {
+      currentParams.set(type, value);
+    } else {
+      currentParams.delete(type);
+    }
+
+    setSearchParams(currentParams);
+
+    setActiveFilters((prev) => ({
+      ...prev,
+      [type]: value,
+    }));
+  };
+
+  const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    console.log("🔵 MIN THUMB MOVED:", value);
+    // Ensure min price doesn't exceed max price - 2000
+    const clampedValue = Math.min(value, maxPriceUI - 2000);
+
+    // Update UI immediately for smooth sliding
+    setMinPriceUI(clampedValue);
+
+    // Debounce API call
+    if (priceDebounceRef.current) {
+      clearTimeout(priceDebounceRef.current);
+    }
+
+    priceDebounceRef.current = setTimeout(() => {
+      setMinPrice(clampedValue);
+      updatePriceFilter("min_price", clampedValue.toString());
+    }, 500); // 500ms debounce for API calls
+  };
+
+  const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    console.log("🔶 MAX THUMB MOVED:", value);
+    // Ensure max price doesn't go below min price + 2000
+    const clampedValue = Math.max(value, minPriceUI + 2000);
+
+    // Update UI immediately for smooth sliding
+    setMaxPriceUI(clampedValue);
+
+    // Debounce API call
+    if (priceDebounceRef.current) {
+      clearTimeout(priceDebounceRef.current);
+    }
+
+    priceDebounceRef.current = setTimeout(() => {
+      setMaxPrice(clampedValue);
+      updatePriceFilter("max_price", clampedValue.toString());
+    }, 500); // 500ms debounce for API calls
+  };
+
+  // Clear all filters
+  const clearAllFilters = useCallback(() => {
+    setSearchParams(new URLSearchParams());
+
+    // Clear price debounce timeout
+    if (priceDebounceRef.current) {
+      clearTimeout(priceDebounceRef.current);
+    }
+
+    // Reset both UI and API price states
+    setMinPriceUI(0);
+    setMaxPriceUI(50000);
+    setMinPrice(0);
+    setMaxPrice(50000);
+
+    setActiveFilters({
+      ring_category: [],
+      solitaire_diamond_shape: [],
+      engagement_diamond_shape: [],
+      mens_diamond_shape: [],
+      fashion_diamond_shape: [],
+      style: [],
+      min_price: "0",
+      max_price: "50000",
+    });
+  }, [setSearchParams]);
+
+  // Cleanup debounce timeout on component unmount
+  useEffect(() => {
+    return () => {
+      if (priceDebounceRef.current) {
+        clearTimeout(priceDebounceRef.current);
+      }
+    };
+  }, []);
+
+  // Fetch products when component mounts
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // Trigger API call when filters change (with debounce)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchProducts(1); // Reset to first page when filters change
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [fetchProducts, minPrice, maxPrice]);
+
+  // Initialize filters from URL on component mount
+  useEffect(() => {
+    if (searchParams.toString()) {
+      const urlMinPrice = searchParams.get("min_price");
+      const urlMaxPrice = searchParams.get("max_price");
+
+      if (urlMinPrice) {
+        const minPriceValue = parseInt(urlMinPrice);
+        setMinPrice(minPriceValue);
+        setMinPriceUI(minPriceValue);
+      }
+      if (urlMaxPrice) {
+        const maxPriceValue = parseInt(urlMaxPrice);
+        setMaxPrice(maxPriceValue);
+        setMaxPriceUI(maxPriceValue);
+      }
+
+      // Parse comma-separated values from URL for all category-specific filters
+      const getFilterValues = (paramName: string) => {
+        const param = searchParams.get(paramName);
+        return param ? param.split(",") : [];
+      };
+
+      setActiveFilters({
+        // Ring filters only
+        ring_category: getFilterValues("ring_category"),
+        solitaire_diamond_shape: getFilterValues("solitaire_diamond_shape"),
+        engagement_diamond_shape: getFilterValues("engagement_diamond_shape"),
+        fashion_diamond_shape: getFilterValues("fashion_diamond_shape"),
+        mens_diamond_shape: getFilterValues("mens_diamond_shape"),
+
+        // Common filters
+        style: getFilterValues("style"),
+        min_price: urlMinPrice || "0",
+        max_price: urlMaxPrice || "50000",
+      });
+    } else {
+      clearAllFilters();
+    }
+  }, [searchParams, clearAllFilters]);
+
+  const titleMap: Record<MainCategory, string> = {
+    rings: "Engraving Rings",
+  };
+
+  // Function to render category-specific filters
+  const renderCategoryFilters = () => {
+    // Enhanced filter components with URL updates and category tracking
+    const renderStyleOptions = (
+      styles: string[],
+      categoryType: string,
+      categoryName: string
+    ) => (
+      <>
+        {styles.map((style) => (
+          <label key={`${categoryName}-${style}`} className="eng-suboption">
+            <input
+              type="checkbox"
+              checked={activeFilters.style.includes(style)}
+              onChange={(e) => {
+                updateUrlFilters("style", style, e.target.checked);
+                // Update appropriate category when style is selected
+                if (e.target.checked) {
+                  updateUrlFilters(categoryType, categoryName, true);
+                }
+              }}
+            />
+            <span>{style}</span>
+          </label>
+        ))}
+      </>
+    );
+
+    // Enhanced DiamondShapeSelector with category-specific filters
+    const EnhancedDiamondShapeSelector = ({
+      // selectedShapes,
+      showImages,
+      ringCategory,
+      diamondShapeFilterKey,
+    }: {
+      selectedShapes: string[];
+      showImages: boolean;
+      ringCategory: string;
+      diamondShapeFilterKey: keyof typeof activeFilters;
+    }) => {
+      const shapes = [
+        "Round",
+        "Oval",
+        "Princess",
+        "Emerald",
+        "Cushion",
+        "Marquise",
+        "Pear",
+        "Heart",
+      ];
+
+      // Get the specific diamond shape array for this category
+      const categoryDiamondShapes = activeFilters[
+        diamondShapeFilterKey
+      ] as string[];
+
+      return (
         <div
           className="diamond-shape-grid"
           style={{
@@ -95,328 +492,115 @@ const JewelleryFilterSidebar: React.FC<{
             gap: "8px",
           }}
         >
-          {shapes.map((shape) => (
-            <label
-              key={`${category}-${shape}`}
-              className="diamond-shape-option"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                padding: "8px",
-                cursor: "pointer",
-                border: categoryDiamondShapes.includes(shape)
-                  ? "2px solid var(--teal)"
-                  : "1px solid var(--border)",
-                borderRadius: "6px",
-                backgroundColor: categoryDiamondShapes.includes(shape)
-                  ? "var(--muted)"
-                  : "transparent",
-                transition: "all 0.2s ease",
-                position: "relative",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={categoryDiamondShapes.includes(shape)}
-                onChange={(e) => {
-                  updateUrlFilters(
-                    diamondShapeFilterKey,
-                    shape,
-                    e.target.checked
-                  );
-                  // Update category when diamond shape is selected
-                  if (e.target.checked) {
-                    const categoryKey = category.toLowerCase().includes("ring")
-                      ? "ring_category"
-                      : category.toLowerCase().includes("earring")
-                      ? "earring_category"
-                      : category.toLowerCase().includes("pendant")
-                      ? "pendant_category"
-                      : "category";
-                    const existing =
-                      (activeFilters[categoryKey] as string[]) || [];
-                    if (!existing.includes(category)) {
-                      updateUrlFilters(categoryKey, category, true);
-                    }
-                  }
-                }}
-                style={{ marginBottom: "4px" }}
-              />
-              {/* Selection indicator */}
-              {categoryDiamondShapes.includes(shape) && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "4px",
-                    right: "4px",
-                    width: "16px",
-                    height: "16px",
-                    backgroundColor: "var(--teal)",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "10px",
-                    color: "white",
-                    fontWeight: "bold",
-                  }}
-                >
-                  ✓
-                </div>
-              )}
-              {showImages && (
-                <img
-                  src={`/DIAMOND_SHAPES_WEBP/${shape.toLowerCase()}.png`}
-                  alt={shape}
-                  className="h-6 w-6 mb-1"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    const placeholder = document.createElement("div");
-                    placeholder.style.cssText =
-                      "width: 32px; height: 32px; background: #e5e7eb; border-radius: 50%; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280;";
-                    placeholder.textContent = shape.charAt(0);
-                    e.currentTarget.parentNode?.insertBefore(
-                      placeholder,
-                      e.currentTarget
-                    );
-                  }}
-                />
-              )}
-              <span
+          {shapes.map((shape) => {
+            const isSelected = categoryDiamondShapes.includes(shape);
+
+            return (
+              <label
+                key={`${ringCategory}-${shape}`}
+                className="diamond-shape-option"
                 style={{
-                  fontSize: "10px",
-                  textAlign: "center",
-                  fontWeight: categoryDiamondShapes.includes(shape)
-                    ? "600"
-                    : "400",
-                  color: categoryDiamondShapes.includes(shape)
-                    ? "var(--teal)"
-                    : "inherit",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  padding: "8px",
+                  cursor: "pointer",
+                  border: isSelected
+                    ? "2px solid #10b981"
+                    : "1px solid var(--border)",
+                  borderRadius: "6px",
+                  backgroundColor: isSelected ? "#dcfce7" : "transparent",
                 }}
               >
-                {shape}
-              </span>
-            </label>
-          ))}
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={(e) => {
+                    // Handle ring categories only
+                    updateUrlFilters(
+                      diamondShapeFilterKey,
+                      shape,
+                      e.target.checked
+                    );
+                    // Only add ring_category if diamond shape is being checked and category not already present
+                    if (
+                      e.target.checked &&
+                      !activeFilters.ring_category.includes(ringCategory)
+                    ) {
+                      updateUrlFilters("ring_category", ringCategory, true);
+                    }
+                  }}
+                  style={{ marginBottom: "4px" }}
+                />
+                {showImages && (
+                  <img
+                    src={`/DIAMOND_SHAPES_WEBP/${shape.toLowerCase()}.png`}
+                    alt={shape}
+                    className="h-8 w-8 mb-1"
+                    onError={(e) => {
+                      // Replace with a simple placeholder if image fails to load
+                      e.currentTarget.style.display = "none";
+                      const placeholder = document.createElement("div");
+                      placeholder.style.cssText =
+                        "width: 32px; height: 32px; background: #e5e7eb; border-radius: 50%; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280;";
+                      placeholder.textContent = shape.charAt(0);
+                      e.currentTarget.parentNode?.insertBefore(
+                        placeholder,
+                        e.currentTarget
+                      );
+                    }}
+                  />
+                )}
+                <span
+                  style={{
+                    fontSize: "10px",
+                    textAlign: "center",
+                    fontWeight: isSelected ? "600" : "400",
+                    color: isSelected ? "#10b981" : "inherit",
+                  }}
+                >
+                  {shape}
+                </span>
+              </label>
+            );
+          })}
         </div>
-        {/* Show selected count */}
-        {categoryDiamondShapes.length > 0 && (
-          <p className="text-xs text-teal-600 mt-2 font-medium">
-            {categoryDiamondShapes.length} shape
-            {categoryDiamondShapes.length !== 1 ? "s" : ""} selected
-          </p>
-        )}
-      </div>
-    );
-  };
+      );
+    };
 
-  const renderStyleOptions = (
-    styles: string[],
-    categoryType: string,
-    categoryName: string
-  ) => (
-    <div>
-      <p className="text-xs text-gray-500 mb-2 italic">
-        Multiple selections allowed
-      </p>
-      {styles.map((style) => (
-        <label key={`${categoryName}-${style}`} className="eng-suboption">
-          <input
-            type="checkbox"
-            checked={activeFilters.style?.includes(style) || false}
-            onChange={(e) => {
-              updateUrlFilters("style", style, e.target.checked);
-              if (e.target.checked) {
-                updateUrlFilters(categoryType, categoryName, true);
-              }
-            }}
-          />
-          <span
-            style={{
-              fontWeight: activeFilters.style?.includes(style) ? "600" : "400",
-              color: activeFilters.style?.includes(style)
-                ? "var(--teal)"
-                : "inherit",
-            }}
-          >
-            {style}
-          </span>
-          {activeFilters.style?.includes(style) && (
-            <span
-              style={{
-                marginLeft: "auto",
-                color: "var(--teal)",
-                fontSize: "12px",
-              }}
-            >
-              ✓
-            </span>
-          )}
-        </label>
-      ))}
-      {/* Show selected count for styles */}
-      {activeFilters.style && activeFilters.style.length > 0 && (
-        <p className="text-xs text-teal-600 mt-1 font-medium px-2">
-          {activeFilters.style.length} style
-          {activeFilters.style.length !== 1 ? "s" : ""} selected
-        </p>
-      )}
-    </div>
-  );
-
-  const renderEngagementRingStyles = (categoryName: string) => (
-    <div>
-      <p className="text-xs text-gray-500 mb-2 italic">
-        Multiple selections allowed
-      </p>
-      {[
-        "Accents",
-        "Halo",
-        "Hidden Halo",
-        "3 Stone",
-        "5 Stone",
-        "7 & 8 Stone",
-      ].map((item) => (
-        <label key={`${categoryName}-${item}`} className="eng-suboption">
-          <input
-            type="checkbox"
-            checked={activeFilters.style?.includes(item) || false}
-            onChange={(e) => {
-              updateUrlFilters("style", item, e.target.checked);
-              if (e.target.checked) {
-                updateUrlFilters("ring_category", categoryName, true);
-              }
-            }}
-          />
-          <span
-            style={{
-              fontWeight: activeFilters.style?.includes(item) ? "600" : "400",
-              color: activeFilters.style?.includes(item)
-                ? "var(--teal)"
-                : "inherit",
-            }}
-          >
-            {item}
-          </span>
-          {activeFilters.style?.includes(item) && (
-            <span
-              style={{
-                marginLeft: "auto",
-                color: "var(--teal)",
-                fontSize: "12px",
-              }}
-            >
-              ✓
-            </span>
-          )}
-        </label>
-      ))}
-    </div>
-  );
-
-  const renderEarringLengths = (categoryName: string) => (
-    <div>
-      <p className="text-xs text-gray-500 mb-2 italic">
-        Multiple selections allowed
-      </p>
-      {["Small (10 to 19mm)", "Medium (20 to 35mm)", "Large (Above 35mm)"].map(
-        (item) => (
-          <label key={`earring-length-${item}`} className="eng-suboption">
+    const renderEngagementRingStyles = (ringCategory: string) => (
+      <>
+        {[
+          "Accents",
+          "Halo",
+          "Hidden Halo",
+          "3 Stone",
+          "5 Stone",
+          "7 & 8 Stone",
+        ].map((item) => (
+          <label key={`${ringCategory}-${item}`} className="eng-suboption">
             <input
               type="checkbox"
-              checked={activeFilters.earring_length?.includes(item) || false}
+              checked={activeFilters.style.includes(item)}
               onChange={(e) => {
-                updateUrlFilters("earring_length", item, e.target.checked);
-                if (e.target.checked) {
-                  updateUrlFilters("earring_category", categoryName, true);
+                updateUrlFilters("style", item, e.target.checked);
+                // Only add ring_category if style is being checked and category not already present
+                if (
+                  e.target.checked &&
+                  !activeFilters.ring_category.includes(ringCategory)
+                ) {
+                  updateUrlFilters("ring_category", ringCategory, true);
                 }
               }}
             />
-            <span
-              style={{
-                fontWeight: activeFilters.earring_length?.includes(item)
-                  ? "600"
-                  : "400",
-                color: activeFilters.earring_length?.includes(item)
-                  ? "var(--teal)"
-                  : "inherit",
-              }}
-            >
-              {item}
-            </span>
-            {activeFilters.earring_length?.includes(item) && (
-              <span
-                style={{
-                  marginLeft: "auto",
-                  color: "var(--teal)",
-                  fontSize: "12px",
-                }}
-              >
-                ✓
-              </span>
-            )}
+            <span>{item}</span>
           </label>
-        )
-      )}
-      {/* Show selected count for lengths */}
-      {activeFilters.earring_length &&
-        activeFilters.earring_length.length > 0 && (
-          <p className="text-xs text-teal-600 mt-1 font-medium px-2">
-            {activeFilters.earring_length.length} length
-            {activeFilters.earring_length.length !== 1 ? "s" : ""} selected
-          </p>
-        )}
-    </div>
-  );
+        ))}
+      </>
+    );
 
-  const renderDropEarringStyles = (categoryName: string) => (
-    <div>
-      <p className="text-xs text-gray-500 mb-2 italic">
-        Multiple selections allowed
-      </p>
-      {["Classic Solitaire", "Halo Drop Earrings"].map((item) => (
-        <label key={`drop-earring-${item}`} className="eng-suboption">
-          <input
-            type="checkbox"
-            checked={activeFilters.style?.includes(item) || false}
-            onChange={(e) => {
-              updateUrlFilters("style", item, e.target.checked);
-              if (e.target.checked) {
-                updateUrlFilters("earring_category", categoryName, true);
-              }
-            }}
-          />
-          <span
-            style={{
-              fontWeight: activeFilters.style?.includes(item) ? "600" : "400",
-              color: activeFilters.style?.includes(item)
-                ? "var(--teal)"
-                : "inherit",
-            }}
-          >
-            {item}
-          </span>
-          {activeFilters.style?.includes(item) && (
-            <span
-              style={{
-                marginLeft: "auto",
-                color: "var(--teal)",
-                fontSize: "12px",
-              }}
-            >
-              ✓
-            </span>
-          )}
-        </label>
-      ))}
-    </div>
-  );
-
-  return (
-    <>
-      {/* Rings Section */}
-      <FilterGroup title="Rings" defaultOpen={true}>
+    return (
+      <FilterGroup title="Engraving Rings" defaultOpen={true}>
         {/* Solitaire Rings */}
         <FilterGroup
           title="Solitaire Rings"
@@ -425,16 +609,17 @@ const JewelleryFilterSidebar: React.FC<{
         >
           <p className="eng-label-muted">DIAMOND SHAPE</p>
           <EnhancedDiamondShapeSelector
+            selectedShapes={activeFilters.solitaire_diamond_shape}
             showImages={true}
-            category="Solitaire Rings"
+            ringCategory="Solitaire Rings"
             diamondShapeFilterKey="solitaire_diamond_shape"
           />
           <p className="eng-label-muted">PRICE</p>
           <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
+            minPrice={minPriceUI}
+            maxPrice={maxPriceUI}
+            onMinChange={handleMinChange}
+            onMaxChange={handleMaxChange}
           />
         </FilterGroup>
 
@@ -442,16 +627,17 @@ const JewelleryFilterSidebar: React.FC<{
         <FilterGroup title="Engagement Rings" isSubGroup={true}>
           <p className="eng-label-muted">DIAMOND SHAPE</p>
           <EnhancedDiamondShapeSelector
-            showImages={false}
-            category="Engagement Rings"
+            selectedShapes={activeFilters.engagement_diamond_shape}
+            showImages={true}
+            ringCategory="Engagement Rings"
             diamondShapeFilterKey="engagement_diamond_shape"
           />
           <p className="eng-label-muted">PRICE</p>
           <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
+            minPrice={minPriceUI}
+            maxPrice={maxPriceUI}
+            onMinChange={handleMinChange}
+            onMaxChange={handleMaxChange}
           />
           <div className="eng-sublist pt-2">
             <p className="eng-label-muted">STYLE</p>
@@ -461,6 +647,13 @@ const JewelleryFilterSidebar: React.FC<{
 
         {/* Fashion Rings */}
         <FilterGroup title="Fashion Rings" isSubGroup={true}>
+          <p className="eng-label-muted">DIAMOND SHAPE</p>
+          <EnhancedDiamondShapeSelector
+            selectedShapes={activeFilters.fashion_diamond_shape}
+            showImages={true}
+            ringCategory="Fashion Rings"
+            diamondShapeFilterKey="fashion_diamond_shape"
+          />
           <p className="eng-label-muted">STYLE</p>
           {renderStyleOptions(
             ["Daily Wear Rings", "Designer Rings"],
@@ -469,699 +662,363 @@ const JewelleryFilterSidebar: React.FC<{
           )}
           <p className="eng-label-muted">PRICE</p>
           <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
+            minPrice={minPriceUI}
+            maxPrice={maxPriceUI}
+            onMinChange={handleMinChange}
+            onMaxChange={handleMaxChange}
+          />
+        </FilterGroup>
+
+        {/* Men's Rings */}
+        <FilterGroup title="Men's Rings" isSubGroup={true}>
+          <p className="eng-label-muted">DIAMOND SHAPE</p>
+          <EnhancedDiamondShapeSelector
+            selectedShapes={activeFilters.mens_diamond_shape}
+            showImages={true}
+            ringCategory="Men's Rings"
+            diamondShapeFilterKey="mens_diamond_shape"
+          />
+          <p className="eng-label-muted">PRICE</p>
+          <PriceRangeSlider
+            minPrice={minPriceUI}
+            maxPrice={maxPriceUI}
+            onMinChange={handleMinChange}
+            onMaxChange={handleMaxChange}
           />
         </FilterGroup>
       </FilterGroup>
-
-      {/* Earrings Section */}
-      <FilterGroup title="Earrings" defaultOpen={false}>
-        {/* Studs */}
-        <FilterGroup title="Studs" defaultOpen={false} isSubGroup={true}>
-          <p className="eng-label-muted">DIAMOND SHAPE</p>
-          <EnhancedDiamondShapeSelector
-            showImages={true}
-            category="Studs"
-            diamondShapeFilterKey="studs_diamond_shape"
-          />
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-        </FilterGroup>
-
-        {/* Hoops / Huggies */}
-        <FilterGroup
-          title="Hoops / Huggies"
-          defaultOpen={false}
-          isSubGroup={true}
-        >
-          <p className="eng-label-muted">DIAMOND SHAPE</p>
-          <EnhancedDiamondShapeSelector
-            showImages={true}
-            category="Hoops / Huggies"
-            diamondShapeFilterKey="hoops_diamond_shape"
-          />
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-          <div className="eng-sublist">
-            <div className="eng-sublist pt-2">
-              <p className="eng-label-muted">EARRINGS Length</p>
-              {renderEarringLengths("Hoops / Huggies")}
-            </div>
-          </div>
-        </FilterGroup>
-
-        {/* Fashion Earrings */}
-        <FilterGroup title="Fashion Earrings" isSubGroup={true}>
-          <div className="eng-sublist pt-2">
-            <p className="eng-label-muted">STYLE</p>
-            {renderStyleOptions(
-              ["Daily Wear Earrings", "Designer Earrings"],
-              "earring_category",
-              "Fashion Earrings"
-            )}
-          </div>
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-        </FilterGroup>
-
-        {/* Drop Earrings */}
-        <FilterGroup title="Drop Earrings" isSubGroup={true}>
-          <p className="eng-label-muted">DIAMOND SHAPE</p>
-          <EnhancedDiamondShapeSelector
-            showImages={false}
-            category="Drop Earrings"
-            diamondShapeFilterKey="drop_diamond_shape"
-          />
-          <div className="eng-sublist pt-2">
-            <p className="eng-label-muted">STYLE</p>
-            {renderDropEarringStyles("Drop Earrings")}
-          </div>
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-        </FilterGroup>
-      </FilterGroup>
-
-      {/* Pendants Section */}
-      <FilterGroup title="Pendants" defaultOpen={false}>
-        {/* Solitaire Pendants */}
-        <FilterGroup
-          title="Solitaire Pendants"
-          defaultOpen={false}
-          isSubGroup={true}
-        >
-          <p className="eng-label-muted">DIAMOND SHAPE</p>
-          <EnhancedDiamondShapeSelector
-            showImages={true}
-            category="Solitaire Pendants"
-            diamondShapeFilterKey="solitaire_pendant_diamond_shape"
-          />
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-        </FilterGroup>
-
-        {/* Fashion Pendants */}
-        <FilterGroup title="Fashion Pendants" isSubGroup={true}>
-          <div className="eng-sublist pt-2">
-            <p className="eng-label-muted">STYLE</p>
-            {renderStyleOptions(
-              ["Daily Wear Pendants", "Designer Pendants"],
-              "pendant_category",
-              "Fashion Pendants"
-            )}
-          </div>
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-        </FilterGroup>
-
-        {/* Solitaire Halo */}
-        <FilterGroup
-          title="Solitaire Halo"
-          defaultOpen={false}
-          isSubGroup={true}
-        >
-          <p className="eng-label-muted">DIAMOND SHAPE</p>
-          <EnhancedDiamondShapeSelector
-            showImages={true}
-            category="Solitaire Halo"
-            diamondShapeFilterKey="halo_pendant_diamond_shape"
-          />
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-        </FilterGroup>
-      </FilterGroup>
-
-      {/* Bracelets Section */}
-      <FilterGroup title="Bracelets" defaultOpen={false}>
-        <FilterGroup
-          title="Tennis Bracelets"
-          defaultOpen={false}
-          isSubGroup={true}
-        >
-          <p className="eng-label-muted">DIAMOND SHAPE</p>
-          <EnhancedDiamondShapeSelector
-            showImages={true}
-            category="Tennis Bracelets"
-            diamondShapeFilterKey="tennis_bracelet_diamond_shape"
-          />
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-        </FilterGroup>
-
-        <FilterGroup title="Fashion Bracelets" isSubGroup={true}>
-          <div className="eng-sublist pt-2">
-            <p className="eng-label-muted">STYLE</p>
-            {renderStyleOptions(
-              ["Daily Wear Bracelets", "Designer Bracelets"],
-              "bracelet_category",
-              "Fashion Bracelets"
-            )}
-          </div>
-          <p className="eng-label-muted">PRICE</p>
-          <PriceRangeSlider
-            minPrice={minPrice}
-            maxPrice={maxPrice}
-            onMinChange={onMinChange}
-            onMaxChange={onMaxChange}
-          />
-        </FilterGroup>
-      </FilterGroup>
-    </>
-  );
-};
-
-export default function JewelleryPage() {
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [minPrice, setMinPrice] = useState<number>(24000);
-  const [maxPrice, setMaxPrice] = useState<number>(100000);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [apiProducts, setApiProducts] = useState<APIProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Filter state management with backend parameter names
-  const [activeFilters, setActiveFilters] = useState({
-    // Ring categories and filters
-    ring_category: [] as string[],
-    solitaire_diamond_shape: [] as string[],
-    engagement_diamond_shape: [] as string[],
-    fashion_diamond_shape: [] as string[],
-
-    // Earring categories and filters
-    earring_category: [] as string[],
-    studs_diamond_shape: [] as string[],
-    hoops_diamond_shape: [] as string[],
-    drop_diamond_shape: [] as string[],
-    fashion_earring_diamond_shape: [] as string[],
-    earring_length: [] as string[],
-
-    // Pendant categories and filters
-    pendant_category: [] as string[],
-    solitaire_pendant_diamond_shape: [] as string[],
-    fashion_pendant_diamond_shape: [] as string[],
-    halo_pendant_diamond_shape: [] as string[],
-
-    // Bracelet categories and filters
-    bracelet_category: [] as string[],
-    tennis_bracelet_diamond_shape: [] as string[],
-
-    // Common filters
-    style: [] as string[],
-    min_price: "24000",
-    max_price: "100000",
-  });
-
-  // Helper: build URLSearchParams from the full filters state
-  const buildParamsFromFilters = (state: typeof activeFilters) => {
-    const params = new URLSearchParams();
-    Object.entries(state).forEach(([key, value]) => {
-      if (Array.isArray(value)) {
-        if (value.length > 0) params.set(key, value.join(","));
-      } else if (key === "min_price") {
-        if (value !== "24000") params.set(key, value);
-      } else if (key === "max_price") {
-        if (value !== "100000") params.set(key, value);
-      }
-    });
-    return params;
+    );
   };
-
-  // Update URL and local state for checkbox-like filters (multi-select)
-  const updateUrlFilters = (
-    filterType: string,
-    value: string,
-    checked: boolean
-  ) => {
-    setActiveFilters((prev) => {
-      const filterKey = filterType as keyof typeof prev;
-      const prevValues = Array.isArray(prev[filterKey])
-        ? ([prev[filterKey]] as unknown as string[][])[0]
-        : [];
-      const nextValues = checked
-        ? Array.from(new Set([...prevValues, value]))
-        : prevValues.filter((v) => v !== value);
-
-      const nextState = { ...prev, [filterKey]: nextValues };
-      const params = buildParamsFromFilters(nextState);
-      setSearchParams(params, { replace: true });
-      return nextState;
-    });
-  };
-
-  const updatePriceFilter = (
-    type: "min_price" | "max_price",
-    value: string
-  ) => {
-    setActiveFilters((prev) => {
-      const nextState = { ...prev, [type]: value };
-      const params = buildParamsFromFilters(nextState);
-      setSearchParams(params, { replace: true });
-      return nextState;
-    });
-  };
-
-  // Clear all filters
-  const clearAllFilters = () => {
-    setActiveFilters({
-      ring_category: [],
-      solitaire_diamond_shape: [],
-      engagement_diamond_shape: [],
-      fashion_diamond_shape: [],
-      earring_category: [],
-      studs_diamond_shape: [],
-      hoops_diamond_shape: [],
-      drop_diamond_shape: [],
-      fashion_earring_diamond_shape: [],
-      earring_length: [],
-      pendant_category: [],
-      solitaire_pendant_diamond_shape: [],
-      fashion_pendant_diamond_shape: [],
-      halo_pendant_diamond_shape: [],
-      bracelet_category: [],
-      tennis_bracelet_diamond_shape: [],
-      style: [],
-      min_price: "24000",
-      max_price: "100000",
-    });
-    setSearchParams(new URLSearchParams(), { replace: true });
-    setMinPrice(24000);
-    setMaxPrice(100000);
-  };
-
-  // Initialize filters from URL on component mount
-  useEffect(() => {
-    if (searchParams.toString()) {
-      const urlMinPrice = searchParams.get("min_price");
-      const urlMaxPrice = searchParams.get("max_price");
-
-      if (urlMinPrice) setMinPrice(parseInt(urlMinPrice));
-      if (urlMaxPrice) setMaxPrice(parseInt(urlMaxPrice));
-
-      // Parse comma-separated values from URL
-      const getFilterValues = (paramName: string) => {
-        const param = searchParams.get(paramName);
-        return param ? param.split(",") : [];
-      };
-
-      setActiveFilters({
-        ring_category: getFilterValues("ring_category"),
-        solitaire_diamond_shape: getFilterValues("solitaire_diamond_shape"),
-        engagement_diamond_shape: getFilterValues("engagement_diamond_shape"),
-        fashion_diamond_shape: getFilterValues("fashion_diamond_shape"),
-        earring_category: getFilterValues("earring_category"),
-        studs_diamond_shape: getFilterValues("studs_diamond_shape"),
-        hoops_diamond_shape: getFilterValues("hoops_diamond_shape"),
-        drop_diamond_shape: getFilterValues("drop_diamond_shape"),
-        fashion_earring_diamond_shape: getFilterValues(
-          "fashion_earring_diamond_shape"
-        ),
-        earring_length: getFilterValues("earring_length"),
-        pendant_category: getFilterValues("pendant_category"),
-        solitaire_pendant_diamond_shape: getFilterValues(
-          "solitaire_pendant_diamond_shape"
-        ),
-        fashion_pendant_diamond_shape: getFilterValues(
-          "fashion_pendant_diamond_shape"
-        ),
-        halo_pendant_diamond_shape: getFilterValues(
-          "halo_pendant_diamond_shape"
-        ),
-        bracelet_category: getFilterValues("bracelet_category"),
-        tennis_bracelet_diamond_shape: getFilterValues(
-          "tennis_bracelet_diamond_shape"
-        ),
-        style: getFilterValues("style"),
-        min_price: urlMinPrice || "24000",
-        max_price: urlMaxPrice || "100000",
-      });
-    } else {
-      clearAllFilters();
-    }
-  }, []);
-
-  // Fetch products from API
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(" http://localhost:5000/api/products");
-        const data = await response.json();
-
-        if (data.success) {
-          setApiProducts(data.data.products);
-        } else {
-          setError("Failed to fetch products");
-        }
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        setError("Failed to connect to API");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
-
-  const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Math.min(Number(e.target.value), maxPrice - 1000);
-    setMinPrice(value);
-    updatePriceFilter("min_price", value.toString());
-  };
-
-  const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Math.max(Number(e.target.value), minPrice + 1000);
-    setMaxPrice(value);
-    updatePriceFilter("max_price", value.toString());
-  };
-
-  // Combine static products with API products
-  const allProducts = [
-    ...products,
-    ...apiProducts.map((p) => ({
-      id: parseInt(p.id),
-      title: p.name,
-      oldPrice: `₹${Math.round(p.price * 1.2)}`,
-      price: `₹${p.price}`,
-      img: p.mainImage.startsWith("/")
-        ? p.mainImage
-        : "/product_detail/display.png",
-      discount: "15% OFF",
-      availableColors: ["white", "gold", "rosegold"] as ColorOption[],
-      category: p.category.toLowerCase().includes("ring")
-        ? "rings"
-        : p.category.toLowerCase().includes("earring")
-        ? "earrings"
-        : ("pendants" as "rings" | "earrings" | "pendants"),
-    })),
-  ];
-
-  // Filter products by price range
-  const filteredProducts = allProducts.filter((p) => {
-    const price = parseInt(p.price.replace(/[₹,]/g, ""));
-    return price >= minPrice && price <= maxPrice;
-  });
 
   return (
-    <>
-      <header aria-label="Site header" className="sr-only">
-        <h1>Jewellery Collection — Premium Diamond Jewellery</h1>
-      </header>
+    <main aria-labelledby="products-heading" className="eng-root">
+      <div className="eng-wrap">
+        <nav aria-label="Breadcrumb" className="eng-breadcrumb">
+          <Link to="/">Home</Link> <span> - </span>{" "}
+          <span>{titleMap[category]}</span>
+        </nav>
 
-      <main aria-labelledby="jewellery-heading" className="eng-root">
-        <div className="eng-wrap">
-          <nav aria-label="Breadcrumb" className="eng-breadcrumb">
-            <Link to="/">Home</Link> <span> - </span> <span>Jewellery</span>
-          </nav>
-
-          <p className="eng-sub">
-            Discover our complete collection of premium diamond jewellery. From
-            elegant rings to stunning earrings, find the perfect piece that
-            speaks to your style. Each piece is crafted with precision and
-            attention to detail.
-          </p>
-
-          <div className="eng-header">
-            <h2 id="jewellery-heading" className="eng-title">
-              Jewellery Collection ({filteredProducts.length})
-            </h2>
-            <div className="eng-actions">
-              <label>
-                Sort by:{" "}
-                <select className="eng-sort" aria-label="Sort products">
-                  <option>Best Seller</option>
-                  <option>Price: Low to High</option>
-                  <option>Price: High to Low</option>
-                  <option>Newest</option>
-                </select>
-              </label>
-            </div>
+        <div className="eng-header">
+          <h2 id="products-heading" className="eng-title">
+            {titleMap[category]} Products ({loading ? "..." : pagination.total})
+          </h2>
+          <div className="eng-actions">
+            <label>
+              Sort by:{" "}
+              <select className="eng-sort" aria-label="Sort products">
+                <option>Best Seller</option>
+                <option>Price: Low to High</option>
+                <option>Price: High to Low</option>
+                <option>Newest</option>
+              </select>
+            </label>
           </div>
-
-          {/* Mobile filter bar */}
-          <div
-            className="flex justify-between items-center my-3 lg:hidden"
-            aria-hidden="false"
-          >
-            <button
-              className="inline-flex items-center gap-2 border border-gray-300 px-3 py-2 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
-              onClick={() => setMobileFiltersOpen(true)}
-              aria-label="Open filters"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M3 6h18" />
-                <path d="M7 12h10" />
-                <path d="M11 18h2" />
-              </svg>
-              Filters
-            </button>
-          </div>
-
-          <section className="eng-layout mt-5">
-            {/* Desktop sidebar */}
-            <aside
-              className="eng-filters"
-              aria-label="Filters"
-              role="complementary"
-            >
-              <div className="eng-filters-header">
-                Filters
-                <button
-                  onClick={clearAllFilters}
-                  className="text-sm text-teal-600 hover:text-teal-800"
-                >
-                  Clear All
-                </button>
-              </div>
-              <JewelleryFilterSidebar
-                minPrice={minPrice}
-                maxPrice={maxPrice}
-                onMinChange={handleMinChange}
-                onMaxChange={handleMaxChange}
-                activeFilters={activeFilters}
-                updateUrlFilters={updateUrlFilters}
-              />
-            </aside>
-
-            {/* Products */}
-            <section aria-label="Products" className="eng-grid">
-              {/* Display active filters summary */}
-              {Object.values(activeFilters).some((filter) =>
-                Array.isArray(filter)
-                  ? filter.length > 0
-                  : filter !== "24000" && filter !== "100000"
-              ) && (
-                <div className="col-span-full mb-4 p-3 bg-gray-100 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-gray-600">Active Filters:</p>
-                    <button
-                      onClick={clearAllFilters}
-                      className="text-xs text-red-600 hover:text-red-800 font-medium"
-                    >
-                      Clear All Filters
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {/* All Categories */}
-                    {Object.entries(activeFilters).map(([key, values]) => {
-                      if (!Array.isArray(values) || values.length === 0)
-                        return null;
-
-                      const displayName = key
-                        .replace(/_/g, " ")
-                        .replace(/category|diamond shape/gi, "")
-                        .trim();
-                      const colorClass = key.includes("ring")
-                        ? "bg-teal-100 text-teal-800"
-                        : key.includes("earring")
-                        ? "bg-blue-100 text-blue-800"
-                        : key.includes("pendant")
-                        ? "bg-purple-100 text-purple-800"
-                        : key.includes("bracelet")
-                        ? "bg-orange-100 text-orange-800"
-                        : "bg-green-100 text-green-800";
-
-                      return values.map((value: string) => (
-                        <span
-                          key={`${key}-${value}`}
-                          className={`px-2 py-1 ${colorClass} rounded-md text-xs flex items-center gap-1`}
-                        >
-                          <span className="font-medium">{displayName}:</span>{" "}
-                          {value}
-                          <button
-                            onClick={() => updateUrlFilters(key, value, false)}
-                            className="ml-1 hover:opacity-75 text-sm font-bold"
-                            title={`Remove ${value} filter`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ));
-                    })}
-                  </div>
-                  {/* Show total filter count */}
-                  <p className="text-xs text-gray-500 mt-2">
-                    Total active filters:{" "}
-                    {Object.values(activeFilters).reduce(
-                      (count, filter) =>
-                        count + (Array.isArray(filter) ? filter.length : 0),
-                      0
-                    )}
-                  </p>
-                </div>
-              )}
-
-              {loading && (
-                <div className="eng-loading col-span-full">
-                  Loading products...
-                </div>
-              )}
-
-              {error && (
-                <div className="eng-error col-span-full">
-                  {error}. Showing static products only.
-                </div>
-              )}
-
-              {filteredProducts.map((p) => (
-                <article
-                  className="eng-card"
-                  key={`jewellery-${p.id}`}
-                  aria-label={p.title}
-                >
-                  {p.discount && (
-                    <span
-                      className="eng-badge"
-                      aria-label={`${p.discount} badge`}
-                    >
-                      {p.discount}
-                    </span>
-                  )}
-                  <button className="eng-wishlist" aria-label="Add to wishlist">
-                    <Heart size={16} />
-                  </button>
-                  <Link to={`/product/${p.id}`}>
-                    <img
-                      src={p.img}
-                      alt={`${p.title} product image`}
-                      loading="lazy"
-                      className="eng-card-img"
-                    />
-                  </Link>
-                  {/* Available colors */}
-                  {p.availableColors && p.availableColors.length > 0 && (
-                    <div
-                      className="eng-color-row"
-                      aria-label="Available colors"
-                    >
-                      {p.availableColors.map((c) => (
-                        <span key={`${p.id}-${c}`}>{COLOR_ICONS[c]}</span>
-                      ))}
-                    </div>
-                  )}
-                  <div className="eng-card-body">
-                    <h3 className="eng-card-title">
-                      <Link
-                        to={`/product/${p.id}`}
-                        className="hover:text-teal-600"
-                      >
-                        {p.title}
-                      </Link>
-                    </h3>
-                    <div className="eng-card-prices">
-                      <span className="eng-old">{p.oldPrice}</span>
-                      <span className="eng-new">{p.price}</span>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </section>
-          </section>
         </div>
 
-        {/* Mobile Filters Drawer */}
+        {/* API Applied Filters Display */}
+        {appliedFilters && !loading && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm font-medium text-blue-900 mb-2">
+              Applied Filters (from API):
+            </p>
+            <div className="flex flex-wrap gap-2 text-xs">
+              {Object.entries(
+                (appliedFilters as unknown as Record<string, unknown>) || {}
+              )
+                .filter(([, v]) => {
+                  if (v === null || v === undefined) return false;
+                  if (Array.isArray(v)) return v.length > 0;
+                  if (typeof v === "string") return v.trim().length > 0;
+                  return true; // numbers/booleans/objects
+                })
+                .map(([k, v]) => {
+                  const formatLabel = (key: string) => {
+                    // space before capitals, digits; replace underscores; title case
+                    const spaced = key
+                      .replace(/_/g, " ")
+                      .replace(/([a-z])([A-Z])/g, "$1 $2")
+                      .replace(/(\D)(\d)/g, "$1 $2")
+                      .trim();
+                    return spaced
+                      .split(/\s+/)
+                      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                      .join(" ");
+                  };
+
+                  let valueText = "";
+                  if (Array.isArray(v)) valueText = v.join(", ");
+                  else if (typeof v === "object") valueText = JSON.stringify(v);
+                  else valueText = String(v);
+
+                  return (
+                    <span
+                      key={`applied-${k}`}
+                      className="px-2 py-1 bg-blue-200 text-blue-800 rounded"
+                    >
+                      {formatLabel(k)}: {valueText}
+                    </span>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
+        {/* Mobile filter bar */}
         <div
-          className={`eng-drawer ${mobileFiltersOpen ? "active" : ""}`}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Filters drawer"
+          className="flex justify-between items-center my-3 sm:hidden"
+          aria-hidden="false"
         >
-          <aside className="eng-drawer-aside">
-            <div className="eng-drawer-head">
-              <span>Filters</span>
+          <button
+            className="inline-flex items-center gap-2 border border-gray-300 px-3 py-2 rounded-lg bg-white text-gray-700 hover:bg-gray-50"
+            onClick={() => setMobileFiltersOpen(true)}
+            aria-label="Open filters"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18" />
+              <path d="M7 12h10" />
+              <path d="M11 18h2" />
+            </svg>
+            Filters
+          </button>
+        </div>
+
+        <section className="eng-layout mt-5">
+          <aside
+            className="eng-filters"
+            aria-label="Filters"
+            role="complementary"
+          >
+            <div className="eng-filters-header">
+              Filters
               <button
-                className="eng-close"
-                onClick={() => setMobileFiltersOpen(false)}
-                aria-label="Close filters"
+                onClick={clearAllFilters}
+                className="text-sm text-teal-600 hover:text-teal-800"
               >
-                <X size={16} />
+                Clear All
               </button>
             </div>
-            <div style={{ padding: "8px 0" }}>
-              <JewelleryFilterSidebar
-                minPrice={minPrice}
-                maxPrice={maxPrice}
-                onMinChange={handleMinChange}
-                onMaxChange={handleMaxChange}
-                activeFilters={activeFilters}
-                updateUrlFilters={updateUrlFilters}
-              />
-            </div>
+            {renderCategoryFilters()}
           </aside>
-        </div>
-      </main>
-    </>
+
+          <section aria-label="Products" className="eng-grid">
+            {/* Display active filters summary - removed to avoid confusion */}
+
+            {/* Loading State */}
+            {loading && (
+              <div className="col-span-full flex justify-center items-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Loading products...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error State */}
+            {error && !loading && (
+              <div className="col-span-full flex justify-center items-center py-12">
+                <div className="text-center">
+                  <div className="text-red-500 text-xl mb-2">⚠️</div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Failed to load products
+                  </h3>
+                  <p className="text-gray-600 mb-4">{error}</p>
+                  <button
+                    onClick={() => fetchProducts()}
+                    className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Products */}
+            {!loading &&
+              !error &&
+              products.map((p) => {
+                // Convert any view suffix to EV (Engraving View)
+                console.log(
+                  "🔍 DEBUG - Original image URL:",
+                  p.firstVariantImageUrl
+                );
+
+                const evImage =
+                  p.firstVariantImageUrl?.replace(
+                    /-(FV|SV|TV|BV|LV|RV)\.webp$/i,
+                    "-EV.webp"
+                  ) || p.firstVariantImageUrl;
+
+                console.log("🎯 DEBUG - Converted EV image URL:", evImage);
+                console.log(
+                  "✅ DEBUG - URLs match (no conversion needed):",
+                  p.firstVariantImageUrl === evImage
+                );
+                console.log(
+                  "🔄 DEBUG - Conversion applied:",
+                  p.firstVariantImageUrl !== evImage
+                );
+                console.log("---");
+
+                return (
+                  <Link
+                    to={`/product/rings/${
+                      p.modelSku
+                    }?variantId=${encodeURIComponent(
+                      p.firstVariantSku
+                    )}&metalColor=WG&view=EV`}
+                    key={`rings-${p.modelSku}`}
+                    className="block"
+                  >
+                    <article
+                      className="eng-card hover:shadow-lg transition-shadow duration-200"
+                      aria-label={p.title}
+                    >
+                      <button
+                        className="eng-wishlist"
+                        aria-label="Add to wishlist"
+                      >
+                        <Heart size={16} />
+                      </button>
+                      <img
+                        src={evImage || p.firstVariantImageUrl}
+                        alt={`${p.title} engraving view`}
+                        loading="lazy"
+                        className="eng-card-img"
+                        onLoad={(e) => {
+                          console.log(
+                            "✅ DEBUG - Image loaded successfully:",
+                            e.currentTarget.src
+                          );
+                        }}
+                        onError={(e) => {
+                          console.log(
+                            "❌ DEBUG - EV image failed to load:",
+                            evImage
+                          );
+                          console.log(
+                            "🔄 DEBUG - Falling back to original image:",
+                            p.firstVariantImageUrl
+                          );
+                          // Fallback to original image if EV image fails to load
+                          e.currentTarget.src = p.firstVariantImageUrl;
+                        }}
+                      />
+                      {p.metalTypes && p.metalTypes.length > 0 && (
+                        <div
+                          className="eng-color-row"
+                          aria-label="Available metals"
+                        >
+                          {p.metalTypes.slice(0, 3).map((metal) => (
+                            // <span
+                            //   key={`${p.modelSku}-${metal}`}
+                            //   className="text-xs px-2 py-1 bg-gray-100 rounded-full"
+                            // >
+                            //   {metal}
+                            // </span>
+                            <div
+                              key={`${p.modelSku}-${metal}`}
+                              className="text-xs px-2 py-1 bg-gray-100 rounded-full"
+                            >
+                              <img
+                                src={
+                                  metal === "GOLD"
+                                    ? "/colors/gold.png"
+                                    : metal === "SILVER"
+                                    ? "/colors/white.png"
+                                    : metal === "PLATINUM"
+                                    ? "/colors/platinum.png"
+                                    : metal === "ROSE GOLD"
+                                    ? "/colors/rose-gold.png"
+                                    : metal === "WHITE GOLD"
+                                    ? "/colors/white-gold.png"
+                                    : "/colors/default.png"
+                                }
+                                className="h-6 w-6"
+                                alt=""
+                              />
+                              {/* {metal} */}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="eng-card-body">
+                        <h3 className="eng-card-title">{p.title}</h3>
+                        <div className="text-xs text-black mt-1">
+                          Starting at Rs.{p.sellingPrice.toLocaleString()}
+                        </div>
+                      </div>
+                    </article>
+                  </Link>
+                );
+              })}
+          </section>
+        </section>
+
+        {/* Pagination */}
+        {(() => {
+          console.log("Pagination debug:", {
+            loading,
+            error,
+            totalPages: pagination.totalPages,
+            shouldShow: !loading && !error && pagination.totalPages > 1,
+          });
+          return null;
+        })()}
+        {!loading && !error && pagination.totalPages > 1 && (
+          <div className="flex justify-center items-center mt-8 space-x-2">
+            <button
+              onClick={() => fetchProducts(pagination.currentPage - 1)}
+              disabled={pagination.currentPage === 1}
+              className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Previous
+            </button>
+
+            <span className="px-4 py-2 text-sm text-gray-700">
+              Page {pagination.currentPage} of {pagination.totalPages}
+            </span>
+
+            <button
+              onClick={() => fetchProducts(pagination.currentPage + 1)}
+              disabled={pagination.currentPage === pagination.totalPages}
+              className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div
+        className={`eng-drawer ${mobileFiltersOpen ? "active" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filters drawer"
+      >
+        <aside className="eng-drawer-aside">
+          <div className="eng-drawer-head">
+            <span>Filters</span>
+            <button
+              className="eng-close"
+              onClick={() => setMobileFiltersOpen(false)}
+              aria-label="Close filters"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div style={{ padding: "8px 0" }}>{renderCategoryFilters()}</div>
+        </aside>
+      </div>
+    </main>
   );
 }
