@@ -82,6 +82,24 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     country: userInfo.country || "India",
   });
 
+  const pricingSummary = orderData.orderDetails?.pricingSummary as
+    | {
+        subtotal?: number;
+        promoDiscount?: number;
+        referralWallet?: number;
+        taxableAmount?: number;
+        tax?: number;
+        payableAmount?: number;
+      }
+    | undefined;
+
+  const formatCurrency = (value?: number) => {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+      return "₹0";
+    }
+    return `₹${value.toLocaleString("en-IN")}`;
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setBillingInfo((prev) => ({
       ...prev,
@@ -320,21 +338,69 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               <span>₹{(item.price * item.quantity).toLocaleString()}</span>
             </div>
           ))}
+        </div>
+        {pricingSummary ? (
+          <div className="border-t pt-3 mt-3 space-y-2 text-sm text-gray-700">
+            <div className="flex justify-between">
+              <span>Subtotal</span>
+              <span>
+                {formatCurrency(pricingSummary.subtotal ?? orderData.amount)}
+              </span>
+            </div>
+            {pricingSummary.promoDiscount &&
+              pricingSummary.promoDiscount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Promo Discount</span>
+                  <span>
+                    -{formatCurrency(pricingSummary.promoDiscount)}
+                  </span>
+                </div>
+              )}
+            {pricingSummary.referralWallet &&
+              pricingSummary.referralWallet > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Referral Wallet</span>
+                  <span>
+                    -{formatCurrency(pricingSummary.referralWallet)}
+                  </span>
+                </div>
+              )}
+            <div className="flex justify-between">
+              <span>Tax</span>
+              <span>{formatCurrency(pricingSummary.tax)}</span>
+            </div>
+            <div className="flex justify-between font-semibold text-base text-gray-900">
+              <span>Amount Due</span>
+              <span>
+                {formatCurrency(
+                  pricingSummary.payableAmount ?? orderData.amount
+                )}
+              </span>
+            </div>
+          </div>
+        ) : (
           <div className="border-t pt-2 mt-2">
             <div className="flex justify-between font-semibold">
               <span>Total Amount</span>
               <span>₹{orderData.amount.toLocaleString()}</span>
             </div>
-            {orderData.orderDetails?.promo && (
-              <p className="text-xs text-green-700 mt-1">
-                Includes promo {orderData.orderDetails.promo.code} saving ₹
-                {typeof orderData.orderDetails.promo.discountValue === "number"
-                  ? orderData.orderDetails.promo.discountValue.toLocaleString()
-                  : orderData.orderDetails.promo.discountValue}
-              </p>
-            )}
           </div>
-        </div>
+        )}
+        {orderData.orderDetails?.promo && (
+          <p className="text-xs text-green-700 mt-1">
+            Includes promo {orderData.orderDetails.promo.code} saving ₹
+            {typeof orderData.orderDetails.promo.discountValue === "number"
+              ? orderData.orderDetails.promo.discountValue.toLocaleString()
+              : orderData.orderDetails.promo.discountValue}
+          </p>
+        )}
+        {pricingSummary?.referralWallet &&
+          pricingSummary.referralWallet > 0 && (
+            <p className="text-xs text-indigo-700">
+              Referral wallet redemption: ₹
+              {pricingSummary.referralWallet.toLocaleString()}
+            </p>
+          )}
       </div>
 
       {/* Billing Information */}

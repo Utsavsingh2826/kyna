@@ -57,6 +57,13 @@ export interface IUser extends Document {
   refDiscount?: number; // percentage discount available to user (e.g., 5 for 5%)
   referralCount: number;
   totalReferralEarnings: number;
+  referralEarningsHistory?: Array<{
+    type: "credit" | "debit";
+    amount: number;
+    orderId?: string;
+    note?: string;
+    createdAt: Date;
+  }>;
   usedPromoCodes: Array<{
     code: string;
     orderId?: string;
@@ -100,6 +107,22 @@ export interface IOrder extends Document {
   status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
   paymentStatus: "pending" | "paid" | "failed" | "refunded";
   paymentMethod: string;
+  promoSummary?: {
+    code: string;
+    discountPercent: number;
+    discountValue: number;
+    appliedOn?: string;
+  };
+  referralSummary?: {
+    credits?: {
+      referrerId?: string;
+      code: string;
+      amount: number;
+    };
+    walletRedemption?: {
+      amount: number;
+    };
+  };
   trackingNumber?: string;
   notes?: string;
   createdAt: Date;

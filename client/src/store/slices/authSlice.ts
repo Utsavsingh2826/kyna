@@ -38,6 +38,7 @@ interface User {
     };
   };
   // Add other relevant user properties here
+  totalReferralEarnings?: number;
 }
 
 export interface AuthState {

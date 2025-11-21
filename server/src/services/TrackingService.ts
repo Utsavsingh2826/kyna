@@ -128,6 +128,8 @@ export class TrackingService {
     console.log('  Order Type from populated order:', order?.orderType);
     console.log('  Final Order Type:', orderType);
     console.log('  Status:', trackingObj.status);
+    console.log('  Estimated Delivery (TrackingOrder):', trackingObj.estimatedDelivery);
+    console.log('  Estimated Delivery (Order):', order?.estimatedDelivery || order?.estimatedDeliveryDate);
     
     // Get user email - handle both populated and unpopulated scenarios
     let customerEmail = '';
@@ -143,21 +145,28 @@ export class TrackingService {
     }
 
     // Return data in the format expected by frontend
+    // Get estimatedDelivery from TrackingOrder first, fallback to Order collection
+    const estimatedDeliveryDate = trackingObj.estimatedDelivery || order?.estimatedDelivery || order?.estimatedDeliveryDate;
+    
     const response = {
       orderNumber: orderNumber,
       customerEmail: customerEmail,
       status: trackingObj.status,
       orderType: orderType, // ⭐ FROM POPULATED ORDER REFERENCE
-      estimatedDelivery: trackingObj.estimatedDelivery ? new Date(trackingObj.estimatedDelivery).toISOString() : undefined,
+      estimatedDelivery: estimatedDeliveryDate ? new Date(estimatedDeliveryDate).toISOString() : undefined,
       docketNumber: trackingObj.docketNumber,
       shippingAddress: shippingAddress,
       trackingHistory: trackingObj.trackingHistory || [],
       items: items,
       totalAmount: totalAmount,
+      createdAt: order?.orderedAt || order?.createdAt || trackingObj.createdAt, // ✅ For 2-day cancellation policy
+      orderedAt: order?.orderedAt || order?.createdAt, // ✅ For 2-day cancellation policy
+      returnRequest: trackingObj.returnRequest, // ✅ Return request info
       updatedAt: trackingObj.updatedAt ? new Date(trackingObj.updatedAt).toISOString() : new Date().toISOString()
     };
     
     console.log('  📤 Sending Order Type to Frontend:', response.orderType);
+    console.log('  📅 Sending Estimated Delivery to Frontend:', response.estimatedDelivery);
     
     return response;
   }
@@ -231,27 +240,268 @@ export class TrackingService {
   }
 
   /**
-   * Cancel shipment
+   * Update tracking order from Sequel247 API response (for trackMultiple)
+   * This method processes the trackMultiple response and updates the database
    */
-  async cancelShipment(docketNumber: string, reason: string): Promise<boolean> {
+  async updateTrackingFromSequel(trackingOrder: any): Promise<boolean> {
     try {
-      // In a real implementation, this would call Sequel247 API
-      // For now, just update the database
-      const trackingOrder = await TrackingOrder.findOne({ docketNumber });
-      
-      if (!trackingOrder) {
+      if (!trackingOrder.docketNumber) {
+        logInfo(`Order ${trackingOrder.orderNumber} has no docket number, skipping Sequel update`, 'TrackingService');
         return false;
       }
 
+      // Import trackMultiple function
+      const { trackMultiple } = await import('../utils/sequelApi');
+      
+      // Call Sequel247 API to get latest tracking info
+      const response = await trackMultiple([trackingOrder.docketNumber]);
+      
+      if (response.status !== 'true' || !response.successShipments) {
+        logInfo(`No tracking data found for docket ${trackingOrder.docketNumber}`, 'TrackingService');
+        return false;
+      }
+
+      // Find the shipment data for this docket number
+      const shipmentData = response.successShipments[trackingOrder.docketNumber];
+      
+      if (!shipmentData) {
+        // Check errorShipments for this docket
+        if (response.errorShipments && response.errorShipments[trackingOrder.docketNumber]) {
+          const error = response.errorShipments[trackingOrder.docketNumber];
+          logInfo(`Error tracking docket ${trackingOrder.docketNumber}: ${error.docket || error.docketNo}`, 'TrackingService');
+        }
+        return false;
+      }
+
+      // Get previous status for comparison
+      const previousStatus = trackingOrder.status;
+
+      // Update tracking order with Sequel247 data
+      trackingOrder.updateFromSequelTracking(shipmentData);
+      
+      await trackingOrder.save();
+
+      // Check if status changed
+      if (previousStatus !== trackingOrder.status) {
+        logInfo(`Order ${trackingOrder.orderNumber} status updated: ${previousStatus} → ${trackingOrder.status}`, 'TrackingService');
+        
+        // If order is delivered and POD link doesn't exist, fetch it
+        if (trackingOrder.status === OrderStatus.DELIVERED && !trackingOrder.podLink && trackingOrder.docketNumber) {
+          try {
+            // Format delivery date for POD request (YYYY-MM-DD)
+            const deliveryDate = trackingOrder.deliveredAt 
+              ? new Date(trackingOrder.deliveredAt).toISOString().split('T')[0]
+              : new Date().toISOString().split('T')[0];
+            
+            const podLink = await this.downloadPOD(
+              [trackingOrder.docketNumber],
+              deliveryDate,
+              deliveryDate
+            );
+            
+            if (podLink) {
+              trackingOrder.podLink = podLink;
+              await trackingOrder.save();
+              logInfo(`POD link saved for delivered order ${trackingOrder.orderNumber}`, 'TrackingService');
+            }
+          } catch (podError) {
+            logError(podError as Error, 'updateTrackingFromSequel - POD fetch');
+            // Don't fail the tracking update if POD fetch fails
+          }
+        }
+        
+        // Sync status back to original order
+        await this.syncOrderStatus(trackingOrder, trackingOrder.status);
+      }
+
+      return true;
+
+    } catch (error) {
+      logError(error as Error, 'updateTrackingFromSequel');
+      return false;
+    }
+  }
+
+  /**
+   * Update multiple tracking orders using trackMultiple API
+   * This is more efficient than calling updateTrackingFromSequel individually
+   */
+  async updateMultipleTrackingFromSequel(trackingOrders: any[]): Promise<{
+    successCount: number;
+    errorCount: number;
+    results: Array<{ orderNumber: string; success: boolean; error?: string }>;
+  }> {
+    try {
+      // Extract all docket numbers
+      const docketNumbers = trackingOrders
+        .map(order => order.docketNumber)
+        .filter((docket): docket is string => !!docket);
+
+      if (docketNumbers.length === 0) {
+        return { successCount: 0, errorCount: 0, results: [] };
+      }
+
+      // Import trackMultiple function
+      const { trackMultiple } = await import('../utils/sequelApi');
+      
+      // Call Sequel247 API to get latest tracking info for all dockets
+      const response = await trackMultiple(docketNumbers);
+      
+      const results: Array<{ orderNumber: string; success: boolean; error?: string }> = [];
+      let successCount = 0;
+      let errorCount = 0;
+
+      // Create a map of docket number to tracking order for quick lookup
+      const docketToOrderMap = new Map<string, any>();
+      trackingOrders.forEach(order => {
+        if (order.docketNumber) {
+          docketToOrderMap.set(order.docketNumber, order);
+        }
+      });
+
+      // Process successful shipments
+      if (response.successShipments) {
+        for (const [docketNumber, shipmentData] of Object.entries(response.successShipments)) {
+          const trackingOrder = docketToOrderMap.get(docketNumber);
+          
+          if (!trackingOrder) {
+            continue;
+          }
+
+          try {
+            const previousStatus = trackingOrder.status;
+            
+            // Update tracking order with Sequel247 data
+            trackingOrder.updateFromSequelTracking(shipmentData);
+            await trackingOrder.save();
+
+            // Check if status changed
+            if (previousStatus !== trackingOrder.status) {
+              // If order is delivered and POD link doesn't exist, fetch it
+              if (trackingOrder.status === OrderStatus.DELIVERED && !trackingOrder.podLink && trackingOrder.docketNumber) {
+                try {
+                  // Format delivery date for POD request (YYYY-MM-DD)
+                  const deliveryDate = trackingOrder.deliveredAt 
+                    ? new Date(trackingOrder.deliveredAt).toISOString().split('T')[0]
+                    : new Date().toISOString().split('T')[0];
+                  
+                  const podLink = await this.downloadPOD(
+                    [trackingOrder.docketNumber],
+                    deliveryDate,
+                    deliveryDate
+                  );
+                  
+                  if (podLink) {
+                    trackingOrder.podLink = podLink;
+                    await trackingOrder.save();
+                    logInfo(`POD link saved for delivered order ${trackingOrder.orderNumber}`, 'TrackingService');
+                  }
+                } catch (podError) {
+                  logError(podError as Error, 'updateMultipleTrackingFromSequel - POD fetch');
+                  // Don't fail the tracking update if POD fetch fails
+                }
+              }
+              
+              // Sync status back to original order
+              await this.syncOrderStatus(trackingOrder, trackingOrder.status);
+            }
+
+            results.push({
+              orderNumber: trackingOrder.orderNumber,
+              success: true
+            });
+            successCount++;
+
+          } catch (error) {
+            logError(error as Error, `updateMultipleTrackingFromSequel - order ${trackingOrder.orderNumber}`);
+            results.push({
+              orderNumber: trackingOrder.orderNumber,
+              success: false,
+              error: (error as Error).message
+            });
+            errorCount++;
+          }
+        }
+      }
+
+      // Process error shipments
+      if (response.errorShipments) {
+        for (const [docketNumber, errorData] of Object.entries(response.errorShipments)) {
+          const trackingOrder = docketToOrderMap.get(docketNumber);
+          
+          if (trackingOrder) {
+            const errorMessage = errorData.docket || errorData.docketNo || 'Unknown error';
+            logInfo(`Error tracking docket ${docketNumber} for order ${trackingOrder.orderNumber}: ${errorMessage}`, 'TrackingService');
+            
+            results.push({
+              orderNumber: trackingOrder.orderNumber,
+              success: false,
+              error: errorMessage
+            });
+            errorCount++;
+          }
+        }
+      }
+
+      return { successCount, errorCount, results };
+
+    } catch (error) {
+      logError(error as Error, 'updateMultipleTrackingFromSequel');
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel shipment via Sequel247 API
+   * Calls the Sequel247 cancel API and updates the database accordingly
+   */
+  async cancelShipment(docketNumber: string, reason: string): Promise<boolean> {
+    try {
+      if (!docketNumber) {
+        logError(new Error('Docket number is required for cancellation'), 'cancelShipment');
+        return false;
+      }
+
+      // Find tracking order first to ensure it exists
+      const trackingOrder = await TrackingOrder.findOne({ docketNumber });
+      
+      if (!trackingOrder) {
+        logError(new Error(`Tracking order not found for docket: ${docketNumber}`), 'cancelShipment');
+        return false;
+      }
+
+      // Check if already cancelled
+      if (trackingOrder.status === OrderStatus.CANCELLED) {
+        logInfo(`Shipment ${docketNumber} is already cancelled`, 'TrackingService');
+        return true;
+      }
+
+      // Import cancelShipment function from sequelApi
+      const { cancelShipment: cancelSequelShipment } = await import('../utils/sequelApi');
+      
+      // Call Sequel247 API to cancel the shipment
+      const response = await cancelSequelShipment(docketNumber, reason);
+      
+      if (response.status !== 'true') {
+        logError(new Error(`Failed to cancel shipment: ${response.message || 'Unknown error'}`), 'cancelShipment');
+        return false;
+      }
+
+      // Update tracking order status in database
       trackingOrder.status = OrderStatus.CANCELLED;
       trackingOrder.addTrackingEvent(
         OrderStatus.CANCELLED,
-        `Shipment cancelled: ${reason}`
+        `Shipment cancelled via Sequel247: ${reason}`,
+        undefined,
+        'SCANCELLED'
       );
       
       await trackingOrder.save();
+
+      // Sync status back to original order
+      await this.syncOrderStatus(trackingOrder, OrderStatus.CANCELLED);
       
-      logInfo(`Shipment ${docketNumber} cancelled`, 'TrackingService');
+      logInfo(`Shipment ${docketNumber} cancelled successfully via Sequel247`, 'TrackingService');
       return true;
 
     } catch (error) {
@@ -261,14 +511,34 @@ export class TrackingService {
   }
 
   /**
-   * Download Proof of Delivery
+   * Download Proof of Delivery via Sequel247 API
+   * Fetches POD download link for given docket numbers
    */
-  async downloadPOD(docketNumbers: string[], fromDate: string, toDate: string): Promise<string | null> {
+  async downloadPOD(docketNumbers: string[], fromDate?: string, toDate?: string): Promise<string | null> {
     try {
-      // In a real implementation, this would call Sequel247 API
-      // For now, return null to indicate POD not available
-      logInfo(`POD request for dockets: ${docketNumbers.join(', ')}`, 'TrackingService');
-      return null;
+      if (!docketNumbers || docketNumbers.length === 0) {
+        logError(new Error('Docket numbers are required for POD download'), 'downloadPOD');
+        return null;
+      }
+
+      // Import podDownload function from sequelApi
+      const { podDownload } = await import('../utils/sequelApi');
+      
+      // Call Sequel247 API to get POD download link
+      const response = await podDownload({
+        requestType: 'docket',
+        dockets: docketNumbers,
+        fromDate: fromDate, // Optional: YYYY-MM-DD format
+        toDate: toDate // Optional: YYYY-MM-DD format
+      });
+      
+      if (response.status !== 'true' || !response.link) {
+        logInfo(`POD not available for dockets: ${docketNumbers.join(', ')}. Message: ${response.message || 'Unknown error'}`, 'TrackingService');
+        return null;
+      }
+
+      logInfo(`POD link retrieved successfully for dockets: ${docketNumbers.join(', ')}`, 'TrackingService');
+      return response.link;
 
     } catch (error) {
       logError(error as Error, 'downloadPOD');

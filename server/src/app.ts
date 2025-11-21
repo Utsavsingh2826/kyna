@@ -29,6 +29,7 @@ import ringsRoutes from "./routes/rings";
 import promoCodeRoutes from "./routes/promoCode";
 import referralCodeRoutes from "./routes/referralCode";
 import trackingRoutes, { setTrackingController } from "./routes/tracking";
+import { startTrackingCronJob } from "./services/cronService";
 import adminRoutes from "./routes/admin";
 import buildYourJewelryRoutes from "./routes/buildYourJewelry";
 import subProductRoutes from "./routes/subProduct";
@@ -203,12 +204,15 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // Initialize tracking services
 const initializeTrackingServices = () => {
   try {
-    // Initialize services (simplified version without Sequel247)
+    // Initialize tracking services
     const trackingService = new TrackingService();
     const trackingController = new TrackingController(trackingService);
 
     // Set controller in routes
     setTrackingController(trackingController);
+
+    // Start automatic tracking sync
+    startTrackingCronJob(trackingService);
 
     console.log("✅ Tracking services initialized successfully");
   } catch (error) {

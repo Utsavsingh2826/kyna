@@ -645,15 +645,14 @@ const CartPage = () => {
           {/* Right Column */}
           <div className="space-y-6">
             {/* Promo & Referral Code Section */}
-            {/* <ReferralPromoSection
-              subtotal={cart?.totalAmount || 0}
+            <ReferralPromoSection
               onPromoApplied={setAppliedPromo}
               onReferralApplied={setAppliedReferral}
               onPromoRemoved={() => setAppliedPromo(null)}
               onReferralRemoved={() => setAppliedReferral(null)}
               appliedPromo={appliedPromo}
               appliedReferral={appliedReferral}
-            /> */}
+            />
 
             {/* Cart Price Details Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">

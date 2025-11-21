@@ -199,6 +199,16 @@ export interface IOrder extends Document {
     discountValue: number;
     appliedOn?: string;
   };
+  referralSummary?: {
+    credits?: {
+      referrerId?: string;
+      code: string;
+      amount: number;
+    };
+    walletRedemption?: {
+      amount: number;
+    };
+  };
   orderedAt: Date;
   shippedAt?: Date;
   deliveredAt?: Date;
@@ -459,6 +469,16 @@ const orderSchema = new Schema<IOrder>(
       discountPercent: { type: Number },
       discountValue: { type: Number },
       appliedOn: { type: String },
+    },
+    referralSummary: {
+      credits: {
+        referrerId: { type: Schema.Types.ObjectId, ref: "User" },
+        code: { type: String, uppercase: true, trim: true },
+        amount: { type: Number },
+      },
+      walletRedemption: {
+        amount: { type: Number },
+      },
     },
 
     // Important dates

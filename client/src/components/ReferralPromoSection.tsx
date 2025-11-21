@@ -8,7 +8,6 @@ import apiService from '@/services/api';
 import { toast } from 'sonner';
 
 interface ReferralPromoSectionProps {
-  subtotal: number;
   onPromoApplied?: (promo: any) => void;
   onReferralApplied?: (referral: any) => void;
   onPromoRemoved?: () => void;
@@ -19,7 +18,6 @@ interface ReferralPromoSectionProps {
 }
 
 export const ReferralPromoSection: React.FC<ReferralPromoSectionProps> = ({
-  subtotal,
   onPromoApplied,
   onReferralApplied,
   onPromoRemoved,

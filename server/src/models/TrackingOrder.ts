@@ -71,6 +71,12 @@ const TrackingOrderSchema = new Schema<TrackingOrderDocument>({
     type: String,
     trim: true
   },
+  returnRequest: {
+    requested: { type: Boolean, default: false },
+    reason: String,
+    hasManufacturerFault: { type: Boolean, default: false },
+    requestedAt: Date
+  },
   trackingHistory: [TrackingEventSchema]
 }, {
   timestamps: true,
@@ -129,21 +135,80 @@ TrackingOrderSchema.methods.updateFromSequelTracking = function(sequelData: any)
     this.docketNumber = sequelData.docket_no;
   }
   
+  // Parse estimated_delivery date (format: "DD-MM-YYYY HH:MM" or "DD-MM-YYYY")
   if (sequelData.estimated_delivery) {
-    this.estimatedDelivery = new Date(sequelData.estimated_delivery);
+    try {
+      // Parse Sequel247 date format: "DD-MM-YYYY HH:MM" or "DD-MM-YYYY"
+      const dateStr = sequelData.estimated_delivery.trim();
+      const parts = dateStr.split(' ');
+      const datePart = parts[0]; // "DD-MM-YYYY"
+      const [day, month, year] = datePart.split('-');
+      
+      // Create date in ISO format: YYYY-MM-DD
+      const isoDate = `${year}-${month}-${day}`;
+      this.estimatedDelivery = new Date(isoDate);
+    } catch (error) {
+      console.warn(`Failed to parse estimated_delivery date: ${sequelData.estimated_delivery}`, error);
+    }
   }
   
-  // Update tracking history from Sequel data
+  // Update shipment status if provided
+  if (sequelData.shipment_status) {
+    const mappedStatus = this.mapSequelStatus(sequelData.shipment_status);
+    if (mappedStatus) {
+      this.status = mappedStatus;
+    }
+  }
+  
+  // Clear existing tracking history and rebuild from Sequel data
+  // This ensures we have the latest tracking information
   if (sequelData.tracking && Array.isArray(sequelData.tracking)) {
+    // Only add new events that don't already exist (based on code and timestamp)
+    const existingCodes = new Set(
+      this.trackingHistory.map((e: any) => `${e.code}_${e.timestamp}`)
+    );
+    
     sequelData.tracking.forEach((event: any) => {
-      this.addTrackingEvent(
-        this.mapSequelStatus(event.code),
-        event.description,
-        event.location,
-        event.code
-      );
+      const eventKey = `${event.code}_${event.date_time}`;
+      if (!existingCodes.has(eventKey)) {
+        // Parse event timestamp (format: "YYYY-MM-DD HH:MM:SS")
+        let eventTimestamp = new Date();
+        try {
+          eventTimestamp = new Date(event.date_time);
+        } catch (error) {
+          console.warn(`Failed to parse event timestamp: ${event.date_time}`, error);
+        }
+        
+        this.trackingHistory.push({
+          status: this.mapSequelStatus(event.code),
+          description: event.description || '',
+          location: event.location || undefined,
+          timestamp: eventTimestamp,
+          code: event.code || ''
+        });
+        
+        // Update current status to the latest event status
+        if (event.code) {
+          const mappedStatus = this.mapSequelStatus(event.code);
+          if (mappedStatus) {
+            this.status = mappedStatus;
+            
+            // If order is delivered (SDELVD), set deliveredAt timestamp
+            if (event.code === 'SDELVD') {
+              this.deliveredAt = eventTimestamp;
+            }
+          }
+        }
+      }
+    });
+    
+    // Sort tracking history by timestamp
+    this.trackingHistory.sort((a: any, b: any) => {
+      return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
     });
   }
+  
+  this.updatedAt = new Date();
 };
 
 TrackingOrderSchema.methods.mapSequelStatus = function(sequelCode: string): OrderStatus {
