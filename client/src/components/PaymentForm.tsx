@@ -6,6 +6,7 @@ import {
   paymentService,
   PaymentInitiateRequest,
 } from "../services/paymentService";
+import { setLoading } from "@/store/slices/cartSlice";
 
 interface PaymentFormProps {
   orderData: {
@@ -71,6 +72,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   onError,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [serviceabilityStatus, setServiceabilityStatus] = useState<
+    "idle" | "checking" | "serviceable" | "not-serviceable"
+  >("idle");
+  const [serviceabilityMessage, setServiceabilityMessage] = useState("");
   const [billingInfo, setBillingInfo] = useState({
     name: `${userInfo.firstName} ${userInfo.lastName}`.trim(),
     email: userInfo.email,
@@ -100,11 +105,80 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     return `₹${value.toLocaleString("en-IN")}`;
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = async (field: string, value: string) => {
     setBillingInfo((prev) => ({
       ...prev,
       [field]: value,
     }));
+    // Check serviceability when user enters a valid 6-digit pincode
+    if (value.length === 6 && /^\d{6}$/.test(value)) {
+      await checkServiceability(value);
+    } else if (value.length < 6) {
+      setServiceabilityStatus("idle");
+      setServiceabilityMessage("");
+    }
+  };
+
+  // Function to check serviceability using Sequel247 API
+  const checkServiceability = async (pinCode: string): Promise<boolean> => {
+    if (!pinCode || pinCode.length !== 6 || !/^\d{6}$/.test(pinCode)) {
+      setServiceabilityStatus("idle");
+      setServiceabilityMessage("");
+      return false;
+    }
+
+    try {
+      setServiceabilityStatus("checking");
+      setServiceabilityMessage("Checking serviceability...");
+      console.log("🚀 Checking serviceability for pincode:", pinCode);
+
+      const response = await fetch(
+        "https://test.sequel247.com/api/checkServiceability",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            token: "b228a27399f07927985d57c0f7d94ce8",
+            pin_code: pinCode,
+          }),
+        }
+      );
+
+      const result = await response.json();
+      console.log("📍 Serviceability check result:", result);
+
+      // Handle API returning boolean true or string variants like 'true', 'True', '1'
+      const statusRaw = result?.status;
+      console.debug(
+        "🔎 Raw serviceability status from API:",
+        statusRaw,
+        typeof statusRaw
+      );
+      const statusStr =
+        statusRaw == null ? "" : String(statusRaw).trim().toLowerCase();
+      const isServiceableApi =
+        statusRaw === true || ["true", "1", "yes"].includes(statusStr);
+
+      if (isServiceableApi) {
+        setServiceabilityStatus("serviceable");
+        setServiceabilityMessage(
+          "✅ Great! This area is serviceable for delivery."
+        );
+        return true;
+      } else {
+        setServiceabilityStatus("not-serviceable");
+        setServiceabilityMessage(
+          "❌ Sorry, this area is not serviceable for delivery."
+        );
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error checking serviceability:", error);
+      setServiceabilityStatus("idle");
+      setServiceabilityMessage(
+        "⚠️ Unable to check serviceability. Please try again."
+      );
+      return false;
+    }
   };
 
   const validateForm = () => {
@@ -145,6 +219,33 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     if (!validateForm()) return;
 
     setIsProcessing(true);
+
+    // Check if serviceability has been verified
+    if (serviceabilityStatus !== "serviceable") {
+      if (serviceabilityStatus === "not-serviceable") {
+        alert(
+          "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+        );
+        setIsProcessing(false);
+        return;
+      } else if (serviceabilityStatus === "checking") {
+        alert("Please wait while we check if your area is serviceable.");
+        setIsProcessing(false);
+        return;
+      } else {
+        // Status is 'idle' - need to check serviceability
+        console.log("📍 Checking serviceability for pincode:", billingInfo.zip);
+        const isServiceable = await checkServiceability(billingInfo.zip);
+
+        if (!isServiceable) {
+          alert(
+            "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+          );
+          setLoading(false);
+          return;
+        }
+      }
+    }
 
     // VERY OBVIOUS DEBUG - Alert to ensure this code is running
     alert(`IMAGES DEBUG: ${JSON.stringify(orderData.images)}`);
@@ -351,18 +452,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               pricingSummary.promoDiscount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Promo Discount</span>
-                  <span>
-                    -{formatCurrency(pricingSummary.promoDiscount)}
-                  </span>
+                  <span>-{formatCurrency(pricingSummary.promoDiscount)}</span>
                 </div>
               )}
             {pricingSummary.referralWallet &&
               pricingSummary.referralWallet > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Referral Wallet</span>
-                  <span>
-                    -{formatCurrency(pricingSummary.referralWallet)}
-                  </span>
+                  <span>-{formatCurrency(pricingSummary.referralWallet)}</span>
                 </div>
               )}
             <div className="flex justify-between">
@@ -529,24 +626,44 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         </p>
       </div>
 
-      {/* Payment Button */}
-      <Button
-        onClick={initiatePayment}
-        disabled={isProcessing}
-        className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3 text-lg font-medium flex items-center justify-center gap-2"
-      >
-        {isProcessing ? (
-          <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            Processing...
-          </>
-        ) : (
-          <>
-            <Lock className="w-5 h-5" />
-            Pay ₹{orderData.amount.toLocaleString()} Securely
-          </>
-        )}
-      </Button>
+      {/* Payment Button if serviceable zip code */}
+      {serviceabilityStatus === "serviceable" ? (
+        <Button
+          onClick={initiatePayment}
+          disabled={isProcessing}
+          className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3 text-lg font-medium flex items-center justify-center gap-2"
+        >
+          {isProcessing ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              Processing...
+            </>
+          ) : (
+            <>
+              <Lock className="w-5 h-5" />
+              Pay ₹{orderData.amount.toLocaleString()} Securely
+            </>
+          )}
+        </Button>
+      ) : (
+        <Button
+          onClick={initiatePayment}
+          disabled={true}
+          className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3 text-lg font-medium flex items-center justify-center gap-2"
+        >
+          {isProcessing ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              Processing...
+            </>
+          ) : (
+            <>
+              <Lock className="w-5 h-5" />
+              Your zip code is not serviceable yet.
+            </>
+          )}
+        </Button>
+      )}
 
       <p className="text-xs text-gray-500 text-center mt-4">
         By clicking "Pay Securely", you agree to our Terms of Service and

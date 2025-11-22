@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   ChevronUp,
   ChevronDown,
@@ -31,30 +31,129 @@ import {
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
-// type ApiVariant = {
-//   variantId: string;
-//   stylingName: string;
-//   builderImage: string;
-//   basePrice: number;
-// };
+// Types for API response
+interface ApiVariant {
+  sku: string;
+}
 
-type StyleGroup = {
+interface ApiProduct {
+  parentSku: string;
+  builderView: string;
+  selectedImage: string;
+  variants: ApiVariant[];
+}
+
+interface ApiResponse {
+  success: boolean;
+  stylingName: string;
+  count: number;
+  entries: ApiProduct[];
+}
+
+// Product Model API interfaces
+interface ProductModelResponse {
+  _id: string;
+  success: boolean;
+  modelSku: string;
+  title: string;
+  description: string;
+  metalTypes: string[];
+  goldKarats: string[];
+  diamondShape: string[];
+  diamondSize: string[];
+  diamondColorClarity: string[];
+  isEngraving: boolean;
+  engravingInfo: {
+    fontSize: number;
+    maxCharacters: number;
+  };
+  variantCount: number;
+  firstVariantSku: string;
+  sellingPrice: number;
+  priceIncomplete: boolean;
+  priceBreakdown: {
+    metalCost: number;
+    diamondCost: number;
+    labourCost: number;
+    expense: number;
+    gstPercent: number;
+    gstAmount: number;
+    totalBeforeGst: number;
+    totalWithGst: number;
+  };
+  priceIncompleteReasons: string[];
+  chosenVariantSku: string;
+  variantImages: string[];
+}
+
+interface SubStyle {
+  img: string;
   name: string;
-  substyles: { img: string; name: string; price: string }[];
+  price: string;
+  parentSku?: string;
+  variants?: ApiVariant[];
+  productDetails?: ProductModelResponse;
+  isLabGrownAvailable?: boolean;
+  thumbnailImages?: string[];
+}
+
+// Hardcoded category mappings
+const categoryMappings: { [key: string]: string } = {
+  "DANGLE EARINGS": "DANGLE EARINGS",
+  "CLASSIC STUDS": "CLASSIC STUDS",
+  "CLUSTER EARINGS": "CLUSTER EARINGS",
+  "HOOP EARINGS": "HOOP EARINGS",
+  "HALO EARINGS": "HALO EARINGS",
+  "SINGLE STUDS": "SINGLE STUDS",
 };
 
-// Map diamond shape codes to display names and images
-const diamondShapeMapping: { [key: string]: { name: string; img: string } } = {
-  'RD': { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
-  'PR': { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
-  'EM': { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
-  'AS': { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
-  'RA': { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
-  'CU': { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
-  'OV': { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
-  'PE': { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
-  'MQ': { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
-  'HE': { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
+// Initial hardcoded structure that will be populated with API data
+const getInitialStyleAndDesign = () => [
+  {
+    name: "DANGLE EARINGS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "CLASSIC STUDS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "CLUSTER EARINGS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "HOOP EARINGS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "HALO EARINGS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "SINGLE STUDS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+];
+
+const diamondShapes = {
+  shapes: [
+    { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
+    { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
+    { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
+    { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
+    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
+    { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
+    { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
+    { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
+    { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
+    { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
+  ],
 };
 const GLBViewer = ({
   modelUrl,
@@ -174,8 +273,6 @@ const GLBViewer = ({
 
       // Load GLB Model
       if (modelUrl && modelUrl.endsWith(".glb")) {
-        console.log("Attempting to load GLB model:", modelUrl);
-
         const loader = new GLTFLoader();
 
         // Setup DRACO loader for compressed models
@@ -190,7 +287,6 @@ const GLBViewer = ({
         loader.load(
           modelUrl,
           (gltf) => {
-            console.log("Successfully loaded GLB model:", modelUrl, gltf);
             const model = gltf.scene;
 
             // Clear any existing models
@@ -212,29 +308,19 @@ const GLBViewer = ({
 
             scene.add(model);
             modelRef.current = model;
-            console.log("GLB model added to scene successfully");
 
             // Dispose of the DRACO loader after use
             dracoLoader.dispose();
           },
-          (progress) => {
-            const progressPercent = (progress.loaded / progress.total) * 100;
-            console.log(
-              "Loading progress for",
-              modelUrl,
-              ":",
-              progressPercent + "%"
-            );
-          },
+          (progress) => {},
           (error) => {
             console.error("Error loading GLB model:", modelUrl, error);
-            console.log("Falling back to placeholder model");
+
             dracoLoader.dispose();
             createPlaceholderModel();
           }
         );
       } else {
-        console.log("No valid GLB URL provided, using placeholder model");
         createPlaceholderModel();
       }
 
@@ -362,6 +448,23 @@ const GLBViewer = ({
   return <div ref={mountRef} className={className} />;
 };
 
+// Sample product data for metal types (moved outside component to avoid dependency issues)
+const sampleProductData = {
+  metalTypes: [
+    "14K White Gold",
+    "14K Yellow Gold",
+    "14K Rose Gold",
+    "18K White Gold",
+    "18K Yellow Gold",
+    "18K Rose Gold",
+    "22K Gold",
+    "Platinum",
+    "Palladium",
+    "Titanium",
+    "Silver",
+  ],
+};
+
 const ProductDetail = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [showEngraveModal, setShowEngraveModal] = useState(false);
@@ -371,70 +474,166 @@ const ProductDetail = () => {
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
   const [selectedSize, setSelectedSize] = useState("");
-  const [selectedClarity, setSelectedClarity] = useState("");
 
-  // API-driven styles and variant data
-  const [styleData, setStyleData] = useState<StyleGroup[]>([]);
-  const [allVariants, setAllVariants] = useState<any[]>([]);
-  const [selectedVariant, setSelectedVariant] = useState<any>(null);
-  const [selectedStyleCategory, setSelectedStyleCategory] = useState("");
+  // API state
+  const [styleAndDesign, setStyleAndDesign] = useState(
+    getInitialStyleAndDesign()
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Default to first category
+  const [selectedStyleCategory, setSelectedStyleCategory] =
+    useState("DANGLE EARINGS");
   const [selectedRingStyle, setSelectedRingStyle] = useState("");
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchVariants = async () => {
-      try {
-        const res = await fetch("/api/build-your-jewelry/categories/EARRINGS");
-        const json = await res.json();
-        const variants: any[] = json?.data?.variants || [];
-        console.log("Fetched variants:", variants);
-        
-        // Store all variants for later use
-        setAllVariants(variants);
-        
-        const groupsMap = new Map<string, StyleGroup>();
-        variants.forEach((v) => {
-          const key = (v.stylingName || "OTHER").toUpperCase();
-          const sub = {
-            img: `/build_yr_own/${v.builderImage}.png`,
-            name: v.builderImage,
-            price: new Intl.NumberFormat("en-IN").format(v.basePrice || 0),
-          };
-          if (!groupsMap.has(key)) {
-            groupsMap.set(key, { name: key, substyles: [sub] });
-          } else {
-            groupsMap.get(key)!.substyles.push(sub);
+  // Fetch data from API
+  const fetchCategoryData = useCallback(async (categoryName: string) => {
+    if (!categoryMappings[categoryName]) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `http://localhost:5000/api/products/builder?stylingName=${encodeURIComponent(
+          categoryName
+        )}`
+      );
+      const data: ApiResponse = await response.json();
+
+      if (data.success && data.entries) {
+        // Fetch detailed product data for each entry
+        const substylePromises = data.entries.map(async (entry) => {
+          try {
+            // Get the first variant SKU to fetch product details
+            const firstVariantSku = entry.variants[0]?.sku;
+            if (firstVariantSku && entry.parentSku) {
+              const productResponse = await fetch(
+                `http://localhost:5000/api/products/model/${entry.parentSku}?variantId=${firstVariantSku}&metalColor=WG`
+              );
+              const productData: ProductModelResponse =
+                await productResponse.json();
+
+              // Price tracking: log API sellingPrice and formatted display price
+              console.log(
+                `Price tracking — parentSku: ${
+                  entry.parentSku
+                }, variant: ${firstVariantSku}, API sellingPrice: ${
+                  productData.sellingPrice
+                }, formatted: ₹${new Intl.NumberFormat("en-IN").format(
+                  productData.sellingPrice
+                )}`
+              );
+
+              if (productData.success) {
+                // detect lab-grown variant presence from SKU
+                const variantSkuToCheck = (
+                  (productData.firstVariantSku as string) ||
+                  firstVariantSku ||
+                  ""
+                ).toUpperCase();
+                const hasLG = variantSkuToCheck.includes("LG");
+
+                return {
+                  img: entry.selectedImage,
+                  name: entry.builderView,
+                  price: new Intl.NumberFormat("en-IN").format(
+                    productData.sellingPrice
+                  ), // Format price with commas
+                  parentSku: entry.parentSku,
+                  variants: entry.variants,
+                  productDetails: productData,
+                  isLabGrownAvailable: hasLG,
+                  thumbnailImages: productData.variantImages,
+                };
+              }
+            }
+            // Fallback if product details fail
+            return {
+              img: entry.selectedImage,
+              name: entry.builderView,
+              price: "5,224", // Fallback price
+              parentSku: entry.parentSku,
+              variants: entry.variants,
+            };
+          } catch (err) {
+            console.error(
+              `Failed to fetch product details for ${entry.parentSku}:`,
+              err
+            );
+            return {
+              img: entry.selectedImage,
+              name: entry.builderView,
+              price: "5,224", // Fallback price
+              parentSku: entry.parentSku,
+              variants: entry.variants,
+            };
           }
         });
-        const groups = Array.from(groupsMap.values());
-        if (!isMounted) return;
-        setStyleData(groups);
-        if (groups.length > 0) {
-          setSelectedStyleCategory(groups[0].name);
-          if (groups[0].substyles.length > 0) {
-            setSelectedRingStyle(groups[0].substyles[0].name);
-            // Set the first variant as selected by default
-            const firstVariant = variants.find(v => v.builderImage === groups[0].substyles[0].name);
-            setSelectedVariant(firstVariant);
-          }
+
+        const substyles = await Promise.all(substylePromises);
+
+        setStyleAndDesign((prev) =>
+          prev.map((category) =>
+            category.name === categoryName
+              ? { ...category, substyles, isLoaded: true }
+              : category
+          )
+        );
+
+        // Set first style as selected if none selected
+        if (!selectedRingStyle && substyles.length > 0) {
+          setSelectedRingStyle(substyles[0].name);
         }
-      } catch (e) {
-        console.error("Failed to fetch earrings variants", e);
       }
-    };
-    fetchVariants();
-    return () => {
-      isMounted = false;
-    };
+    } catch (err) {
+      console.error("Failed to fetch category data:", err);
+      setError(`Failed to load ${categoryName} data`);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // Update selected variant when ring style changes
+  // Load data for current category
   useEffect(() => {
-    if (allVariants.length > 0 && selectedRingStyle) {
-      const variant = allVariants.find(v => v.builderImage === selectedRingStyle);
-      setSelectedVariant(variant);
+    const currentCategory = styleAndDesign.find(
+      (cat) => cat.name === selectedStyleCategory
+    );
+    if (currentCategory && !currentCategory.isLoaded) {
+      fetchCategoryData(selectedStyleCategory);
     }
-  }, [selectedRingStyle, allVariants]);
+  }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
+
+  // No hardcoded initial fetches — current category effect handles loading.
+
+  // Add fallback for categories without API endpoints
+  const getFallbackSubstyles = (categoryName: string): SubStyle[] => {
+    if (categoryName === "PAPPER CLIP") {
+      return [
+        {
+          img: "/build_yr_own/BR1-RD-025-WG-TRV.png",
+          name: "BR1-RD-025-WG-TRV",
+          price: "5,224",
+        },
+      ];
+    }
+    if (categoryName === "MULTI SHAPE") {
+      return [
+        {
+          img: "/build_yr_own/BR8-MIX-025-WG-TRV.png",
+          name: "BR8-MIX-025-WG-TRV",
+          price: "5,224",
+        },
+        {
+          img: "/build_yr_own/BR15-EMMQ-025-WG-TRV.png",
+          name: "BR15-EMMQ-025-WG-TRV",
+          price: "5,224",
+        },
+      ];
+    }
+    return [];
+  };
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
@@ -493,13 +692,35 @@ const ProductDetail = () => {
   };
 
   // Get current category's substyles and selected style data
-  const currentCategory = styleData.find(
+  const currentCategory = styleAndDesign.find(
     (cat) => cat.name === selectedStyleCategory
   );
   const currentSubstyles = currentCategory?.substyles || [];
   const selectedStyleData =
     currentSubstyles.find((style) => style.name === selectedRingStyle) ||
     currentSubstyles[0];
+
+  // Derive a productId to feed into the ProductReviews component
+  const derivedProductId =
+    selectedStyleData?.productDetails?.modelSku ||
+    selectedStyleData?.parentSku ||
+    selectedStyleData?.variants?.[0]?.sku ||
+    selectedStyleData?.productDetails?._id ||
+    undefined;
+
+  // Detect lab-grown variants (variant sku or parentSku containing '-LG-' or ending/starting with LG)
+  const _earringVariantIdentifier =
+    (selectedStyleData as any)?.variants?.[0]?.sku ||
+    selectedStyleData?.parentSku ||
+    (derivedProductId as string) ||
+    "";
+  const isLabGrownVariant = /(^|-)LG/i.test(_earringVariantIdentifier);
+
+  useEffect(() => {
+    if (isLabGrownVariant) {
+      setSelectedDiamondOrigin("Lab Grown Diamond");
+    }
+  }, [isLabGrownVariant]);
 
   const ringSizes = [
     "4",
@@ -517,57 +738,28 @@ const ProductDetail = () => {
     "10",
   ];
 
-  // Dynamic metal colors from selected variant
-  const metalColors = selectedVariant?.availableMetalColors?.map((color: string) => ({
-    name: color,
-    img: color.toLowerCase().includes('gold') 
-      ? (color.toLowerCase().includes('rose') ? "/colors/rosegold.png" 
-         : color.toLowerCase().includes('yellow') ? "/colors/gold.png"
-         : "/colors/white.png")
-      : "/colors/white.png"
-  })) || [];
-
-  // Dynamic diamond shapes from selected variant
-  const diamondShapes = {
-    shapes: selectedVariant?.availableDiamondShapes?.map((shapeCode: string) => 
-      diamondShapeMapping[shapeCode] || { name: shapeCode, img: "/DIAMOND_SHAPES_WEBP/round.webp" }
-    ) || []
-  };
-
-  // // Dynamic diamond sizes from selected variant
-  // const diamondSizes = selectedVariant?.availableDiamondSizes || [];
-
-  // // Dynamic diamond colors from selected variant  
-  // const diamondColors = selectedVariant?.availableDiamondColors || [];
-
-  // // Dynamic diamond clarity from selected variant
-  // const diamondClarity = selectedVariant?.availableDiamondClarity || [];
-
-  // // Dynamic diamond origins from selected variant
-  // const diamondOrigins = selectedVariant?.availableDiamondOrigins || ["Natural Diamond", "Lab Grown Diamond"];
-
-  // // Dynamic metal types from selected variant
-  // const metalTypes = selectedVariant?.availableMetalTypes || [];
-
-  // // Dynamic metal kt options from selected variant
-  // const metalKtOptions = selectedVariant?.availableMetalKt || [];
-
-  // // Dynamic jewelry sizes from selected variant
-  // const jewelrySizes = selectedVariant?.availableSizes || [];
-
-  // // Dynamic gallery images from selected variant
-  // const galleryImages = selectedVariant?.galleryImages || [
-  //   "/product_detail/display.png",
-  //   "/product_detail/glb.glb", 
-  //   "/product_detail/display.png",
-  //   "/about/2.jpg"
-  // ];
+  const metalColors = [
+    { name: "White Gold", img: "/colors/white.png" },
+    { name: "Yellow Gold", img: "/colors/gold.png" },
+    { name: "Rose Gold", img: "/colors/rosegold.png" },
+    { name: "Silver", img: "/colors/white.png" },
+    { name: "Platinum", img: "/colors/white.png" },
+    { name: "14K White Gold", img: "/colors/white.png" },
+    { name: "14K Yellow Gold", img: "/colors/gold.png" },
+    { name: "14K Rose Gold", img: "/colors/rosegold.png" },
+    { name: "18K White Gold", img: "/colors/white.png" },
+    { name: "18K Yellow Gold", img: "/colors/gold.png" },
+    { name: "18K Rose Gold", img: "/colors/rosegold.png" },
+    { name: "22K Gold", img: "/colors/gold.png" },
+    { name: "Palladium", img: "/colors/white.png" },
+    { name: "Titanium", img: "/colors/white.png" },
+  ];
 
   // Add state for showing more colors on mobile
   const [showAllColors, setShowAllColors] = useState(false);
 
-  // Hardcoded thumbnail images
-  const thumbnailImages = [
+  // Use the thumbnail images from the selected style data
+  const thumbnailImages = selectedStyleData?.thumbnailImages || [
     "/product_detail/display.png",
     "/product_detail/glb.glb",
     "/product_detail/display.png",
@@ -578,46 +770,124 @@ const ProductDetail = () => {
     "/about/4.jpg",
   ];
 
+  // Log when thumbnail images change
+  useEffect(() => {
+    // Removed console log for thumbnail changes
+  }, [selectedRingStyle, selectedStyleData?.thumbnailImages]);
+
   // Function to check if image is a 3D model
   const is3DModel = (imagePath: string, index: number) => {
     const isGLB = index === 1 && imagePath.endsWith(".glb");
     return isGLB || imagePath.endsWith(".glb");
   };
 
-  // Sample product data for metal types
-  const sampleProduct = {
-    metalTypes: [
-      "14K White Gold",
-      "14K Yellow Gold",
-      "14K Rose Gold",
-      "18K White Gold",
-      "18K Yellow Gold",
-      "18K Rose Gold",
-      "22K Gold",
-      "Platinum",
-      "Palladium",
-      "Titanium",
-      "Silver",
-    ],
-  };
+  // Get available options from selected style's product details
+  const getAvailableMetalTypes = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.metalTypes) {
+      return sampleProductData.metalTypes; // Fallback to hardcoded data
+    }
+    return selectedStyleData.productDetails.metalTypes;
+  }, [selectedStyleData?.productDetails?.metalTypes]);
+
+  const getAvailableGoldKarats = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.goldKarats) {
+      return ["14kt", "18kt", "22kt"]; // Fallback
+    }
+    return selectedStyleData.productDetails.goldKarats;
+  }, [selectedStyleData?.productDetails?.goldKarats]);
+
+  const getAvailableDiamondShapes = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.diamondShape) {
+      return diamondShapes.shapes; // Fallback to hardcoded data
+    }
+    // Map API diamond shapes to our shape objects
+    return selectedStyleData.productDetails.diamondShape.map((shape) => {
+      const shapeData = diamondShapes.shapes.find(
+        (s) => s.name.toUpperCase() === shape.toUpperCase()
+      );
+      return (
+        shapeData || { name: shape, img: "/DIAMOND_SHAPES_WEBP/round.webp" }
+      );
+    });
+  }, [selectedStyleData?.productDetails?.diamondShape]);
+
+  const getAvailableDiamondSizes = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.diamondSize) {
+      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+    }
+    return selectedStyleData.productDetails.diamondSize;
+  }, [selectedStyleData?.productDetails?.diamondSize]);
 
   // Ref for metal types scroll container
   const metalTypesRef = useRef<HTMLDivElement>(null);
   const [selectedMetalType, setSelectedMetalType] = useState(
-    sampleProduct.metalTypes[0]
+    "GOLD" // Default to GOLD
   );
 
-  function scrollMetalTypesLeft(): void {
-    if (metalTypesRef.current) {
-      metalTypesRef.current.scrollBy({ left: -120, behavior: "smooth" });
-    }
-  }
+  // Add states for diamond size and gold karat
+  const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
+  const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
 
-  function scrollMetalTypesRight(): void {
-    if (metalTypesRef.current) {
-      metalTypesRef.current.scrollBy({ left: 120, behavior: "smooth" });
+  // Function to get available karats based on selected metal type
+  const getAvailableKarats = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.goldKarats) {
+      return ["18kt", "14kt", "9kt"]; // Fallback for gold
     }
-  }
+
+    const goldKarats = selectedStyleData.productDetails.goldKarats;
+
+    if (selectedMetalType === "SILVER") {
+      return ["925"]; // Silver is always 925
+    } else if (selectedMetalType === "PLATINUM") {
+      return ["950"]; // Platinum is 950
+    } else {
+      // For GOLD, filter out silver/platinum karats
+      return goldKarats.filter((karat) => !["925", "950"].includes(karat));
+    }
+  }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
+
+  // Update selected options when style changes
+  useEffect(() => {
+    if (selectedStyleData?.productDetails) {
+      const metalTypes = getAvailableMetalTypes();
+      const goldKarats = getAvailableGoldKarats();
+      const diamondShapes = getAvailableDiamondShapes();
+      const diamondSizes = getAvailableDiamondSizes();
+      const availableKarats = getAvailableKarats();
+
+      // Set default selections from API data
+      if (metalTypes.length > 0 && !metalTypes.includes(selectedMetalType)) {
+        setSelectedMetalType("GOLD"); // Always default to GOLD
+      }
+      if (
+        diamondShapes.length > 0 &&
+        !diamondShapes.find((shape) => shape.name === selectedDiamondShape)
+      ) {
+        setSelectedDiamondShape(diamondShapes[0].name);
+      }
+      if (diamondSizes.length > 0 && selectedDiamondSize === "") {
+        setSelectedDiamondSize(diamondSizes[0]);
+      }
+      if (
+        availableKarats.length > 0 &&
+        (selectedGoldKarat === "" ||
+          !availableKarats.includes(selectedGoldKarat))
+      ) {
+        setSelectedGoldKarat(availableKarats[0]);
+      }
+    }
+  }, [
+    selectedStyleData,
+    selectedMetalType,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedGoldKarat,
+    getAvailableMetalTypes,
+    getAvailableGoldKarats,
+    getAvailableDiamondShapes,
+    getAvailableDiamondSizes,
+    getAvailableKarats,
+  ]);
 
   return (
     <div
@@ -625,9 +895,9 @@ const ProductDetail = () => {
       className="flex justify-center overflow-x-hidden w-full"
     >
       <SEO
-        title="Build Your Earrings - Custom Diamond Earrings Builder"
-        description="Design your perfect earrings with our custom builder. Choose from premium settings and diamonds."
-        canonical="/build-your-jewellery/Earrings"
+        title="Build Your Bracelet - Custom Diamond Bracelet Builder"
+        description="Design your perfect bracelet with our custom builder. Choose from premium settings and diamonds."
+        canonical="/build-your-jewellery/Bracelets"
       />
       <main className="min-h-screen w-full max-w-6xl bg-background overflow-x-hidden">
         {/* Breadcrumb */}
@@ -639,7 +909,7 @@ const ProductDetail = () => {
             <span>›</span>
             <div className="hover:text-foreground">Build Your Jewellery</div>
             <span>›</span>
-            <span className="text-foreground">Earrings</span>
+            <span className="text-foreground">Bracelet</span>
           </nav>
         </div>
 
@@ -667,7 +937,9 @@ const ProductDetail = () => {
                     {thumbnailImages.map((image, index) => (
                       <button
                         key={index}
-                        onClick={() => setSelectedImage(index)}
+                        onClick={() => {
+                          setSelectedImage(index);
+                        }}
                         className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
                           selectedImage === index
                             ? "border-[#328F94] ring-2 ring-[#328F94]/20"
@@ -848,12 +1120,20 @@ const ProductDetail = () => {
                         ref={styleCategoryRef}
                         className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
                       >
-                        {styleData.map((category, index) => (
+                        {styleAndDesign.map((category, index) => (
                           <button
                             key={`${category.name}-${index}`}
                             onClick={() => {
                               setSelectedStyleCategory(category.name);
-                              setSelectedRingStyle(category.substyles[0].name);
+                              // Load data if not loaded
+                              if (!category.isLoaded) {
+                                // Fetch API data for this category
+                                fetchCategoryData(category.name);
+                              } else if (category.substyles.length > 0) {
+                                setSelectedRingStyle(
+                                  category.substyles[0].name
+                                );
+                              }
                             }}
                             className={`px-3 md:px-4 py-2 md:py-2.5 rounded-lg border text-xs md:text-sm font-medium min-w-max whitespace-nowrap transition-all capitalize flex-shrink-0 ${
                               selectedStyleCategory === category.name
@@ -889,34 +1169,66 @@ const ProductDetail = () => {
                         ref={ringStylesRef}
                         className="flex gap-2 md:gap-4 overflow-x-hidden scroll-smooth flex-1 w-[200px]"
                       >
-                        {currentSubstyles.map((style, index) => (
-                          <button
-                            key={`${style.name}-${index}`}
-                            onClick={() => setSelectedRingStyle(style.name)}
-                            className={`flex flex-col items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
-                              selectedRingStyle === style.name
-                                ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
-                                : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
-                            }`}
-                          >
-                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg overflow-hidden bg-gray-100">
-                              <img
-                                src={style.img}
-                                alt={style.name}
-                                className="w-full h-full object-cover"
-                              />
+                        {loading && currentSubstyles.length === 0 ? (
+                          // Loading state
+                          Array.from({ length: 3 }).map((_, index) => (
+                            <div
+                              key={`loading-${index}`}
+                              className="flex flex-col items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border border-neutral-300 min-w-[75px] md:min-w-[100px] animate-pulse"
+                            >
+                              <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-gray-200" />
+                              <div className="w-16 h-3 bg-gray-200 rounded" />
                             </div>
-                            <span
-                              className={`text-xs font-medium text-center leading-tight ${
+                          ))
+                        ) : error ? (
+                          // Error state
+                          <div className="flex items-center justify-center p-4 text-sm text-red-600 bg-red-50 rounded-lg min-w-[200px]">
+                            {error}
+                          </div>
+                        ) : currentSubstyles.length === 0 ? (
+                          // Empty state
+                          <div className="flex items-center justify-center p-4 text-sm text-gray-500 min-w-[200px]">
+                            No designs available
+                          </div>
+                        ) : (
+                          currentSubstyles.map((style, index) => (
+                            <button
+                              key={`${style.name}-${index}`}
+                              onClick={() => {
+                                setSelectedRingStyle(style.name);
+                                setSelectedImage(0); // Reset to first image when style changes
+                              }}
+                              className={`flex flex-col items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
                                 selectedRingStyle === style.name
-                                  ? "text-[#328F94]"
-                                  : "text-neutral-600"
+                                  ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
+                                  : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              {style.name}
-                            </span>
-                          </button>
-                        ))}
+                              <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg overflow-hidden bg-gray-100">
+                                <img
+                                  src={style.img}
+                                  alt={style.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    // Fallback image on error
+                                    const target = e.target as HTMLImageElement;
+                                    target.src =
+                                      "/build_yr_own/placeholder.png";
+                                  }}
+                                />
+                              </div>
+                              <span
+                                className={`text-xs font-medium text-center leading-tight ${
+                                  selectedRingStyle === style.name
+                                    ? "text-[#328F94]"
+                                    : "text-neutral-600"
+                                }`}
+                              >
+                                {style.name}
+                              </span>
+                            </button>
+                          ))
+                        )}
                       </div>
                       <button
                         onClick={scrollRingStylesRight}
@@ -964,20 +1276,138 @@ const ProductDetail = () => {
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {["Natural Diamond", "Lab Grown Diamond"].map((origin) => (
+                    {(isLabGrownVariant
+                      ? ["Lab Grown Diamond"]
+                      : ["Natural Diamond", "Lab Grown Diamond"]
+                    ).map((origin) => (
                       <button
                         key={origin}
-                        onClick={() => setSelectedDiamondOrigin(origin)}
+                        onClick={() => {
+                          if (!isLabGrownVariant)
+                            setSelectedDiamondOrigin(origin);
+                        }}
                         className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
                           selectedDiamondOrigin === origin
                             ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
                             : "border-neutral-600 text-neutral-600"
+                        } ${
+                          isLabGrownVariant && origin !== "Lab Grown Diamond"
+                            ? "opacity-50 pointer-events-none"
+                            : ""
                         }`}
                       >
                         {origin}
                       </button>
                     ))}
                   </div>
+                </div>
+
+                {/* Variant / Product Details Accordion (mirrors ProductDetail) */}
+                <div className="mt-4">
+                  <Accordion type="single" collapsible>
+                    <AccordionItem value="variant-details">
+                      <AccordionTrigger>Variant Details</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2 text-sm">
+                          <div>
+                            <strong>Title:</strong>{" "}
+                            {selectedStyleData?.productDetails?.title ||
+                              selectedStyleData?.name ||
+                              "-"}
+                          </div>
+                          <div>
+                            <strong>SKU:</strong>{" "}
+                            {derivedProductId ||
+                              selectedStyleData?.parentSku ||
+                              "-"}
+                          </div>
+                          <div>
+                            <strong>Price:</strong>{" "}
+                            {selectedStyleData?.productDetails?.sellingPrice
+                              ? `₹${new Intl.NumberFormat("en-IN").format(
+                                  selectedStyleData.productDetails.sellingPrice
+                                )}`
+                              : selectedStyleData?.price || "-"}
+                          </div>
+                          {selectedStyleData?.productDetails
+                            ?.priceBreakdown && (
+                            <div className="text-xs text-neutral-700">
+                              <div>
+                                Metal Cost: ₹
+                                {new Intl.NumberFormat("en-IN").format(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.metalCost || 0
+                                )}
+                              </div>
+                              <div>
+                                Diamond Cost: ₹
+                                {new Intl.NumberFormat("en-IN").format(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.diamondCost || 0
+                                )}
+                              </div>
+                              <div>
+                                GST: ₹
+                                {new Intl.NumberFormat("en-IN").format(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.gstAmount || 0
+                                )}
+                              </div>
+                              <div>
+                                Total: ₹
+                                {new Intl.NumberFormat("en-IN").format(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.totalWithGst || 0
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <strong>Metal Types:</strong>{" "}
+                            {(
+                              selectedStyleData?.productDetails?.metalTypes ||
+                              []
+                            ).join(", ") || "-"}
+                          </div>
+                          <div>
+                            <strong>Gold Karats:</strong>{" "}
+                            {(
+                              selectedStyleData?.productDetails?.goldKarats ||
+                              []
+                            ).join(", ") || "-"}
+                          </div>
+                          <div>
+                            <strong>Diamond Shapes:</strong>{" "}
+                            {(
+                              selectedStyleData?.productDetails?.diamondShape ||
+                              []
+                            ).join(", ") || "-"}
+                          </div>
+                          <div>
+                            <strong>Engraving Available:</strong>{" "}
+                            {selectedStyleData?.productDetails?.isEngraving
+                              ? "Yes"
+                              : "No"}
+                          </div>
+                          {selectedStyleData?.productDetails?.variantImages
+                            ?.length > 0 && (
+                            <div className="flex gap-2 overflow-auto mt-2">
+                              {selectedStyleData.productDetails.variantImages.map(
+                                (img: string, idx: number) => (
+                                  <img
+                                    key={idx}
+                                    src={img}
+                                    alt={`variant-${idx}`}
+                                    className="w-16 h-16 object-cover rounded"
+                                  />
+                                )
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </div>
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
@@ -989,37 +1419,31 @@ const ProductDetail = () => {
                     </span>
                   </h3>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 w-full">
-                    {(() => {
-                      interface DiamondShape {
-                        name: string;
-                        img: string;
-                      }
-                      return diamondShapes.shapes.map((diamond: DiamondShape, index: number) => (
-                        <button
-                          key={`${diamond.name}-${index}`}
-                          onClick={() => setSelectedDiamondShape(diamond.name)}
-                          className={`group relative aspect-square border rounded-lg flex flex-col items-center justify-center text-xs p-2 ${
-                            selectedDiamondShape === diamond.name
-                              ? "border-primary bg-primary/5"
-                              : "border-neutral-300"
-                          }`}
-                        >
-                          <img
-                            className="w-8 sm:w-12 md:w-16 lg:w-20 max-w-full h-auto"
-                            src={diamond.img}
-                            alt={diamond.name}
-                          />
-                          <span className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-10 whitespace-nowrap">
-                            <p className="text-xs">{diamond.name}</p>
-                          </span>
-                        </button>
-                      ));
-                    })()}
+                    {getAvailableDiamondShapes().map((diamond, index) => (
+                      <button
+                        key={`${diamond.name}-${index}`}
+                        onClick={() => setSelectedDiamondShape(diamond.name)}
+                        className={`group relative aspect-square border rounded-lg flex flex-col items-center justify-center text-xs p-2 ${
+                          selectedDiamondShape === diamond.name
+                            ? "border-primary bg-primary/5"
+                            : "border-neutral-300"
+                        }`}
+                      >
+                        <img
+                          className="w-8 sm:w-12 md:w-16 lg:w-20 max-w-full h-auto"
+                          src={diamond.img}
+                          alt={diamond.name}
+                        />
+                        <span className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-10 whitespace-nowrap">
+                          <p className="text-xs">{diamond.name}</p>
+                        </span>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
                 {/* Diamond Lab & Clarity */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs mb-2">Diamond Size</label>
                     <Select
@@ -1051,18 +1475,64 @@ const ProductDetail = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
+                </div> */}
+
+                {/* Diamond Size Section */}
+                {selectedStyleData?.productDetails?.diamondSize && (
+                  <div className="w-full">
+                    <h3 className="mb-3 text-sm md:text-base">
+                      Diamond Size:{" "}
+                      <span className="text-[#8D8A91]">
+                        {selectedDiamondSize ||
+                          selectedStyleData.productDetails.diamondSize[0]}{" "}
+                        carat
+                      </span>
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full">
+                      {getAvailableDiamondSizes().map((size, index) => (
+                        <button
+                          key={`${size}-${index}`}
+                          onClick={() => setSelectedDiamondSize(size)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                            selectedDiamondSize === size
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          {size} ct
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Select Gold Karat Section - Dynamic based on Metal Type */}
 
                 {/* Metal Type */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs mb-2">Metal Type</label>
-                    <Select>
+                    <Select
+                      value={selectedMetalType}
+                      onValueChange={(value) => {
+                        setSelectedMetalType(value);
+                        // Reset karat selection when metal type changes
+                        const newKarats =
+                          value === "SILVER"
+                            ? ["925"]
+                            : value === "PLATINUM"
+                            ? ["950"]
+                            : selectedStyleData?.productDetails?.goldKarats?.filter(
+                                (k) => !["925", "950"].includes(k)
+                              ) || ["18kt", "14kt", "9kt"];
+                        setSelectedGoldKarat(newKarats[0] || "");
+                      }}
+                    >
                       <SelectTrigger className="text-sm border-neutral-300">
-                        <SelectValue placeholder="Select" />
+                        <SelectValue placeholder="Select Metal Type" />
                       </SelectTrigger>
                       <SelectContent className="bg-white">
-                        {sampleProduct.metalTypes.map((type, index) => (
+                        {getAvailableMetalTypes().map((type, index) => (
                           <SelectItem key={index} value={type}>
                             {type}
                           </SelectItem>
@@ -1070,12 +1540,31 @@ const ProductDetail = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <h3 className="mb-1 text-sm">Select Gold Karat</h3>
+                  <div className="w-full">
+                    <h3 className="mb-3 text-sm md:text-base">
+                      {selectedMetalType === "GOLD"
+                        ? "Select Gold Karat"
+                        : selectedMetalType === "SILVER"
+                        ? "Silver Purity"
+                        : selectedMetalType === "PLATINUM"
+                        ? "Platinum Purity"
+                        : "Metal Purity"}
+                      :{" "}
+                      <span className="text-[#8D8A91]">
+                        {selectedGoldKarat || getAvailableKarats()[0]}
+                      </span>
+                    </h3>
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={scrollMetalTypesLeft}
-                        aria-label="Scroll metal types left"
+                        onClick={() => {
+                          if (metalTypesRef.current) {
+                            metalTypesRef.current.scrollBy({
+                              left: -120,
+                              behavior: "smooth",
+                            });
+                          }
+                        }}
+                        aria-label="Scroll karats left"
                         className="p-1 hover:bg-gray-100 rounded"
                       >
                         <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
@@ -1084,23 +1573,30 @@ const ProductDetail = () => {
                         ref={metalTypesRef}
                         className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
                       >
-                        {sampleProduct.metalTypes.map((type) => (
+                        {getAvailableKarats().map((karat, index) => (
                           <button
-                            key={type}
-                            onClick={() => setSelectedMetalType(type)}
-                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
-                              selectedMetalType === type
+                            key={`${karat}-${index}`}
+                            onClick={() => setSelectedGoldKarat(karat)}
+                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
+                              selectedGoldKarat === karat
                                 ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                                : "border-neutral-600 text-neutral-600"
+                                : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
                             }`}
                           >
-                            {type}
+                            {karat}
                           </button>
                         ))}
                       </div>
                       <button
-                        onClick={scrollMetalTypesRight}
-                        aria-label="Scroll metal types right"
+                        onClick={() => {
+                          if (metalTypesRef.current) {
+                            metalTypesRef.current.scrollBy({
+                              left: 120,
+                              behavior: "smooth",
+                            });
+                          }
+                        }}
+                        aria-label="Scroll karats right"
                         className="p-1 hover:bg-gray-100 rounded"
                       >
                         <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
@@ -1117,17 +1613,39 @@ const ProductDetail = () => {
 
                   {/* Desktop View - 7 columns, 2 rows */}
                   <div className="hidden md:grid grid-cols-7 gap-3">
-                    {(() => {
-                      interface MetalColor {
-                        name: string;
-                        img: string;
-                      }
+                    {metalColors.map((colorOption, index) => (
+                      <button
+                        key={`${colorOption.name}-${index}`}
+                        onClick={() => setSelectedMetalColor(colorOption.name)}
+                        className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                          selectedMetalColor === colorOption.name
+                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                            : "border-neutral-300 hover:border-neutral-400"
+                        }`}
+                        title={colorOption.name}
+                      >
+                        <img
+                          className="w-full h-full object-cover rounded-full"
+                          src={colorOption.img}
+                          alt={colorOption.name}
+                        />
+                      </button>
+                    ))}
+                  </div>
 
-                      return metalColors.map((colorOption: MetalColor, index: number) => (
+                  {/* Mobile View - 5 columns with show more */}
+                  <div className="md:hidden w-full">
+                    <div className="grid grid-cols-5 gap-2 sm:gap-3">
+                      {(showAllColors
+                        ? metalColors
+                        : metalColors.slice(0, 10)
+                      ).map((colorOption, index) => (
                         <button
                           key={`${colorOption.name}-${index}`}
-                          onClick={() => setSelectedMetalColor(colorOption.name)}
-                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                          onClick={() =>
+                            setSelectedMetalColor(colorOption.name)
+                          }
+                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
                             selectedMetalColor === colorOption.name
                               ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                               : "border-neutral-300 hover:border-neutral-400"
@@ -1140,42 +1658,7 @@ const ProductDetail = () => {
                             alt={colorOption.name}
                           />
                         </button>
-                      ));
-                    })()}
-                  </div>
-
-                  {/* Mobile View - 5 columns with show more */}
-                  <div className="md:hidden w-full">
-                    <div className="grid grid-cols-5 gap-2 sm:gap-3">
-                      {(() => {
-                        interface MetalColor {
-                          name: string;
-                          img: string;
-                        }
-
-                        const visibleColors: MetalColor[] = (showAllColors
-                          ? metalColors
-                          : metalColors.slice(0, 10)) as MetalColor[];
-
-                        return visibleColors.map((colorOption: MetalColor, index: number) => (
-                          <button
-                            key={`${colorOption.name}-${index}`}
-                            onClick={() => setSelectedMetalColor(colorOption.name)}
-                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
-                              selectedMetalColor === colorOption.name
-                                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                                : "border-neutral-300 hover:border-neutral-400"
-                            }`}
-                            title={colorOption.name}
-                          >
-                            <img
-                              className="w-full h-full object-cover rounded-full"
-                              src={colorOption.img}
-                              alt={colorOption.name}
-                            />
-                          </button>
-                        ));
-                      })()}
+                      ))}
                     </div>
 
                     {/* Show More/Less buttons */}
@@ -1198,62 +1681,6 @@ const ProductDetail = () => {
                     )}
                   </div>
                 </div>
-
-                {/* Ring Size - Full width on mobile */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm mb-2">Ring Size</label>
-                    <Select
-                      value={selectedSize}
-                      onValueChange={setSelectedSize}
-                    >
-                      <SelectTrigger className="text-sm border-neutral-300 h-10 md:h-11">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ringSizes.map((size) => (
-                          <SelectItem key={size} value={size}>
-                            Size {size}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Ring Size Guide */}
-                <Link
-                  to={"/ring-size-guide"}
-                  className="text-sm text-primary font-medium underline block"
-                >
-                  Ring Size Guide
-                </Link>
-
-                {/* Free Engraving */}
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="engraving"
-                    checked={showEngraveModal}
-                    onChange={(e) => setShowEngraveModal(e.target.checked)}
-                    className="border-primary accent-[#68C5C0] w-4 h-4"
-                  />
-                  <label
-                    htmlFor="engraving"
-                    className="text-sm text-primary cursor-pointer"
-                  >
-                    Add Free Engraving
-                  </label>
-                </div>
-
-                {/* Engrave Modal Pop-Up */}
-                {showEngraveModal && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                    <div className="relative w-full h-full bg-white overflow-auto">
-                      <Engrave onClose={() => setShowEngraveModal(false)} />
-                    </div>
-                  </div>
-                )}
 
                 {/* Estimated Ship Date */}
                 <div className="text-sm">
@@ -1369,7 +1796,7 @@ const ProductDetail = () => {
 
           {/* Reviews Section */}
           <div className="mt-16">
-            <ProductReviews />
+            <ProductReviews productId={derivedProductId} />
           </div>
         </div>
 
