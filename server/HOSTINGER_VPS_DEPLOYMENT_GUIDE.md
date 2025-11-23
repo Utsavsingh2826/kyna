@@ -9,10 +9,11 @@ This guide will help you deploy your Kyna Jewels backend on Hostinger VPS. The c
 ## 🏗️ **Hostinger VPS Setup**
 
 ### **1. VPS Requirements**
+
 - **OS**: Ubuntu 20.04+ or CentOS 7+
 - **RAM**: Minimum 2GB (4GB recommended)
 - **Storage**: 20GB+ SSD
-- **Node.js**: Version 18+ 
+- **Node.js**: Version 18+
 - **PM2**: Process manager for Node.js
 
 ### **2. Server Preparation**
@@ -163,7 +164,7 @@ server {
 
     # API Backend
     location /api {
-        proxy_pass http://localhost:5000;
+        proxy_pass ;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -190,6 +191,7 @@ server {
 ```
 
 Enable the site:
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/kyna-jewels /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -249,6 +251,7 @@ pm2 startup
 ## 🖼️ **Image Management on Hostinger VPS**
 
 ### **Product Images Structure**
+
 ```
 /var/www/kyna-jewels/public/images/
 ├── rings/
@@ -269,6 +272,7 @@ pm2 startup
 ```
 
 ### **Upload Product Images**
+
 ```bash
 # Upload your product images to the VPS
 scp -r ./product-images/* user@yourdomain.com:/var/www/kyna-jewels/public/images/
@@ -283,6 +287,7 @@ sudo chmod -R 755 /var/www/kyna-jewels/public/images
 ## 🔧 **Monitoring and Maintenance**
 
 ### **1. PM2 Commands**
+
 ```bash
 # Check status
 pm2 status
@@ -301,6 +306,7 @@ pm2 monit
 ```
 
 ### **2. Nginx Commands**
+
 ```bash
 # Test configuration
 sudo nginx -t
@@ -316,6 +322,7 @@ sudo systemctl status nginx
 ```
 
 ### **3. Log Monitoring**
+
 ```bash
 # Application logs
 tail -f /var/log/kyna-jewels/combined.log
@@ -330,6 +337,7 @@ tail -f /var/log/nginx/error.log
 ## 🚀 **Deployment Commands**
 
 ### **Quick Deployment Script**
+
 ```bash
 #!/bin/bash
 # deploy.sh
@@ -355,6 +363,7 @@ echo "✅ Deployment completed!"
 ```
 
 Make it executable:
+
 ```bash
 chmod +x deploy.sh
 ```
@@ -364,6 +373,7 @@ chmod +x deploy.sh
 ## ✅ **Verification**
 
 ### **Test Your Deployment**
+
 ```bash
 # Check if application is running
 curl https://yourdomain.com/api
@@ -381,6 +391,7 @@ curl https://yourdomain.com/api/auth/test
 ## 🔒 **Security Considerations**
 
 ### **1. Firewall Setup**
+
 ```bash
 # Allow only necessary ports
 sudo ufw allow 22    # SSH
@@ -390,6 +401,7 @@ sudo ufw enable
 ```
 
 ### **2. File Permissions**
+
 ```bash
 # Secure your application files
 sudo chown -R www-data:www-data /var/www/kyna-jewels
@@ -398,6 +410,7 @@ sudo chmod 600 /var/www/kyna-jewels/server/.env
 ```
 
 ### **3. Regular Updates**
+
 ```bash
 # Update system packages
 sudo apt update && sudo apt upgrade -y
@@ -416,7 +429,7 @@ npm update
 ✅ **Cost Effective**: No serverless limitations  
 ✅ **Custom Configuration**: Full Nginx and server configuration  
 ✅ **Image Storage**: Direct access to product images  
-✅ **Performance**: Dedicated resources for your application  
+✅ **Performance**: Dedicated resources for your application
 
 ---
 
@@ -425,14 +438,17 @@ npm update
 ### **Common Issues**
 
 1. **Port 5000 not accessible**
+
    - Check if PM2 is running: `pm2 status`
    - Check Nginx configuration: `sudo nginx -t`
 
 2. **Images not loading**
+
    - Check file permissions: `ls -la /var/www/kyna-jewels/public/images`
    - Check Nginx configuration for `/images` location
 
 3. **Database connection issues**
+
    - Verify MongoDB is running: `sudo systemctl status mongodb`
    - Check connection string in `.env`
 

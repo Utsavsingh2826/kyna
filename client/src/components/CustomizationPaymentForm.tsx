@@ -143,17 +143,14 @@ const CustomizationPaymentForm: React.FC<CustomizationPaymentFormProps> = ({
         customizationRequestData
       );
 
-      const response = await fetch(
-        "http://localhost:5000/api/customization/request-with-payment",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify(customizationRequestData),
-        }
-      );
+      const response = await fetch("/api/customization/request-with-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(customizationRequestData),
+      });
 
       const result = await response.json();
 
