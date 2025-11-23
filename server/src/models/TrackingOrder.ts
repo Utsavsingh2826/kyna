@@ -266,15 +266,60 @@ TrackingOrderSchema.statics.findByOrderNumberAndEmail = async function(orderNumb
   }
   console.log('   ✅ Order found:', order._id);
   
-  // Find tracking order by order reference (NO POPULATE - to avoid timeout)
-  const trackingOrder = await this.findOne({ order: order._id });
+  // First, try to find tracking order by order reference
+  let trackingOrder = await this.findOne({ order: order._id });
+  
+  // If not found by order reference, try to find by orderNumber and customerEmail directly
+  // This handles cases where TrackingOrder exists but order reference might be different
+  if (!trackingOrder) {
+    console.log('   ⚠️ Tracking order not found by order reference, trying by orderNumber and email...');
+    trackingOrder = await this.findOne({ 
+      orderNumber: new RegExp(`^${orderNumber}$`, 'i'),
+      customerEmail: email.toLowerCase()
+    });
+    
+    if (trackingOrder) {
+      console.log('   ✅ Tracking order found by orderNumber and email:', trackingOrder._id);
+      // Update the order reference if it's different (fix data inconsistency)
+      if (trackingOrder.order.toString() !== order._id.toString()) {
+        console.log('   🔧 Fixing order reference mismatch...');
+        trackingOrder.order = order._id;
+        trackingOrder.orderModel = order.constructor.modelName || 'Order';
+        await trackingOrder.save();
+        console.log('   ✅ Order reference updated');
+      }
+    }
+  }
   
   if (!trackingOrder) {
     console.log('   ❌ Tracking order not found for order:', order._id);
-    return null;
+    console.log('   💡 Creating TrackingOrder automatically...');
+    
+    // Auto-create TrackingOrder if it doesn't exist
+    // OrderStatus is already imported at the top of the file
+    const orderType = order.orderType || (order.customizations ? 'customized' : 'normal');
+    
+    trackingOrder = new this({
+      userId: user._id,
+      orderModel: order.constructor.modelName || 'Order',
+      order: order._id,
+      orderNumber: order.orderNumber,
+      customerEmail: email.toLowerCase(),
+      orderType: orderType,
+      status: OrderStatus.ORDER_PLACED,
+      trackingHistory: [{
+        status: OrderStatus.ORDER_PLACED,
+        description: 'Order placed successfully',
+        timestamp: new Date(),
+        code: OrderStatus.ORDER_PLACED
+      }]
+    });
+    
+    await trackingOrder.save();
+    console.log('   ✅ TrackingOrder auto-created:', trackingOrder._id);
+  } else {
+    console.log('   ✅ Tracking order found:', trackingOrder._id);
   }
-  
-  console.log('   ✅ Tracking order found:', trackingOrder._id);
   
   // Manually attach order data to avoid populate issues
   trackingOrder.order = order;

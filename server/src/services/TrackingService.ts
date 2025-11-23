@@ -115,15 +115,17 @@ export class TrackingService {
     // Get data from TrackingOrder and populated order reference
     const order: any = trackingObj.order;
     
-    // Get orderType directly from TrackingOrder (fallback to order if not present)
+    // Use TrackingOrder fields FIRST (they are the source of truth), then fallback to order
     const orderType = trackingObj.orderType || order?.orderType || 'normal';
-    const orderNumber = order?.orderNumber || 'N/A';
+    const orderNumber = trackingObj.orderNumber || order?.orderNumber || 'N/A'; // ✅ Use TrackingOrder.orderNumber first
     const totalAmount = order?.totalAmount || order?.amount || 0;
     const items = order?.items || [];
     const shippingAddress = order?.shippingAddress;
     
     console.log('🔍 Building Tracking Response:');
-    console.log('  Order Number:', orderNumber);
+    console.log('  Order Number (TrackingOrder):', trackingObj.orderNumber);
+    console.log('  Order Number (Order):', order?.orderNumber);
+    console.log('  Final Order Number:', orderNumber);
     console.log('  Order Type from TrackingOrder:', trackingObj.orderType);
     console.log('  Order Type from populated order:', order?.orderType);
     console.log('  Final Order Type:', orderType);
@@ -131,9 +133,11 @@ export class TrackingService {
     console.log('  Estimated Delivery (TrackingOrder):', trackingObj.estimatedDelivery);
     console.log('  Estimated Delivery (Order):', order?.estimatedDelivery || order?.estimatedDeliveryDate);
     
-    // Get user email - handle both populated and unpopulated scenarios
-    let customerEmail = '';
-    if (order?.user) {
+    // Get customer email - use TrackingOrder.customerEmail FIRST (source of truth)
+    let customerEmail = trackingObj.customerEmail || '';
+    
+    // Fallback: get from order's user if TrackingOrder doesn't have it
+    if (!customerEmail && order?.user) {
       if (typeof order.user === 'object' && order.user.email) {
         customerEmail = order.user.email;
       }
@@ -167,6 +171,7 @@ export class TrackingService {
     
     console.log('  📤 Sending Order Type to Frontend:', response.orderType);
     console.log('  📅 Sending Estimated Delivery to Frontend:', response.estimatedDelivery);
+    console.log('  📧 Sending Customer Email to Frontend:', response.customerEmail);
     
     return response;
   }
