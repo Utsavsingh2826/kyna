@@ -364,19 +364,17 @@ const ProductDetail = () => {
         setError(null);
 
         // First try to fetch by slug, if that fails try by modelSku
-        let response = await fetch(
-          `http://localhost:5000/api/products/model/slug/${id}?var`
-        );
+        let response = await fetch(`/api/products/model/slug/${id}?var`);
 
         // If slug endpoint doesn't work, try the model endpoint
         if (!response.ok) {
           const params = new URLSearchParams(location.search);
           const variantId = params.get("variantId");
           const modelUrl = variantId
-            ? `http://localhost:5000/api/products/model/${id}?variantId=${encodeURIComponent(
+            ? `/api/products/model/${id}?variantId=${encodeURIComponent(
                 variantId
               )}/&metalColor=${params.get("metalColor") || "WG"}`
-            : `http://localhost:5000/api/products/model/${id}`;
+            : `/api/products/model/${id}`;
 
           response = await fetch(modelUrl);
         }
@@ -474,52 +472,6 @@ const ProductDetail = () => {
     }
   }, [location.search, selectedMetalColor]);
 
-  // Auto-select appropriate karat when metal type changes
-  useEffect(() => {
-    if (!selectedMetalType || !productData) return;
-
-    // Get available karats for the selected metal type
-    let availableKarats: (string | number)[] = [];
-    switch (selectedMetalType) {
-      case "GOLD":
-        availableKarats = productData.goldKarats.filter((karat) =>
-          karat.toString().includes("kt")
-        );
-        break;
-      case "PLATINUM":
-        availableKarats = productData.goldKarats.filter(
-          (karat) => karat.toString() === "950"
-        );
-        break;
-      case "SILVER":
-        availableKarats = productData.goldKarats.filter(
-          (karat) => karat.toString() === "925"
-        );
-        break;
-      default:
-        availableKarats = productData.goldKarats;
-    }
-
-    // Auto-select the appropriate karat based on metal type
-    switch (selectedMetalType) {
-      case "GOLD":
-        // Keep current selection if it's a valid gold karat, otherwise select first available
-        if (!selectedGoldKarat || !selectedGoldKarat.includes("kt")) {
-          const firstGoldKarat = availableKarats[0];
-          if (firstGoldKarat) {
-            setSelectedGoldKarat(firstGoldKarat.toString());
-          }
-        }
-        break;
-      case "PLATINUM":
-        setSelectedGoldKarat("950");
-        break;
-      case "SILVER":
-        setSelectedGoldKarat("925");
-        break;
-    }
-  }, [selectedMetalType, productData, selectedGoldKarat]);
-
   // Generate variant ID based on current selections
   const generateVariantId = useCallback(() => {
     if (!productData) return null;
@@ -595,6 +547,7 @@ const ProductDetail = () => {
     selectedDiamondSize,
     selectedGoldKarat,
     selectedDiamondOrigin,
+    selectedMetalType,
     originalVariantFormat,
   ]);
 
@@ -622,6 +575,170 @@ const ProductDetail = () => {
       }
     );
   }, [generateVariantId, id, category, navigate]);
+
+  // Refetch product data with current variant and metal color
+  const refetchProductData = useCallback(async () => {
+    const currentProductData = productData;
+    if (!id || !currentProductData) return;
+
+    try {
+      // Generate current variant ID based on selected filters
+      const currentVariantId = generateVariantId();
+
+      if (!currentVariantId) {
+        console.log("⚠️ Cannot generate variant ID, skipping price update");
+        return;
+      }
+
+      // Map current metal color to code
+      const colorCodeMap: { [key: string]: string } = {
+        "White Gold": "WG",
+        "Yellow Gold": "YG",
+        "Rose Gold": "RG",
+      };
+      const metalCode = colorCodeMap[selectedMetalColor] || "WG";
+
+      console.log("🔄 Refetching price for:", {
+        variantId: currentVariantId,
+        metalColor: selectedMetalColor,
+        metalCode: metalCode,
+      });
+
+      // Fetch updated product data with current variant and metal color
+      const response = await fetch(
+        `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
+      );
+
+      if (response.ok) {
+        const updatedData: ProductData = await response.json();
+        console.log("💰 Price updated:", {
+          from: currentProductData.sellingPrice,
+          to: updatedData.sellingPrice,
+          variant: currentVariantId,
+          metalColor: selectedMetalColor,
+        });
+
+        // Update product data with new price and details
+        setProductData(updatedData);
+      } else {
+        console.warn(`Failed to refetch: ${response.status}`);
+      }
+    } catch (err) {
+      console.error("Failed to refetch product data:", err);
+    }
+  }, [id, selectedMetalColor, generateVariantId]);
+
+  // Refetch product data when metal color changes
+  useEffect(() => {
+    if (productData && selectedMetalColor) {
+      const timeoutId = setTimeout(() => {
+        refetchProductData();
+      }, 300); // Debounce to avoid rapid API calls
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedMetalColor, refetchProductData]);
+
+  // Refetch product data when diamond origin changes
+  useEffect(() => {
+    if (productData && selectedDiamondOrigin) {
+      const timeoutId = setTimeout(() => {
+        refetchProductData();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedDiamondOrigin, refetchProductData]);
+
+  // Refetch product data when diamond shape changes
+  useEffect(() => {
+    if (productData && selectedDiamondShape) {
+      const timeoutId = setTimeout(() => {
+        refetchProductData();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedDiamondShape, refetchProductData]);
+
+  // Refetch product data when diamond size changes
+  useEffect(() => {
+    if (productData && selectedDiamondSize) {
+      const timeoutId = setTimeout(() => {
+        refetchProductData();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedDiamondSize, refetchProductData]);
+
+  // Refetch product data when gold karat changes
+  useEffect(() => {
+    if (productData && selectedGoldKarat) {
+      const timeoutId = setTimeout(() => {
+        refetchProductData();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedGoldKarat, refetchProductData]);
+
+  // Refetch product data when metal type changes
+  useEffect(() => {
+    if (productData && selectedMetalType) {
+      const timeoutId = setTimeout(() => {
+        refetchProductData();
+      }, 300);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedMetalType, refetchProductData]);
+
+  // Auto-select appropriate karat when metal type changes
+  useEffect(() => {
+    if (!selectedMetalType || !productData) return;
+
+    // Get available karats for the selected metal type
+    let availableKarats: (string | number)[] = [];
+    switch (selectedMetalType) {
+      case "GOLD":
+        availableKarats = productData.goldKarats.filter((karat) =>
+          karat.toString().includes("kt")
+        );
+        break;
+      case "PLATINUM":
+        availableKarats = productData.goldKarats.filter(
+          (karat) => karat.toString() === "950"
+        );
+        break;
+      case "SILVER":
+        availableKarats = productData.goldKarats.filter(
+          (karat) => karat.toString() === "925"
+        );
+        break;
+      default:
+        availableKarats = productData.goldKarats;
+    }
+
+    // Auto-select the appropriate karat based on metal type
+    switch (selectedMetalType) {
+      case "GOLD":
+        // Keep current selection if it's a valid gold karat, otherwise select first available
+        if (!selectedGoldKarat || !selectedGoldKarat.includes("kt")) {
+          const firstGoldKarat = availableKarats[0];
+          if (firstGoldKarat) {
+            setSelectedGoldKarat(firstGoldKarat.toString());
+          }
+        }
+        break;
+      case "PLATINUM":
+        setSelectedGoldKarat("950");
+        break;
+      case "SILVER":
+        setSelectedGoldKarat("925");
+        break;
+    }
+  }, [selectedMetalType, productData, selectedGoldKarat]);
 
   // Update metal color and URL parameter
   const updateMetalColor = useCallback(
@@ -837,7 +954,7 @@ const ProductDetail = () => {
         formData.append("text", text);
         formData.append("motifPath", motifPath);
 
-        const uploadResponse = await fetch("/api/upload/engraving", {
+        const uploadResponse = await fetch("/api/upload/engravingOnly", {
           method: "POST",
           body: formData,
         });
@@ -1428,7 +1545,10 @@ const ProductDetail = () => {
                     {["Natural Diamond", "Lab Grown Diamond"].map((origin) => (
                       <button
                         key={origin}
-                        onClick={() => setSelectedDiamondOrigin(origin)}
+                        onClick={() => {
+                          setSelectedDiamondOrigin(origin);
+                          // Price will update automatically via useEffect
+                        }}
                         className={`px-3 py-2 rounded-full border text-xs font-medium ${
                           selectedDiamondOrigin === origin
                             ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
@@ -1462,11 +1582,10 @@ const ProductDetail = () => {
                           .map((shape) => (
                             <button
                               key={shape.name}
-                              onClick={() =>
-                                setSelectedDiamondShape(
-                                  shape.name.toUpperCase()
-                                )
-                              }
+                              onClick={() => {
+                                const newShape = shape.name.toUpperCase();
+                                setSelectedDiamondShape(newShape);
+                              }}
                               className={`group relative aspect-square border rounded-lg flex flex-col items-center justify-center text-xs ${
                                 selectedDiamondShape ===
                                 shape.name.toUpperCase()
@@ -1503,7 +1622,9 @@ const ProductDetail = () => {
                         </label>
                         <Select
                           value={selectedDiamondSize}
-                          onValueChange={setSelectedDiamondSize}
+                          onValueChange={(value) => {
+                            setSelectedDiamondSize(value);
+                          }}
                         >
                           <SelectTrigger className="text-sm border-neutral-300">
                             <SelectValue placeholder="Select" />
@@ -1584,9 +1705,10 @@ const ProductDetail = () => {
                           {getAvailableKarats().map((karat, index) => (
                             <button
                               key={index}
-                              onClick={() =>
-                                setSelectedGoldKarat(karat.toString())
-                              }
+                              onClick={() => {
+                                const newKarat = karat.toString();
+                                setSelectedGoldKarat(newKarat);
+                              }}
                               className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
                                 selectedGoldKarat === karat.toString()
                                   ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
@@ -1650,7 +1772,7 @@ const ProductDetail = () => {
                           <SelectTrigger className="text-sm border-neutral-300">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-white">
                             {ringSizes.map((size) => (
                               <SelectItem key={size} value={size}>
                                 Size {size}
