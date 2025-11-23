@@ -551,6 +551,34 @@ const ProductDetail = () => {
     originalVariantFormat,
   ]);
 
+  useEffect(() => {
+    if (!productData) return;
+
+    const newVariantId = generateVariantId();
+    if (!newVariantId) return;
+
+    // If the generated variantId is same as API one => do NOT refetch
+    if (productData.chosenVariantSku === newVariantId) {
+      return;
+    }
+
+    // Debounce to prevent spam
+    const debounce = setTimeout(() => {
+      updateVariantSelection(); // updates URL
+      refetchProductData(); // fetch new data
+    }, 600);
+
+    return () => clearTimeout(debounce);
+  }, [
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedDiamondOrigin,
+    selectedGoldKarat,
+    selectedMetalType,
+    selectedMetalColor,
+    productData,
+  ]);
+
   // Update variant ID and refetch data
   const updateVariantSelection = useCallback(() => {
     const newVariantId = generateVariantId();
@@ -578,121 +606,32 @@ const ProductDetail = () => {
 
   // Refetch product data with current variant and metal color
   const refetchProductData = useCallback(async () => {
-    const currentProductData = productData;
-    if (!id || !currentProductData) return;
+    if (!id) return;
 
-    try {
-      // Generate current variant ID based on selected filters
-      const currentVariantId = generateVariantId();
+    const currentVariantId = generateVariantId();
+    if (!currentVariantId) return;
 
-      if (!currentVariantId) {
-        console.log("⚠️ Cannot generate variant ID, skipping price update");
-        return;
-      }
+    const colorCodeMap: Record<string, string> = {
+      "White Gold": "WG",
+      "Yellow Gold": "YG",
+      "Rose Gold": "RG",
+    };
 
-      // Map current metal color to code
-      const colorCodeMap: { [key: string]: string } = {
-        "White Gold": "WG",
-        "Yellow Gold": "YG",
-        "Rose Gold": "RG",
-      };
-      const metalCode = colorCodeMap[selectedMetalColor] || "WG";
+    const metalCode = colorCodeMap[selectedMetalColor] || "WG";
 
-      console.log("🔄 Refetching price for:", {
-        variantId: currentVariantId,
-        metalColor: selectedMetalColor,
-        metalCode: metalCode,
-      });
+    const response = await fetch(
+      `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
+    );
 
-      // Fetch updated product data with current variant and metal color
-      const response = await fetch(
-        `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
-      );
+    if (!response.ok) return;
 
-      if (response.ok) {
-        const updatedData: ProductData = await response.json();
-        console.log("💰 Price updated:", {
-          from: currentProductData.sellingPrice,
-          to: updatedData.sellingPrice,
-          variant: currentVariantId,
-          metalColor: selectedMetalColor,
-        });
+    const newData = await response.json();
 
-        // Update product data with new price and details
-        setProductData(updatedData);
-      } else {
-        console.warn(`Failed to refetch: ${response.status}`);
-      }
-    } catch (err) {
-      console.error("Failed to refetch product data:", err);
+    // Only update if price actually changed
+    if (newData.sellingPrice !== productData?.sellingPrice) {
+      setProductData(newData);
     }
   }, [id, selectedMetalColor, generateVariantId]);
-
-  // Refetch product data when metal color changes
-  useEffect(() => {
-    if (productData && selectedMetalColor) {
-      const timeoutId = setTimeout(() => {
-        refetchProductData();
-      }, 300); // Debounce to avoid rapid API calls
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedMetalColor, refetchProductData]);
-
-  // Refetch product data when diamond origin changes
-  useEffect(() => {
-    if (productData && selectedDiamondOrigin) {
-      const timeoutId = setTimeout(() => {
-        refetchProductData();
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedDiamondOrigin, refetchProductData]);
-
-  // Refetch product data when diamond shape changes
-  useEffect(() => {
-    if (productData && selectedDiamondShape) {
-      const timeoutId = setTimeout(() => {
-        refetchProductData();
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedDiamondShape, refetchProductData]);
-
-  // Refetch product data when diamond size changes
-  useEffect(() => {
-    if (productData && selectedDiamondSize) {
-      const timeoutId = setTimeout(() => {
-        refetchProductData();
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedDiamondSize, refetchProductData]);
-
-  // Refetch product data when gold karat changes
-  useEffect(() => {
-    if (productData && selectedGoldKarat) {
-      const timeoutId = setTimeout(() => {
-        refetchProductData();
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedGoldKarat, refetchProductData]);
-
-  // Refetch product data when metal type changes
-  useEffect(() => {
-    if (productData && selectedMetalType) {
-      const timeoutId = setTimeout(() => {
-        refetchProductData();
-      }, 300);
-
-      return () => clearTimeout(timeoutId);
-    }
-  }, [selectedMetalType, refetchProductData]);
 
   // Auto-select appropriate karat when metal type changes
   useEffect(() => {
