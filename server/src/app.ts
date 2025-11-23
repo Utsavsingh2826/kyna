@@ -100,11 +100,7 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: [
-          "'self'",
-          "http://localhost:5000",
-          "http://localhost:5173",
-        ],
+        connectSrc: ["'self'", "", "http://localhost:5173"],
       },
     },
   })

@@ -136,7 +136,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           params.set("category3", earringFilters.category3);
           params.set("centerStoneShape", earringFilters.centerStoneShape);
 
-          const apiUrl = `http://localhost:5000/api/products/category/earrings?${params.toString()}`;
+          const apiUrl = `/api/products/category/earrings?${params.toString()}`;
           console.log("Fetching earrings from:", apiUrl);
 
           const response = await fetch(apiUrl);
@@ -185,7 +185,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         }
 
         const response = await fetch(
-          `http://localhost:5000/api/products/category/${apiCategory}?${params.toString()}`
+          `/api/products/category/${apiCategory}?${params.toString()}`
         );
 
         if (!response.ok) {
@@ -504,7 +504,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                   wordBreak: "break-all",
                 }}
               >
-                API: http://localhost:5000/api/products/category/earrings?page=
+                API: /api/products/category/earrings?page=
                 {earringFilters.page}&limit={earringFilters.limit}&category1=
                 {earringFilters.category1}&category2={earringFilters.category2}
                 &category3={earringFilters.category3}&centerStoneShape=

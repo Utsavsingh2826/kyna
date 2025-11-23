@@ -3,6 +3,7 @@
 ## ✅ Production Readiness Checklist
 
 ### 1. Code Quality ✅
+
 - [x] TypeScript compilation successful
 - [x] All critical errors fixed
 - [x] Security vulnerabilities addressed
@@ -11,6 +12,7 @@
 - [x] Input validation added
 
 ### 2. Security Features ✅
+
 - [x] Hardcoded secrets removed
 - [x] CORS properly configured
 - [x] Rate limiting on all routes
@@ -20,6 +22,7 @@
 - [x] JWT security enhanced
 
 ### 3. Production Configuration ✅
+
 - [x] Environment validation
 - [x] Production config file
 - [x] PM2 ecosystem config
@@ -28,6 +31,7 @@
 - [x] Graceful shutdown handling
 
 ### 4. Monitoring & Logging ✅
+
 - [x] Comprehensive health checks
 - [x] Request/response logging
 - [x] Error tracking
@@ -39,11 +43,13 @@
 ### Step 1: Environment Setup
 
 1. **Create production environment file:**
+
 ```bash
 cp .env.example .env.production
 ```
 
 2. **Configure production environment variables:**
+
 ```env
 NODE_ENV=production
 PORT=5000
@@ -93,16 +99,19 @@ AUTH_RATE_LIMIT_MAX_REQUESTS=5
 ### Step 2: Build and Test
 
 1. **Install dependencies:**
+
 ```bash
 npm install --production
 ```
 
 2. **Build the application:**
+
 ```bash
 npm run build
 ```
 
 3. **Run production readiness tests:**
+
 ```bash
 node test-production-readiness.js
 ```
@@ -110,22 +119,26 @@ node test-production-readiness.js
 ### Step 3: PM2 Deployment
 
 1. **Install PM2 globally:**
+
 ```bash
 npm install -g pm2
 ```
 
 2. **Start the application with PM2:**
+
 ```bash
 pm2 start ecosystem.config.js --env production
 ```
 
 3. **Save PM2 configuration:**
+
 ```bash
 pm2 save
 pm2 startup
 ```
 
 4. **Monitor the application:**
+
 ```bash
 pm2 status
 pm2 logs kynajewels-api
@@ -152,7 +165,7 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
     location / {
-        proxy_pass http://localhost:5000;
+        proxy_pass ;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -161,7 +174,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
+
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
@@ -177,6 +190,7 @@ server {
 ```
 
 Enable the site:
+
 ```bash
 sudo ln -s /etc/nginx/sites-available/kynajewels-api /etc/nginx/sites-enabled/
 sudo nginx -t
@@ -186,11 +200,13 @@ sudo systemctl reload nginx
 ### Step 5: SSL Certificate
 
 1. **Install Certbot:**
+
 ```bash
 sudo apt install certbot python3-certbot-nginx
 ```
 
 2. **Obtain SSL certificate:**
+
 ```bash
 sudo certbot --nginx -d api.kynajewels.com
 ```
@@ -198,12 +214,14 @@ sudo certbot --nginx -d api.kynajewels.com
 ### Step 6: Database Setup
 
 1. **MongoDB Atlas (Recommended):**
+
    - Create cluster
    - Configure network access
    - Create database user
    - Get connection string
 
 2. **Local MongoDB:**
+
 ```bash
 # Install MongoDB
 sudo apt install mongodb
@@ -225,6 +243,7 @@ db.createUser({
 ### Step 7: Monitoring Setup
 
 1. **Install monitoring tools:**
+
 ```bash
 # Install htop for system monitoring
 sudo apt install htop
@@ -234,7 +253,8 @@ sudo apt install logrotate
 ```
 
 2. **Configure log rotation:**
-Create `/etc/logrotate.d/kynajewels-api`:
+   Create `/etc/logrotate.d/kynajewels-api`:
+
 ```
 /var/log/kynajewels-api/*.log {
     daily
@@ -284,23 +304,27 @@ pm2 delete kynajewels-api
 ### Common Issues:
 
 1. **Port already in use:**
+
 ```bash
 sudo lsof -i :5000
 sudo kill -9 <PID>
 ```
 
 2. **MongoDB connection failed:**
+
 - Check connection string
 - Verify network access
 - Check credentials
 
 3. **PM2 not starting:**
+
 ```bash
 pm2 logs kynajewels-api
 pm2 describe kynajewels-api
 ```
 
 4. **Nginx 502 Bad Gateway:**
+
 - Check if Node.js app is running
 - Verify proxy configuration
 - Check firewall settings
@@ -332,6 +356,7 @@ pm2 describe kynajewels-api
 ✅ **READY FOR PRODUCTION DEPLOYMENT**
 
 The backend is now fully production-ready with:
+
 - Zero compilation errors
 - Comprehensive security measures
 - Production-grade configuration

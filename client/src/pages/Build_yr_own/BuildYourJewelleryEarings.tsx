@@ -496,9 +496,7 @@ const ProductDetail = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/products/builder?stylingName=${encodeURIComponent(
-          categoryName
-        )}`
+        `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`
       );
       const data: ApiResponse = await response.json();
 
@@ -510,7 +508,7 @@ const ProductDetail = () => {
             const firstVariantSku = entry.variants[0]?.sku;
             if (firstVariantSku && entry.parentSku) {
               const productResponse = await fetch(
-                `http://localhost:5000/api/products/model/${entry.parentSku}?variantId=${firstVariantSku}&metalColor=WG`
+                `/api/products/model/${entry.parentSku}?variantId=${firstVariantSku}&metalColor=WG`
               );
               const productData: ProductModelResponse =
                 await productResponse.json();

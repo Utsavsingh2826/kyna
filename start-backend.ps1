@@ -11,5 +11,5 @@ if (-not (Test-Path "node_modules")) {
 }
 
 # Start the development server
-Write-Host "Starting server on http://localhost:5000" -ForegroundColor Cyan
+Write-Host "Starting server on " -ForegroundColor Cyan
 npm run dev
