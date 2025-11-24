@@ -476,9 +476,7 @@ const ProductDetail = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/products/builder?stylingName=${encodeURIComponent(
-          categoryName
-        )}`
+        `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`
       );
       const data: ApiResponse = await response.json();
 
@@ -496,7 +494,7 @@ const ProductDetail = () => {
               };
               const metalCode = colorCodeMap[selectedMetalColor] || "WG";
               const productResponse = await fetch(
-                `http://localhost:5000/api/products/model/${entry.parentSku}?variantId=${firstVariantSku}&metalColor=${metalCode}`
+                `/api/products/model/${entry.parentSku}?variantId=${firstVariantSku}&metalColor=${metalCode}`
               );
               const productData: ProductModelResponse =
                 await productResponse.json();
@@ -583,7 +581,7 @@ const ProductDetail = () => {
         };
         const metalCode = colorCodeMap[metalColorName] || "WG";
         const res = await fetch(
-          `http://localhost:5000/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`
+          `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`
         );
         const data: ProductModelResponse = await res.json();
         if (data && data.success) {

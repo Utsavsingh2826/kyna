@@ -144,7 +144,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           params.set("category3", activeFilters.category3 || "");
           params.set("centerStoneShape", activeFilters.centerStoneShape || "");
 
-          const apiUrl = `http://localhost:5000/api/products/category/earrings?${params.toString()}`;
+          const apiUrl = `/api/products/category/earrings?${params.toString()}`;
           const response = await fetch(apiUrl);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -410,7 +410,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         const filterParams = buildApiFilters();
         const response = await fetch(
-          `http://localhost:5000/api/products/category/${apiCategory}?${filterParams.toString()}`
+          `/api/products/category/${apiCategory}?${filterParams.toString()}`
         );
 
         if (!response.ok) {

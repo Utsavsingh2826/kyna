@@ -1396,13 +1396,10 @@ export default function EarringBuilder() {
         });
 
         // Upload images using the same endpoint as order creation
-        const imageResponse = await fetch(
-          "http://localhost:5000/api/rings/upload",
-          {
-            method: "POST",
-            body: imageFormData,
-          }
-        );
+        const imageResponse = await fetch("/api/rings/upload", {
+          method: "POST",
+          body: imageFormData,
+        });
 
         const imageResult = await imageResponse.json();
 
@@ -1492,15 +1489,12 @@ export default function EarringBuilder() {
 
       // Test server connectivity first
       try {
-        const testResponse = await fetch(
-          "http://localhost:5000/api/customization/my-requests",
-          {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
-        );
+        const testResponse = await fetch("/api/customization/my-requests", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
         console.log("� Server connectivity test:", testResponse.status);
       } catch (error) {
         console.error("❌ Server connectivity error:", error);
@@ -1511,17 +1505,14 @@ export default function EarringBuilder() {
         return;
       }
 
-      const response = await fetch(
-        "http://localhost:5000/api/customization/request-with-payment",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify(customizationRequestDataWithImages),
-        }
-      );
+      const response = await fetch("/api/customization/request-with-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(customizationRequestDataWithImages),
+      });
 
       const result = await response.json();
 

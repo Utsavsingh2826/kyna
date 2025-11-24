@@ -677,7 +677,10 @@ interface JewelleryPageProps {
   category?: string; // For backward compatibility
 }
 
-export default function JewelleryPage({ priceRange, category }: JewelleryPageProps) {
+export default function JewelleryPage({
+  priceRange,
+  category,
+}: JewelleryPageProps) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [minPrice, setMinPrice] = useState<number>(24000);
   const [maxPrice, setMaxPrice] = useState<number>(100000);
@@ -850,17 +853,17 @@ export default function JewelleryPage({ priceRange, category }: JewelleryPagePro
   useEffect(() => {
     // Check priceRange prop first, then fallback to category prop
     const rangeString = priceRange || category;
-    
+
     if (rangeString && /^\d+-\d+$/.test(rangeString)) {
-      const [urlMin, urlMax] = rangeString.split('-').map(Number);
-      
+      const [urlMin, urlMax] = rangeString.split("-").map(Number);
+
       if (urlMin >= 0 && urlMax > urlMin) {
         console.log(`🎯 URL Price Range detected: ${urlMin} - ${urlMax}`);
         setMinPrice(urlMin);
         setMaxPrice(urlMax);
-        
+
         // Update filter state as well
-        setActiveFilters(prev => ({
+        setActiveFilters((prev) => ({
           ...prev,
           min_price: urlMin.toString(),
           max_price: urlMax.toString(),
@@ -874,32 +877,32 @@ export default function JewelleryPage({ priceRange, category }: JewelleryPagePro
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        
+
         // Build URL with price range parameters
-        const url = new URL("http://localhost:5000/api/gifting");
-        
+        const url = new URL("/api/gifting");
+
         // Add price range as query parameters (using the range format you requested)
         if (minPrice !== 24000 || maxPrice !== 100000) {
-          url.searchParams.set('range', `${minPrice}-${maxPrice}`);
+          url.searchParams.set("range", `${minPrice}-${maxPrice}`);
         }
-        
-        console.log('Fetching products with URL:', url.toString());
-        
+
+        console.log("Fetching products with URL:", url.toString());
+
         const response = await fetch(url.toString());
         const data = await response.json();
 
         if (data.success) {
-            // API may return products as data.products or as data (array). Handle both.
-            const productsFromApi = Array.isArray(data?.data?.products)
-              ? data.data.products
-              : Array.isArray(data?.data)
-              ? data.data
-              : [];
-            setApiProducts(productsFromApi);
-          } else {
-            setError("Failed to fetch products");
-            setApiProducts([]);
-          }
+          // API may return products as data.products or as data (array). Handle both.
+          const productsFromApi = Array.isArray(data?.data?.products)
+            ? data.data.products
+            : Array.isArray(data?.data)
+            ? data.data
+            : [];
+          setApiProducts(productsFromApi);
+        } else {
+          setError("Failed to fetch products");
+          setApiProducts([]);
+        }
       } catch (err) {
         console.error("Error fetching products:", err);
         setError("Failed to connect to API");
@@ -930,11 +933,20 @@ export default function JewelleryPage({ priceRange, category }: JewelleryPagePro
       // Safely resolve image field (API may return mainImage or image)
       const pRec = p as APIProduct & Record<string, unknown>;
       const rawImgUnknown = pRec.mainImage ?? pRec["image"] ?? "";
-      const imgStr = typeof rawImgUnknown === "string" ? rawImgUnknown : String(rawImgUnknown);
-      const hasLeadingSlash = typeof imgStr === "string" && imgStr.startsWith && imgStr.startsWith("/");
+      const imgStr =
+        typeof rawImgUnknown === "string"
+          ? rawImgUnknown
+          : String(rawImgUnknown);
+      const hasLeadingSlash =
+        typeof imgStr === "string" &&
+        imgStr.startsWith &&
+        imgStr.startsWith("/");
 
       const rawCategoryUnknown = pRec["category"] ?? "";
-      const categoryLower = typeof rawCategoryUnknown === "string" ? rawCategoryUnknown.toLowerCase() : "";
+      const categoryLower =
+        typeof rawCategoryUnknown === "string"
+          ? rawCategoryUnknown.toLowerCase()
+          : "";
 
       const priceNum =
         typeof p.price === "number"
@@ -944,7 +956,11 @@ export default function JewelleryPage({ priceRange, category }: JewelleryPagePro
       return {
         // Keep non-numeric ids as-is (some API ids are hex strings)
         id: isNaN(Number(p.id)) ? p.id : Number(p.id),
-        title: p.name ?? (typeof rawCategoryUnknown === "string" ? rawCategoryUnknown : "Product"),
+        title:
+          p.name ??
+          (typeof rawCategoryUnknown === "string"
+            ? rawCategoryUnknown
+            : "Product"),
         oldPrice: `₹${Math.round(priceNum ? priceNum * 1.2 : 0)}`,
         price: `₹${priceNum ?? 0}`,
         img: hasLeadingSlash ? imgStr : "/product_detail/display.png",
@@ -1080,22 +1096,26 @@ export default function JewelleryPage({ priceRange, category }: JewelleryPagePro
                         ? "bg-orange-100 text-orange-800"
                         : "bg-green-100 text-green-800";
 
-                      return (Array.isArray(values) ? values : []).map((value: string) => (
-                        <span
-                          key={`${key}-${value}`}
-                          className={`px-2 py-1 ${colorClass} rounded-md text-xs flex items-center gap-1`}
-                        >
-                          <span className="font-medium">{displayName}:</span>{" "}
-                          {value}
-                          <button
-                            onClick={() => updateUrlFilters(key, value, false)}
-                            className="ml-1 hover:opacity-75 text-sm font-bold"
-                            title={`Remove ${value} filter`}
+                      return (Array.isArray(values) ? values : []).map(
+                        (value: string) => (
+                          <span
+                            key={`${key}-${value}`}
+                            className={`px-2 py-1 ${colorClass} rounded-md text-xs flex items-center gap-1`}
                           >
-                            ×
-                          </button>
-                        </span>
-                      ));
+                            <span className="font-medium">{displayName}:</span>{" "}
+                            {value}
+                            <button
+                              onClick={() =>
+                                updateUrlFilters(key, value, false)
+                              }
+                              className="ml-1 hover:opacity-75 text-sm font-bold"
+                              title={`Remove ${value} filter`}
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )
+                      );
                     })}
                   </div>
                   {/* Show total filter count */}
