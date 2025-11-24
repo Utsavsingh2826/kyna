@@ -1,16 +1,28 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { X, Heart } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import {
   FilterGroup,
   // DiamondShapeSelector,
   PriceRangeSlider,
 } from "@/components/Engravings";
 import "./ProductPage.css";
+import type { AppDispatch, RootState } from "@/store";
+import {
+  addWishlistItem,
+  buildWishlistKey,
+  fetchWishlist,
+  removeWishlistItemThunk,
+  selectWishlistInitialized,
+  selectWishlistKeyMap,
+  selectWishlistLoading,
+} from "@/store/slices/wishlistSlice";
 
 type MainCategory = "rings" | "earrings" | "pendants" | "bracelets";
 
 interface Product {
+  _id?: string;
   modelSku: string;
   metalTypes: string[];
   title: string;
@@ -64,6 +76,18 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const [appliedFilters, setAppliedFilters] = useState<
     ApiResponse["appliedFilters"] | null
   >(null);
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const wishlistInitialized = useSelector(selectWishlistInitialized);
+  const wishlistLoading = useSelector(selectWishlistLoading);
+  const wishlistKeyMap = useSelector(selectWishlistKeyMap);
+
+  useEffect(() => {
+    if (isAuthenticated && !wishlistInitialized && !wishlistLoading) {
+      dispatch(fetchWishlist());
+    }
+  }, [dispatch, isAuthenticated, wishlistInitialized, wishlistLoading]);
 
   // Filter state management with backend parameter names - category-specific for all jewelry types
   const [activeFilters, setActiveFilters] = useState({
@@ -428,6 +452,53 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       }
     },
     [category, activeFilters, minPrice, maxPrice]
+  );
+
+  const handleWishlistToggle = useCallback(
+    (event: React.MouseEvent, product: Product) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (!isAuthenticated) {
+        navigate("/login");
+        return;
+      }
+
+      if (!product._id) {
+        alert("Product information is unavailable. Please try again.");
+        return;
+      }
+
+      const entryKey = buildWishlistKey(
+        product._id,
+        product.firstVariantSku || null,
+        null
+      );
+      const existingEntryId = wishlistKeyMap[entryKey];
+
+      if (existingEntryId) {
+        dispatch(removeWishlistItemThunk(existingEntryId));
+        return;
+      }
+
+      dispatch(
+        addWishlistItem({
+          productId: product._id,
+          modelSku: product.modelSku,
+          categorySlug: category,
+          categoryLabel: category,
+          variantSku: product.firstVariantSku,
+          primaryImage: product.firstVariantImageUrl || null,
+        })
+      );
+    },
+    [
+      category,
+      dispatch,
+      isAuthenticated,
+      navigate,
+      wishlistKeyMap,
+    ]
   );
 
   // Update URL when filters change - use comma-separated values
@@ -1563,79 +1634,88 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             {/* Products */}
             {!loading &&
               !error &&
-              products.map((p) => (
-                <Link
-                  to={`/product/${category}/${
-                    p.modelSku
-                  }?variantId=${encodeURIComponent(
-                    p.firstVariantSku
-                  )}&metalColor=WG`}
-                  key={`${category}-${p.modelSku}`}
-                  className="block"
-                >
-                  <article
-                    className="eng-card hover:shadow-lg transition-shadow duration-200"
-                    aria-label={p.title}
+              products.map((p) => {
+                const wishlistKey =
+                  p._id &&
+                  buildWishlistKey(p._id, p.firstVariantSku || null, null);
+                const isWishlisted =
+                  wishlistKey && Boolean(wishlistKeyMap[wishlistKey]);
+
+                return (
+                  <Link
+                    to={`/product/${category}/${
+                      p.modelSku
+                    }?variantId=${encodeURIComponent(
+                      p.firstVariantSku
+                    )}&metalColor=WG`}
+                    key={`${category}-${p.modelSku}`}
+                    className="block"
                   >
-                    <button
-                      className="eng-wishlist"
-                      aria-label="Add to wishlist"
+                    <article
+                      className="eng-card hover:shadow-lg transition-shadow duration-200"
+                      aria-label={p.title}
                     >
-                      <Heart size={16} />
-                    </button>
-                    <img
-                      src={p.firstVariantImageUrl}
-                      alt={`${p.title} product image`}
-                      loading="lazy"
-                      className="eng-card-img"
-                    />
-                    {p.metalTypes && p.metalTypes.length > 0 && (
-                      <div
-                        className="eng-color-row"
-                        aria-label="Available metals"
+                      <button
+                        className={`eng-wishlist ${
+                          isWishlisted ? "text-red-500" : ""
+                        } ${wishlistLoading ? "opacity-70" : ""}`}
+                        aria-label="Add to wishlist"
+                        aria-pressed={Boolean(isWishlisted)}
+                        onClick={(e) => handleWishlistToggle(e, p)}
+                        disabled={wishlistLoading}
                       >
-                        {p.metalTypes.slice(0, 3).map((metal) => (
-                          // <span
-                          //   key={`${p.modelSku}-${metal}`}
-                          //   className="text-xs px-2 py-1 bg-gray-100 rounded-full"
-                          // >
-                          //   {metal}
-                          // </span>
-                          <div
-                            key={`${p.modelSku}-${metal}`}
-                            className="text-xs px-2 py-1 bg-gray-100 rounded-full"
-                          >
-                            <img
-                              src={
-                                metal === "GOLD"
-                                  ? "/colors/gold.png"
-                                  : metal === "SILVER"
-                                  ? "/colors/white.png"
-                                  : metal === "PLATINUM"
-                                  ? "/colors/platinum.png"
-                                  : metal === "ROSE GOLD"
-                                  ? "/colors/rose-gold.png"
-                                  : metal === "WHITE GOLD"
-                                  ? "/colors/white-gold.png"
-                                  : "/colors/default.png"
-                              }
-                              className="h-6 w-6"
-                              alt=""
-                            />
-                            {/* {metal} */}
-                          </div>
-                        ))}
+                        <Heart
+                          size={16}
+                          className={isWishlisted ? "fill-current" : ""}
+                        />
+                      </button>
+                      <img
+                        src={p.firstVariantImageUrl}
+                        alt={`${p.title} product image`}
+                        loading="lazy"
+                        className="eng-card-img"
+                      />
+                      {p.metalTypes && p.metalTypes.length > 0 && (
+                        <div
+                          className="eng-color-row"
+                          aria-label="Available metals"
+                        >
+                          {p.metalTypes.slice(0, 3).map((metal) => (
+                            <div
+                              key={`${p.modelSku}-${metal}`}
+                              className="text-xs px-2 py-1 bg-gray-100 rounded-full"
+                            >
+                              <img
+                                src={
+                                  metal === "GOLD"
+                                    ? "/colors/gold.png"
+                                    : metal === "SILVER"
+                                    ? "/colors/white.png"
+                                    : metal === "PLATINUM"
+                                    ? "/colors/platinum.png"
+                                    : metal === "ROSE GOLD"
+                                    ? "/colors/rose-gold.png"
+                                    : metal === "WHITE GOLD"
+                                    ? "/colors/white-gold.png"
+                                    : "/colors/default.png"
+                                }
+                                className="h-6 w-6"
+                                alt=""
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="eng-card-body">
+                        <h3 className="eng-card-title">{p.title}</h3>
+                        <div className="text-xs text-black mt-1">
+                          Starting at Rs.{p.sellingPrice.toLocaleString()}
+                        </div>
                       </div>
-                    )}
-                    <div className="eng-card-body">
-                      <h3 className="eng-card-title">{p.title}</h3>
-                      <div className="text-xs text-black mt-1">
-                        Starting at Rs.{p.sellingPrice.toLocaleString()}
-                      </div>
-                    </div>
                   </article>
                 </Link>
-              ))}
+                );
+              })}
           </section>
         </section>
 

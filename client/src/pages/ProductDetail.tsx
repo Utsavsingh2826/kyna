@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Star,
   Heart,
@@ -14,6 +14,14 @@ import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { addToCart } from "@/store/slices/cartSlice";
 import type { RootState, AppDispatch } from "@/store";
+import {
+  addWishlistItem,
+  removeWishlistItemThunk,
+  fetchWishlist,
+  selectWishlistEntryId,
+  selectWishlistInitialized,
+  selectWishlistLoading,
+} from "@/store/slices/wishlistSlice";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import Engrave from "./Engrave";
@@ -41,6 +49,7 @@ interface ProductData {
   modelSku: string;
   title: string;
   description: string;
+  category?: string;
   metalTypes: string[];
   goldKarats: (string | number)[];
   diamondShape: string[];
@@ -65,6 +74,14 @@ interface ProductData {
   variantImages?: string[];
   chosenVariantSku?: string;
 }
+
+const METAL_COLOR_CODE_MAP: Record<string, string> = {
+  "White Gold": "WG",
+  "Yellow Gold": "YG",
+  "Rose Gold": "RG",
+  Platinum: "PL",
+  Silver: "SV",
+};
 
 // Sample product data - in a real app this would come from API/database
 const sampleProduct = {
@@ -171,6 +188,7 @@ const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
 
 const ProductDetail = () => {
   const { id, category } = useParams();
+  const currentCategorySlug = category || "rings";
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
@@ -206,10 +224,42 @@ const ProductDetail = () => {
   const [selectedGoldKarat, setSelectedGoldKarat] = useState("");
   const [selectedMetalType, setSelectedMetalType] = useState("");
 
+  const activeVariantSku = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (
+      params.get("variantId") ||
+      productData?.chosenVariantSku ||
+      productData?.firstVariantSku ||
+      null
+    );
+  }, [location.search, productData?.chosenVariantSku, productData?.firstVariantSku]);
+
+  const currentMetalColorCode =
+    METAL_COLOR_CODE_MAP[selectedMetalColor] || null;
+
+  const wishlistInitialized = useSelector(selectWishlistInitialized);
+  const wishlistLoading = useSelector(selectWishlistLoading);
+  const wishlistEntryId = useSelector((state: RootState) => {
+    if (!productData?._id) return undefined;
+    return selectWishlistEntryId(
+      state,
+      productData._id,
+      activeVariantSku,
+      currentMetalColorCode
+    );
+  });
+  const isInWishlist = Boolean(wishlistEntryId);
+
   // Track the original variant format to preserve it
   const [originalVariantFormat, setOriginalVariantFormat] = useState<
     "5-part" | "3-part" | null
   >(null);
+
+  useEffect(() => {
+    if (isAuthenticated && !wishlistInitialized && !wishlistLoading) {
+      dispatch(fetchWishlist());
+    }
+  }, [dispatch, isAuthenticated, wishlistInitialized, wishlistLoading]);
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
@@ -684,14 +734,7 @@ const ProductDetail = () => {
     (colorName: string) => {
       setSelectedMetalColor(colorName);
 
-      // Map color names to URL codes
-      const colorCodeMap: { [key: string]: string } = {
-        "White Gold": "WG",
-        "Yellow Gold": "YG",
-        "Rose Gold": "RG",
-      };
-
-      const colorCode = colorCodeMap[colorName] || "WG";
+      const colorCode = METAL_COLOR_CODE_MAP[colorName] || "WG";
 
       // Update URL with new metal color parameter
       const currentUrl = new URL(window.location.href);
@@ -700,6 +743,72 @@ const ProductDetail = () => {
       navigate(`${currentUrl.pathname}${currentUrl.search}`, { replace: true });
     },
     [navigate]
+  );
+
+  const handleWishlistToggle = useCallback(
+    (event?: React.MouseEvent) => {
+      event?.preventDefault();
+      event?.stopPropagation();
+
+      if (!isAuthenticated) {
+        navigate("/login");
+        return;
+      }
+
+      if (!productData?._id) {
+        alert("Product information is missing. Please try again.");
+        return;
+      }
+
+      if (wishlistEntryId) {
+        dispatch(removeWishlistItemThunk(wishlistEntryId));
+        return;
+      }
+
+      const primaryImage =
+        productData.variantImages?.[selectedImage] ||
+        productData.variantImages?.[0] ||
+        null;
+
+      dispatch(
+        addWishlistItem({
+          productId: productData._id,
+          modelSku: productData.modelSku || id || "",
+          categorySlug: currentCategorySlug,
+          categoryLabel: productData.category || currentCategorySlug,
+          variantSku: activeVariantSku,
+          metalColorName: selectedMetalColor,
+          metalColorCode: currentMetalColorCode,
+          primaryImage,
+          engraving:
+            hasEngraving &&
+            (engravingText || engravingMotifPath || engravingImageUrl)
+              ? {
+                  text: engravingText || undefined,
+                  motif: engravingMotifPath || undefined,
+                  imageUrl: engravingImageUrl || undefined,
+                }
+              : undefined,
+        })
+      );
+    },
+    [
+      activeVariantSku,
+      currentCategorySlug,
+      currentMetalColorCode,
+      dispatch,
+      engravingImageUrl,
+      engravingMotifPath,
+      engravingText,
+      hasEngraving,
+      id,
+      isAuthenticated,
+      navigate,
+      productData,
+      selectedMetalColor,
+      wishlistEntryId,
+      selectedImage,
+    ]
   );
 
   // Update variant when selections change (with debounce)
@@ -1347,8 +1456,18 @@ const ProductDetail = () => {
                   <div className="absolute bg-[#68C5C0] text-white top-4 left-4 px-2 py-1 rounded-md text-xs font-semibold">
                     15% OFF
                   </div>
-                  <button className="absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors">
-                    <Heart size={20} />
+                  <button
+                    onClick={handleWishlistToggle}
+                    disabled={wishlistLoading}
+                    aria-pressed={isInWishlist}
+                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${
+                      isInWishlist ? "text-red-500" : "text-gray-600"
+                    } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+                  >
+                    <Heart
+                      size={20}
+                      className={isInWishlist ? "fill-current" : ""}
+                    />
                   </button>
                 </div>
 

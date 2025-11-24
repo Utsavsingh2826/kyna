@@ -319,41 +319,52 @@ class ApiService {
     });
   }
 
-  async addToWishlist(productId: string) {
+  async addToWishlist(payload: {
+    productId: string;
+    modelSku: string;
+    categorySlug: string;
+    categoryLabel?: string;
+    variantSku?: string | null;
+    metalColorName?: string | null;
+    metalColorCode?: string | null;
+    primaryImage?: string | null;
+    engraving?: {
+      text?: string;
+      motif?: string;
+      imageUrl?: string;
+    };
+  }) {
     return this.makeRequest("/wishlist", {
       method: "POST",
-      body: JSON.stringify({ productId }),
+      body: JSON.stringify(payload),
     });
   }
 
-  async removeFromWishlist(productId: string) {
-    return this.makeRequest(`/wishlist/${productId}`, {
+  async removeFromWishlist(itemId: string) {
+    return this.makeRequest(`/wishlist/${itemId}`, {
       method: "DELETE",
     });
   }
 
-  async checkWishlistStatus(productId: string) {
-    return this.makeRequest(`/wishlist/check/${productId}`, {
+  async checkWishlistStatus(
+    productId: string,
+    options?: { variantSku?: string; metalColorCode?: string }
+  ) {
+    const params = new URLSearchParams();
+    if (options?.variantSku) {
+      params.set("variantSku", options.variantSku);
+    }
+    if (options?.metalColorCode) {
+      params.set("metalColorCode", options.metalColorCode);
+    }
+
+    const query = params.toString();
+    const endpoint = query
+      ? `/wishlist/check/${productId}?${query}`
+      : `/wishlist/check/${productId}`;
+
+    return this.makeRequest(endpoint, {
       method: "GET",
-    });
-  }
-
-  // Wishlist sharing methods
-  async generateWishlistShareLink() {
-    return this.makeRequest("/wishlist-share/generate", {
-      method: "POST",
-    });
-  }
-
-  async getSharedWishlist(shareId: string) {
-    return this.makeRequest(`/wishlist-share/${shareId}`, {
-      method: "GET",
-    });
-  }
-
-  async revokeWishlistShareLink() {
-    return this.makeRequest("/wishlist-share/revoke", {
-      method: "DELETE",
     });
   }
 
