@@ -19,7 +19,7 @@ router.get('/', getWishlist);
 router.post('/', addToWishlist);
 
 // DELETE /api/wishlist/:productId - Remove product from wishlist
-router.delete('/:productId', removeFromWishlist);
+router.delete('/:itemId', removeFromWishlist);
 
 // GET /api/wishlist/check/:productId - Check if product is in wishlist
 router.get('/check/:productId', checkWishlistStatus);

@@ -1,107 +1,81 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Heart, Share2, Mail, MessageCircle } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import type { RootState } from '@/store';
-import apiService from '@/services/api';
-
-interface WishlistItem {
-  _id: string;
-  title: string;
-  price: number;
-  images: {
-    main: string;
-    sub: string[];
-  };
-  category: string;
-  subCategory: string;
-  rating?: {
-    score: number;
-    reviews: number;
-  };
-}
+import {
+  fetchWishlist,
+  removeWishlistItemThunk,
+  selectWishlistInitialized,
+  selectWishlistItems,
+  selectWishlistLoading,
+} from '@/store/slices/wishlistSlice';
+import type { WishlistEntry } from '@/store/slices/wishlistSlice';
 
 const WishlistPage = () => {
+  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
-  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const wishlist = useSelector(selectWishlistItems);
+  const wishlistLoading = useSelector(selectWishlistLoading);
+  const wishlistInitialized = useSelector(selectWishlistInitialized);
+  const wishlistError = useSelector((state: RootState) => state.wishlist.error);
   const [activeTab, setActiveTab] = useState('all');
 
+  const loading = wishlistLoading && !wishlistInitialized;
+  const error = wishlistError;
+
+  const formatCategoryLabel = (label: string) => {
+    if (label === 'all') return 'View All';
+    return label
+      .split('-')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
+  const buildProductUrl = (item: WishlistEntry) => {
+    const slug = item.categorySlug || 'rings';
+    const sku = item.modelSku || item.productId;
+    const params = new URLSearchParams();
+    if (item.variantSku) {
+      params.set('variantId', item.variantSku);
+    }
+    if (item.metalColorCode) {
+      params.set('metalColor', item.metalColorCode);
+    }
+    const query = params.toString();
+    return `/product/${slug}/${sku}${query ? `?${query}` : ''}`;
+  };
+
   useEffect(() => {
-    fetchWishlist();
-  }, []);
-
-  const fetchWishlist = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.getWishlist();
-      if (response.success) {
-        setWishlist(response.data.wishlist || []);
-      } else {
-        setError(response.error || 'Failed to fetch wishlist');
-      }
-    } catch (error) {
-      console.error('Error fetching wishlist:', error);
-      setError('Failed to fetch wishlist');
-    } finally {
-      setLoading(false);
+    if (!wishlistInitialized) {
+      dispatch(fetchWishlist());
     }
-  };
+  }, [dispatch, wishlistInitialized]);
 
-  const handleRemoveFromWishlist = async (productId: string, productTitle: string) => {
-    try {
-      const response = await apiService.removeFromWishlist(productId);
-      if (response.success) {
-        setWishlist(prev => prev.filter(item => item._id !== productId));
-        alert(`${productTitle} removed from wishlist`);
-      } else {
-        alert(response.error || 'Failed to remove from wishlist');
-      }
-    } catch (error) {
-      console.error('Error removing from wishlist:', error);
-      alert('Failed to remove from wishlist');
-    }
-  };
-
-  const handleShareWishlist = async (method: 'whatsapp' | 'email') => {
-    try {
-      const response = await apiService.generateWishlistShareLink();
-      if (response.success) {
-        const userName = user?.firstName || 'User';
-        const shareUrl = response.data.shareUrl;
-        
-        if (method === 'whatsapp') {
-          const message = `Check out ${userName}'s wishlist: ${shareUrl}`;
-          window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-        } else if (method === 'email') {
-          const subject = `${userName}'s Wishlist`;
-          const body = `Check out my wishlist: ${shareUrl}`;
-          window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
-        }
-      } else {
-        alert('Failed to generate share link');
-      }
-    } catch (error) {
-      console.error('Error generating share link:', error);
-      alert('Failed to generate share link');
-    }
+  const handleRemoveFromWishlist = (itemId: string, productTitle: string) => {
+    dispatch(removeWishlistItemThunk(itemId));
+    alert(`${productTitle} removed from wishlist`);
   };
 
   const getFilteredWishlist = () => {
     if (activeTab === 'all') return wishlist;
-    return wishlist.filter(item => 
-      item.category.toLowerCase().includes(activeTab.toLowerCase()) ||
-      item.subCategory.toLowerCase().includes(activeTab.toLowerCase())
-    );
+    const tabValue = activeTab.toLowerCase();
+    return wishlist.filter(item => {
+      const categoryLabel = (item.category || '').toLowerCase();
+      const slug = (item.categorySlug || '').toLowerCase();
+      return (
+        categoryLabel.includes(tabValue) ||
+        slug.includes(tabValue)
+      );
+    });
   };
 
   const getCategoryCounts = () => {
     const counts: { [key: string]: number } = { all: wishlist.length };
     
     wishlist.forEach(item => {
-      const category = item.category;
+      const category = item.category || item.categorySlug || 'Other';
       counts[category] = (counts[category] || 0) + 1;
     });
     
@@ -127,7 +101,7 @@ const WishlistPage = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={fetchWishlist} className="bg-teal-600 hover:bg-teal-700">
+          <Button onClick={() => dispatch(fetchWishlist())} className="bg-teal-600 hover:bg-teal-700">
             Try Again
           </Button>
         </div>
@@ -148,23 +122,6 @@ const WishlistPage = () => {
               {wishlist.length} item{wishlist.length !== 1 ? 's' : ''} in your wishlist
             </p>
           </div>
-          
-          <div className="flex gap-3">
-            <Button
-              onClick={() => handleShareWishlist('whatsapp')}
-              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-            >
-              <MessageCircle className="w-4 h-4" />
-              Share Wish List
-            </Button>
-            <Button
-              onClick={() => handleShareWishlist('email')}
-              className="bg-gray-600 hover:bg-gray-700 text-white flex items-center gap-2"
-            >
-              <Mail className="w-4 h-4" />
-              Share Wish List
-            </Button>
-          </div>
         </div>
 
         {/* Navigation Tabs */}
@@ -180,7 +137,7 @@ const WishlistPage = () => {
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                {category === 'all' ? 'View All' : category} ({count})
+                {formatCategoryLabel(category)} ({count})
               </button>
             ))}
           </nav>
@@ -191,7 +148,9 @@ const WishlistPage = () => {
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {activeTab === 'all' ? 'Your wishlist is empty' : `No ${activeTab} items in your wishlist`}
+              {activeTab === 'all'
+                ? 'Your wishlist is empty'
+                : `No ${formatCategoryLabel(activeTab)} items in your wishlist`}
             </h3>
             <p className="text-gray-500 mb-6">
               {activeTab === 'all' 
@@ -211,7 +170,7 @@ const WishlistPage = () => {
               <div key={item._id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
                 <div className="relative">
                   <img
-                    src={item.images.main}
+                    src={item.image || "/placeholder.png"}
                     alt={item.title}
                     className="w-full h-64 object-cover rounded-t-lg"
                   />
@@ -231,21 +190,25 @@ const WishlistPage = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900">
-                        ₹{item.price.toLocaleString()}
+                        {typeof item.price === 'number'
+                          ? `₹${item.price.toLocaleString('en-IN')}`
+                          : 'Price on request'}
                       </span>
                     </div>
                     {item.rating && (
                       <div className="flex items-center text-sm text-gray-500">
                         <span>★</span>
                         <span className="ml-1">{item.rating.score}</span>
-                        <span className="ml-1">({item.rating.reviews})</span>
+                        <span className="ml-1">
+                          ({item.rating.reviews})
+                        </span>
                       </div>
                     )}
                   </div>
                   
                   <div className="mt-auto">
                     <div className="flex gap-2 mb-2">
-                      <Link to={`/product/${item._id}`} className="flex-1">
+                      <Link to={buildProductUrl(item)} className="flex-1">
                         <Button className="w-full bg-teal-600 hover:bg-teal-700">
                           Show Details
                         </Button>

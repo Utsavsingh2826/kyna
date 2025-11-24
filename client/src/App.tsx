@@ -49,7 +49,6 @@ import PaymentProcessingPage from "./pages/PaymentProcessingPage";
 import ShippingInformationPage from "./pages/ShippingInformationPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import WishlistPage from "./pages/WishlistPage";
-import SharedWishlistPage from "./pages/SharedWishlistPage";
 import PrivacyPolicy from "./components/terms&conditions/PrivacyPolicy";
 import ShippingPolicy from "./components/terms&conditions/Shipping";
 import CancellationRefund from "./components/terms&conditions/Cancellation&Refund";
@@ -144,10 +143,6 @@ function App() {
                 <WishlistPage />
               </PrivateRoute>
             }
-          />
-          <Route
-            path="/shared-wishlist/:shareId"
-            element={<SharedWishlistPage />}
           />
           <Route
             path="/login"

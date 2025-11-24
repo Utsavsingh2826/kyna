@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Heart, Plus, Minus, ArrowLeft, ArrowRight, Edit } from "lucide-react";
+import { Plus, Minus, ArrowLeft, ArrowRight, Edit } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import type { RootState, AppDispatch } from "@/store";
 import {
@@ -30,7 +30,6 @@ const CartPage = () => {
   // Promo and referral code states
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [appliedReferral, setAppliedReferral] = useState<any>(null);
-  const [wishlistItems, setWishlistItems] = useState<string[]>([]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -43,25 +42,8 @@ const CartPage = () => {
   useEffect(() => {
     if (isAuthenticated) {
       dispatch(fetchCart());
-
-      fetchWishlistItems();
     }
   }, [dispatch, isAuthenticated]);
-
-  const fetchWishlistItems = async () => {
-    try {
-      const response = await apiService.getWishlist();
-      if (response.success) {
-        console.log("Wishlist data:", response.data);
-        const wishlistProductIds = response.data.wishlist.map(
-          (item: any) => item._id
-        );
-        setWishlistItems(wishlistProductIds);
-      }
-    } catch (error) {
-      console.error("Error fetching wishlist:", error);
-    }
-  };
 
   // Handle Add Address click - redirect to profile page
   // const handleAddAddress = () => {
@@ -91,22 +73,6 @@ const CartPage = () => {
 
   const handleRemoveItem = async (productId: string) => {
     dispatch(removeFromCart(productId));
-  };
-
-  const handleMoveToWishlist = async (product: any) => {
-    try {
-      const response = await apiService.addToWishlist(product._id);
-      if (response.success) {
-        alert(`${product.title} added to wishlist!`);
-        // Refresh wishlist items to update heart color
-        fetchWishlistItems();
-      } else {
-        alert(response.error || "Failed to add to wishlist");
-      }
-    } catch (error) {
-      console.error("Failed to add to wishlist:", error);
-      alert("Failed to add to wishlist");
-    }
   };
 
   const handleEditProduct = (
@@ -260,6 +226,29 @@ const CartPage = () => {
                     );
                   }
 
+                  const variantConfig = (item.variantConfig || {}) as any;
+                  const priceBreakdownRaw = variantConfig?.priceBreakdown;
+                  const priceBreakdown = Array.isArray(priceBreakdownRaw)
+                    ? priceBreakdownRaw[0] || {}
+                    : priceBreakdownRaw || {};
+                  const rawVariantImages =
+                    Array.isArray(variantConfig?.variantImages)
+                      ? variantConfig.variantImages
+                      : [];
+                  const variantImages = rawVariantImages
+                    .map((image: any) =>
+                      typeof image === "string"
+                        ? image
+                        : image?.url || image?.imageUrl || image?.src || ""
+                    )
+                    .filter(Boolean);
+                  const primaryVariantImage = variantImages[0] || "";
+                  const productCategory =
+                    (typeof (item.product as any)?.category === "string"
+                      ? ((item.product as any)?.category as string)
+                      : ""
+                    ).toUpperCase();
+
                   return (
                     <div
                       key={item._id}
@@ -278,10 +267,7 @@ const CartPage = () => {
 
                       <div className="flex items-start space-x-4">
                         <img
-                          src={
-                            (item.variantConfig as any)?.variantImages?.[0] ||
-                            ""
-                          }
+                          src={primaryVariantImage}
                           alt={item.product.title}
                           className="w-20 h-20 object-cover rounded"
                         />
@@ -296,7 +282,7 @@ const CartPage = () => {
                                 handleEditProduct(
                                   item.product,
                                   item.variantSku,
-                                  item.variantConfig?.metalColor
+                                  variantConfig?.metalColor
                                 )
                               }
                               className="bg-[#2a8a85] hover:bg-[#1f6b66] text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center space-x-1"
@@ -320,8 +306,7 @@ const CartPage = () => {
                                 </p>
                                 <p className="text-lg font-bold text-green-600">
                                   ₹
-                                  {(
-                                    item.variantConfig?.sellingPrice ||
+                                  {(variantConfig?.sellingPrice ||
                                     item.price ||
                                     0
                                   ).toLocaleString("en-IN")}
@@ -329,93 +314,76 @@ const CartPage = () => {
                               </div>
 
                               {/* Variant Images Row */}
-                              {(() => {
-                                const variantImages =
-                                  (item.variantConfig as any)?.variantImages ||
-                                  [];
-                                if (
-                                  !variantImages ||
-                                  variantImages.length === 0
-                                )
-                                  return null;
-                                return (
-                                  <div className="mb-3">
-                                    <p className="text-xs text-gray-600 mb-1">
-                                      Variant Images:
-                                    </p>
-                                    <div className="flex space-x-2 overflow-x-auto pb-1">
-                                      {variantImages
-                                        .slice(0, 4)
-                                        .map((image: any, index: number) => (
-                                          <img
-                                            key={index}
-                                            src={image}
-                                            alt={`Variant ${index + 1}`}
-                                            className="w-12 h-12 object-cover rounded border-2 border-gray-200 hover:border-[#2a8a85] transition-colors flex-shrink-0 cursor-pointer"
-                                            onError={(e) => {
-                                              console.warn(
-                                                `Failed to load variant image: ${image}`
-                                              );
-                                              e.currentTarget.style.display =
-                                                "none";
-                                            }}
-                                            title={`Variant image ${index + 1}`}
-                                          />
-                                        ))}
-                                      {variantImages.length > 4 && (
-                                        <div className="w-12 h-12 flex items-center justify-center bg-gray-100 rounded border-2 border-gray-200 text-xs text-gray-600">
-                                          +{variantImages.length - 4}
-                                        </div>
-                                      )}
-                                    </div>
+                              {variantImages.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="text-xs text-gray-600 mb-1">
+                                    Variant Images:
+                                  </p>
+                                  <div className="flex space-x-2 overflow-x-auto pb-1">
+                                    {variantImages
+                                      .slice(0, 4)
+                                      .map((image: any, index: number) => (
+                                        <img
+                                          key={index}
+                                          src={image}
+                                          alt={`Variant ${index + 1}`}
+                                          className="w-12 h-12 object-cover rounded border-2 border-gray-200 hover:border-[#2a8a85] transition-colors flex-shrink-0 cursor-pointer"
+                                          onError={(e) => {
+                                            console.warn(
+                                              `Failed to load variant image: ${image}`
+                                            );
+                                            e.currentTarget.style.display =
+                                              "none";
+                                          }}
+                                          title={`Variant image ${index + 1}`}
+                                        />
+                                      ))}
+                                    {variantImages.length > 4 && (
+                                      <div className="w-12 h-12 flex items-center justify-center bg-gray-100 rounded border-2 border-gray-200 text-xs text-gray-600">
+                                        +{variantImages.length - 4}
+                                      </div>
+                                    )}
                                   </div>
-                                );
-                              })()}
+                                </div>
+                              )}
 
                               {/* Price Breakdown */}
-                              {item.variantConfig?.priceBreakdown && (
+                                  {variantConfig?.priceBreakdown && (
                                 <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
                                   <p className="text-xs font-medium text-blue-800 mb-1">
                                     Price Breakdown:
                                   </p>
                                   <div className="grid grid-cols-2 gap-1 text-xs text-blue-700">
-                                    {item.variantConfig.priceBreakdown
-                                      .metalCost && (
+                                        {priceBreakdown.metalCost && (
                                       <div>
                                         Metal: ₹
-                                        {item.variantConfig.priceBreakdown.metalCost.toLocaleString(
+                                            {priceBreakdown.metalCost.toLocaleString(
                                           "en-IN"
                                         )}
                                       </div>
                                     )}
-                                    {item.variantConfig.priceBreakdown
-                                      .diamondCost && (
+                                        {priceBreakdown.diamondCost && (
                                       <div>
                                         Diamond: ₹
-                                        {item.variantConfig.priceBreakdown.diamondCost.toLocaleString(
+                                            {priceBreakdown.diamondCost.toLocaleString(
                                           "en-IN"
                                         )}
                                       </div>
                                     )}
-                                    {item.variantConfig.priceBreakdown
-                                      .labourCost && (
+                                        {priceBreakdown.labourCost && (
                                       <div>
                                         Labour: ₹
-                                        {item.variantConfig.priceBreakdown.labourCost.toLocaleString(
+                                            {priceBreakdown.labourCost.toLocaleString(
                                           "en-IN"
                                         )}
                                       </div>
                                     )}
-                                    {item.variantConfig.priceBreakdown
-                                      .gstAmount && (
+                                        {priceBreakdown.gstAmount && (
                                       <div>
                                         GST (
-                                        {
-                                          item.variantConfig.priceBreakdown
-                                            .gstPercent
-                                        }
+                                            {priceBreakdown.gstPercent}
                                         %): ₹
-                                        {item.variantConfig.priceBreakdown.gstAmount.toLocaleString(
+                                            {priceBreakdown.gstAmount.toLocaleString(
                                           "en-IN"
                                         )}
                                       </div>
@@ -424,57 +392,57 @@ const CartPage = () => {
                                 </div>
                               )}
 
-                              {item.variantConfig && (
+                              {variantConfig && (
                                 <div className="space-y-2">
                                   <div className="grid grid-cols-2 gap-2 text-sm">
-                                    {item.variantConfig.metalType && (
+                                    {variantConfig.metalType && (
                                       <div className="flex items-center">
                                         <span className="text-gray-600 mr-1">
                                           Metal:
                                         </span>
                                         <span className="font-medium">
-                                          {item.variantConfig.metalType}{" "}
-                                          {item.variantConfig.goldKarat}
-                                          {item.variantConfig.metalColor && (
+                                          {variantConfig.metalType}{" "}
+                                          {variantConfig.goldKarat}
+                                          {variantConfig.metalColor && (
                                             <span className="ml-1 text-xs bg-gray-200 px-1 rounded">
-                                              {item.variantConfig.metalColor}
+                                              {variantConfig.metalColor}
                                             </span>
                                           )}
                                         </span>
                                       </div>
                                     )}
-                                    {item.variantConfig.diamondShape && (
+                                    {variantConfig.diamondShape && (
                                       <div className="flex items-center">
                                         <span className="text-gray-600 mr-1">
                                           Diamond:
                                         </span>
                                         <span className="font-medium">
-                                          {item.variantConfig.diamondShape}{" "}
-                                          {item.variantConfig.diamondSize}ct
+                                          {variantConfig.diamondShape}{" "}
+                                          {variantConfig.diamondSize}ct
                                         </span>
                                       </div>
                                     )}
-                                    {item.variantConfig.diamondOrigin && (
+                                    {variantConfig.diamondOrigin && (
                                       <div className="flex items-center">
                                         <span className="text-gray-600 mr-1">
                                           Origin:
                                         </span>
                                         <span className="font-medium">
-                                          {item.variantConfig.diamondOrigin}
+                                          {variantConfig.diamondOrigin}
                                         </span>
                                       </div>
                                     )}
                                   </div>
 
                                   {/* Ring Size Dropdown - Only for Rings */}
-                                  {item.product.category === "RINGS" && (
+                                  {productCategory === "RINGS" && (
                                     <div className="flex items-center space-x-2 pt-2 border-t border-gray-200">
                                       <span className="text-sm text-gray-600">
                                         Ring Size:
                                       </span>
                                       <select
                                         value={
-                                          item.variantConfig.ringSize || ""
+                                            variantConfig.ringSize || ""
                                         }
                                         onChange={(e) =>
                                           handleRingSizeUpdate(
@@ -501,7 +469,7 @@ const CartPage = () => {
                                         <option value="11.5">11.5</option>
                                         <option value="12">12</option>
                                       </select>
-                                      {!item.variantConfig.ringSize && (
+                                      {!variantConfig.ringSize && (
                                         <span className="text-xs text-orange-600">
                                           Please select ring size
                                         </span>
@@ -520,8 +488,7 @@ const CartPage = () => {
                               </span>
                               <span className="px-2 py-1 bg-gray-100 text-xs text-gray-700 rounded">
                                 Price: ₹
-                                {(
-                                  item.variantConfig?.sellingPrice ||
+                                {(variantConfig?.sellingPrice ||
                                   item.price ||
                                   0
                                 ).toLocaleString("en-IN")}
@@ -533,33 +500,10 @@ const CartPage = () => {
                             <div className="flex items-center space-x-4">
                               <button
                                 onClick={() =>
-                                  handleMoveToWishlist(item.product)
-                                }
-                                className={`flex items-center space-x-1 transition-colors ${
-                                  wishlistItems.includes(item.product._id)
-                                    ? "text-red-500 hover:text-red-600"
-                                    : "text-gray-500 hover:text-red-500"
-                                }`}
-                              >
-                                <Heart
-                                  className={`w-4 h-4 ${
-                                    wishlistItems.includes(item.product._id)
-                                      ? "fill-current"
-                                      : ""
-                                  }`}
-                                />
-                                <span className="text-sm">
-                                  {wishlistItems.includes(item.product._id)
-                                    ? "In Wish List"
-                                    : "Move To Wish List"}
-                                </span>
-                              </button>
-                              <button
-                                onClick={() =>
                                   handleEditProduct(
                                     item.product,
                                     item.variantSku,
-                                    item.variantConfig?.metalColor
+                                    variantConfig?.metalColor
                                   )
                                 }
                                 className="text-gray-500 hover:text-blue-500 flex items-center space-x-1 transition-colors"
