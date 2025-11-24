@@ -500,7 +500,11 @@ const ProductDetail = () => {
 
       if (data.success && data.entries) {
         // Fetch detailed product data for each entry
-        const substylePromises = data.entries.map(async (entry) => {
+        const validEntries = data.entries.filter(
+          (e) => e.variants && e.variants.length > 0
+        );
+
+        const substylePromises = validEntries.map(async (entry) => {
           try {
             // Get the first variant SKU to fetch product details
             const firstVariantSku = entry.variants[0]?.sku;
@@ -1243,7 +1247,7 @@ const ProductDetail = () => {
                     ) : (
                       <img
                         src={
-                          selectedStyleData?.img || "/build_yr_own/sample1.png"
+                          thumbnailImages[selectedImage] || thumbnailImages[0]
                         }
                         alt={selectedStyleData?.name || "Ring Style"}
                         className="w-full h-full object-cover transition-opacity duration-300"
