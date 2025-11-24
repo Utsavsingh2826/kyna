@@ -189,18 +189,6 @@ export default function TrackOrderPage() {
       return;
     }
 
-    const cachedData = localStorage.getItem("lastTrackedOrder");
-    if (cachedData) {
-      try {
-        const parsed = JSON.parse(cachedData);
-        setTrackingData(parsed.data);
-        setOrderNumber(parsed.orderNumber);
-        setEmail(parsed.email);
-      } catch (e) {
-        console.error("Failed to load cached data", e);
-      }
-    }
-
     // Fetch orders for the logged-in user from database
     const fetchTestOrders = async () => {
       try {
@@ -251,17 +239,6 @@ export default function TrackOrderPage() {
           console.log("🔍 Tracking Data Received:", response.data);
           console.log("📦 Order Type:", response.data.orderType);
           setTrackingData(response.data as TrackingData);
-
-          // Cache the data
-          localStorage.setItem(
-            "lastTrackedOrder",
-            JSON.stringify({
-              data: response.data,
-              orderNumber,
-              email,
-              timestamp: new Date().toISOString(),
-            })
-          );
         } else {
           setError(
             response.error || "Order not found. Please check your details."
@@ -662,7 +639,12 @@ export default function TrackOrderPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => setTrackingData(null)}
+                    onClick={() => {
+                      setTrackingData(null);
+                      setOrderNumber("");
+                      setEmail("");
+                      setError("");
+                    }}
                     className="text-sm text-[#126180] hover:underline font-medium"
                   >
                     Track Another Order
