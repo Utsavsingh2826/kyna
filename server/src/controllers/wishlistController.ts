@@ -243,6 +243,7 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
       metalColorName,
       metalColorCode,
       primaryImage,
+      price,
       engraving,
     }: {
       productId?: string;
@@ -253,6 +254,7 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
       metalColorName?: string;
       metalColorCode?: string;
       primaryImage?: string | null;
+      price?: number | null;
       engraving?: IWishlistEngraving;
     } = req.body;
 
@@ -302,6 +304,8 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
     }
 
     const productSnapshot = toPlainObject(catalogProduct || legacyProduct);
+    const normalizedPrice =
+      typeof price === 'number' && Number.isFinite(price) ? price : null;
     const normalizedProductId =
       productSnapshot?._id?.toString?.() || productId;
 
@@ -334,6 +338,7 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
       ),
       titleSnapshot: productSnapshot?.title,
       priceSnapshot:
+        normalizedPrice ??
         productSnapshot?.sellingPriceWithGST ??
         productSnapshot?.sellingPrice ??
         productSnapshot?.price ??
