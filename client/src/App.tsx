@@ -181,6 +181,10 @@ function App() {
           />
           <Route path="/rings" element={<ProductsPage category="rings" />} />
           <Route
+            path="/bracelets"
+            element={<ProductsPage category="bracelets" />}
+          />
+          <Route
             path="/rings/:subcategory"
             element={<ProductsPage category="rings" />}
           />

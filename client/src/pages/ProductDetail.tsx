@@ -87,16 +87,16 @@ const sampleProduct = {
   //   "/about/4.jpg",
   // ],
   diamondShapes: [
-    { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
-    { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
-    { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
-    { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
-    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
-    { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
-    { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
-    { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
-    { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
-    { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
+    { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.png" },
+    { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.png" },
+    { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.png" },
+    { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.png" },
+    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.png" },
+    { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.png" },
+    { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.png" },
+    { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.png" },
+    { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.png" },
+    { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.png" },
   ],
   metalTypes: ["Gold", "Silver", "Platinum", "Palladium", "Titanium", "Cobalt"],
   metalColors: [
@@ -1417,9 +1417,9 @@ const ProductDetail = () => {
               </div>
             }
             rightColumn={
-              <div className="space-y-6">
+              <div className="">
                 <div>
-                  <h1 className="text-2xl mb-2">{productData.title}</h1>
+                  <h1 className="text-2xl my-6 mb-2">{productData.title}</h1>
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -1447,7 +1447,7 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Diamond Origin */}
-                <div>
+                <div className="mb-6">
                   <h3 className="flex items-center gap-3 mb-3 text-sm">
                     Diamond Origin{" "}
                     <button
@@ -1511,7 +1511,7 @@ const ProductDetail = () => {
                             selectedDiamondShape.slice(1).toLowerCase()}
                         </span>
                       </h3>
-                      <div className="grid grid-cols-5 gap-2">
+                      <div className="h-[100px] flex gap-2 overflow-x-auto no-scrollbar">
                         {sampleProduct.diamondShapes
                           .filter((shape) =>
                             productData.diamondShape.includes(
@@ -1525,21 +1525,25 @@ const ProductDetail = () => {
                                 const newShape = shape.name.toUpperCase();
                                 setSelectedDiamondShape(newShape);
                               }}
-                              className={`group relative aspect-square border rounded-lg flex flex-col items-center justify-center text-xs ${
-                                selectedDiamondShape ===
-                                shape.name.toUpperCase()
-                                  ? "border-primary bg-primary/5"
-                                  : "border-neutral-300"
-                              }`}
+                              className={`group relative w-[70px] h-[70px] border rounded-lg p-1 
+          ${
+            selectedDiamondShape === shape.name.toUpperCase()
+              ? "border-primary bg-primary/5"
+              : "border-neutral-300"
+          }`}
                             >
-                              <img
-                                className="w-20"
-                                src={shape.img}
-                                alt={shape.name}
-                              />
-                              {/* Tooltip: shape name */}
+                              {/* FIXED: remove full flex-center, add controlled padding */}
+                              <div className="w-full h-full flex items-end justify-center">
+                                <img
+                                  src={shape.img}
+                                  alt={shape.name}
+                                  className="max-h-[85%] max-w-[85%] pb-1 object-contain"
+                                />
+                              </div>
+
+                              {/* Tooltip */}
                               <span
-                                className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100"
+                                className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-50"
                                 style={{ zIndex: 10 }}
                               >
                                 <p className="text-xs">{shape.name}</p>
@@ -1553,7 +1557,7 @@ const ProductDetail = () => {
                 {/* Diamond Size & Color/Clarity - Only show if data is available */}
                 {(productData.diamondSize.length > 0 ||
                   productData.diamondColorClarity.length > 0) && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
                     {productData.diamondSize.length > 0 && (
                       <div>
                         <label className="block text-xs mb-2">
@@ -1603,7 +1607,7 @@ const ProductDetail = () => {
                 )}
 
                 {/* Metal Type */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="my-6 grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs mb-2">Metal Type</label>
                     <Select
@@ -1671,7 +1675,7 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Metal Color */}
-                <div>
+                <div className="my-6">
                   <h3 className=" mb-3 text-sm">
                     Metal Color: {selectedMetalColor}
                   </h3>
@@ -1698,7 +1702,7 @@ const ProductDetail = () => {
                 </div>
 
                 {category === "rings" && (
-                  <>
+                  <div className="my-6 space-y-2">
                     {" "}
                     {/* Ring Size */}
                     <div className="grid grid-cols-2 gap-4">
@@ -1728,7 +1732,7 @@ const ProductDetail = () => {
                     >
                       Ring Size Guide
                     </Link>
-                  </>
+                  </div>
                 )}
 
                 {/* Free Engraving - Only show if engraving is available */}
@@ -1804,7 +1808,7 @@ const ProductDetail = () => {
                 )}
 
                 {/* Estimated Ship Date */}
-                <div className="text-sm">
+                <div className="my-6 text-sm">
                   <div className="font-medium">
                     Estimated Ship Date: {sampleProduct.estimatedShipDate}
                   </div>
@@ -1814,7 +1818,7 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="my-6 grid grid-cols-2 gap-4">
                   <Button
                     onClick={handleBuyNow}
                     disabled={cartLoading || isUploadingEngraving}
@@ -1931,7 +1935,7 @@ const ProductDetail = () => {
                         ITEM DETAILS
                       </h4>
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             SKU Number
                           </span>
@@ -1939,31 +1943,39 @@ const ProductDetail = () => {
                             {productData.modelSku}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
-                          <span className="text-muted-foreground">
-                            Ring Size
-                          </span>
-                          <span className="font-medium">14 (20 mm)</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        {category === "rings" && (
+                          <div className="flex justify-between py-2 border-b border-[#328F94]">
+                            <span className="text-muted-foreground">
+                              Ring Size
+                            </span>
+                            <span className="font-medium">
+                              {selectedSize || "Not Selected"}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Type
                           </span>
-                          <span className="font-medium">Gold 22KT</span>
+                          <span className="font-medium">
+                            {selectedMetalType}||"Not Selected"
+                          </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Color
                           </span>
-                          <span className="font-medium">Rose</span>
+                          <span className="font-medium">
+                            {selectedMetalColor}
+                          </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gold/Silver/Platinum Grams (Approx net grams)
                           </span>
                           <span className="font-medium">1.356 Grams</span>
                         </div>
-                        <div className="py-2 border-b border-border">
+                        <div className="py-2 border-b border-[#328F94]">
                           <div className="text-muted-foreground mb-2">
                             Product Dimensions (In mm)
                           </div>
@@ -1988,7 +2000,7 @@ const ProductDetail = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="py-2 border-b border-border flex justify-between">
+                        <div className="py-2 border-b border-[#328F94] flex justify-between">
                           <h4 className="font-medium mb-3 text-sm">
                             Disclaimer For Product Image
                           </h4>
@@ -2006,7 +2018,7 @@ const ProductDetail = () => {
                         DIAMOND & GEMSTONES DETAILS
                       </h4>
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Diamond Origin
                           </span>
@@ -2014,37 +2026,37 @@ const ProductDetail = () => {
                             {selectedDiamondOrigin}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Diamond Color & Clarity
                           </span>
                           <span className="font-medium">14K White Gold</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Total Diamond Weight (Approx carats)
                           </span>
                           <span className="font-medium">8.60</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstone Origin
                           </span>
                           <span className="font-medium">11.86</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstone Color
                           </span>
                           <span className="font-medium">11.86</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstone Clarity
                           </span>
                           <span className="font-medium">11.86</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Total Gemstone Weight (Approx carats)
                           </span>
@@ -2059,7 +2071,7 @@ const ProductDetail = () => {
                         Price Breakup
                       </h4>
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             SKU Number
                           </span>
@@ -2067,7 +2079,7 @@ const ProductDetail = () => {
                             BRDTXR07400Q300GW4
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gold/Silver/Platinum Value
                           </span>
@@ -2076,7 +2088,7 @@ const ProductDetail = () => {
                             {productData.priceBreakdown.metalCost.toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Diamond Value
                           </span>
@@ -2085,13 +2097,13 @@ const ProductDetail = () => {
                             {productData.priceBreakdown.diamondCost.toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstones Value
                           </span>
                           <span className="font-medium">Rs.</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Making Charges
                           </span>
@@ -2101,7 +2113,7 @@ const ProductDetail = () => {
                             .
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
                             Rs
@@ -2109,20 +2121,20 @@ const ProductDetail = () => {
                             .
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border font-semibold">
+                        <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
                           <span>
                             Rs.
                             {productData.priceBreakdown.totalWithGst.toLocaleString()}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Certification
                           </span>
                           <span className="font-medium">IGI/SGL Certified</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             HallMark
                           </span>
@@ -2143,7 +2155,7 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Full Width Disclaimer Section */}
-                  <div className="border-t border-border pt-6">
+                  <div className="border-t border-[#328F94] pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Certification Logos */}
                       <div className="flex items-center gap-4 justify-start md:justify-end">
