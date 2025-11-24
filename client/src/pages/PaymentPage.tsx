@@ -56,6 +56,16 @@ const PaymentPage = () => {
   const { cart, loading: cartLoading } = useSelector(
     (state: RootState) => state.cart
   );
+  // Promo code UI state
+  const [promoCode, setPromoCode] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+
+  // Make referralBalance reactive to user state changes
+  const [referralBalance, setReferralBalance] = useState(0);
+  const [walletDiscount, setWalletDiscount] = useState(0);
+  const [walletError, setWalletError] = useState("");
 
   // Get direct purchase data from navigation state
   const directPurchaseData = location.state?.directPurchase
@@ -76,62 +86,12 @@ const PaymentPage = () => {
     }
   }, [dispatch, isAuthenticated, user, directPurchaseData]);
 
-
-  // Check if cart is empty (only for cart-based purchases)
-  if (!directPurchaseData && cartLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-teal-600" />
-          <h2 className="text-2xl font-semibold text-gray-900">
-            Loading Cart...
-          </h2>
-        </div>
-      </div>
-    );
-  }
-
-  if (
-    !directPurchaseData &&
-    (!cart || !cart.items || cart.items.length === 0)
-  ) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Your cart is empty
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Add some items to proceed with payment
-          </p>
-          <Button
-            onClick={() => navigate("/cart")}
-            className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
-          >
-            Back to Cart
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Promo code UI state
-  const [promoCode, setPromoCode] = useState("");
-  const [promoLoading, setPromoLoading] = useState(false);
-  const [promoError, setPromoError] = useState("");
-  const [appliedPromo, setAppliedPromo] = useState<any>(null);
-  
-  // Make referralBalance reactive to user state changes
-  const [referralBalance, setReferralBalance] = useState(0);
-  const [walletDiscount, setWalletDiscount] = useState(0);
-  const [walletError, setWalletError] = useState("");
-
   // Fetch fresh user data to get latest referral balance
   useEffect(() => {
     const fetchFreshUserData = async () => {
       if (isAuthenticated && user) {
         try {
-          const response = await apiService.getProfile() as any;
+          const response = (await apiService.getProfile()) as any;
           if (response.success) {
             // Handle both response.data.user and response.user formats
             const freshUserData = response.data?.user || response.user;
@@ -139,7 +99,10 @@ const PaymentPage = () => {
               // Update Redux state with fresh user data including latest totalReferralEarnings
               dispatch(updateUser(freshUserData));
               // Also update local state immediately for reactive UI
-              const balance = Math.max(0, Number(freshUserData.totalReferralEarnings) || 0);
+              const balance = Math.max(
+                0,
+                Number(freshUserData.totalReferralEarnings) || 0
+              );
               setReferralBalance(balance);
             }
           }
@@ -418,7 +381,8 @@ const PaymentPage = () => {
     }
 
     if (maxWalletRedeemable <= 0) {
-      const message = "No payable amount remaining to redeem referral earnings.";
+      const message =
+        "No payable amount remaining to redeem referral earnings.";
       setWalletError(message);
       toast.warning(message);
       return;
@@ -430,6 +394,44 @@ const PaymentPage = () => {
       `Referral earnings of ₹${maxWalletRedeemable.toLocaleString()} applied`
     );
   };
+
+  // Check if cart is empty (only for cart-based purchases)
+  if (!directPurchaseData && cartLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-teal-600" />
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Loading Cart...
+          </h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    !directPurchaseData &&
+    (!cart || !cart.items || cart.items.length === 0)
+  ) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            Your cart is empty
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Add some items to proceed with payment
+          </p>
+          <Button
+            onClick={() => navigate("/cart")}
+            className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
+          >
+            Back to Cart
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -519,9 +521,7 @@ const PaymentPage = () => {
             />
             <Button
               onClick={handleApplyPromo}
-              disabled={
-                promoLoading || !promoCode.trim() || !!appliedPromo
-              }
+              disabled={promoLoading || !promoCode.trim() || !!appliedPromo}
               className="bg-[#328F94] hover:bg-[#28777b]"
             >
               {promoLoading ? "Applying..." : "Apply Coupon"}
@@ -538,8 +538,7 @@ const PaymentPage = () => {
                 </p>
                 <p>
                   Savings: ₹{appliedPromo.discountValue.toLocaleString()} on
-                  diamond value ₹
-                  {appliedPromo.diamondSubtotal.toLocaleString()}
+                  diamond value ₹{appliedPromo.diamondSubtotal.toLocaleString()}
                 </p>
               </div>
               <Button
@@ -571,8 +570,8 @@ const PaymentPage = () => {
             </p>
           ) : (
             <p className="text-sm text-gray-500 mt-1">
-              You can redeem up to ₹{maxWalletRedeemable.toLocaleString("en-IN")} on
-              this order.
+              You can redeem up to ₹
+              {maxWalletRedeemable.toLocaleString("en-IN")} on this order.
             </p>
           )}
           <div className="mt-4">
