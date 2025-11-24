@@ -1,4 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate, Link } from "react-router-dom";
+import type { RootState, AppDispatch } from "@/store";
+import apiService from "@/services/api";
+import { fetchCart } from "@/store/slices/cartSlice";
+import { toast } from "sonner";
 import {
   ChevronUp,
   ChevronDown,
@@ -11,7 +17,7 @@ import {
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
-import { Link } from "react-router-dom";
+// (Link is re-imported above)
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import Engrave from "../Engrave";
@@ -474,6 +480,12 @@ const ProductDetail = () => {
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
   const [selectedSize, setSelectedSize] = useState("");
+
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth
+  );
 
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
@@ -1691,13 +1703,182 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Action Buttons - Stack on very small screens */}
+                {/* Add-to-cart and Buy-now handlers */}
+                {/** Handlers placed here so they capture latest selection state */}
+                <div className="mt-2">
+                  {/* handlers */}
+                  {/* eslint-disable-next-line react-hooks/rules-of-hooks */}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                  <Button className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3">
+                  <Button
+                    className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3"
+                    onClick={async () => {
+                      // Buy Now flow
+                      if (!isAuthenticated) {
+                        toast("Please login to continue");
+                        navigate("/login");
+                        return;
+                      }
+                      const productDetails = selectedStyleData?.productDetails;
+                      const productId =
+                        productDetails?._id ||
+                        selectedStyleData?.parentSku ||
+                        derivedProductId;
+                      const variantSku =
+                        productDetails?.chosenVariantSku ||
+                        selectedStyleData?.variants?.[0]?.sku ||
+                        derivedProductId;
+
+                      if (!productId || !variantSku) {
+                        toast("Please select a product variant");
+                        return;
+                      }
+
+                      const productTitle =
+                        productDetails?.title || selectedStyleData?.name || "";
+                      const price = productDetails?.sellingPrice || 0;
+
+                      const orderData = {
+                        orderId: `ORD-${Date.now()}-${Math.random()
+                          .toString(36)
+                          .substr(2, 9)}`,
+                        customer: {
+                          userId: user?.id,
+                          name: `${user?.firstName || ""} ${
+                            user?.lastName || ""
+                          }`,
+                          email: user?.email,
+                          phone: user?.phone,
+                        },
+                        product: {
+                          modelSku: selectedStyleData?.parentSku,
+                          variantSku,
+                          title: productTitle,
+                          price,
+                          images:
+                            productDetails?.variantImages ||
+                            selectedStyleData?.thumbnailImages ||
+                            [],
+                        },
+                        customization: {
+                          metalColor: selectedMetalColor,
+                          metalType: selectedMetalType,
+                          goldKarat: selectedGoldKarat,
+                          diamondShape: selectedDiamondShape,
+                          diamondSize: selectedDiamondSize,
+                          diamondOrigin: selectedDiamondOrigin,
+                        },
+                        quantity: 1,
+                        totalAmount: price,
+                        orderDate: new Date().toISOString(),
+                        status: "pending",
+                      };
+
+                      navigate("/payment", {
+                        state: {
+                          orderData,
+                          directPurchase: true,
+                          items: [
+                            {
+                              product: {
+                                _id: selectedStyleData?.parentSku,
+                                title: productTitle,
+                                price,
+                                priceBreakdown: productDetails?.priceBreakdown,
+                                images: {
+                                  main:
+                                    productDetails?.variantImages?.[0] || "",
+                                  sub:
+                                    productDetails?.variantImages?.slice(1) ||
+                                    [],
+                                },
+                                sku: variantSku,
+                              },
+                              quantity: 1,
+                              price,
+                              customization: {
+                                metalColor: selectedMetalColor,
+                                metalType: selectedMetalType,
+                                goldKarat: selectedGoldKarat,
+                                diamondShape: selectedDiamondShape,
+                                diamondSize: selectedDiamondSize,
+                                diamondOrigin: selectedDiamondOrigin,
+                              },
+                            },
+                          ],
+                          totalAmount: price,
+                        },
+                      });
+                    }}
+                  >
                     Buy Now
                   </Button>
                   <Button
                     variant="outline"
                     className="w-full border-[#328F94] text-[#328F94] py-3"
+                    onClick={async () => {
+                      // Add to cart flow
+                      if (!isAuthenticated) {
+                        toast("Please login to add items to cart");
+                        navigate("/login");
+                        return;
+                      }
+
+                      const productDetails = selectedStyleData?.productDetails;
+                      const productId =
+                        productDetails?._id ||
+                        selectedStyleData?.parentSku ||
+                        derivedProductId;
+                      const variantSku =
+                        productDetails?.chosenVariantSku ||
+                        selectedStyleData?.variants?.[0]?.sku ||
+                        derivedProductId;
+
+                      if (!productId || !variantSku) {
+                        toast("Please select a product variant");
+                        return;
+                      }
+
+                      const variantData: any = {
+                        variantSku,
+                        variantConfig: {
+                          metalColor: selectedMetalColor,
+                          metalType: selectedMetalType,
+                          goldKarat: selectedGoldKarat,
+                          diamondShape: selectedDiamondShape,
+                          diamondSize: selectedDiamondSize,
+                          diamondOrigin: selectedDiamondOrigin,
+                          variantImages:
+                            productDetails?.variantImages ||
+                            selectedStyleData?.thumbnailImages ||
+                            [],
+                          sellingPrice: productDetails?.sellingPrice || 0,
+                          priceBreakdown:
+                            productDetails?.priceBreakdown || null,
+                        },
+                      };
+
+                      try {
+                        const resp: any = await apiService.addToCart(
+                          productId,
+                          1,
+                          variantData
+                        );
+                        if (resp?.success) {
+                          toast.success?.("Added to cart");
+                          dispatch(fetchCart());
+                        } else {
+                          toast.error?.(
+                            resp?.error ||
+                              resp?.message ||
+                              "Failed to add to cart"
+                          );
+                        }
+                      } catch (err) {
+                        console.error("Add to cart failed", err);
+                        toast.error?.("Network error while adding to cart");
+                      }
+                    }}
                   >
                     Add To Cart
                   </Button>
