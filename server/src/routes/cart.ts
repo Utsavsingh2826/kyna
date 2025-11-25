@@ -3,6 +3,7 @@ import {
   getCart,
   addToCart,
   removeFromCart,
+  removeCartItemById,
   updateCartItem,
   clearCart,
   updateCartItemRingSize,
@@ -22,6 +23,9 @@ router.post("/add", addToCart);
 
 // DELETE /api/cart/remove/:productId - Remove item from cart
 router.delete("/remove/:productId", removeFromCart);
+
+// DELETE /api/cart/item/:itemId - Remove cart item by ID
+router.delete("/item/:itemId", removeCartItemById);
 
 // PUT /api/cart/update/:productId - Update item quantity
 router.put("/update/:productId", updateCartItem);

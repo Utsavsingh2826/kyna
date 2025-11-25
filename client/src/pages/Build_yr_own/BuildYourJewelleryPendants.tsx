@@ -298,7 +298,7 @@ const GLBViewer = ({
             // Dispose of the DRACO loader after use
             dracoLoader.dispose();
           },
-          (progress) => {},
+          () => {},
           (error) => {
             console.error("Error loading GLB model:", modelUrl, error);
 
@@ -460,6 +460,11 @@ const ProductDetail = () => {
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
 
+  // Add missing state variables for pendants builder
+  const [selectedMetalType, setSelectedMetalType] = useState("GOLD");
+  const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
+  const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
+
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useSelector(
@@ -497,84 +502,25 @@ const ProductDetail = () => {
           (e) => e.variants && e.variants.length > 0
         );
 
-        const substylePromises = validEntries.map(async (entry) => {
-          try {
-            // Get the first variant SKU to fetch product details
-            const firstVariantSku = entry.variants[0]?.sku;
-            if (firstVariantSku && entry.parentSku) {
-              const colorCodeMap: { [key: string]: string } = {
-                "White Gold": "WG",
-                "Yellow Gold": "YG",
-                "Rose Gold": "RG",
-              };
-              const metalCode = colorCodeMap[selectedMetalColor] || "WG";
-              const productResponse = await fetch(
-                `/api/products/model/${entry.parentSku}?variantId=${firstVariantSku}&metalColor=${metalCode}`
-              );
-              const productData: ProductModelResponse =
-                await productResponse.json();
-
-              // Price tracking: log API sellingPrice and formatted display price
-              console.log(
-                `Price tracking — parentSku: ${
-                  entry.parentSku
-                }, variant: ${firstVariantSku}, API sellingPrice: ${
-                  productData.sellingPrice
-                }, formatted: ₹${new Intl.NumberFormat("en-IN").format(
-                  productData.sellingPrice
-                )}`
-              );
-
-              if (productData.success) {
-                return {
-                  img: entry.selectedImage,
-                  name: entry.builderView,
-                  price: new Intl.NumberFormat("en-IN").format(
-                    productData.sellingPrice
-                  ), // Format price with commas
-                  parentSku: entry.parentSku,
-                  variants: entry.variants,
-                  productDetails: productData,
-                  thumbnailImages: productData.variantImages,
-                };
-              }
-            }
-            // Fallback if product details fail
-            return {
-              img: entry.selectedImage,
-              name: entry.builderView,
-              price: "5,224", // Fallback price
-              parentSku: entry.parentSku,
-              variants: entry.variants,
-            };
-          } catch (err) {
-            console.error(
-              `Failed to fetch product details for ${entry.parentSku}:`,
-              err
-            );
-            return {
-              img: entry.selectedImage,
-              name: entry.builderView,
-              price: "5,224", // Fallback price
-              parentSku: entry.parentSku,
-              variants: entry.variants,
-            };
-          }
-        });
-
-        const substyles = await Promise.all(substylePromises);
+        const mappedSubstyles = validEntries.map((entry) => ({
+          img: entry.selectedImage,
+          name: entry.builderView,
+          price: "", // blank initially
+          parentSku: entry.parentSku,
+          variants: entry.variants,
+        }));
 
         setStyleAndDesign((prev) =>
-          prev.map((category) =>
-            category.name === categoryName
-              ? { ...category, substyles, isLoaded: true }
-              : category
+          prev.map((cat) =>
+            cat.name === categoryName
+              ? { ...cat, substyles: mappedSubstyles, isLoaded: true }
+              : cat
           )
         );
 
-        // Set first style as selected if none selected
-        if (!selectedRingStyle && substyles.length > 0) {
-          setSelectedRingStyle(substyles[0].name);
+        // auto-select first style
+        if (!selectedRingStyle && mappedSubstyles.length > 0) {
+          setSelectedRingStyle(mappedSubstyles[0].name);
         }
       }
     } catch (err) {
@@ -659,10 +605,10 @@ const ProductDetail = () => {
   }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
 
   // Load Tennis Bracelet data on component mount
-  useEffect(() => {
-    fetchCategoryData("TENNIS BRACELET");
-    fetchCategoryData("PAPPER CLIP");
-  }, [fetchCategoryData]);
+  // useEffect(() => {
+  //   fetchCategoryData("TENNIS BRACELET");
+  //   fetchCategoryData("PAPPER CLIP");
+  // }, [fetchCategoryData]);
 
   // Add fallback for categories without API endpoints
   const getFallbackSubstyles = (categoryName: string): SubStyle[] => {
@@ -804,6 +750,90 @@ const ProductDetail = () => {
     "/about/4.jpg",
   ];
 
+  const generateVariantId = useCallback(
+    (substyle: SubStyle) => {
+      const modelSku = substyle.parentSku;
+      const variants = substyle.variants;
+
+      // Use first variant if no variant selected
+      const base = variants?.[0]?.sku.split("-");
+      if (!base) return null;
+
+      const shapeCodeMap: { [key: string]: string } = {
+        ROUND: "RD",
+        OVAL: "OV",
+        PRINCESS: "PRN",
+        EMERALD: "EM",
+        MARQUISE: "MQ",
+        PEAR: "PRS",
+        HEART: "HRT",
+        CUSHION: "CUS",
+      };
+
+      const shapeCode =
+        shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
+
+      const caratCode = String(
+        Math.round(parseFloat(selectedDiamondSize) * 100)
+      );
+
+      const karat = selectedGoldKarat.replace("kt", "");
+
+      const originCode =
+        selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
+
+      const specifications = `${originCode}EFVVS`;
+
+      return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+    },
+    [
+      selectedDiamondShape,
+      selectedDiamondSize,
+      selectedGoldKarat,
+      selectedDiamondOrigin,
+    ]
+  );
+
+  const refetchUpdatedProduct = useCallback(
+    async (substyle: SubStyle) => {
+      const variantId = generateVariantId(substyle);
+      if (!variantId) return;
+
+      const colorCodeMap: { [key: string]: string } = {
+        "White Gold": "WG",
+        "Yellow Gold": "YG",
+        "Rose Gold": "RG",
+      };
+      const metalColor = colorCodeMap[selectedMetalColor] || "WG";
+
+      const res = await fetch(
+        `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`
+      );
+
+      const data: ProductModelResponse = await res.json();
+      if (data.success) {
+        setStyleAndDesign((prev) =>
+          prev.map((cat) => ({
+            ...cat,
+            substyles: cat.substyles.map((s) =>
+              s.parentSku === substyle.parentSku
+                ? {
+                    ...s,
+                    productDetails: data,
+                    price: new Intl.NumberFormat("en-IN").format(
+                      data.sellingPrice
+                    ),
+                    thumbnailImages: data.variantImages,
+                  }
+                : s
+            ),
+          }))
+        );
+      }
+    },
+    [generateVariantId, selectedMetalColor]
+  );
+
   // Log when thumbnail images change
   useEffect(() => {
     // Removed console log for thumbnail changes
@@ -815,6 +845,13 @@ const ProductDetail = () => {
     return isGLB || imagePath.endsWith(".glb");
   };
 
+  const normalizeMetalType = (type: string) => {
+    if (type.toUpperCase().includes("GOLD")) return "GOLD";
+    if (type.toUpperCase().includes("SILVER")) return "SILVER";
+    if (type.toUpperCase().includes("PLATINUM")) return "PLATINUM";
+    return "GOLD";
+  };
+
   // Get available options from selected style's product details
   const getAvailableMetalTypes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.metalTypes) {
@@ -822,13 +859,6 @@ const ProductDetail = () => {
     }
     return selectedStyleData.productDetails.metalTypes;
   }, [selectedStyleData?.productDetails?.metalTypes]);
-
-  const getAvailableGoldKarats = useCallback(() => {
-    if (!selectedStyleData?.productDetails?.goldKarats) {
-      return ["14kt", "18kt", "22kt"]; // Fallback
-    }
-    return selectedStyleData.productDetails.goldKarats;
-  }, [selectedStyleData?.productDetails?.goldKarats]);
 
   const getAvailableDiamondShapes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.diamondShape) {
@@ -854,13 +884,6 @@ const ProductDetail = () => {
 
   // Ref for metal types scroll container
   const metalTypesRef = useRef<HTMLDivElement>(null);
-  const [selectedMetalType, setSelectedMetalType] = useState(
-    "GOLD" // Default to GOLD
-  );
-
-  // Add states for diamond size and gold karat
-  const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
-  const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
 
   // Function to get available karats based on selected metal type
   const getAvailableKarats = useCallback(() => {
@@ -871,11 +894,10 @@ const ProductDetail = () => {
     const goldKarats = selectedStyleData.productDetails.goldKarats;
 
     if (selectedMetalType === "SILVER") {
-      return ["925"]; // Silver is always 925
+      return ["SLV"];
     } else if (selectedMetalType === "PLATINUM") {
-      return ["950"]; // Platinum is 950
+      return ["PT"];
     } else {
-      // For GOLD, filter out silver/platinum karats
       return goldKarats.filter((karat) => !["925", "950"].includes(karat));
     }
   }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
@@ -884,7 +906,6 @@ const ProductDetail = () => {
   useEffect(() => {
     if (selectedStyleData?.productDetails) {
       const metalTypes = getAvailableMetalTypes();
-      const goldKarats = getAvailableGoldKarats();
       const diamondShapes = getAvailableDiamondShapes();
       const diamondSizes = getAvailableDiamondSizes();
       const availableKarats = getAvailableKarats();
@@ -910,17 +931,26 @@ const ProductDetail = () => {
         setSelectedGoldKarat(availableKarats[0]);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    selectedStyleData,
-    selectedMetalType,
+    selectedStyleData?.productDetails?.metalTypes,
+    selectedStyleData?.productDetails?.goldKarats,
+    selectedStyleData?.productDetails?.diamondShape,
+    selectedStyleData?.productDetails?.diamondSize,
+  ]);
+
+  // Refetch variant when selection changes - similar to bracelet builder
+  useEffect(() => {
+    if (!selectedStyleData?.parentSku) return;
+    refetchUpdatedProduct(selectedStyleData);
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    selectedDiamondOrigin,
     selectedDiamondShape,
     selectedDiamondSize,
+    selectedMetalColor,
+    selectedMetalType,
     selectedGoldKarat,
-    getAvailableMetalTypes,
-    getAvailableGoldKarats,
-    getAvailableDiamondShapes,
-    getAvailableDiamondSizes,
-    getAvailableKarats,
   ]);
 
   return (
@@ -1358,33 +1388,42 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
-                <div className="w-full">
+                <div className="mb-6">
                   <h3 className="mb-3 text-sm md:text-base">
                     Diamond Shape:{" "}
                     <span className="text-[#8D8A91]">
-                      {selectedDiamondShape}
+                      {selectedDiamondShape.charAt(0) +
+                        selectedDiamondShape.slice(1).toLowerCase()}
                     </span>
                   </h3>
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 w-full">
-                    {getAvailableDiamondShapes().map((diamond, index) => (
-                      <button
-                        key={`${diamond.name}-${index}`}
-                        onClick={() => setSelectedDiamondShape(diamond.name)}
-                        className={`group relative aspect-square border rounded-lg flex flex-col items-center justify-center text-xs p-2 ${
-                          selectedDiamondShape === diamond.name
-                            ? "border-primary bg-primary/5"
-                            : "border-neutral-300"
-                        }`}
-                      >
-                        <img
-                          className="w-8 sm:w-12 md:w-16 lg:w-20 max-w-full h-auto"
-                          src={diamond.img}
-                          alt={diamond.name}
-                        />
-                        <span className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-10 whitespace-nowrap">
-                          <p className="text-xs">{diamond.name}</p>
+
+                  <div className="flex flex-wrap gap-3">
+                    {getAvailableDiamondShapes().map((shape) => (
+                      <div key={shape.name} className="relative group">
+                        <button
+                          onClick={() => setSelectedDiamondShape(shape.name)}
+                          className={`w-14 h-14 md:w-16 md:h-16 border rounded-lg overflow-hidden grid place-items-center p-1 transition-all
+            ${
+              selectedDiamondShape === shape.name
+                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                : "border-neutral-300 hover:border-neutral-400"
+            }`}
+                        >
+                          <img
+                            src={shape.img}
+                            alt={shape.name}
+                            className="h-12"
+                          />
+                        </button>
+
+                        {/* Tooltip */}
+                        <span
+                          className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-50"
+                          style={{ zIndex: 10 }}
+                        >
+                          <p className="text-xs">{shape.name}</p>
                         </span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1462,17 +1501,21 @@ const ProductDetail = () => {
                     <Select
                       value={selectedMetalType}
                       onValueChange={(value) => {
-                        setSelectedMetalType(value);
-                        // Reset karat selection when metal type changes
+                        const normalized = normalizeMetalType(value);
+                        setSelectedMetalType(normalized);
+
                         const newKarats =
-                          value === "SILVER"
-                            ? ["925"]
-                            : value === "PLATINUM"
-                            ? ["950"]
-                            : selectedStyleData?.productDetails?.goldKarats?.filter(
-                                (k) => !["925", "950"].includes(k)
-                              ) || ["18kt", "14kt", "9kt"];
-                        setSelectedGoldKarat(newKarats[0] || "");
+                          normalized === "SILVER"
+                            ? ["SLV"]
+                            : normalized === "PLATINUM"
+                            ? ["PT"]
+                            : selectedStyleData?.productDetails?.goldKarats || [
+                                "18kt",
+                                "14kt",
+                                "9kt",
+                              ];
+
+                        setSelectedGoldKarat(newKarats[0]);
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300">
@@ -1670,9 +1713,9 @@ const ProductDetail = () => {
                       const price = productDetails?.sellingPrice || 0;
 
                       const orderData = {
-                        orderId: `ORD-${Date.now()}-${Math.random()
+                        orderId: `ORD_${Date.now()}_${Math.random()
                           .toString(36)
-                          .substr(2, 9)}`,
+                          .substring(2, 15)}`, // Match CheckoutPage format
                         customer: {
                           userId: user?.id,
                           name: `${user?.firstName || ""} ${
@@ -1881,7 +1924,7 @@ const ProductDetail = () => {
                         ITEM DETAILS
                       </h4>
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             SKU Number
                           </span>
@@ -1891,31 +1934,31 @@ const ProductDetail = () => {
                               "-"}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Ring Size
                           </span>
                           <span className="font-medium">14 (20 mm)</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Type
                           </span>
                           <span className="font-medium">Gold 22KT</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Color
                           </span>
                           <span className="font-medium">Rose</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gold/Silver/Platinum Grams (Approx net grams)
                           </span>
                           <span className="font-medium">1.356 Grams</span>
                         </div>
-                        <div className="py-2 border-b border-border">
+                        <div className="py-2 border-b border-[#328F94]">
                           <div className="text-muted-foreground mb-2">
                             Product Dimensions (In mm)
                           </div>
@@ -1940,7 +1983,7 @@ const ProductDetail = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="py-2 border-b border-border flex justify-between">
+                        <div className="py-2 border-b border-[#328F94] flex justify-between">
                           <h4 className="font-medium mb-3 text-sm">
                             Disclaimer For Product Image
                           </h4>
@@ -1958,7 +2001,7 @@ const ProductDetail = () => {
                         DIAMOND & GEMSTONES DETAILS
                       </h4>
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Diamond Origin
                           </span>
@@ -1966,37 +2009,37 @@ const ProductDetail = () => {
                             {selectedDiamondOrigin}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Diamond Color & Clarity
                           </span>
                           <span className="font-medium">14K White Gold</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Total Diamond Weight (Approx carats)
                           </span>
                           <span className="font-medium">8.60</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstone Origin
                           </span>
                           <span className="font-medium">11.86</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstone Color
                           </span>
                           <span className="font-medium">11.86</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstone Clarity
                           </span>
                           <span className="font-medium">11.86</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Total Gemstone Weight (Approx carats)
                           </span>
@@ -2011,7 +2054,7 @@ const ProductDetail = () => {
                         Price Breakup
                       </h4>
                       <div className="space-y-3 text-sm">
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             SKU Number
                           </span>
@@ -2019,7 +2062,7 @@ const ProductDetail = () => {
                             BRDTXR07400Q300GW4
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gold/Silver/Platinum Value
                           </span>
@@ -2028,7 +2071,7 @@ const ProductDetail = () => {
                             {/* {productData.priceBreakdown.metalCost.toLocaleString()} */}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Diamond Value
                           </span>
@@ -2037,13 +2080,13 @@ const ProductDetail = () => {
                             {/* {productData.priceBreakdown.diamondCost.toLocaleString()} */}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstones Value
                           </span>
                           <span className="font-medium">Rs.</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Making Charges
                           </span>
@@ -2053,7 +2096,7 @@ const ProductDetail = () => {
                             .
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
                             Rs
@@ -2061,20 +2104,20 @@ const ProductDetail = () => {
                             .
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border font-semibold">
+                        <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
                           <span>
                             Rs.
                             {/* {productData.priceBreakdown.totalWithGst.toLocaleString()} */}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Certification
                           </span>
                           <span className="font-medium">IGI/SGL Certified</span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-border">
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             HallMark
                           </span>
@@ -2095,7 +2138,7 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Full Width Disclaimer Section */}
-                  <div className="border-t border-border pt-6">
+                  <div className="border-t border-[#328F94] pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {/* Certification Logos */}
                       <div className="flex items-center gap-4 justify-start md:justify-end">
