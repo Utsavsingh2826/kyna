@@ -232,7 +232,11 @@ const ProductDetail = () => {
       productData?.firstVariantSku ||
       null
     );
-  }, [location.search, productData?.chosenVariantSku, productData?.firstVariantSku]);
+  }, [
+    location.search,
+    productData?.chosenVariantSku,
+    productData?.firstVariantSku,
+  ]);
 
   const currentMetalColorCode =
     METAL_COLOR_CODE_MAP[selectedMetalColor] || null;
@@ -1002,7 +1006,7 @@ const ProductDetail = () => {
         formData.append("text", text);
         formData.append("motifPath", motifPath);
 
-        const uploadResponse = await fetch("/api/upload/engravingOnly", {
+        const uploadResponse = await fetch("/api/upload/engraving", {
           method: "POST",
           body: formData,
         });
@@ -1098,7 +1102,9 @@ const ProductDetail = () => {
 
     // Create order data for console logging and payment
     const orderData = {
-      orderId: `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      orderId: `ORD_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 15)}`, // Match CheckoutPage format
       customer: {
         userId: user?.id || user?.id,
         name: `${user?.firstName} ${user?.lastName}`,
@@ -1462,7 +1468,9 @@ const ProductDetail = () => {
                     aria-pressed={isInWishlist}
                     className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${
                       isInWishlist ? "text-red-500" : "text-gray-600"
-                    } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+                    } ${
+                      wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
+                    }`}
                   >
                     <Heart
                       size={20}

@@ -6,14 +6,13 @@ import {
   paymentService,
   PaymentInitiateRequest,
 } from "../services/paymentService";
-import { setLoading } from "@/store/slices/cartSlice";
 
 interface PaymentFormProps {
   orderData: {
     orderId: string;
     orderCategory?: "design-your-own" | "build-your-own" | "products";
     orderType?: "customized" | "normal";
-    customData?: any;
+    customData?: unknown;
     amount: number;
     items: Array<{
       name: string;
@@ -32,7 +31,6 @@ interface PaymentFormProps {
       description?: string;
       estimatedDelivery?: string | null;
       estimatedDeliveryDay?: string | null;
-      [key: string]: unknown;
       promo?: {
         code: string;
         discountPercent: number;
@@ -47,6 +45,7 @@ interface PaymentFormProps {
         tax: number;
         payableAmount: number;
       };
+      [key: string]: unknown;
     };
   };
   userInfo: {
@@ -65,6 +64,12 @@ interface PaymentFormProps {
   onError?: (error: string) => void;
 }
 
+type ServiceabilityStatus =
+  | "idle"
+  | "checking"
+  | "serviceable"
+  | "not-serviceable";
+
 const PaymentForm: React.FC<PaymentFormProps> = ({
   orderData,
   userInfo,
@@ -72,10 +77,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   onError,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [serviceabilityStatus, setServiceabilityStatus] = useState<
-    "idle" | "checking" | "serviceable" | "not-serviceable"
-  >("idle");
-  const [serviceabilityMessage, setServiceabilityMessage] = useState("");
+  const [serviceabilityStatus, setServiceabilityStatus] =
+    useState<ServiceabilityStatus>("idle");
   const [billingInfo, setBillingInfo] = useState({
     name: `${userInfo.firstName} ${userInfo.lastName}`.trim(),
     email: userInfo.email,
@@ -115,7 +118,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       await checkServiceability(value);
     } else if (value.length < 6) {
       setServiceabilityStatus("idle");
-      setServiceabilityMessage("");
     }
   };
 
@@ -123,13 +125,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const checkServiceability = async (pinCode: string): Promise<boolean> => {
     if (!pinCode || pinCode.length !== 6 || !/^\d{6}$/.test(pinCode)) {
       setServiceabilityStatus("idle");
-      setServiceabilityMessage("");
       return false;
     }
 
     try {
       setServiceabilityStatus("checking");
-      setServiceabilityMessage("Checking serviceability...");
       console.log("🚀 Checking serviceability for pincode:", pinCode);
 
       const response = await fetch(
@@ -146,7 +146,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       const result = await response.json();
       console.log("📍 Serviceability check result:", result);
 
-      // Handle API returning boolean true or string variants like 'true', 'True', '1'
       const statusRaw = result?.status;
       console.debug(
         "🔎 Raw serviceability status from API:",
@@ -160,23 +159,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       if (isServiceableApi) {
         setServiceabilityStatus("serviceable");
-        setServiceabilityMessage(
-          "✅ Great! This area is serviceable for delivery."
-        );
         return true;
       } else {
         setServiceabilityStatus("not-serviceable");
-        setServiceabilityMessage(
-          "❌ Sorry, this area is not serviceable for delivery."
-        );
         return false;
       }
     } catch (error) {
       console.error("❌ Error checking serviceability:", error);
       setServiceabilityStatus("idle");
-      setServiceabilityMessage(
-        "⚠️ Unable to check serviceability. Please try again."
-      );
       return false;
     }
   };
@@ -241,46 +231,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           alert(
             "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
           );
-          setLoading(false);
+          setIsProcessing(false);
           return;
         }
       }
-    }
-
-    // VERY OBVIOUS DEBUG - Alert to ensure this code is running
-    alert(`IMAGES DEBUG: ${JSON.stringify(orderData.images)}`);
-    console.log("🔍 IMAGES ALERT DONE - orderData.images:", orderData.images);
-
-    // Debug: Check what orderData.images contains
-    console.log(
-      "🔍 PaymentForm - orderData.images JSON:",
-      JSON.stringify(orderData.images)
-    );
-    console.log(
-      "🔍 PaymentForm - orderData.images length:",
-      orderData.images?.length || 0
-    );
-    console.log(
-      "🔍 PaymentForm - orderData.images type:",
-      typeof orderData.images,
-      "Array?",
-      Array.isArray(orderData.images)
-    );
-
-    // Debug: Check EDD data in orderData
-    console.log("📦 [EDD] PaymentForm - EDD data check:", {
-      hasOrderDetails: !!orderData.orderDetails,
-      estimatedDelivery: orderData.orderDetails?.estimatedDelivery,
-      estimatedDeliveryDay: orderData.orderDetails?.estimatedDeliveryDay,
-      fullOrderDetails: JSON.stringify(orderData.orderDetails, null, 2),
-    });
-
-    if (orderData.orderDetails?.estimatedDelivery) {
-      console.log(
-        "✅ [EDD] PaymentForm - EDD data found, will be sent to backend"
-      );
-    } else {
-      console.warn("⚠️ [EDD] PaymentForm - No EDD data found in orderDetails");
     }
 
     try {
@@ -298,43 +252,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         customData: orderData.customData,
         items: orderData.items,
         orderDetails: orderData.orderDetails,
-        // jewelryId: orderData.jewelryId, // Include jewelryId if available
         images: orderData.images || [],
-        // Extract EDD from orderDetails and add to root level for backend validation
         estimatedDelivery:
           orderData.orderDetails?.estimatedDelivery || "03-04-05",
         estimatedDeliveryDay:
           orderData.orderDetails?.estimatedDeliveryDay || "sunday",
       };
 
-      console.log("💳 Initiating payment with images:", paymentData.images);
-      console.log("💳 Full payment data:", paymentData);
-      console.log(
-        "🔍 PaymentForm - orderDetails being sent:",
-        JSON.stringify(paymentData.orderDetails, null, 2)
-      );
-      console.log(
-        "🔍 PaymentForm - orderDetails.directPurchaseData:",
-        JSON.stringify(paymentData.orderDetails?.directPurchaseData, null, 2)
-      );
-
-      // PROMINENT LOG FOR DEBUGGING
-      if (!paymentData.images || paymentData.images.length === 0) {
-        console.error("❌ IMAGES ARE EMPTY IN PAYMENT DATA!");
-      } else {
-        console.log(
-          "✅ IMAGES FOUND IN PAYMENT DATA:",
-          paymentData.images.length,
-          "images"
-        );
-      }
+      console.log("💳 Initiating payment with data:", paymentData);
 
       const response = await paymentService.initiatePayment(paymentData);
 
       if (response.success) {
         console.log("✅ Payment initiated successfully:", response.data);
 
-        // Prepare Razorpay options
         const razorpayOptions = {
           key: response.data.razorpayKeyId,
           amount: response.data.amount,
@@ -351,12 +282,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           },
         };
 
-        // Open Razorpay checkout
         paymentService.openRazorpayCheckout(
           razorpayOptions,
           async (paymentResponse) => {
             try {
-              // Verify payment with backend
               const verificationResult = await paymentService.verifyPayment({
                 razorpay_order_id: paymentResponse.razorpay_order_id,
                 razorpay_payment_id: paymentResponse.razorpay_payment_id,
@@ -366,7 +295,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
               if (verificationResult.success) {
                 onPaymentInitiated?.(response.data.orderId);
-                // Redirect to success page
                 window.location.href = `${window.location.origin}/payment-success?orderId=${response.data.orderId}&status=success`;
               } else {
                 throw new Error("Payment verification failed");
@@ -381,20 +309,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             }
           },
           (paymentError) => {
-            // Log full error object from Razorpay for debugging
             console.error("Payment error (full object):", paymentError);
 
-            /*
-             Razorpay error object often contains fields like:
-             - code
-             - description
-             - source
-             - step
-             - reason
-             - metadata
-            */
-
-            // Pick a friendly message to show the user
             const errorMessage = (() => {
               if (paymentError && typeof paymentError === "object") {
                 // @ts-expect-error - paymentError is any from Razorpay
@@ -414,9 +330,137 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       }
     } catch (error) {
       console.error("❌ Payment initiation failed:", error);
-      onError?.(
-        error instanceof Error ? error.message : "Payment initiation failed"
-      );
+
+      // Handle "Order ID already exists" error specifically
+      if (
+        error instanceof Error &&
+        error.message.includes("Order ID already exists")
+      ) {
+        console.log(
+          "⚠️ Order already exists, generating new order ID for retry:",
+          orderData.orderId
+        );
+
+        try {
+          // Generate a new order ID to avoid conflicts
+          const generateOrderId = () => {
+            const timestamp = Date.now();
+            const randomString = Math.random().toString(36).substring(2, 9);
+            return `ORD-${timestamp}-${randomString}`;
+          };
+
+          const newOrderId = generateOrderId();
+          console.log(`🔄 Retrying payment with new order ID: ${newOrderId}`);
+
+          // Create retry payment data with new order ID
+          const retryPaymentData: PaymentInitiateRequest = {
+            orderId: newOrderId,
+            amount: orderData.amount.toString(),
+            currency: "INR",
+            billingInfo: billingInfo,
+            redirectUrl: `${window.location.origin}/payment-success`,
+            cancelUrl: `${window.location.origin}/payment-cancel`,
+            userId: userInfo.userId,
+            orderNumber: newOrderId,
+            orderCategory: orderData.orderCategory || "products",
+            orderType: orderData.orderType || "normal",
+            customData: orderData.customData,
+            items: orderData.items,
+            orderDetails: orderData.orderDetails,
+            images: orderData.images || [],
+            estimatedDelivery:
+              orderData.orderDetails?.estimatedDelivery || "03-04-05",
+            estimatedDeliveryDay:
+              orderData.orderDetails?.estimatedDeliveryDay || "sunday",
+          };
+
+          console.log(
+            "🔄 Initiating payment with new order data:",
+            retryPaymentData
+          );
+          const retryResponse = await paymentService.initiatePayment(
+            retryPaymentData
+          );
+
+          if (retryResponse.success) {
+            console.log("✅ Payment retry successful with new order ID");
+
+            const razorpayOptions = {
+              key: retryResponse.data.razorpayKeyId,
+              amount: retryResponse.data.amount,
+              currency: retryResponse.data.currency,
+              name: retryResponse.data.name,
+              description: retryResponse.data.description,
+              order_id: retryResponse.data.razorpayOrderId,
+              prefill: retryResponse.data.prefill,
+              theme: retryResponse.data.theme,
+              notes: retryResponse.data.notes,
+              handler: () => {}, // Will be set by openRazorpayCheckout
+              modal: {
+                ondismiss: () => {},
+              },
+            };
+
+            paymentService.openRazorpayCheckout(
+              razorpayOptions,
+              async (paymentResponse) => {
+                try {
+                  console.log(
+                    "✅ Payment successful with retry order:",
+                    paymentResponse
+                  );
+
+                  const verificationResult = await paymentService.verifyPayment(
+                    {
+                      razorpay_order_id: paymentResponse.razorpay_order_id,
+                      razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                      razorpay_signature: paymentResponse.razorpay_signature,
+                      orderId: retryResponse.data.orderId,
+                    }
+                  );
+
+                  if (verificationResult.success) {
+                    console.log(
+                      "✅ Payment verified successfully for retry order"
+                    );
+                    onPaymentInitiated?.(retryResponse.data.orderId);
+                    window.location.href = `${window.location.origin}/payment-success?orderId=${retryResponse.data.orderId}&status=success`;
+                  } else {
+                    throw new Error("Payment verification failed");
+                  }
+                } catch (verifyError) {
+                  console.error("Payment verification error:", verifyError);
+                  onError?.(
+                    verifyError instanceof Error
+                      ? verifyError.message
+                      : "Payment verification failed"
+                  );
+                }
+              },
+              (paymentError) => {
+                console.error("Payment error:", paymentError);
+                onError?.(
+                  "Payment failed. Please try again or use another payment method."
+                );
+              }
+            );
+
+            return; // Exit successfully
+          } else {
+            throw new Error("Failed to initiate payment with new order ID");
+          }
+        } catch (retryError) {
+          console.error("❌ Payment retry failed:", retryError);
+          onError?.(
+            "Unable to process payment. Please refresh the page and try again."
+          );
+        }
+      } else {
+        // Handle other errors normally
+        onError?.(
+          error instanceof Error ? error.message : "Payment initiation failed"
+        );
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -504,41 +548,39 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-4">Billing Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Full Name *
             </label>
             <Input
               type="text"
               value={billingInfo.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
-              placeholder="John Doe"
+              placeholder="Enter your full name"
               required
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email *
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address *
             </label>
             <Input
               type="email"
               value={billingInfo.email}
               onChange={(e) => handleInputChange("email", e.target.value)}
-              placeholder="john@example.com"
+              placeholder="your@email.com"
               required
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone *
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number *
             </label>
             <Input
               type="tel"
               value={billingInfo.phone}
               onChange={(e) => handleInputChange("phone", e.target.value)}
-              placeholder="+91-9876543210"
+              placeholder="+91 XXXXX XXXXX"
               required
             />
           </div>
@@ -572,7 +614,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               required
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               City *
@@ -585,20 +626,18 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               required
             />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               State *
             </label>
             <Input
               type="text"
               value={billingInfo.state}
               onChange={(e) => handleInputChange("state", e.target.value)}
-              placeholder="Maharashtra"
+              placeholder="State"
               required
             />
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               ZIP Code *
@@ -607,68 +646,56 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               type="text"
               value={billingInfo.zip}
               onChange={(e) => handleInputChange("zip", e.target.value)}
-              placeholder="400001"
+              placeholder="ZIP Code"
               required
             />
           </div>
         </div>
+
+        {/* Serviceability Status */}
+        {serviceabilityStatus && serviceabilityStatus !== "idle" && (
+          <div className="mt-4 p-3 rounded-lg border">
+            {serviceabilityStatus === "checking" && (
+              <div className="text-blue-600 text-sm">
+                🔄 Checking if your area is serviceable...
+              </div>
+            )}
+            {serviceabilityStatus === "serviceable" && (
+              <div className="text-green-600 text-sm">
+                ✅ Great! We can deliver to your area.
+              </div>
+            )}
+            {serviceabilityStatus === "not-serviceable" && (
+              <div className="text-red-600 text-sm">
+                ❌ Sorry, we cannot deliver to this area currently.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Security Notice */}
-      <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-        <div className="flex items-center gap-2 text-green-800 mb-2">
-          <Shield className="w-5 h-5" />
-          <span className="font-medium">Secure Payment</span>
+      {/* Payment Button */}
+      <div className="flex flex-col space-y-4">
+        <Button
+          onClick={initiatePayment}
+          disabled={
+            isProcessing ||
+            serviceabilityStatus === "checking" ||
+            serviceabilityStatus === "not-serviceable"
+          }
+          className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3 text-lg font-medium flex items-center justify-center gap-2"
+        >
+          <Lock className="w-5 h-5" />
+          {isProcessing
+            ? "Processing..."
+            : `Pay ₹${orderData.amount.toLocaleString()} securely`}
+        </Button>
+
+        <div className="text-center text-xs text-gray-500">
+          <p>🔒 Secure payment powered by Razorpay</p>
+          <p>Your payment information is encrypted and secure</p>
         </div>
-        <p className="text-sm text-green-700">
-          Your payment is secured with 256-bit SSL encryption. We don't store
-          your card details.
-        </p>
       </div>
-
-      {/* Payment Button if serviceable zip code */}
-      {serviceabilityStatus === "serviceable" ? (
-        <Button
-          onClick={initiatePayment}
-          disabled={isProcessing}
-          className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3 text-lg font-medium flex items-center justify-center gap-2"
-        >
-          {isProcessing ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              Processing...
-            </>
-          ) : (
-            <>
-              <Lock className="w-5 h-5" />
-              Pay ₹{orderData.amount.toLocaleString()} Securely
-            </>
-          )}
-        </Button>
-      ) : (
-        <Button
-          onClick={initiatePayment}
-          disabled={true}
-          className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3 text-lg font-medium flex items-center justify-center gap-2"
-        >
-          {isProcessing ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              Processing...
-            </>
-          ) : (
-            <>
-              <Lock className="w-5 h-5" />
-              Your zip code is not serviceable yet.
-            </>
-          )}
-        </Button>
-      )}
-
-      <p className="text-xs text-gray-500 text-center mt-4">
-        By clicking "Pay Securely", you agree to our Terms of Service and
-        Privacy Policy. Payment is processed securely through Razorpay.
-      </p>
     </div>
   );
 };

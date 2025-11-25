@@ -66,11 +66,26 @@ const PaymentPage = () => {
   const [referralBalance, setReferralBalance] = useState(0);
   const [walletDiscount, setWalletDiscount] = useState(0);
   const [walletError, setWalletError] = useState("");
+  const [persistentOrderId, setPersistentOrderId] = useState<string | null>(
+    null
+  );
 
   // Get direct purchase data from navigation state
   const directPurchaseData = location.state?.directPurchase
     ? location.state
     : null;
+
+  // Initialize persistent order ID for cart purchases
+  useEffect(() => {
+    if (!directPurchaseData && !persistentOrderId) {
+      // Generate persistent order ID for cart purchases only
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const newOrderId = `ORD_${timestamp}_${randomString}`;
+      console.log("🆕 Generated persistent cart order ID:", newOrderId);
+      setPersistentOrderId(newOrderId);
+    }
+  }, [directPurchaseData, persistentOrderId]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -202,7 +217,8 @@ const PaymentPage = () => {
   const orderData = {
     orderId: isDirectPurchase
       ? directPurchaseData.orderData.orderId
-      : `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      : persistentOrderId ||
+        `ORD_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`, // Fallback if persistent ID not ready
     amount: payableAmount,
     items: itemsData.map((item: any) => ({
       name: item.product?.title || item.product?.name || "Product",
