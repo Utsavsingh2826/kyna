@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Copy, Users, DollarSign, Gift } from "lucide-react";
+import { Copy } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,6 @@ interface ReferralSectionProps {
 
 interface UserReferralData {
   referralCode: string;
-  referralCount: number;
-  totalReferralEarnings: number;
-  availableOffers: number;
 }
 
 interface ReferralSettings {
@@ -26,25 +23,12 @@ interface ReferralSettings {
   promoExpiryDays: number;
 }
 
-interface ReferralHistory {
-  _id: string;
-  referFrdId: string;
-  toEmails: string[];
-  status: string;
-  createdAt: string;
-  redeemedBy?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-}
 
 export default function ReferralSection({ isOpen }: ReferralSectionProps) {
   const [referralForm, setReferralForm] = useState({
     yourEmail: "",
     friendsEmails: "",
     note: "",
-    sendReminder: false,
   });
   const [yourEmail, setYourEmail] = useState("");
   const [referralLink, setReferralLink] = useState("");
@@ -52,7 +36,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
   const [message, setMessage] = useState("");
   const [userReferralData, setUserReferralData] = useState<UserReferralData | null>(null);
   const [referralSettings, setReferralSettings] = useState<ReferralSettings | null>(null);
-  const [referralHistory, setReferralHistory] = useState<ReferralHistory[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Fetch user data and referral information
@@ -82,9 +65,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
           // Set user referral data
           setUserReferralData({
             referralCode: userData.referralCode || "",
-            referralCount: userData.referralCount || 0,
-            totalReferralEarnings: userData.totalReferralEarnings || 0,
-            availableOffers: userData.availableOffers || 0,
           });
 
           // Generate referral link if user has a referral code
@@ -108,20 +88,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
 
         if (settingsResponse.data.success) {
           setReferralSettings(settingsResponse.data.data);
-        }
-
-        // Get user's referral history
-        const historyResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/referrals/my-referrals`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (historyResponse.data.success) {
-          setReferralHistory(historyResponse.data.data);
         }
 
       } catch (error) {
@@ -158,7 +124,7 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
         {
           toEmails,
           note: referralForm.note,
-          sendReminder: referralForm.sendReminder,
+          sendReminder: false,
         },
         {
           headers: {
@@ -176,7 +142,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
           yourEmail: yourEmail,
           friendsEmails: "",
           note: "",
-          sendReminder: false,
         });
 
         // Update referral link if new one was generated
@@ -187,19 +152,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
           setReferralLink(shareableLink);
         }
 
-        // Refresh referral history
-        const historyResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/referrals/my-referrals`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (historyResponse.data.success) {
-          setReferralHistory(historyResponse.data.data);
-        }
       } else {
         setMessage(response.data.message || "Failed to send referral");
         toast.error(response.data.message || "Failed to send referral");
@@ -266,49 +218,21 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Left side - Form and Stats */}
               <div>
-                {/* Referral Statistics */}
-                {userReferralData && (
-                  <div className="mb-6 grid grid-cols-3 gap-4">
-                    <div className="text-center p-3 bg-blue-50 rounded-lg">
-                      <Users className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-                      <p className="text-sm text-gray-600">Referrals</p>
-                      <p className="text-lg font-semibold text-blue-600">
-                        {userReferralData.referralCount}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-green-50 rounded-lg">
-                      <DollarSign className="h-6 w-6 mx-auto mb-2 text-green-600" />
-                      <p className="text-sm text-gray-600">Earnings</p>
-                      <p className="text-lg font-semibold text-green-600">
-                        ₹{userReferralData.totalReferralEarnings}
-                      </p>
-                    </div>
-                    <div className="text-center p-3 bg-purple-50 rounded-lg">
-                      <Gift className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-                      <p className="text-sm text-gray-600">Wallet</p>
-                      <p className="text-lg font-semibold text-purple-600">
-                        ₹{userReferralData.availableOffers}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="mb-6">
                   <h2
-                    className="text-6xl font-light mb-1"
+                    className="text-5xl font-light mb-4"
                     style={{ fontFamily: "KoPub Batang" }}
                   >
-                    Give ₹{referralSettings?.referralRewardFriend || 10},
+                    Refer & Earn Points
                   </h2>
-                  <h2
-                    className="text-6xl font-light mb-4"
+                  <h3
+                    className="text-3xl font-light mb-4 text-gray-700"
                     style={{ fontFamily: "KoPub Batang" }}
                   >
-                    Get ₹{referralSettings?.referralRewardReferrer || 10}
-                  </h2>
+                    Get Exclusive Discounts
+                  </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Treat your friend to ₹{referralSettings?.referralRewardFriend || 10} and get ₹{referralSettings?.referralRewardReferrer || 10} towards a future
-                    purchase after their first order of ₹1,000+.
+                    Share the beauty of Kyna Jewels with your friends and family. Every successful referral earns you points that unlock exclusive discounts and special offers on your next purchase.
                   </p>
                 </div>
 
@@ -395,24 +319,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
                     />
                   </div>
 
-                  <div className="flex items-center space-x-2">
-                    <input
-                      id="sendReminder"
-                      type="checkbox"
-                      checked={referralForm.sendReminder}
-                      onChange={(e) =>
-                        setReferralForm((prev) => ({
-                          ...prev,
-                          sendReminder: e.target.checked,
-                        }))
-                      }
-                      className="h-4 w-4"
-                    />
-                    <label htmlFor="sendReminder" className="text-sm">
-                      Send my friends a reminder email in 3 days
-                    </label>
-                  </div>
-
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button type="submit" className="flex-1" disabled={loading}>
                       {loading ? "Sending..." : "Send"}
@@ -436,42 +342,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
                   )}
                 </form>
 
-                {/* Recent Referrals */}
-                {referralHistory.length > 0 && (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-4">Recent Referrals</h3>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {referralHistory.slice(0, 5).map((referral) => (
-                        <div key={referral._id} className="p-3 bg-gray-50 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-sm font-medium">
-                                {referral.toEmails.join(", ")}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(referral.createdAt).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <span className={`px-2 py-1 rounded-full text-xs ${
-                              referral.status === 'accepted' 
-                                ? 'bg-green-100 text-green-800' 
-                                : referral.status === 'expired'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {referral.status}
-                            </span>
-                          </div>
-                          {referral.redeemedBy && (
-                            <p className="text-xs text-green-600 mt-1">
-                              Redeemed by: {referral.redeemedBy.firstName} {referral.redeemedBy.lastName}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Right side - Image */}

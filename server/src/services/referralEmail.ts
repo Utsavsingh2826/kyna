@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { IReferral, IUser } from '../types';
+import { baseStyles, socialFooter, legalFooter } from './emailTemplates';
 
 // Email transporter configuration
 const createTransporter = () => {
@@ -29,69 +30,51 @@ export const sendReferralInvitation = async (
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
       to: friendEmail,
-      subject: `${referrer.firstName} invited you to join Kyna Jewels!`,
+      subject: `${referrer.firstName} invited you to discover Kyna Jewels`,
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>You're Invited to Kyna Jewels!</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .cta-button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
-            .referral-code { background: #e8f2ff; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0; font-family: monospace; font-size: 18px; font-weight: bold; color: #667eea; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            .note { background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 20px 0; }
-          </style>
+          <title>You're Invited to KYNA</title>
+          <style>${baseStyles}</style>
         </head>
         <body>
-          <div class="container">
-            <div class="header">
-              <h1>✨ You're Invited to Kyna Jewels! ✨</h1>
-              <p>Discover beautiful jewelry and earn rewards together</p>
-            </div>
-            
-            <div class="content">
-              <h2>Hello!</h2>
-              <p><strong>${referrer.firstName} ${referrer.lastName || ''}</strong> has invited you to join Kyna Jewels, where you can discover stunning jewelry pieces and earn rewards!</p>
-              
-              ${referral.note ? `<div class="note"><strong>Personal message from ${referrer.firstName}:</strong><br>"${referral.note}"</div>` : ''}
-              
-              <h3>🎁 What's in it for you?</h3>
-              <ul>
-                <li>Get a <strong>special discount</strong> when you sign up</li>
-                <li>Access to exclusive jewelry collections</li>
-                <li>Earn rewards for future purchases</li>
-                <li>${referrer.firstName} will also get a reward when you join!</li>
-              </ul>
-              
-              <div class="referral-code">
-                Your Referral Code: ${referrer.referralCode}
+          <div class="wrapper">
+            <div class="container">
+              <div class="brand-bar">KYNA<span>FINE JEWELLERY</span></div>
+              <div class="hero">You're Invited</div>
+              <div class="content">
+                <div class="card">
+                  <div class="card-title">Dear Friend,</div>
+                  <p class="summary">
+                    <strong>${referrer.firstName} ${referrer.lastName || ''}</strong> has invited you to discover KYNA, where timeless elegance meets modern craftsmanship. Join our community and unlock exclusive benefits.
+                  </p>
+                  
+                  ${referral.note ? `<div class="note"><strong>Personal message from ${referrer.firstName}:</strong><br>"${referral.note}"</div>` : ''}
+                  
+                  <div class="highlight-box" style="margin-top:10px;">REFERRAL CODE: ${referrer.referralCode}</div>
+                  
+                  <table class="details-table">
+                    <tr><td>Exclusive Access</td><td>Curated collections & limited editions</td></tr>
+                    <tr><td>Special Benefits</td><td>Earn points & unlock discounts</td></tr>
+                    <tr><td>Personalized Service</td><td>Bespoke assistance for your jewelry journey</td></tr>
+                  </table>
+                  
+                  <div style="text-align:center;">
+                    <a class="primary-btn" href="${referralLink}">Join KYNA Now</a>
+                  </div>
+                  
+                  <div class="note">
+                    This invitation expires on ${new Date(referral.expiresAt).toLocaleDateString()}. Start your journey with KYNA today.
+                  </div>
+                </div>
               </div>
-              
-              <div style="text-align: center;">
-                <a href="${referralLink}" class="cta-button">Sign Up & Get Rewards</a>
+              <div class="footer">
+                ${socialFooter}
+                ${legalFooter}
               </div>
-              
-              <p><strong>How to get your rewards:</strong></p>
-              <ol>
-                <li>Click the button above to visit our website</li>
-                <li>You'll be redirected to our signup page</li>
-                <li>Create your account (referral code is automatically applied)</li>
-                <li>Verify your email with OTP</li>
-                <li>Both you and ${referrer.firstName} get ₹100 rewards automatically!</li>
-              </ol>
-              
-              <p><em>This invitation expires on ${new Date(referral.expiresAt).toLocaleDateString()}.</em></p>
-            </div>
-            
-            <div class="footer">
-              <p>Best regards,<br>The Kyna Jewels Team</p>
-              <p>If you didn't expect this invitation, you can safely ignore this email.</p>
             </div>
           </div>
         </body>
@@ -119,47 +102,49 @@ export const sendReferralSuccessNotification = async (
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
       to: referrer.email,
-      subject: '🎉 Your referral was successful!',
+      subject: 'Your referral was successful - KYNA',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Referral Success!</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .reward-box { background: #d4edda; padding: 20px; border-radius: 5px; text-align: center; margin: 20px 0; border: 2px solid #c3e6cb; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          </style>
+          <title>Referral Success - KYNA</title>
+          <style>${baseStyles}</style>
         </head>
         <body>
-          <div class="container">
-            <div class="header">
-              <h1>🎉 Congratulations!</h1>
-              <p>Your referral was successful</p>
-            </div>
-            
-            <div class="content">
-              <h2>Great news, ${referrer.firstName}!</h2>
-              <p><strong>${friendEmail}</strong> has successfully joined Kyna Jewels using your referral code!</p>
-              
-              <div class="reward-box">
-                <h3>💰 Your Reward</h3>
-                <p style="font-size: 24px; font-weight: bold; color: #28a745;">$${rewardAmount}</p>
-                <p>has been added to your available offers balance!</p>
+          <div class="wrapper">
+            <div class="container">
+              <div class="brand-bar">KYNA<span>FINE JEWELLERY</span></div>
+              <div class="hero">Referral Successful</div>
+              <div class="content">
+                <div class="card">
+                  <div class="card-title">Congratulations, ${referrer.firstName}</div>
+                  <p class="summary">
+                    <strong>${friendEmail}</strong> has successfully joined KYNA using your referral code. Thank you for sharing the beauty of KYNA with your friends.
+                  </p>
+                  
+                  <div class="highlight-box" style="margin-top:10px;">POINTS EARNED</div>
+                  
+                  <table class="details-table">
+                    <tr><td>Referral Status</td><td>Successfully completed</td></tr>
+                    <tr><td>Points Added</td><td>Available in your account</td></tr>
+                    <tr><td>Next Steps</td><td>Use your points for exclusive discounts</td></tr>
+                  </table>
+                  
+                  <div style="text-align:center;">
+                    <a class="primary-btn" href="${process.env.FRONTEND_URL || 'http://localhost:5173'}">View My Account</a>
+                  </div>
+                  
+                  <div class="note">
+                    Continue sharing KYNA with your friends and family to earn more points and unlock special benefits.
+                  </div>
+                </div>
               </div>
-              
-              <p>You can use this reward on your next purchase. Thank you for helping us grow our community!</p>
-              
-              <p><strong>Want to refer more friends?</strong> Share your referral link and earn more rewards!</p>
-            </div>
-            
-            <div class="footer">
-              <p>Best regards,<br>The Kyna Jewels Team</p>
+              <div class="footer">
+                ${socialFooter}
+                ${legalFooter}
+              </div>
             </div>
           </div>
         </body>
@@ -190,74 +175,55 @@ export const sendReferralReminder = async (
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
       to: friendEmail,
-      subject: '⏰ Reminder: Your Kyna Jewels invitation is waiting!',
+      subject: 'Reminder: Your KYNA invitation awaits',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Reminder: Your Kyna Jewels Invitation</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-            .cta-button { display: inline-block; background: #ff6b6b; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
-            .referral-code { background: #ffe8e8; padding: 15px; border-radius: 5px; text-align: center; margin: 20px 0; font-family: monospace; font-size: 18px; font-weight: bold; color: #ff6b6b; }
-            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            .note { background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 20px 0; }
-            .urgency { background: #f8d7da; padding: 15px; border-radius: 5px; border-left: 4px solid #dc3545; margin: 20px 0; }
-          </style>
+          <title>Reminder: Your KYNA Invitation</title>
+          <style>${baseStyles}</style>
         </head>
         <body>
-          <div class="container">
-            <div class="header">
-              <h1>⏰ Don't Miss Out!</h1>
-              <p>Your invitation from ${referrer.firstName} is still waiting</p>
-            </div>
-            
-            <div class="content">
-              <h2>Hello again!</h2>
-              <p><strong>${referrer.firstName} ${referrer.lastName || ''}</strong> invited you to join Kyna Jewels a few days ago, and we wanted to make sure you didn't miss this special offer!</p>
-              
-              <div class="urgency">
-                <strong>⏰ Limited Time Offer:</strong> This invitation expires on ${new Date(referral.expiresAt).toLocaleDateString()}!
+          <div class="wrapper">
+            <div class="container">
+              <div class="brand-bar">KYNA<span>FINE JEWELLERY</span></div>
+              <div class="hero">Don't Miss Out</div>
+              <div class="content">
+                <div class="card">
+                  <div class="card-title">Friendly Reminder</div>
+                  <p class="summary">
+                    <strong>${referrer.firstName} ${referrer.lastName || ''}</strong> invited you to join KYNA a few days ago. We wanted to ensure you don't miss this opportunity to discover exquisite jewelry and exclusive benefits.
+                  </p>
+                  
+                  <div class="note" style="background: #fff4ea; border-left: 4px solid #c97c42;">
+                    <strong>Limited Time:</strong> This invitation expires on ${new Date(referral.expiresAt).toLocaleDateString()}
+                  </div>
+                  
+                  ${referral.note ? `<div class="note"><strong>Personal message from ${referrer.firstName}:</strong><br>"${referral.note}"</div>` : ''}
+                  
+                  <div class="highlight-box" style="margin-top:10px;">REFERRAL CODE: ${referrer.referralCode}</div>
+                  
+                  <table class="details-table">
+                    <tr><td>Exclusive Access</td><td>Curated collections & limited editions</td></tr>
+                    <tr><td>Special Benefits</td><td>Earn points & unlock discounts</td></tr>
+                    <tr><td>Personalized Service</td><td>Bespoke assistance for your jewelry journey</td></tr>
+                  </table>
+                  
+                  <div style="text-align:center;">
+                    <a class="primary-btn" href="${referralLink}">Join KYNA Now</a>
+                  </div>
+                  
+                  <div class="note">
+                    Start your journey with KYNA today and unlock a world of elegant possibilities.
+                  </div>
+                </div>
               </div>
-              
-              ${referral.note ? `<div class="note"><strong>Personal message from ${referrer.firstName}:</strong><br>"${referral.note}"</div>` : ''}
-              
-              <h3>🎁 What you'll get:</h3>
-              <ul>
-                <li>Get a <strong>special discount</strong> when you sign up</li>
-                <li>Access to exclusive jewelry collections</li>
-                <li>Earn rewards for future purchases</li>
-                <li>${referrer.firstName} will also get a reward when you join!</li>
-              </ul>
-              
-              <div class="referral-code">
-                Your Referral Code: ${referral.referFrdId}
+              <div class="footer">
+                ${socialFooter}
+                ${legalFooter}
               </div>
-              
-              <div style="text-align: center;">
-                <a href="${referralLink}" class="cta-button">Sign Up & Get Rewards</a>
-              </div>
-              
-              <p><strong>How to get your rewards:</strong></p>
-              <ol>
-                <li>Click the button above to visit our website</li>
-                <li>You'll be redirected to our signup page</li>
-                <li>Create your account (referral code is automatically applied)</li>
-                <li>Verify your email with OTP</li>
-                <li>Both you and ${referrer.firstName} get ₹100 rewards automatically!</li>
-              </ol>
-              
-              <p><em>This is your final reminder - don't let this opportunity slip away!</em></p>
-            </div>
-            
-            <div class="footer">
-              <p>Best regards,<br>The Kyna Jewels Team</p>
-              <p>If you don't want to receive these reminders, you can safely ignore this email.</p>
             </div>
           </div>
         </body>

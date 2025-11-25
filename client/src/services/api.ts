@@ -328,6 +328,7 @@ class ApiService {
     metalColorName?: string | null;
     metalColorCode?: string | null;
     primaryImage?: string | null;
+    price?: number | null;
     engraving?: {
       text?: string;
       motif?: string;

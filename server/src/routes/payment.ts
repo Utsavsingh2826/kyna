@@ -14,6 +14,11 @@ import PaymentOrder, {
 import OrderModel from "../models/orderModel";
 import User from "../models/userModel";
 import Cart from "../models/cartModel";
+import {
+  consumeReferralCredits,
+  queueReferralCredit,
+  releasePendingReferralCredits,
+} from "../utils/referralWallet";
 
 const router = express.Router();
 
@@ -841,6 +846,12 @@ router.post("/verify", async (req: Request, res: Response) => {
       );
     }
     let purchasingUserChanged = false;
+    if (purchasingUser) {
+      const releasedForPurchaser = releasePendingReferralCredits(purchasingUser);
+      if (releasedForPurchaser > 0) {
+        purchasingUserChanged = true;
+      }
+    }
     const referralSummary: {
       credits?: { referrerId?: any; code: string; amount: number };
       walletRedemption?: { amount: number };
@@ -901,27 +912,28 @@ router.post("/verify", async (req: Request, res: Response) => {
       const requestedWalletAmount = Number(
         (paymentOrder.orderDetails as any)?.referralWallet?.amountRequested || 0
       );
-      if (
-        requestedWalletAmount > 0 &&
-        purchasingUser.totalReferralEarnings > 0
-      ) {
-        const walletDeduction = Math.min(
-          requestedWalletAmount,
-          purchasingUser.totalReferralEarnings
-        );
+      const availableBalance = purchasingUser.referralAvailableBalance || 0;
+      if (requestedWalletAmount > 0 && availableBalance > 0) {
+        const walletDeduction = Math.min(requestedWalletAmount, availableBalance);
         if (walletDeduction > 0) {
-          purchasingUser.totalReferralEarnings -= walletDeduction;
-          purchasingUser.referralEarningsHistory =
-            purchasingUser.referralEarningsHistory || [];
-          purchasingUser.referralEarningsHistory.push({
-            type: "debit",
-            amount: walletDeduction,
-            orderId: paymentOrder._id,
-            note: "Redeemed at checkout",
-            createdAt: new Date(),
-          } as any);
-          purchasingUserChanged = true;
-          referralSummary.walletRedemption = { amount: walletDeduction };
+          const consumed = consumeReferralCredits(
+            purchasingUser,
+            walletDeduction,
+            { orderId: paymentOrder._id }
+          );
+          if (consumed > 0) {
+            purchasingUser.referralEarningsHistory =
+              purchasingUser.referralEarningsHistory || [];
+            purchasingUser.referralEarningsHistory.push({
+              type: "debit",
+              amount: consumed,
+              orderId: paymentOrder._id,
+              note: "Redeemed at checkout",
+              createdAt: new Date(),
+            } as any);
+            purchasingUserChanged = true;
+            referralSummary.walletRedemption = { amount: consumed };
+          }
         }
       }
     }
@@ -940,26 +952,25 @@ router.post("/verify", async (req: Request, res: Response) => {
         referrer &&
         referrer._id.toString() !== purchasingUser._id.toString()
       ) {
+        const releaseDelta = releasePendingReferralCredits(referrer);
         const referralCredit = Math.round(diamondSubtotal * 0.05);
+        let referrerChanged = releaseDelta > 0;
         if (referralCredit > 0) {
-          referrer.totalReferralEarnings += referralCredit;
-          referrer.referralEarningsHistory =
-            referrer.referralEarningsHistory || [];
-          referrer.referralEarningsHistory.push({
-            type: "credit",
-            amount: referralCredit,
+          queueReferralCredit(referrer, referralCredit, {
             orderId: paymentOrder._id,
             note: `Referral purchase by ${
               purchasingUser.email || purchasingUser._id
             }`,
-            createdAt: new Date(),
-          } as any);
-          await referrer.save();
+          });
+          referrerChanged = true;
           referralSummary.credits = {
             referrerId: referrer._id,
             code: referrer.referralCode,
             amount: referralCredit,
           };
+        }
+        if (referrerChanged) {
+          await referrer.save();
         }
       }
     }

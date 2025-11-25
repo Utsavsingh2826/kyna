@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { NextFunction, Request, Response } from 'express';
 import User from '../models/userModel';
 import { generateTokenAndSetCookie } from '../utils/generateTokenAndSetCookie';
+import { IUser } from "../types";
 import {
   sendPasswordResetEmail,
   sendResetSuccessEmail,
@@ -11,6 +12,7 @@ import {
 } from '../services/emailService';
 import validator from "validator";
 import { deleteImageFromCloudinary, extractPublicIdFromUrl } from "../services/cloudinary";
+import { releasePendingReferralCredits } from "../utils/referralWallet";
 
 
 interface UpdateProfileRequest {
@@ -30,6 +32,24 @@ const generateOtpPayload = () => {
   const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
   return { otp, otpExpires };
 };
+
+const buildUserResponse = (user: IUser) => ({
+  id: user._id,
+  firstName: user.firstName,
+  lastName: user.lastName,
+  email: user.email,
+  phone: user.phone,
+  isVerified: user.isVerified,
+  role: user.role,
+  lastLogin: user.lastLogin,
+  isActive: user.isActive,
+  availableOffers: user.availableOffers,
+  totalReferralEarnings: user.totalReferralEarnings,
+  referralAvailableBalance: user.referralAvailableBalance,
+  referralPendingBalance: user.referralPendingBalance,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
 
 // Signup with OTP verification
 export const signup = async (req: Request, res: Response) => {
@@ -111,14 +131,7 @@ export const signup = async (req: Request, res: Response) => {
       success: true,
       requiresVerification: true,
       message: "Registration successful. Please check your email for OTP verification.",
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        isVerified: user.isVerified,
-        totalReferralEarnings: user.totalReferralEarnings,
-      },
+      user: buildUserResponse(user),
     });
   } catch (error) {
     res.status(400).json({ success: false, message: (error as Error).message });
@@ -147,6 +160,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpires = undefined;
+    releasePendingReferralCredits(user);
     await user.save();
 
     // Send welcome email
@@ -159,21 +173,7 @@ export const verifyEmail = async (req: Request, res: Response) => {
       success: true,
       message: "Email verified successfully. You can now login.",
       token: token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        isVerified: user.isVerified,
-        role: user.role,
-        lastLogin: user.lastLogin,
-        isActive: user.isActive,
-        availableOffers: user.availableOffers,
-        totalReferralEarnings: user.totalReferralEarnings,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      },
+      user: buildUserResponse(user),
     });
   } catch (error) {
     console.log("error in verifyEmail ", error);
@@ -220,6 +220,7 @@ export const login = async (req: Request, res: Response) => {
     // Generate JWT and set cookie
     const token = generateTokenAndSetCookie(res, user._id);
 
+    releasePendingReferralCredits(user);
     user.lastLogin = new Date();
     await user.save();
 
@@ -227,21 +228,7 @@ export const login = async (req: Request, res: Response) => {
       success: true,
       message: "Logged in successfully",
       token: token,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        isVerified: user.isVerified,
-        role: user.role,
-        lastLogin: user.lastLogin,
-        isActive: user.isActive,
-        availableOffers: user.availableOffers,
-        totalReferralEarnings: user.totalReferralEarnings,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      },
+      user: buildUserResponse(user),
     });
   } catch (error) {
     console.log("Error in login ", error);
@@ -343,7 +330,8 @@ export const resetPassword = async (req: Request, res: Response) => {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpiresAt = undefined;
     user.resetPasswordExpires = undefined; // For compatibility
-      await user.save();
+    releasePendingReferralCredits(user);
+    await user.save();
 
     await sendResetSuccessEmail(user.email);
 
@@ -354,21 +342,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       success: true, 
       message: "Password reset successful",
       token: jwtToken,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        isVerified: user.isVerified,
-        role: user.role,
-        lastLogin: user.lastLogin,
-        isActive: user.isActive,
-        availableOffers: user.availableOffers,
-        totalReferralEarnings: user.totalReferralEarnings,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }
+      user: buildUserResponse(user)
     });
   } catch (error) {
     console.log("Error in resetPassword ", error);
@@ -379,12 +353,20 @@ export const resetPassword = async (req: Request, res: Response) => {
 // Check authentication status
 export const checkAuth = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById((req as any).userId).select("-password");
+    const user = await User.findById((req as any).userId);
     if (!user) {
       return res.status(400).json({ success: false, message: "User not found" });
     }
 
-    res.status(200).json({ success: true, user });
+    const releaseDelta = releasePendingReferralCredits(user);
+    if (releaseDelta > 0) {
+      await user.save();
+    }
+
+    const sanitizedUser = user.toObject();
+    delete (sanitizedUser as any).password;
+
+    res.status(200).json({ success: true, user: sanitizedUser });
   } catch (error) {
     console.log("Error in checkAuth ", error);
     res.status(400).json({ success: false, message: (error as Error).message });
@@ -394,28 +376,19 @@ export const checkAuth = async (req: Request, res: Response) => {
 // Get current user profile
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
-    const user = await User.findById((req as any).userId).select("-password");
+    const user = await User.findById((req as any).userId);
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
+    const releaseDelta = releasePendingReferralCredits(user);
+    if (releaseDelta > 0) {
+      await user.save();
+    }
+
     res.status(200).json({
       success: true,
-      user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        phone: user.phone,
-        isVerified: user.isVerified,
-        role: user.role,
-        lastLogin: user.lastLogin,
-        isActive: user.isActive,
-        availableOffers: user.availableOffers,
-        totalReferralEarnings: user.totalReferralEarnings,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-      }
+      user: buildUserResponse(user),
     });
   } catch (error) {
     console.log("Error in getCurrentUser ", error);

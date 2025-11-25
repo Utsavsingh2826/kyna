@@ -1,4 +1,4 @@
-const baseStyles = `
+export const baseStyles = `
   body {
     margin: 0;
     padding: 0;
@@ -130,14 +130,14 @@ const baseStyles = `
   }
 `;
 
-const socialFooter = `
+export const socialFooter = `
   <p style="margin: 6px 0 14px;">CONNECT WITH US</p>
   <div style="display:inline-flex;gap:18px;">
     <a href="https://www.instagram.com/kyna_jewels?igsh=MWZ5MWNtZHg0YnN6dA==" style="color:#0f9aa7;text-decoration:none;">Instagram</a>
   </div>
 `;
 
-const legalFooter = `
+export const legalFooter = `
   <p style="margin-top:18px;font-size:11px;color:#b0a195;line-height:1.5;">
     © ${new Date().getFullYear()} KYNA. All rights reserved. You received this message because you registered on the KYNA platform. To manage your email preferences, visit your account settings.
   </p>

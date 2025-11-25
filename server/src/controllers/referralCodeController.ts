@@ -2,6 +2,10 @@ import { Response } from 'express';
 import User from '../models/userModel';
 import Settings from '../models/settingsModel';
 import { AuthRequest } from '../types';
+import {
+  queueReferralCredit,
+  releasePendingReferralCredits,
+} from '../utils/referralWallet';
 
 // Apply referral code
 export const applyReferralCode = async (req: AuthRequest, res: Response) => {
@@ -73,11 +77,17 @@ export const applyReferralCode = async (req: AuthRequest, res: Response) => {
     const referralDiscount = settings.referralRewardFriend;
 
     // Update database - apply referral rewards
-    // Update referrer's stats and wallet
+    // Update referrer's stats and wallet (with 60-day release)
     referrer.referralCount += 1;
-    referrer.totalReferralEarnings += settings.referralRewardReferrer;
-    referrer.availableOffers += settings.referralRewardReferrer;
-    await referrer.save();
+    const releaseDelta = releasePendingReferralCredits(referrer);
+    if (settings.referralRewardReferrer > 0) {
+      queueReferralCredit(referrer, settings.referralRewardReferrer, {
+        note: `Referral bonus from ${user.firstName || user.email}`,
+      });
+    }
+    if (releaseDelta > 0 || settings.referralRewardReferrer > 0) {
+      await referrer.save();
+    }
 
     // Update friend's wallet and mark referral as used
     user.availableOffers += settings.referralRewardFriend;
@@ -204,11 +214,17 @@ export const processReferralRewards = async (userId: string, referralCode?: stri
 
     if (!user || !referrer || !settings) return;
 
-    // Update referrer's stats and wallet
+    // Update referrer's stats and wallet with pending credit
     referrer.referralCount += 1;
-    referrer.totalReferralEarnings += settings.referralRewardReferrer;
-    referrer.availableOffers += settings.referralRewardReferrer;
-    await referrer.save();
+    const releaseDelta = releasePendingReferralCredits(referrer);
+    if (settings.referralRewardReferrer > 0) {
+      queueReferralCredit(referrer, settings.referralRewardReferrer, {
+        note: `Referral reward from ${user.firstName || user.email}`,
+      });
+    }
+    if (releaseDelta > 0 || settings.referralRewardReferrer > 0) {
+      await referrer.save();
+    }
 
     // Update friend's wallet
     user.availableOffers += settings.referralRewardFriend;

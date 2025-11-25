@@ -2,6 +2,19 @@ import { Request } from "express";
 import { Document } from "mongoose";
 
 // User interface - extends Document for Mongoose methods
+export interface ReferralEarningHistoryEntry {
+  type: "credit" | "debit";
+  amount: number;
+  orderId?: string;
+  note?: string;
+  createdAt: Date;
+  status?: "pending" | "available" | "redeemed";
+  redeemableAt?: Date;
+  releasedAt?: Date;
+  redeemedAt?: Date;
+  redeemedAmount?: number;
+}
+
 export interface IUser extends Document {
   firstName: string;
   lastName?: string;
@@ -57,13 +70,9 @@ export interface IUser extends Document {
   refDiscount?: number; // percentage discount available to user (e.g., 5 for 5%)
   referralCount: number;
   totalReferralEarnings: number;
-  referralEarningsHistory?: Array<{
-    type: "credit" | "debit";
-    amount: number;
-    orderId?: string;
-    note?: string;
-    createdAt: Date;
-  }>;
+  referralPendingBalance: number;
+  referralAvailableBalance: number;
+  referralEarningsHistory?: ReferralEarningHistoryEntry[];
   usedPromoCodes: Array<{
     code: string;
     orderId?: string;

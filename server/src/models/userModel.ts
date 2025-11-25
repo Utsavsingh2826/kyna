@@ -111,6 +111,8 @@ const userSchema = new Schema<IUserInternal>({
   refDiscount: { type: Number, default: 0 },
   referralCount: { type: Number, default: 0 },
   totalReferralEarnings: { type: Number, default: 0 },
+  referralPendingBalance: { type: Number, default: 0 },
+  referralAvailableBalance: { type: Number, default: 0 },
   referralEarningsHistory: [
     {
       type: {
@@ -122,6 +124,14 @@ const userSchema = new Schema<IUserInternal>({
       orderId: { type: Schema.Types.ObjectId, ref: "PaymentOrder" },
       note: { type: String, trim: true },
       createdAt: { type: Date, default: Date.now },
+      status: {
+        type: String,
+        enum: ["pending", "available", "redeemed"],
+      },
+      redeemableAt: { type: Date },
+      releasedAt: { type: Date },
+      redeemedAt: { type: Date },
+      redeemedAmount: { type: Number, default: 0 },
     },
   ],
   

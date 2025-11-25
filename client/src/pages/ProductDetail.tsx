@@ -724,6 +724,12 @@ const ProductDetail = () => {
           metalColorName: selectedMetalColor,
           metalColorCode: currentMetalColorCode,
           primaryImage,
+          price:
+            typeof productData.sellingPrice === "number"
+              ? productData.sellingPrice
+              : typeof productData.priceBreakdown?.totalWithGst === "number"
+              ? productData.priceBreakdown.totalWithGst
+              : null,
           engraving:
             hasEngraving &&
             (engravingText || engravingMotifPath || engravingImageUrl)

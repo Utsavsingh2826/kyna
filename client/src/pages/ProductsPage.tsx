@@ -489,6 +489,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           categoryLabel: category,
           variantSku: product.firstVariantSku,
           primaryImage: product.firstVariantImageUrl || null,
+        price:
+          typeof product.sellingPrice === "number"
+            ? product.sellingPrice
+            : null,
         })
       );
     },
