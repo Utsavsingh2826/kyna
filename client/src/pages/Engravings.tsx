@@ -1,16 +1,28 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { X, Heart } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   FilterGroup,
   // DiamondShapeSelector,
   PriceRangeSlider,
 } from "@/components/Engravings";
+import type { AppDispatch, RootState } from "@/store";
+import {
+  addWishlistItem,
+  buildWishlistKey,
+  fetchWishlist,
+  removeWishlistItemThunk,
+  selectWishlistInitialized,
+  selectWishlistKeyMap,
+  selectWishlistLoading,
+} from "@/store/slices/wishlistSlice";
 import "./ProductPage.css";
 
 type MainCategory = "rings";
 
 interface Product {
+  _id?: string;
   modelSku: string;
   metalTypes: string[];
   title: string;
@@ -45,6 +57,12 @@ interface ApiResponse {
 
 export default function EngravingsPage() {
   const category: MainCategory = "rings"; // Fixed to rings only
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const wishlistInitialized = useSelector(selectWishlistInitialized);
+  const wishlistLoading = useSelector(selectWishlistLoading);
+  const wishlistKeyMap = useSelector(selectWishlistKeyMap);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   // Separate UI state (updates immediately while sliding) and API state (debounced)
   const [minPriceUI, setMinPriceUI] = useState<number>(0);
@@ -66,6 +84,16 @@ export default function EngravingsPage() {
     ApiResponse["appliedFilters"] | null
   >(null);
 
+  useEffect(() => {
+    if (
+      isAuthenticated &&
+      !wishlistInitialized &&
+      !wishlistLoading
+    ) {
+      dispatch(fetchWishlist());
+    }
+  }, [dispatch, isAuthenticated, wishlistInitialized, wishlistLoading]);
+
   // Filter state management with backend parameter names - only for rings with engraving
   const [activeFilters, setActiveFilters] = useState({
     // Ring categories and filters
@@ -80,6 +108,57 @@ export default function EngravingsPage() {
     min_price: "0",
     max_price: "50000",
   });
+
+  const handleWishlistToggle = useCallback(
+    (event: React.MouseEvent, product: Product, primaryImage: string | null) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (!isAuthenticated) {
+        navigate("/login");
+        return;
+      }
+
+      if (!product._id) {
+        alert("Product information is unavailable. Please try again.");
+        return;
+      }
+
+      const entryKey = buildWishlistKey(
+        product._id,
+        product.firstVariantSku || null,
+        null
+      );
+      const existingEntryId = wishlistKeyMap[entryKey];
+
+      if (existingEntryId) {
+        dispatch(removeWishlistItemThunk(existingEntryId));
+        return;
+      }
+
+      dispatch(
+        addWishlistItem({
+          productId: product._id,
+          modelSku: product.modelSku,
+          categorySlug: category,
+          categoryLabel: category,
+          variantSku: product.firstVariantSku,
+          primaryImage,
+          price:
+            typeof product.sellingPrice === "number"
+              ? product.sellingPrice
+              : null,
+        })
+      );
+    },
+    [
+      category,
+      dispatch,
+      isAuthenticated,
+      navigate,
+      wishlistKeyMap,
+    ]
+  );
 
   // API function to fetch products
   const fetchProducts = useCallback(
@@ -869,6 +948,14 @@ export default function EngravingsPage() {
                 );
                 console.log("---");
 
+                const wishlistKey =
+                  p._id &&
+                  buildWishlistKey(p._id, p.firstVariantSku || null, null);
+                const isWishlisted = wishlistKey
+                  ? Boolean(wishlistKeyMap[wishlistKey])
+                  : false;
+                const primaryImage = evImage || p.firstVariantImageUrl || null;
+
                 return (
                   <Link
                     to={`/product/rings/${
@@ -884,10 +971,20 @@ export default function EngravingsPage() {
                       aria-label={p.title}
                     >
                       <button
-                        className="eng-wishlist"
+                        className={`eng-wishlist ${
+                          isWishlisted ? "text-red-500" : ""
+                        } ${wishlistLoading ? "opacity-70" : ""}`}
                         aria-label="Add to wishlist"
+                        aria-pressed={Boolean(isWishlisted)}
+                        onClick={(e) =>
+                          handleWishlistToggle(e, p, primaryImage)
+                        }
+                        disabled={wishlistLoading}
                       >
-                        <Heart size={16} />
+                        <Heart
+                          size={16}
+                          className={isWishlisted ? "fill-current" : ""}
+                        />
                       </button>
                       <img
                         src={evImage || p.firstVariantImageUrl}
