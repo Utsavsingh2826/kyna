@@ -117,7 +117,6 @@ export const signup = async (req: Request, res: Response) => {
       }
 
       userData.referredBy = referringUser.referralCode;
-      userData.refDiscount = 5; // reserve 5% discount for referred user
     }
 
     const user = new User(userData);

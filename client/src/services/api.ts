@@ -283,14 +283,6 @@ class ApiService {
     });
   }
 
-  // Referral Code APIs
-  async applyReferralCode(code: string, subtotal: number) {
-    return this.makeRequest("/referral-code/apply", {
-      method: "POST",
-      body: JSON.stringify({ code, subtotal }),
-    });
-  }
-
   // Redeem referral promo (cart flow) - supports passing either referFrdId or public code
   async redeemReferralPromo(codeOrId: string) {
     return this.makeRequest("/referrals/promos/redeem", {

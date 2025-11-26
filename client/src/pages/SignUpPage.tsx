@@ -39,7 +39,9 @@ const SignUpPage: React.FC = () => {
     const referralParam = searchParams.get("referral");
     if (referralParam) {
       setReferralCode(referralParam);
-      toast.info(`Referral code detected: ${referralParam}. You'll get rewards after signup!`);
+      toast.info(
+        `Referral code detected: ${referralParam}. Your friend will earn rewards after your first purchase.`
+      );
     }
   }, [searchParams]);
 
@@ -93,7 +95,7 @@ const SignUpPage: React.FC = () => {
       };
       if (referralCode) payload.referralCode = referralCode;
 
-      const resp = await apiService.signup(payload);
+      const resp = (await apiService.signup(payload)) as any;
 
       if (resp.success) {
         setSuccess(
@@ -131,10 +133,10 @@ const SignUpPage: React.FC = () => {
     setSuccess("");
 
     try {
-      const resp = await apiService.verifyEmail({
+      const resp = (await apiService.verifyEmail({
         email: formData.email,
         otp,
-      });
+      })) as any;
 
       if (resp.success) {
         setSuccess(resp.message || "Email verified successfully.");
@@ -145,32 +147,6 @@ const SignUpPage: React.FC = () => {
           /* ignore storage write failures */
         }
         setStep("completed");
-        
-        // Apply referral code if present
-        if (referralCode) {
-          try {
-            // First login the user to get token
-            const loginResp = await apiService.login({
-              email: formData.email,
-              password: formData.password,
-              useCookie: true,
-            });
-            
-            if (loginResp.success) {
-              // Apply referral code
-              const referralResponse = await apiService.applyReferralCode(referralCode, 0);
-              if (referralResponse.success) {
-                const payload: any = referralResponse.data as any;
-                toast.success(`Referral code applied! You saved ₹${payload.discountAmount || 0}`);
-              } else {
-                toast.warning(`Referral code couldn't be applied: ${referralResponse.error}`);
-              }
-            }
-          } catch (error) {
-            console.error("Error applying referral code:", error);
-            toast.warning("Referral code couldn't be applied, but you can try again later.");
-          }
-        }
         
         // Navigate to login so the user can sign in
         setTimeout(() => navigate("/login"), 800);
@@ -190,7 +166,7 @@ const SignUpPage: React.FC = () => {
     setSuccess("");
 
     try {
-      const resp = await apiService.resendOtp(formData.email);
+      const resp = (await apiService.resendOtp(formData.email)) as any;
 
       if (resp.success) {
         setSuccess(resp.message || "OTP sent successfully. Please check your email.");

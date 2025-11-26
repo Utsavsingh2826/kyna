@@ -10,6 +10,8 @@ export interface User {
   // Add other fields as needed, and ensure firstName and lastName exist if you use them below
   firstName?: string;
   lastName?: string;
+  totalReferralEarnings?: number;
+  referralAvailableBalance?: number;
 }
 
 export interface AuthState {

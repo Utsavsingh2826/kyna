@@ -39,6 +39,7 @@ interface User {
   };
   // Add other relevant user properties here
   totalReferralEarnings?: number;
+  referralAvailableBalance?: number;
 }
 
 export interface AuthState {

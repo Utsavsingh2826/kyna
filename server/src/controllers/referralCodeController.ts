@@ -2,15 +2,11 @@ import { Response } from 'express';
 import User from '../models/userModel';
 import Settings from '../models/settingsModel';
 import { AuthRequest } from '../types';
-import {
-  queueReferralCredit,
-  releasePendingReferralCredits,
-} from '../utils/referralWallet';
 
 // Apply referral code
 export const applyReferralCode = async (req: AuthRequest, res: Response) => {
   try {
-    const { code, subtotal } = req.body;
+    const { code } = req.body;
     const userId = req.user?._id;
 
     if (!userId) {
@@ -20,10 +16,10 @@ export const applyReferralCode = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    if (!code || !subtotal) {
+    if (!code) {
       return res.status(400).json({
         success: false,
-        message: 'Referral code and subtotal are required'
+        message: 'Referral code is required'
       });
     }
 
@@ -73,37 +69,19 @@ export const applyReferralCode = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Calculate referral discount (both users get the same amount)
-    const referralDiscount = settings.referralRewardFriend;
-
-    // Update database - apply referral rewards
-    // Update referrer's stats and wallet (with 60-day release)
-    referrer.referralCount += 1;
-    const releaseDelta = releasePendingReferralCredits(referrer);
-    if (settings.referralRewardReferrer > 0) {
-      queueReferralCredit(referrer, settings.referralRewardReferrer, {
-        note: `Referral bonus from ${user.firstName || user.email}`,
-      });
-    }
-    if (releaseDelta > 0 || settings.referralRewardReferrer > 0) {
-      await referrer.save();
-    }
-
-    // Update friend's wallet and mark referral as used
-    user.availableOffers += settings.referralRewardFriend;
+    // Link this user to the referrer so credits can be issued after first purchase
+    user.referredBy = referrer.referralCode;
     user.usedReferralCodes.push(code.toUpperCase());
     await user.save();
 
     res.json({
       success: true,
-      message: 'Referral code applied successfully. Rewards added to your wallet!',
+      message:
+        'Referral code applied successfully. Your referrer will receive rewards after your first purchase.',
       data: {
         code: referrer.referralCode,
         referrerName: `${referrer.firstName} ${referrer.lastName}`,
-        discountAmount: referralDiscount,
-        description: `Referral bonus from ${referrer.firstName}`,
         referrerId: referrer._id,
-        walletBalance: user.availableOffers
       }
     });
 
@@ -188,10 +166,10 @@ export const validateReferralCode = async (req: AuthRequest, res: Response) => {
       data: {
         code: referrer.referralCode,
         referrerName: `${referrer.firstName} ${referrer.lastName}`,
-        discountAmount: settings.referralRewardFriend,
-        description: `Referral bonus from ${referrer.firstName}`,
-        referrerId: referrer._id
-      }
+        rewardAmount: settings.referralRewardReferrer,
+        description: `Your friend will earn rewards after your first purchase`,
+        referrerId: referrer._id,
+      },
     });
 
   } catch (error) {
@@ -200,52 +178,5 @@ export const validateReferralCode = async (req: AuthRequest, res: Response) => {
       success: false,
       message: 'Failed to validate referral code'
     });
-  }
-};
-
-// Process referral rewards (called after successful order)
-export const processReferralRewards = async (userId: string, referralCode?: string) => {
-  try {
-    if (!referralCode) return;
-
-    const user = await User.findById(userId);
-    const referrer = await User.findOne({ referralCode: referralCode.toUpperCase() });
-    const settings = await Settings.findOne({ isActive: true });
-
-    if (!user || !referrer || !settings) return;
-
-    // Update referrer's stats and wallet with pending credit
-    referrer.referralCount += 1;
-    const releaseDelta = releasePendingReferralCredits(referrer);
-    if (settings.referralRewardReferrer > 0) {
-      queueReferralCredit(referrer, settings.referralRewardReferrer, {
-        note: `Referral reward from ${user.firstName || user.email}`,
-      });
-    }
-    if (releaseDelta > 0 || settings.referralRewardReferrer > 0) {
-      await referrer.save();
-    }
-
-    // Update friend's wallet
-    user.availableOffers += settings.referralRewardFriend;
-    await user.save();
-
-    console.log(`Referral rewards processed: ${referrer.firstName} earned ₹${settings.referralRewardReferrer}, ${user.firstName} earned ₹${settings.referralRewardFriend}`);
-
-  } catch (error) {
-    console.error('Process referral rewards error:', error);
-  }
-};
-
-// Mark referral code as used
-export const markReferralCodeUsed = async (userId: string, referralCode: string) => {
-  try {
-    const user = await User.findById(userId);
-    if (user) {
-      user.usedReferralCodes.push(referralCode.toUpperCase());
-      await user.save();
-    }
-  } catch (error) {
-    console.error('Mark referral code used error:', error);
   }
 };

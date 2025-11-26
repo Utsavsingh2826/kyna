@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { fetchCart } from "@/store/slices/cartSlice";
@@ -125,41 +125,43 @@ const PaymentPage = () => {
   const [referralBalance, setReferralBalance] = useState(0);
   const [walletDiscount, setWalletDiscount] = useState(0);
   const [walletError, setWalletError] = useState("");
+  const referralAvailableBalanceFromUser =
+    Number(user?.referralAvailableBalance) || 0;
 
-  // Fetch fresh user data to get latest referral balance
-  useEffect(() => {
-    const fetchFreshUserData = async () => {
-      if (isAuthenticated && user) {
-        try {
-          const response = await apiService.getProfile() as any;
-          if (response.success) {
-            // Handle both response.data.user and response.user formats
-            const freshUserData = response.data?.user || response.user;
-            if (freshUserData) {
-              // Update Redux state with fresh user data including latest totalReferralEarnings
-              dispatch(updateUser(freshUserData));
-              // Also update local state immediately for reactive UI
-              const balance = Math.max(0, Number(freshUserData.totalReferralEarnings) || 0);
-              setReferralBalance(balance);
-            }
-          }
-        } catch (error) {
-          console.error("Failed to fetch fresh user data:", error);
-          // Fallback to Redux state if API call fails
-          const balance = Math.max(0, Number(user?.totalReferralEarnings) || 0);
+  const fetchReferralBalance = useCallback(async () => {
+    if (!isAuthenticated) {
+      setReferralBalance(0);
+      return;
+    }
+
+    try {
+      const response = (await apiService.getProfile()) as any;
+      if (response.success) {
+        const freshUserData = response.data?.user || response.user;
+        if (freshUserData) {
+          dispatch(updateUser(freshUserData));
+          const balance = Math.max(
+            0,
+            Number(freshUserData.referralAvailableBalance) || 0
+          );
           setReferralBalance(balance);
+          return;
         }
       }
-    };
+      setReferralBalance(referralAvailableBalanceFromUser);
+    } catch (error) {
+      console.error("Failed to fetch fresh referral data:", error);
+      setReferralBalance(referralAvailableBalanceFromUser);
+    }
+  }, [dispatch, isAuthenticated, referralAvailableBalanceFromUser]);
 
-    fetchFreshUserData();
-  }, [isAuthenticated, dispatch]); // Fetch on mount and when auth state changes
-
-  // Update referralBalance when user data in Redux changes (reactive to state updates)
   useEffect(() => {
-    const balance = Math.max(0, Number(user?.totalReferralEarnings) || 0);
-    setReferralBalance(balance);
-  }, [user?.totalReferralEarnings]);
+    fetchReferralBalance();
+  }, [fetchReferralBalance]);
+
+  useEffect(() => {
+    setReferralBalance(referralAvailableBalanceFromUser);
+  }, [referralAvailableBalanceFromUser]);
 
   // Determine data source (cart or direct purchase)
   const isDirectPurchase = !!directPurchaseData;
@@ -186,6 +188,10 @@ const PaymentPage = () => {
   const maxWalletRedeemable = Math.max(
     0,
     Math.min(referralBalance, Math.max(totalAmount - promoDiscount, 0))
+  );
+  const displayedReferralBalance = Math.max(
+    0,
+    referralBalance - (walletDiscount || 0)
   );
 
   useEffect(() => {
@@ -402,11 +408,15 @@ const PaymentPage = () => {
     toast.info("Promo removed");
   };
 
-  const handleToggleWallet = () => {
+  const handleToggleWallet = async () => {
     if (walletDiscount > 0) {
+      const prevDiscount = walletDiscount;
       setWalletDiscount(0);
       setWalletError("");
       toast.info("Referral earnings removed");
+      if (prevDiscount > 0) {
+        await fetchReferralBalance();
+      }
       return;
     }
 
@@ -429,6 +439,7 @@ const PaymentPage = () => {
     toast.success(
       `Referral earnings of ₹${maxWalletRedeemable.toLocaleString()} applied`
     );
+    await fetchReferralBalance();
   };
 
   return (
@@ -562,7 +573,7 @@ const PaymentPage = () => {
           <p className="text-sm text-gray-600">
             Wallet balance:{" "}
             <span className="font-semibold">
-              ₹{referralBalance.toLocaleString("en-IN")}
+              ₹{displayedReferralBalance.toLocaleString("en-IN")}
             </span>
           </p>
           {walletDiscount > 0 ? (

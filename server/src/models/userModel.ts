@@ -113,6 +113,7 @@ const userSchema = new Schema<IUserInternal>({
   totalReferralEarnings: { type: Number, default: 0 },
   referralPendingBalance: { type: Number, default: 0 },
   referralAvailableBalance: { type: Number, default: 0 },
+  referralRewardIssued: { type: Boolean, default: false },
   referralEarningsHistory: [
     {
       type: {

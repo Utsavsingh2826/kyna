@@ -2,11 +2,11 @@ import mongoose, { Schema } from 'mongoose';
 import { ISettings } from '../types';
 
 const settingsSchema = new Schema<ISettings>({
-  referralRewardFriend: { 
-    type: Number, 
-    required: true, 
+  referralRewardFriend: {
+    type: Number,
+    required: true,
     min: 0,
-    default: 10 // Default $10 reward for friend
+    default: 0, // Friend does not receive monetary rewards
   },
   referralRewardReferrer: { 
     type: Number, 

@@ -943,7 +943,8 @@ router.post("/verify", async (req: Request, res: Response) => {
     );
     if (
       purchasingUser?.referredBy &&
-      typeof purchasingUser.referredBy === "string"
+      typeof purchasingUser.referredBy === "string" &&
+      !purchasingUser.referralRewardIssued
     ) {
       const referrer = await User.findOne({
         referralCode: purchasingUser.referredBy.toUpperCase(),
@@ -972,6 +973,8 @@ router.post("/verify", async (req: Request, res: Response) => {
         if (referrerChanged) {
           await referrer.save();
         }
+        purchasingUser.referralRewardIssued = true;
+        purchasingUserChanged = true;
       }
     }
 

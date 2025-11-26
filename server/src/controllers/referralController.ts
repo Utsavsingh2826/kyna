@@ -58,7 +58,7 @@ export const createReferral = async (req: AuthRequest, res: Response) => {
     if (!settings) {
       // Create default settings if none exist
       settings = new Settings({
-        referralRewardFriend: 10,
+        referralRewardFriend: 0,
         referralRewardReferrer: 10,
         promoExpiryDays: 30,
         isActive: true,
@@ -151,27 +151,6 @@ export const redeemPromoCode = async (req: AuthRequest, res: Response) => {
         return res.status(404).json({ success: false, message: 'Invalid referral code' });
       }
       // Check current user's saved referral info
-      const currentUser = await User.findById(userId);
-      if (currentUser && currentUser.referredBy && currentUser.referredBy.toUpperCase() === String(inputCode).toUpperCase() && currentUser.refDiscount && currentUser.refDiscount > 0) {
-        // Apply simple stored discount
-        const Cart = (await import('../models/cartModel')).default;
-        const cart = await Cart.findOne({ user: userId });
-        if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
-
-        const subtotal = cart.totalAmount || 0;
-        const discountAmount = Math.round((subtotal * currentUser.refDiscount) / 100);
-        const tax = Math.round((subtotal - discountAmount) * 0.18);
-        const totalAfter = subtotal - discountAmount + tax;
-
-        // Clear single-use referral fields
-        currentUser.refDiscount = 0;
-        currentUser.referredBy = null;
-        await currentUser.save();
-
-        return res.json({ success: true, message: 'Referral applied: 5% discount applied to your cart', data: { discountAmount, subtotal, tax, totalAfter } });
-      }
-
-      // If not a stored referral for this user, try to find a referral record created by that referrer targeting this user's email
       const user = await User.findById(userId);
       referral = await Referral.findOne({ fromUserId: referrerUser._id, toEmails: user?.email, status: 'pending' }).populate('fromUserId');
       if (!referral) {
@@ -204,37 +183,26 @@ export const redeemPromoCode = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ success: false, message: 'This referral code is not valid for your email address' });
     }
 
-    // Find user's cart
-    const Cart = (await import('../models/cartModel')).default;
-    const cart = await Cart.findOne({ user: userId });
-    if (!cart) {
-      return res.status(404).json({ success: false, message: 'Cart not found' });
-    }
-
-    // Compute 5% discount on cart totalAmount
-    const subtotal = cart.totalAmount || 0;
-    const discountAmount = Math.round(subtotal * 0.05);
-
-    // Mark referral as accepted (do not credit wallets or totals — per request keep it simple)
+    // Mark referral as accepted and link the user to the referrer for future rewards
     referral.status = 'accepted';
     referral.redeemedBy = userId;
     referral.redeemedAt = new Date();
     await referral.save();
 
-    // Return discount info and updated totals; frontend will apply discount to UI
-    const tax = Math.round((subtotal - discountAmount) * 0.18); // 18% GST
-    const totalAfter = subtotal - discountAmount + tax;
+    if (!user.referredBy) {
+      const referrer = referral.fromUserId as typeof User | any;
+      if (referrer?.referralCode) {
+        user.referredBy = referrer.referralCode;
+        await user.save();
+      }
+    }
 
     return res.json({
       success: true,
-      message: 'Referral applied: 5% discount applied to your cart',
+      message: 'Referral confirmed. Your friend will earn rewards after you complete your first purchase.',
       data: {
-        discountAmount,
-        subtotal,
-        tax,
-        totalAfter,
         referralId: referral.referFrdId,
-      }
+      },
     });
   } catch (error) {
     console.error("Error redeeming promo code:", error);
@@ -414,42 +382,10 @@ export const applySimpleReferral = async (req: AuthRequest, res: Response) => {
     const userId = req.user?._id;
     if (!userId) return res.status(401).json({ success: false, message: 'User not authenticated' });
 
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-    if (!user.referredBy || !user.refDiscount || user.refDiscount <= 0) {
-      return res.status(400).json({ success: false, message: 'No referral discount available' });
-    }
-
-    // Find cart
-    const Cart = (await import('../models/cartModel')).default;
-    const cart = await Cart.findOne({ user: userId });
-    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
-
-    const subtotal = cart.totalAmount || 0;
-    const discountAmount = Math.round((subtotal * user.refDiscount) / 100);
-    const tax = Math.round((subtotal - discountAmount) * 0.18);
-    const totalAfter = subtotal - discountAmount + tax;
-
-    // Clear the referral discount so it's single-use
-    user.refDiscount = 0;
-    user.referredBy = null;
-    await user.save();
-
-    // If there is a referral record for this referrer and this user's email, mark it accepted
-    try {
-      const referral = await Referral.findOne({ fromUserId: (await User.findOne({ referralCode: user.referredBy }))?._id, toEmails: user.email, status: 'pending' });
-      if (referral) {
-        referral.status = 'accepted';
-        referral.redeemedBy = userId;
-        referral.redeemedAt = new Date();
-        await referral.save();
-      }
-    } catch (err) {
-      // ignore referral marking errors
-    }
-
-    return res.json({ success: true, message: 'Referral discount applied', data: { discountAmount, subtotal, tax, totalAfter } });
+    return res.status(400).json({
+      success: false,
+      message: 'Referral discounts are no longer available.',
+    });
   } catch (error) {
     console.error('Apply simple referral error:', error);
     return res.status(500).json({ success: false, message: 'Server error' });

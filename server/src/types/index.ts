@@ -72,6 +72,7 @@ export interface IUser extends Document {
   totalReferralEarnings: number;
   referralPendingBalance: number;
   referralAvailableBalance: number;
+  referralRewardIssued?: boolean;
   referralEarningsHistory?: ReferralEarningHistoryEntry[];
   usedPromoCodes: Array<{
     code: string;
