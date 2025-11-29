@@ -231,10 +231,11 @@ const CartPage = () => {
                   const priceBreakdown = Array.isArray(priceBreakdownRaw)
                     ? priceBreakdownRaw[0] || {}
                     : priceBreakdownRaw || {};
-                  const rawVariantImages =
-                    Array.isArray(variantConfig?.variantImages)
-                      ? variantConfig.variantImages
-                      : [];
+                  const rawVariantImages = Array.isArray(
+                    variantConfig?.variantImages
+                  )
+                    ? variantConfig.variantImages
+                    : [];
                   const variantImages = rawVariantImages
                     .map((image: any) =>
                       typeof image === "string"
@@ -243,11 +244,11 @@ const CartPage = () => {
                     )
                     .filter(Boolean);
                   const primaryVariantImage = variantImages[0] || "";
-                  const productCategory =
-                    (typeof (item.product as any)?.category === "string"
+                  const productCategory = (
+                    typeof (item.product as any)?.category === "string"
                       ? ((item.product as any)?.category as string)
                       : ""
-                    ).toUpperCase();
+                  ).toUpperCase();
 
                   return (
                     <div
@@ -306,7 +307,8 @@ const CartPage = () => {
                                 </p>
                                 <p className="text-lg font-bold text-green-600">
                                   ₹
-                                  {(variantConfig?.sellingPrice ||
+                                  {(
+                                    variantConfig?.sellingPrice ||
                                     item.price ||
                                     0
                                   ).toLocaleString("en-IN")}
@@ -348,42 +350,41 @@ const CartPage = () => {
                               )}
 
                               {/* Price Breakdown */}
-                                  {variantConfig?.priceBreakdown && (
+                              {variantConfig?.priceBreakdown && (
                                 <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
                                   <p className="text-xs font-medium text-blue-800 mb-1">
                                     Price Breakdown:
                                   </p>
                                   <div className="grid grid-cols-2 gap-1 text-xs text-blue-700">
-                                        {priceBreakdown.metalCost && (
+                                    {priceBreakdown.metalCost && (
                                       <div>
                                         Metal: ₹
-                                            {priceBreakdown.metalCost.toLocaleString(
+                                        {priceBreakdown.metalCost.toLocaleString(
                                           "en-IN"
                                         )}
                                       </div>
                                     )}
-                                        {priceBreakdown.diamondCost && (
+                                    {priceBreakdown.diamondCost && (
                                       <div>
                                         Diamond: ₹
-                                            {priceBreakdown.diamondCost.toLocaleString(
+                                        {priceBreakdown.diamondCost.toLocaleString(
                                           "en-IN"
                                         )}
                                       </div>
                                     )}
-                                        {priceBreakdown.labourCost && (
+                                    {priceBreakdown.labourCost && (
                                       <div>
                                         Labour: ₹
-                                            {priceBreakdown.labourCost.toLocaleString(
+                                        {priceBreakdown.labourCost.toLocaleString(
                                           "en-IN"
                                         )}
                                       </div>
                                     )}
-                                        {priceBreakdown.gstAmount && (
+                                    {priceBreakdown.gstAmount && (
                                       <div>
-                                        GST (
-                                            {priceBreakdown.gstPercent}
+                                        GST ({priceBreakdown.gstPercent}
                                         %): ₹
-                                            {priceBreakdown.gstAmount.toLocaleString(
+                                        {priceBreakdown.gstAmount.toLocaleString(
                                           "en-IN"
                                         )}
                                       </div>
@@ -432,6 +433,23 @@ const CartPage = () => {
                                         </span>
                                       </div>
                                     )}
+                                    {variantConfig.hasEngraving && (
+                                      <div className="flex items-center col-span-2">
+                                        <span className="text-gray-600 mr-1">
+                                          Engraving:
+                                        </span>
+                                        <div className="flex items-center space-x-2">
+                                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                            ✨ Engraved
+                                          </span>
+                                          {variantConfig.engravingText && (
+                                            <span className="text-xs bg-purple-50 px-2 py-1 rounded border border-purple-200 text-purple-700">
+                                              "{variantConfig.engravingText}"
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
 
                                   {/* Ring Size Dropdown - Only for Rings */}
@@ -441,9 +459,7 @@ const CartPage = () => {
                                         Ring Size:
                                       </span>
                                       <select
-                                        value={
-                                            variantConfig.ringSize || ""
-                                        }
+                                        value={variantConfig.ringSize || ""}
                                         onChange={(e) =>
                                           handleRingSizeUpdate(
                                             item._id,
@@ -488,7 +504,8 @@ const CartPage = () => {
                               </span>
                               <span className="px-2 py-1 bg-gray-100 text-xs text-gray-700 rounded">
                                 Price: ₹
-                                {(variantConfig?.sellingPrice ||
+                                {(
+                                  variantConfig?.sellingPrice ||
                                   item.price ||
                                   0
                                 ).toLocaleString("en-IN")}

@@ -73,6 +73,8 @@ interface ProductData {
   priceIncomplete: boolean;
   variantImages?: string[];
   chosenVariantSku?: string;
+  netWeightGrams?: number;
+  availableColors?: string[];
 }
 
 const METAL_COLOR_CODE_MAP: Record<string, string> = {
@@ -681,8 +683,11 @@ const ProductDetail = () => {
 
     const newData = await response.json();
 
-    // Only update if price actually changed
-    if (newData.sellingPrice !== productData?.sellingPrice) {
+    // Only update if price and image actually changed
+    if (
+      newData.sellingPrice !== productData?.sellingPrice ||
+      newData.variantImages?.[0] !== productData?.variantImages?.[0]
+    ) {
       setProductData(newData);
     }
   }, [id, selectedMetalColor, generateVariantId]);
@@ -958,6 +963,11 @@ const ProductDetail = () => {
           variantImages: productData.variantImages || [], // Include variant images
           sellingPrice: productData.sellingPrice || 0, // Include variant price
           priceBreakdown: productData.priceBreakdown || null, // Include price breakdown
+          // Include engraving data
+          hasEngraving: hasEngraving,
+          engravingText: hasEngraving ? engravingText : undefined,
+          engravingMotifPath: hasEngraving ? engravingMotifPath : undefined,
+          engravingImageUrl: hasEngraving ? engravingImageUrl : undefined,
         },
       };
 
@@ -990,6 +1000,10 @@ const ProductDetail = () => {
     selectedDiamondOrigin,
     selectedSize,
     dispatch,
+    hasEngraving,
+    engravingText,
+    engravingMotifPath,
+    engravingImageUrl,
   ]);
 
   // Upload engraving data to backend
@@ -1168,10 +1182,7 @@ const ProductDetail = () => {
               title: productData.title,
               price: productData.sellingPrice,
               priceBreakdown: productData.priceBreakdown,
-              images: {
-                main: productData.variantImages?.[0] || "",
-                sub: productData.variantImages?.slice(1) || [],
-              },
+              images: productData.variantImages,
               sku: productData.chosenVariantSku,
             },
             quantity: 1,
@@ -1638,7 +1649,7 @@ const ProductDetail = () => {
                             selectedDiamondShape.slice(1).toLowerCase()}
                         </span>
                       </h3>
-                      <div className="h-[100px] flex gap-2 overflow-x-auto no-scrollbar">
+                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
                         {sampleProduct.diamondShapes
                           .filter((shape) =>
                             productData.diamondShape.includes(
@@ -1652,7 +1663,7 @@ const ProductDetail = () => {
                                 const newShape = shape.name.toUpperCase();
                                 setSelectedDiamondShape(newShape);
                               }}
-                              className={`group relative w-[70px] h-[70px] border rounded-lg p-1 
+                              className={`group relative w-[50px] h-[50px] border rounded-lg p-1 
           ${
             selectedDiamondShape === shape.name.toUpperCase()
               ? "border-primary bg-primary/5"
@@ -1803,28 +1814,44 @@ const ProductDetail = () => {
 
                 {/* Metal Color */}
                 <div className="my-6">
-                  <h3 className=" mb-3 text-sm">
+                  <h3 className="mb-3 text-sm">
                     Metal Color: {selectedMetalColor}
                   </h3>
+
                   <div className="flex gap-3">
-                    {sampleProduct.metalColors.map((colorOption) => (
-                      <button
-                        key={colorOption.name}
-                        onClick={() => updateMetalColor(colorOption.name)}
-                        className={`w-8 h-8 rounded-full border-2 ${
-                          selectedMetalColor === colorOption.name
-                            ? "border-[#328F94]"
-                            : "border-neutral-300"
-                        }`}
-                        title={colorOption.name}
-                      >
-                        <img
-                          className="w-full h-full object-cover"
-                          src={colorOption.img}
-                          alt={colorOption.name}
-                        />
-                      </button>
-                    ))}
+                    {productData?.availableColors?.map((code) => {
+                      // Map backend code → frontend UI name + image
+                      const COLOR_MAP: Record<
+                        string,
+                        { name: string; img: string }
+                      > = {
+                        WG: { name: "White Gold", img: "/colors/white.png" },
+                        YG: { name: "Yellow Gold", img: "/colors/gold.png" },
+                        RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
+                      };
+
+                      const ui = COLOR_MAP[code];
+                      if (!ui) return null;
+
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => updateMetalColor(ui.name)} // updates URL with WG/YG/RG
+                          className={`w-8 h-8 rounded-full border-2 ${
+                            selectedMetalColor === ui.name
+                              ? "border-[#328F94]"
+                              : "border-neutral-300"
+                          }`}
+                          title={ui.name}
+                        >
+                          <img
+                            src={ui.img}
+                            alt={ui.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1854,7 +1881,7 @@ const ProductDetail = () => {
                     </div>
                     {/* Ring Size Guide */}
                     <Link
-                      to={"/ring-size-guide"}
+                      to={"/RingSize-Education"}
                       className="text-sm text-primary font-medium underline block"
                     >
                       Ring Size Guide
@@ -1980,7 +2007,7 @@ const ProductDetail = () => {
 
                 {/* Share Options */}
                 <div>
-                  <h3 className="font-medium mb-3 text-sm">Share</h3>
+                  {/* <h3 className="font-medium mb-3 text-sm">Share</h3> */}
                   <div className="flex text-[#328F94] gap-3">
                     <Button
                       size="sm"
@@ -2096,12 +2123,13 @@ const ProductDetail = () => {
                             {selectedMetalColor}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gold/Silver/Platinum Grams (Approx net grams)
-                          </span>
-                          <span className="font-medium">1.356 Grams</span>
-                        </div>
+                        {productData.netWeightGrams && (
+                          <div className="flex justify-between text-sm py-1">
+                            <span>Net Weight:</span>
+                            <span>{productData.netWeightGrams} g</span>
+                          </div>
+                        )}
+
                         <div className="py-2 border-b border-[#328F94]">
                           <div className="text-muted-foreground mb-2">
                             Product Dimensions (In mm)
@@ -2135,6 +2163,24 @@ const ProductDetail = () => {
                             Product Photography in Print Material and Website
                             may not reflect exact true color and/or scale.
                           </p>
+                        </div>
+                        {/* Certification Logos */}
+                        <div className="flex items-center gap-4 justify-start md:justify-end">
+                          <img
+                            src="/Hallmarks/BIS.png"
+                            alt="BIS Hallmark"
+                            className="h-16 w-16 object-contain"
+                          />
+                          <img
+                            src="/Hallmarks/IGI.png"
+                            alt="IGI Certification"
+                            className="h-16 w-16 object-contain"
+                          />
+                          <img
+                            src="/Hallmarks/SGL.png"
+                            alt="SGL Certification"
+                            className="h-16 w-16 object-contain"
+                          />
                         </div>
                       </div>
                     </div>
@@ -2277,30 +2323,6 @@ const ProductDetail = () => {
                             assured the agreed-upon price will stay the same.
                           </p>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Full Width Disclaimer Section */}
-                  <div className="border-t border-[#328F94] pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Certification Logos */}
-                      <div className="flex items-center gap-4 justify-start md:justify-end">
-                        <img
-                          src="/lovable-uploads/28cda72c-8974-4ea2-aecb-d264b8358551.png"
-                          alt="BIS Hallmark"
-                          className="h-16 w-16 object-contain"
-                        />
-                        <img
-                          src="/lovable-uploads/5392cf55-b28f-4fbd-8889-824dfe20dc8f.png"
-                          alt="IGI Certification"
-                          className="h-16 w-16 object-contain"
-                        />
-                        <img
-                          src="/lovable-uploads/9f89b073-535e-401e-88cd-4905a114937f.png"
-                          alt="SGL Certification"
-                          className="h-16 w-16 object-contain"
-                        />
                       </div>
                     </div>
                   </div>

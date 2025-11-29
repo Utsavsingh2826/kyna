@@ -100,6 +100,61 @@ const Footer: React.FC = () => {
             ))}
           </Accordion.Root>
 
+          {/* Track Order */}
+          <div className="mt-6 border-t pt-6">
+            <a
+              href="/track-order"
+              className="block text-sm text-gray-700 font-medium hover:text-teal-600"
+            >
+              Track Your Order
+            </a>
+          </div>
+
+          {/* Contact Us */}
+          <div className="mt-6 space-y-2">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase">
+              Contact Us
+            </h3>
+            <p className="text-sm text-gray-700">+91 8928610682</p>
+            <a
+              href="mailto:enquires@hyunjewellery.com"
+              className="text-sm text-teal-600 underline"
+            >
+              enquires@hyunjewellery.com
+            </a>
+
+            <button
+              onClick={openCalendly}
+              className="text-sm text-teal-600 underline"
+            >
+              Book Virtual Appointment
+            </button>
+          </div>
+
+          {/* Sign Up */}
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold text-gray-700 uppercase">
+              Sign Up For Email
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              Get updates, news & offers.
+            </p>
+
+            <form
+              className="mt-3 flex gap-2"
+              onSubmit={(e) => e.preventDefault()}
+            >
+              <Input
+                type="email"
+                placeholder="Your Email Address"
+                className="flex-1 h-10"
+              />
+              <Button className="h-10 w-10 bg-[#68C5C0] hover:bg-[#5ab3ae] p-0 flex items-center justify-center">
+                <ArrowRight className="w-5 h-5 text-white" />
+              </Button>
+            </form>
+          </div>
+
           {/* Socials */}
           <div className="flex items-center gap-4 mt-6 text-gray-600">
             <Youtube size={20} className="hover:text-teal-600 cursor-pointer" />

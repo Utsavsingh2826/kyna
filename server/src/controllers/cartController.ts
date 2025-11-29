@@ -160,6 +160,11 @@ const areVariantConfigsEqual = (config1: any, config2: any): boolean => {
     "length", // for chains/bracelets
     "width",
     "thickness",
+    // Engraving fields
+    "hasEngraving",
+    "engravingText",
+    "engravingMotifPath",
+    "engravingImageUrl",
   ];
 
   // Compare each variant field

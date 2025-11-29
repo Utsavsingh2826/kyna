@@ -89,6 +89,8 @@ interface ProductModelResponse {
   priceIncompleteReasons: string[];
   chosenVariantSku: string;
   variantImages: string[];
+  availableColors?: string[];
+  netWeightGrams?: number;
 }
 
 interface SubStyle {
@@ -98,6 +100,7 @@ interface SubStyle {
   parentSku?: string;
   variants?: ApiVariant[];
   productDetails?: ProductModelResponse;
+  availableColors?: string[];
   thumbnailImages?: string[];
 }
 
@@ -539,6 +542,9 @@ const ProductDetail = () => {
           "White Gold": "WG",
           "Yellow Gold": "YG",
           "Rose Gold": "RG",
+          "Black Rhodium": "BR",
+          Silver: "SLV",
+          Platinum: "PT",
         };
         const metalCode = colorCodeMap[metalColorName] || "WG";
         const res = await fetch(
@@ -718,22 +724,33 @@ const ProductDetail = () => {
     }
   }, [isLabGrownVariant]);
 
-  const metalColors = [
-    { name: "White Gold", img: "/colors/white.png" },
-    { name: "Yellow Gold", img: "/colors/gold.png" },
-    { name: "Rose Gold", img: "/colors/rosegold.png" },
-    { name: "Silver", img: "/colors/white.png" },
-    { name: "Platinum", img: "/colors/white.png" },
-    { name: "14K White Gold", img: "/colors/white.png" },
-    { name: "14K Yellow Gold", img: "/colors/gold.png" },
-    { name: "14K Rose Gold", img: "/colors/rosegold.png" },
-    { name: "18K White Gold", img: "/colors/white.png" },
-    { name: "18K Yellow Gold", img: "/colors/gold.png" },
-    { name: "18K Rose Gold", img: "/colors/rosegold.png" },
-    { name: "22K Gold", img: "/colors/gold.png" },
-    { name: "Palladium", img: "/colors/white.png" },
-    { name: "Titanium", img: "/colors/white.png" },
-  ];
+  // Build metal color swatches from API `availableColors` when present.
+  const CODE_TO_UI: Record<string, { name: string; img: string }> = {
+    WG: { name: "White Gold", img: "/colors/white.png" },
+    YG: { name: "Yellow Gold", img: "/colors/gold.png" },
+    RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
+    BR: { name: "Black Rhodium", img: "/colors/BR.png" },
+    SLV: { name: "Silver", img: "/colors/white.png" },
+    PT: { name: "Platinum", img: "/colors/white.png" },
+  };
+
+  const metalColors = (
+    selectedStyleData?.productDetails?.availableColors ||
+    selectedStyleData?.availableColors ||
+    []
+  ).map(
+    (code: string) =>
+      CODE_TO_UI[code] || { name: code, img: "/colors/white.png" }
+  );
+
+  // Fallback static list if API didn't provide availableColors
+  if (metalColors.length === 0) {
+    metalColors.push(
+      { name: "White Gold", img: "/colors/white.png" },
+      { name: "Yellow Gold", img: "/colors/gold.png" },
+      { name: "Rose Gold", img: "/colors/rosegold.png" }
+    );
+  }
 
   // Add state for showing more colors on mobile
   const [showAllColors, setShowAllColors] = useState(false);
@@ -803,6 +820,9 @@ const ProductDetail = () => {
         "White Gold": "WG",
         "Yellow Gold": "YG",
         "Rose Gold": "RG",
+        "Black Rhodium": "BR",
+        Silver: "SLV",
+        Platinum: "PT",
       };
       const metalColor = colorCodeMap[selectedMetalColor] || "WG";
 
@@ -1929,36 +1949,49 @@ const ProductDetail = () => {
                             SKU Number
                           </span>
                           <span className="font-medium">
-                            {derivedProductId ||
+                            {selectedStyleData?.productDetails?.modelSku ||
+                              derivedProductId ||
                               selectedStyleData?.parentSku ||
                               "-"}
                           </span>
                         </div>
+
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Ring Size
+                            Pendant Style
                           </span>
-                          <span className="font-medium">14 (20 mm)</span>
+                          <span className="font-medium">
+                            {selectedRingStyle || "Not Selected"}
+                          </span>
                         </div>
+
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Type
                           </span>
-                          <span className="font-medium">Gold 22KT</span>
+                          <span className="font-medium">
+                            {selectedMetalType || "Not Selected"}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Color
                           </span>
-                          <span className="font-medium">Rose</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gold/Silver/Platinum Grams (Approx net grams)
+                          <span className="font-medium">
+                            {selectedMetalColor}
                           </span>
-                          <span className="font-medium">1.356 Grams</span>
                         </div>
-                        <div className="py-2 border-b border-[#328F94]">
+                        {selectedStyleData?.productDetails?.netWeightGrams && (
+                          <div className="flex justify-between text-sm py-1">
+                            <span>Net Weight:</span>
+                            <span>
+                              {selectedStyleData.productDetails.netWeightGrams}{" "}
+                              g
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="hidden py-2 border-b border-[#328F94]">
                           <div className="text-muted-foreground mb-2">
                             Product Dimensions (In mm)
                           </div>
@@ -1983,7 +2016,7 @@ const ProductDetail = () => {
                             </div>
                           </div>
                         </div>
-                        <div className="py-2 border-b border-[#328F94] flex justify-between">
+                        <div className="py-2 border-b border-t border-[#328F94] flex justify-between">
                           <h4 className="font-medium mb-3 text-sm">
                             Disclaimer For Product Image
                           </h4>
@@ -1991,6 +2024,25 @@ const ProductDetail = () => {
                             Product Photography in Print Material and Website
                             may not reflect exact true color and/or scale.
                           </p>
+                        </div>
+
+                        {/* Certification Logos */}
+                        <div className="flex items-center gap-4 justify-start md:justify-end">
+                          <img
+                            src="/Hallmarks/BIS.png"
+                            alt="BIS Hallmark"
+                            className="h-16 w-16 object-contain"
+                          />
+                          <img
+                            src="/Hallmarks/IGI.png"
+                            alt="IGI Certification"
+                            className="h-16 w-16 object-contain"
+                          />
+                          <img
+                            src="/Hallmarks/SGL.png"
+                            alt="SGL Certification"
+                            className="h-16 w-16 object-contain"
+                          />
                         </div>
                       </div>
                     </div>
@@ -2059,7 +2111,10 @@ const ProductDetail = () => {
                             SKU Number
                           </span>
                           <span className="font-medium">
-                            BRDTXR07400Q300GW4
+                            {selectedStyleData?.productDetails
+                              ?.firstVariantSku ||
+                              derivedProductId ||
+                              "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2068,7 +2123,7 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs{" "}
-                            {/* {productData.priceBreakdown.metalCost.toLocaleString()} */}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.metalCost?.toLocaleString() || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2076,39 +2131,37 @@ const ProductDetail = () => {
                             Diamond Value
                           </span>
                           <span className="font-medium">
-                            Rs.
-                            {/* {productData.priceBreakdown.diamondCost.toLocaleString()} */}
+                            Rs{" "}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.diamondCost?.toLocaleString() || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstones Value
                           </span>
-                          <span className="font-medium">Rs.</span>
+                          <span className="font-medium">Rs -</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Making Charges
                           </span>
                           <span className="font-medium">
-                            Rs
-                            {/* {productData.priceBreakdown.labourCost.toLocaleString()} */}
-                            .
+                            Rs{" "}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.labourCost?.toLocaleString() || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
-                            Rs
-                            {/* {productData.priceBreakdown.gstAmount.toLocaleString()} */}
-                            .
+                            Rs{" "}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.gstAmount?.toLocaleString() || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
                           <span>
-                            Rs.
-                            {/* {productData.priceBreakdown.totalWithGst.toLocaleString()} */}
+                            Rs{" "}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.totalWithGst?.toLocaleString() || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2133,30 +2186,6 @@ const ProductDetail = () => {
                             assured the agreed-upon price will stay the same.
                           </p>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Full Width Disclaimer Section */}
-                  <div className="border-t border-[#328F94] pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Certification Logos */}
-                      <div className="flex items-center gap-4 justify-start md:justify-end">
-                        <img
-                          src="/lovable-uploads/28cda72c-8974-4ea2-aecb-d264b8358551.png"
-                          alt="BIS Hallmark"
-                          className="h-16 w-16 object-contain"
-                        />
-                        <img
-                          src="/lovable-uploads/5392cf55-b28f-4fbd-8889-824dfe20dc8f.png"
-                          alt="IGI Certification"
-                          className="h-16 w-16 object-contain"
-                        />
-                        <img
-                          src="/lovable-uploads/9f89b073-535e-401e-88cd-4905a114937f.png"
-                          alt="SGL Certification"
-                          className="h-16 w-16 object-contain"
-                        />
                       </div>
                     </div>
                   </div>
