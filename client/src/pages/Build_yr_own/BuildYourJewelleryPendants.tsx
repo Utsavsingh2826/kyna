@@ -2123,7 +2123,8 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.metalCost?.toLocaleString() || "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.metalCost?.toLocaleString() ||
+                              "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2132,7 +2133,8 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.diamondCost?.toLocaleString() || "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.diamondCost?.toLocaleString() ||
+                              "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2147,21 +2149,24 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.labourCost?.toLocaleString() || "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.labourCost?.toLocaleString() ||
+                              "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.gstAmount?.toLocaleString() || "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.gstAmount?.toLocaleString() ||
+                              "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
                           <span>
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.totalWithGst?.toLocaleString() || "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.totalWithGst?.toLocaleString() ||
+                              "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
