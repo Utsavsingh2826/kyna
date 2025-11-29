@@ -57,10 +57,26 @@ const PaymentPage = () => {
     (state: RootState) => state.cart
   );
 
+  const [persistentOrderId, setPersistentOrderId] = useState<string | null>(
+    null
+  );
+
   // Get direct purchase data from navigation state
   const directPurchaseData = location.state?.directPurchase
     ? location.state
     : null;
+
+  // Initialize persistent order ID for cart purchases
+  useEffect(() => {
+    if (!directPurchaseData && !persistentOrderId) {
+      // Generate persistent order ID for cart purchases only
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 15);
+      const newOrderId = `ORD_${timestamp}_${randomString}`;
+      console.log("🆕 Generated persistent cart order ID:", newOrderId);
+      setPersistentOrderId(newOrderId);
+    }
+  }, [directPurchaseData, persistentOrderId]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -76,51 +92,12 @@ const PaymentPage = () => {
     }
   }, [dispatch, isAuthenticated, user, directPurchaseData]);
 
-
-  // Check if cart is empty (only for cart-based purchases)
-  if (!directPurchaseData && cartLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-teal-600" />
-          <h2 className="text-2xl font-semibold text-gray-900">
-            Loading Cart...
-          </h2>
-        </div>
-      </div>
-    );
-  }
-
-  if (
-    !directPurchaseData &&
-    (!cart || !cart.items || cart.items.length === 0)
-  ) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-            Your cart is empty
-          </h2>
-          <p className="text-gray-600 mb-6">
-            Add some items to proceed with payment
-          </p>
-          <Button
-            onClick={() => navigate("/cart")}
-            className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
-          >
-            Back to Cart
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
   // Promo code UI state
   const [promoCode, setPromoCode] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
-  
+
   // Make referralBalance reactive to user state changes
   const [referralBalance, setReferralBalance] = useState(0);
   const [walletDiscount, setWalletDiscount] = useState(0);
@@ -245,7 +222,8 @@ const PaymentPage = () => {
   const orderData = {
     orderId: isDirectPurchase
       ? directPurchaseData.orderData.orderId
-      : `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      : persistentOrderId ||
+        `ORD_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`, // Fallback if persistent ID not ready
     amount: payableAmount,
     items: itemsData.map((item: any) => ({
       name: item.product?.title || item.product?.name || "Product",
@@ -428,7 +406,8 @@ const PaymentPage = () => {
     }
 
     if (maxWalletRedeemable <= 0) {
-      const message = "No payable amount remaining to redeem referral earnings.";
+      const message =
+        "No payable amount remaining to redeem referral earnings.";
       setWalletError(message);
       toast.warning(message);
       return;
@@ -441,6 +420,44 @@ const PaymentPage = () => {
     );
     await fetchReferralBalance();
   };
+
+  // Check if cart is empty (only for cart-based purchases)
+  if (!directPurchaseData && cartLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-teal-600" />
+          <h2 className="text-2xl font-semibold text-gray-900">
+            Loading Cart...
+          </h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    !directPurchaseData &&
+    (!cart || !cart.items || cart.items.length === 0)
+  ) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            Your cart is empty
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Add some items to proceed with payment
+          </p>
+          <Button
+            onClick={() => navigate("/cart")}
+            className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
+          >
+            Back to Cart
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -530,9 +547,7 @@ const PaymentPage = () => {
             />
             <Button
               onClick={handleApplyPromo}
-              disabled={
-                promoLoading || !promoCode.trim() || !!appliedPromo
-              }
+              disabled={promoLoading || !promoCode.trim() || !!appliedPromo}
               className="bg-[#328F94] hover:bg-[#28777b]"
             >
               {promoLoading ? "Applying..." : "Apply Coupon"}
@@ -549,8 +564,7 @@ const PaymentPage = () => {
                 </p>
                 <p>
                   Savings: ₹{appliedPromo.discountValue.toLocaleString()} on
-                  diamond value ₹
-                  {appliedPromo.diamondSubtotal.toLocaleString()}
+                  diamond value ₹{appliedPromo.diamondSubtotal.toLocaleString()}
                 </p>
               </div>
               <Button
@@ -582,8 +596,8 @@ const PaymentPage = () => {
             </p>
           ) : (
             <p className="text-sm text-gray-500 mt-1">
-              You can redeem up to ₹{maxWalletRedeemable.toLocaleString("en-IN")} on
-              this order.
+              You can redeem up to ₹
+              {maxWalletRedeemable.toLocaleString("en-IN")} on this order.
             </p>
           )}
           <div className="mt-4">

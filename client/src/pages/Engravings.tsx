@@ -253,7 +253,7 @@ export default function EngravingsPage() {
 
         const filterParams = buildApiFilters();
         const response = await fetch(
-          `http://localhost:5000/api/products/category/${apiCategory}?${filterParams.toString()}`
+          `/api/products/category/${apiCategory}?${filterParams.toString()}`
         );
 
         if (!response.ok) {

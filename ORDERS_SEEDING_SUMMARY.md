@@ -15,6 +15,7 @@
 ## 📊 Seeded Data Overview
 
 ### 👤 User 1: tiwariaditya1810@gmail.com (Aditya)
+
 - **Total Orders:** 5
 - **Order Statuses:**
   - ✅ ORDER_PLACED - 1 order with 1 tracking event
@@ -24,6 +25,7 @@
   - ✅ DELIVERED - 1 order with 6 tracking events (has docket number + POD link)
 
 ### 👤 User 2: addytiw1810@gmail.com (Addy)
+
 - **Total Orders:** 5
 - **Order Statuses:**
   - ✅ PROCESSING - 1 order with 2 tracking events
@@ -37,6 +39,7 @@
 ## 📋 Status Coverage
 
 All 7 order statuses are now represented in the database:
+
 - ✓ ORDER_PLACED (1 order)
 - ✓ PROCESSING (2 orders)
 - ✓ PACKAGING (2 orders)
@@ -50,7 +53,9 @@ All 7 order statuses are now represented in the database:
 ## 🔧 Technical Details
 
 ### Order Structure
+
 Each order includes:
+
 - ✅ Order number (format: KYNA-TIMESTAMP-RANDOM)
 - ✅ User reference
 - ✅ Items (with product reference)
@@ -61,7 +66,9 @@ Each order includes:
 - ✅ Timestamps (ordered, shipped, delivered/cancelled dates)
 
 ### Tracking Order Structure
+
 Each tracking order includes:
+
 - ✅ User ID reference
 - ✅ Order ID reference
 - ✅ Current status
@@ -72,6 +79,7 @@ Each tracking order includes:
 - ✅ Tracking history (array of events with status, description, location, timestamp)
 
 ### Tracking History Details
+
 - **ORDER_PLACED**: 1 event
 - **PROCESSING**: 2 events (placed → processing)
 - **PACKAGING**: 3 events (placed → processing → packaging)
@@ -87,10 +95,12 @@ Each tracking order includes:
 ### Frontend Testing (http://localhost:5173)
 
 1. **Login as User 1:**
+
    - Email: `tiwariaditya1810@gmail.com`
    - Password: `password123`
 
 2. **Login as User 2:**
+
    - Email: `addytiw1810@gmail.com`
    - Password: `password123`
 
@@ -103,14 +113,16 @@ Each tracking order includes:
 ### Backend Testing
 
 #### Get User's Orders (Protected Route)
+
 ```bash
-GET http://localhost:5000/api/tracking/my-orders
+GET /api/tracking/my-orders
 Authorization: Bearer <token>
 ```
 
 #### Track Specific Order
+
 ```bash
-POST http://localhost:5000/api/tracking/track
+POST /api/tracking/track
 Body: {
   "orderNumber": "KYNA-1761127659334-0UCP86",
   "email": "tiwariaditya1810@gmail.com"
@@ -118,8 +130,9 @@ Body: {
 ```
 
 #### Health Check
+
 ```bash
-GET http://localhost:5000/api/tracking/health
+GET /api/tracking/health
 ```
 
 ---
@@ -127,16 +140,19 @@ GET http://localhost:5000/api/tracking/health
 ## 🗄️ Database Collections
 
 ### Orders Collection (`orders`)
+
 - 10 total orders
 - Each order linked to a user
 - Various statuses and payment states
 
 ### Tracking Orders Collection (`trackingorders`)
+
 - 10 total tracking orders
 - Each tracking order linked to an order and user
 - Comprehensive tracking history
 
 ### Users Collection (`users`)
+
 - Both test users updated with `orders` arrays
 - Each user has 5 orders in their array
 
@@ -145,11 +161,13 @@ GET http://localhost:5000/api/tracking/health
 ## ✅ Issues Fixed
 
 1. **Dropped old indexes:**
+
    - `orderId_1` from `orders` collection
    - `orderNumber_1` from `trackingorders` collection
    - `customerEmail_1` from `trackingorders` collection
 
 2. **Fixed duplicate method:**
+
    - Removed duplicate `createOrder` method in `client/src/services/api.ts`
    - Frontend warning eliminated
 
@@ -161,6 +179,7 @@ GET http://localhost:5000/api/tracking/health
 ## 📍 Order Numbers Reference
 
 ### User 1 Orders:
+
 1. `KYNA-1761127659334-0UCP86` (ORDER_PLACED)
 2. `KYNA-1761127659336-VSOVT` (PROCESSING)
 3. `KYNA-1761127659337-T64VO6` (PACKAGING)
@@ -168,6 +187,7 @@ GET http://localhost:5000/api/tracking/health
 5. `KYNA-1761127659366-R7DEMM` (DELIVERED)
 
 ### User 2 Orders:
+
 1. `KYNA-1761127659383-6MIAHJ` (PROCESSING)
 2. `KYNA-1761127659388-4BDQ7E` (PACKAGING)
 3. `KYNA-1761127659411-NTVB3A` (ON_THE_ROAD)
@@ -187,4 +207,3 @@ The tracking system is now fully functional with comprehensive test data:
 5. ✅ Test all order statuses
 
 **Both frontend and backend are running perfectly!** 🎊
-
