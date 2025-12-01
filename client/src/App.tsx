@@ -11,6 +11,7 @@ import Header from "./components/Header";
 import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
+import WhatsAppButton from "./components/WhatsAppButton";
 import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
 import AboutPage from "./pages/AboutPage";
@@ -326,6 +327,7 @@ function App() {
         </Routes>
 
         <Footer />
+        <WhatsAppButton />
       </div>
     </Router>
   );

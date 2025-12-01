@@ -70,7 +70,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const [pagination, setPagination] = useState({
     totalPages: 1,
     currentPage: 1,
-    limit: 5,
+    limit: 20,
     total: 0,
   });
   const [appliedFilters, setAppliedFilters] = useState<
@@ -489,20 +489,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           categoryLabel: category,
           variantSku: product.firstVariantSku,
           primaryImage: product.firstVariantImageUrl || null,
-        price:
-          typeof product.sellingPrice === "number"
-            ? product.sellingPrice
-            : null,
+          price:
+            typeof product.sellingPrice === "number"
+              ? product.sellingPrice
+              : null,
         })
       );
     },
-    [
-      category,
-      dispatch,
-      isAuthenticated,
-      navigate,
-      wishlistKeyMap,
-    ]
+    [category, dispatch, isAuthenticated, navigate, wishlistKeyMap]
   );
 
   // Update URL when filters change - use comma-separated values
@@ -1191,7 +1185,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Men's Rings */}
-          <FilterGroup title="Men's Rings" isSubGroup={true}>
+          {/* <FilterGroup title="Men's Rings" isSubGroup={true}>
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.mens_diamond_shape}
@@ -1206,7 +1200,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
             />
-          </FilterGroup>
+          </FilterGroup> */}
         </FilterGroup>
       );
     }
@@ -1716,8 +1710,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                           Starting at Rs.{p.sellingPrice.toLocaleString()}
                         </div>
                       </div>
-                  </article>
-                </Link>
+                    </article>
+                  </Link>
                 );
               })}
           </section>
@@ -1775,7 +1769,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               <X size={16} />
             </button>
           </div>
-          <div style={{ padding: "8px 0" }}>{renderCategoryFilters()}</div>
+          <div className="eng-drawer-content">{renderCategoryFilters()}</div>
         </aside>
       </div>
     </main>

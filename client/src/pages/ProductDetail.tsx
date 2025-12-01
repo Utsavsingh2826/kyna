@@ -9,6 +9,7 @@ import {
   Mail,
   MessageCircle,
   Share2,
+  Play,
 } from "lucide-react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
@@ -225,6 +226,8 @@ const ProductDetail = () => {
   const [selectedDiamondSize, setSelectedDiamondSize] = useState("");
   const [selectedGoldKarat, setSelectedGoldKarat] = useState("");
   const [selectedMetalType, setSelectedMetalType] = useState("");
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
 
   const activeVariantSku = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -1289,6 +1292,93 @@ const ProductDetail = () => {
     return isGLB || imagePath.endsWith(".glb");
   };
 
+  // Function to check if file is a video
+  const isVideo = (filePath: string) => {
+    return (
+      filePath.endsWith(".mp4") ||
+      filePath.endsWith(".webm") ||
+      filePath.endsWith(".mov")
+    );
+  };
+
+  // Function to get video thumbnail (first frame)
+  const getVideoThumbnail = (videoUrl: string) => {
+    // For now, return a placeholder. In production, you might want to generate actual thumbnails
+    return videoUrl.replace(/\.(mp4|webm|mov)$/i, "-thumbnail.webp");
+  };
+
+  // Handle video play/pause
+  const handleVideoToggle = () => {
+    if (videoRef) {
+      if (isVideoPlaying) {
+        videoRef.pause();
+        setIsVideoPlaying(false);
+      } else {
+        videoRef.play();
+        setIsVideoPlaying(true);
+      }
+    }
+  };
+
+  // Share functionality
+  const getCurrentUrl = () => {
+    const currentUrl = new URL(window.location.href);
+    return currentUrl.href;
+  };
+
+  const handleEmailShare = () => {
+    const url = getCurrentUrl();
+    const subject = encodeURIComponent(
+      `Check out this jewelry: ${productData?.title || "Product"}`
+    );
+    const body = encodeURIComponent(
+      `I thought you might be interested in this jewelry piece:\n\n${
+        productData?.title || "Product"
+      }\n\nView it here: ${url}`
+    );
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=ranju.prpk@gmail.com&su=${subject}&body=${body}`;
+    window.open(gmailUrl, "_blank");
+  };
+
+  const handleWhatsAppShare = () => {
+    const url = getCurrentUrl();
+    const message = encodeURIComponent(`I am looking for more details ${url}`);
+    const whatsappUrl = `https://wa.me/917558769753?text=${message}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
+  const handleCopyLink = async () => {
+    const url = getCurrentUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+      // You could add a toast notification here if you have one
+      alert("Link copied to clipboard");
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement("textarea");
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      console.log("Link copied to clipboard (fallback)");
+    }
+  };
+
+  // Handle diamond origin selection with silver metal validation
+  const handleDiamondOriginSelect = (origin: string) => {
+    // Check if trying to select natural diamond with silver metal
+    if (origin === "Natural Diamond" && selectedMetalType === "SILVER") {
+      alert(
+        "Natural diamonds are not available for silver metals. Please select Lab Grown Diamond or change the metal type."
+      );
+      return;
+    }
+
+    setSelectedDiamondOrigin(origin);
+    // Price will update automatically via useEffect
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -1381,7 +1471,24 @@ const ProductDetail = () => {
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
                             <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                              This is 3D model
+                              3D
+                            </div>
+                          </div>
+                        ) : isVideo(image) ? (
+                          <div className="relative w-full h-full">
+                            <video
+                              src={image}
+                              className="w-full h-full object-cover"
+                              muted
+                              preload="metadata"
+                            />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                              <div className="bg-white/90 rounded-full p-2">
+                                <Play
+                                  className="w-3 h-3 text-gray-700"
+                                  fill="currentColor"
+                                />
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -1445,6 +1552,26 @@ const ProductDetail = () => {
                               </div>
                             </div>
                           </div>
+                        </div>
+                      );
+                    }
+
+                    // Check if current media is video
+                    if (currentImage && isVideo(currentImage)) {
+                      return (
+                        <div className="relative w-full h-full">
+                          <video
+                            ref={(el) => setVideoRef(el)}
+                            src={currentImage}
+                            className="w-full h-full object-cover"
+                            controls
+                            muted
+                            autoPlay
+                            playsInline
+                            onPlay={() => setIsVideoPlaying(true)}
+                            onPause={() => setIsVideoPlaying(false)}
+                            onEnded={() => setIsVideoPlaying(false)}
+                          />
                         </div>
                       );
                     }
@@ -1526,7 +1653,24 @@ const ProductDetail = () => {
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
                             <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                              This is 3D model
+                              3D
+                            </div>
+                          </div>
+                        ) : isVideo(image) ? (
+                          <div className="relative w-full h-full">
+                            <video
+                              src={image}
+                              className="w-full h-full object-cover"
+                              muted
+                              preload="metadata"
+                            />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                              <div className="bg-white/90 rounded-full p-2">
+                                <Play
+                                  className="w-3 h-3 text-gray-700"
+                                  fill="currentColor"
+                                />
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -1625,23 +1769,38 @@ const ProductDetail = () => {
                   </h3>
 
                   <div className="flex gap-2">
-                    {["Natural Diamond", "Lab Grown Diamond"].map((origin) => (
-                      <button
-                        key={origin}
-                        onClick={() => {
-                          setSelectedDiamondOrigin(origin);
-                          // Price will update automatically via useEffect
-                        }}
-                        className={`px-3 py-2 rounded-full border text-xs font-medium ${
-                          selectedDiamondOrigin === origin
-                            ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
-                            : "border-neutral-600 text-neutral-600"
-                        }`}
-                      >
-                        {origin}
-                      </button>
-                    ))}
+                    {["Natural Diamond", "Lab Grown Diamond"].map((origin) => {
+                      const isDisabled =
+                        origin === "Natural Diamond" &&
+                        selectedMetalType === "SILVER";
+                      return (
+                        <button
+                          key={origin}
+                          onClick={() => handleDiamondOriginSelect(origin)}
+                          disabled={isDisabled}
+                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${
+                            isDisabled
+                              ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
+                              : selectedDiamondOrigin === origin
+                              ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
+                              : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
+                          }`}
+                        >
+                          {origin}
+                          {isDisabled && (
+                            <span className="ml-1 text-[10px]">❌</span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
+
+                  {/* Information text when natural diamond is disabled */}
+                  {selectedMetalType === "SILVER" && (
+                    <p className="text-xs text-red-500 mt-2 italic">
+                      Natural diamond not available on silver metal type
+                    </p>
+                  )}
                 </div>
 
                 {/* Diamond Shape - Only show if diamond shapes are available */}
@@ -1760,6 +1919,14 @@ const ProductDetail = () => {
                         setSelectedMetalType(value);
                         // Clear karat selection when metal type changes
                         setSelectedGoldKarat("");
+
+                        // Auto-switch to Lab Grown Diamond if Silver is selected and Natural Diamond is currently selected
+                        if (
+                          value === "SILVER" &&
+                          selectedDiamondOrigin === "Natural Diamond"
+                        ) {
+                          setSelectedDiamondOrigin("Lab Grown Diamond");
+                        }
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300">
@@ -2012,12 +2179,13 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Share Options */}
-                <div>
+                <div className="mt-3">
                   {/* <h3 className="font-medium mb-3 text-sm">Share</h3> */}
                   <div className="flex text-[#328F94] gap-3">
                     <Button
                       size="sm"
                       className="flex items-center gap-2 text-xs"
+                      onClick={handleEmailShare}
                     >
                       <Mail size={14} />
                       Email
@@ -2025,6 +2193,7 @@ const ProductDetail = () => {
                     <Button
                       size="sm"
                       className="flex items-center gap-2 text-xs"
+                      onClick={handleWhatsAppShare}
                     >
                       <MessageCircle size={14} />
                       WhatsApp
@@ -2032,6 +2201,7 @@ const ProductDetail = () => {
                     <Button
                       size="sm"
                       className="flex items-center gap-2 text-xs"
+                      onClick={handleCopyLink}
                     >
                       <Share2 size={14} />
                       Copy Link
@@ -2136,7 +2306,7 @@ const ProductDetail = () => {
                           </div>
                         )}
 
-                        <div className="py-2 border-b border-[#328F94]">
+                        {/* <div className="py-2 border-b border-[#328F94]">
                           <div className="text-muted-foreground mb-2">
                             Product Dimensions (In mm)
                           </div>
@@ -2160,8 +2330,8 @@ const ProductDetail = () => {
                               <span className="font-medium">1.356 mm</span>
                             </div>
                           </div>
-                        </div>
-                        <div className="py-2 border-b border-[#328F94] flex justify-between">
+                        </div> */}
+                        <div className="py-2 border-y border-[#328F94] flex justify-between">
                           <h4 className="font-medium mb-3 text-sm">
                             Disclaimer For Product Image
                           </h4>

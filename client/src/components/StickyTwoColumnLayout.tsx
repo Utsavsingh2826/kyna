@@ -20,16 +20,33 @@ export function StickyTwoColumnLayout({
 }: StickyTwoColumnLayoutProps) {
   const leftRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [stickyColumn, setStickyColumn] = useState<"left" | "right" | "none">(
     "none"
   );
 
   useEffect(() => {
     const updateStickyColumn = () => {
-      if (!leftRef.current || !rightRef.current) return;
+      if (!leftRef.current || !rightRef.current || !containerRef.current)
+        return;
 
       const leftHeight = leftRef.current.scrollHeight;
       const rightHeight = rightRef.current.scrollHeight;
+      const containerHeight = containerRef.current.scrollHeight;
+      const viewportHeight = window.innerHeight;
+
+      // Only make a column sticky if:
+      // 1. There's a significant height difference (more than viewport height)
+      // 2. The container is tall enough to benefit from sticky behavior
+      const heightDifference = Math.abs(leftHeight - rightHeight);
+      const shouldUseSticky =
+        heightDifference > viewportHeight * 0.5 &&
+        containerHeight > viewportHeight * 1.5;
+
+      if (!shouldUseSticky) {
+        setStickyColumn("none");
+        return;
+      }
 
       if (leftHeight < rightHeight) {
         setStickyColumn("left");
@@ -53,7 +70,10 @@ export function StickyTwoColumnLayout({
   }, [leftColumn, rightColumn]);
 
   return (
-    <div className={cn("grid md:grid-cols-2", gap, className)}>
+    <div
+      ref={containerRef}
+      className={cn("grid md:grid-cols-2", gap, className)}
+    >
       <div
         ref={leftRef}
         className={cn(

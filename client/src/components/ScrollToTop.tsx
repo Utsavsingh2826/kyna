@@ -1,12 +1,20 @@
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    // Scroll to top whenever the pathname changes
-    window.scrollTo(0, 0);
+    // Small delay to ensure the new page has rendered
+    const timer = setTimeout(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "instant", // Use 'instant' for immediate scroll to top on route change
+      });
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [pathname]);
 
   return null;

@@ -56,7 +56,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
     const limit = Math.max(
       1,
-      Math.min(100, parseInt((req.query.limit as string) || "50", 10))
+      Math.min(100, parseInt((req.query.limit as string) || "20", 10))
     );
     const skip = (page - 1) * limit;
 
@@ -343,9 +343,11 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       });
     }
 
-    pipeline.push({ $sort: { modelSku: 1 } });
-    if (!variantDependentFilterPresent)
-      pipeline.push({ $skip: skip }, { $limit: limit });
+    pipeline.push(
+      { $sort: { modelSku: 1 } },
+      { $skip: skip },
+      { $limit: limit }
+    );
 
     const ProductModel = getCollectionModel("products");
     const docs = await ProductModel.aggregate(pipeline)
@@ -795,13 +797,9 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       });
     }
 
-    // Pagination in JS when variant-dependent filters present (we fetched unpaginated)
+    // Use database-level pagination consistently
     let paged = filtered;
     let totalFiltered = filtered.length;
-    if (variantDependentFilterPresent) {
-      paged = filtered.slice(skip, skip + limit);
-      totalFiltered = filtered.length;
-    }
 
     const conn2 = getCatalogConnection();
     const total = await conn2
@@ -813,7 +811,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       count: paged.length,
       total,
       pagination: {
-        totalPages: Math.ceil(totalFiltered / limit),
+        totalPages: Math.ceil(total / limit),
         currentPage: page,
         limit,
       },
