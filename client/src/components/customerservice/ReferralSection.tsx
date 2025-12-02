@@ -37,7 +37,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
     useState<UserReferralData | null>(null);
   const [referralSettings, setReferralSettings] =
     useState<ReferralSettings | null>(null);
-  const [referralHistory, setReferralHistory] = useState<ReferralHistory[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Fetch user data and referral information
@@ -91,20 +90,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
 
         if (settingsResponse.data.success) {
           setReferralSettings(settingsResponse.data.data);
-        }
-
-        // Get user's referral history
-        const historyResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || "/api"}/referrals/my-referrals`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (historyResponse.data.success) {
-          setReferralHistory(historyResponse.data.data);
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -169,19 +154,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
           setReferralLink(shareableLink);
         }
 
-        // Refresh referral history
-        const historyResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || "/api"}/referrals/my-referrals`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (historyResponse.data.success) {
-          setReferralHistory(historyResponse.data.data);
-        }
       } else {
         setMessage(response.data.message || "Failed to send referral");
         toast.error(response.data.message || "Failed to send referral");
@@ -382,53 +354,6 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
                     </p>
                   )}
                 </form>
-
-                {/* Recent Referrals */}
-                {referralHistory.length > 0 && (
-                  <div className="mt-8">
-                    <h3 className="text-lg font-semibold mb-4">
-                      Recent Referrals
-                    </h3>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {referralHistory.slice(0, 5).map((referral) => (
-                        <div
-                          key={referral._id}
-                          className="p-3 bg-gray-50 rounded-lg"
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="text-sm font-medium">
-                                {referral.toEmails.join(", ")}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {new Date(
-                                  referral.createdAt
-                                ).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs ${
-                                referral.status === "accepted"
-                                  ? "bg-green-100 text-green-800"
-                                  : referral.status === "expired"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {referral.status}
-                            </span>
-                          </div>
-                          {referral.redeemedBy && (
-                            <p className="text-xs text-green-600 mt-1">
-                              Redeemed by: {referral.redeemedBy.firstName}{" "}
-                              {referral.redeemedBy.lastName}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Right side - Image */}
