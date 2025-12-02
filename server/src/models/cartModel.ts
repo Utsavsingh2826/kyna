@@ -45,6 +45,11 @@ const cartSchema = new Schema<ICart>(
             totalBeforeGst: { type: Number },
             totalWithGst: { type: Number },
           },
+          // Engraving support
+          hasEngraving: { type: Boolean },
+          engravingText: { type: String },
+          engravingMotifPath: { type: String },
+          engravingImageUrl: { type: String },
         },
         quantity: {
           type: Number,

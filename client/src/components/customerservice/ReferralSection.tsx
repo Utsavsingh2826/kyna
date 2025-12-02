@@ -23,7 +23,6 @@ interface ReferralSettings {
   promoExpiryDays: number;
 }
 
-
 export default function ReferralSection({ isOpen }: ReferralSectionProps) {
   const [referralForm, setReferralForm] = useState({
     yourEmail: "",
@@ -34,8 +33,11 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
   const [referralLink, setReferralLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [userReferralData, setUserReferralData] = useState<UserReferralData | null>(null);
-  const [referralSettings, setReferralSettings] = useState<ReferralSettings | null>(null);
+  const [userReferralData, setUserReferralData] =
+    useState<UserReferralData | null>(null);
+  const [referralSettings, setReferralSettings] =
+    useState<ReferralSettings | null>(null);
+  const [referralHistory, setReferralHistory] = useState<ReferralHistory[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Fetch user data and referral information
@@ -43,10 +45,10 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
     const fetchUserData = async () => {
       try {
         setLoadingData(true);
-        
+
         // Get user profile with referral data
         const userResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/auth/profile`,
+          `${import.meta.env.VITE_API_URL || "/api"}/auth/profile`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -57,11 +59,11 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
         if (userResponse.data.user) {
           const userData = userResponse.data.user;
           setYourEmail(userData.email || "");
-          setReferralForm(prev => ({
+          setReferralForm((prev) => ({
             ...prev,
             yourEmail: userData.email || "",
           }));
-          
+
           // Set user referral data
           setUserReferralData({
             referralCode: userData.referralCode || "",
@@ -69,7 +71,8 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
 
           // Generate referral link if user has a referral code
           if (userData.referralCode) {
-            const baseUrl = import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173";
+            const baseUrl =
+              import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173";
             // Redirect to signup page with referral code as parameter
             const shareableLink = `${baseUrl}/signup?referral=${userData.referralCode}`;
             setReferralLink(shareableLink);
@@ -78,7 +81,7 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
 
         // Get referral settings
         const settingsResponse = await axios.get(
-          `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/settings`,
+          `${import.meta.env.VITE_API_URL || "/api"}/settings`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -90,6 +93,19 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
           setReferralSettings(settingsResponse.data.data);
         }
 
+        // Get user's referral history
+        const historyResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL || "/api"}/referrals/my-referrals`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (historyResponse.data.success) {
+          setReferralHistory(historyResponse.data.data);
+        }
       } catch (error) {
         console.error("Error fetching user data:", error);
         toast.error("Failed to load referral data");
@@ -120,7 +136,7 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
       }
 
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/referrals`,
+        `${import.meta.env.VITE_API_URL || "/api"}/referrals`,
         {
           toEmails,
           note: referralForm.note,
@@ -137,7 +153,7 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
       if (response.data.success) {
         setMessage(response.data.message || "Referral sent successfully!");
         toast.success("Referral invitations sent!");
-        
+
         setReferralForm({
           yourEmail: yourEmail,
           friendsEmails: "",
@@ -146,12 +162,26 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
 
         // Update referral link if new one was generated
         if (response.data.data?.referralCode) {
-          const baseUrl = import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173";
+          const baseUrl =
+            import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173";
           // Redirect to signup page with referral code as parameter
           const shareableLink = `${baseUrl}/signup?referral=${response.data.data.referralCode}`;
           setReferralLink(shareableLink);
         }
 
+        // Refresh referral history
+        const historyResponse = await axios.get(
+          `${import.meta.env.VITE_API_URL || "/api"}/referrals/my-referrals`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (historyResponse.data.success) {
+          setReferralHistory(historyResponse.data.data);
+        }
       } else {
         setMessage(response.data.message || "Failed to send referral");
         toast.error(response.data.message || "Failed to send referral");
@@ -232,14 +262,19 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
                     Get Exclusive Discounts
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Share the beauty of Kyna Jewels with your friends and family. Every successful referral earns you points that unlock exclusive discounts and special offers on your next purchase.
+                    Treat your friend to ₹
+                    {referralSettings?.referralRewardFriend || 10} and get ₹
+                    {referralSettings?.referralRewardReferrer || 10} towards a
+                    future purchase after their first order of ₹1,000+.
                   </p>
                 </div>
 
                 {/* Your Referral Code */}
                 {userReferralData?.referralCode && (
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-2">Your Referral Code</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      Your Referral Code
+                    </h3>
                     <div className="flex items-center gap-2">
                       <Input
                         value={userReferralData.referralCode}
@@ -336,12 +371,64 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
                   </div>
 
                   {message && (
-                    <p className={`text-sm mt-2 ${message.includes('success') ? 'text-green-600' : 'text-red-500'}`}>
+                    <p
+                      className={`text-sm mt-2 ${
+                        message.includes("success")
+                          ? "text-green-600"
+                          : "text-red-500"
+                      }`}
+                    >
                       {message}
                     </p>
                   )}
                 </form>
 
+                {/* Recent Referrals */}
+                {referralHistory.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold mb-4">
+                      Recent Referrals
+                    </h3>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {referralHistory.slice(0, 5).map((referral) => (
+                        <div
+                          key={referral._id}
+                          className="p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm font-medium">
+                                {referral.toEmails.join(", ")}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {new Date(
+                                  referral.createdAt
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs ${
+                                referral.status === "accepted"
+                                  ? "bg-green-100 text-green-800"
+                                  : referral.status === "expired"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                              }`}
+                            >
+                              {referral.status}
+                            </span>
+                          </div>
+                          {referral.redeemedBy && (
+                            <p className="text-xs text-green-600 mt-1">
+                              Redeemed by: {referral.redeemedBy.firstName}{" "}
+                              {referral.redeemedBy.lastName}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Right side - Image */}

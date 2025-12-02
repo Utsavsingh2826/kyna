@@ -1357,6 +1357,7 @@ export const getProductByModelSku = async (
 
     let description =
       firstVariantDoc?.meta?.description ?? product?.description ?? null;
+
     // ----------------- diamond shape/size fallback from variant stones -----------------
     const extractFromVariantStones = (variant: VariantDoc | null) => {
       const shapes: string[] = [];
@@ -1454,8 +1455,10 @@ export const getProductByModelSku = async (
     diamondShape = Array.isArray(diamondShape) ? diamondShape : [];
     diamondSize = Array.isArray(diamondSize) ? diamondSize : [];
 
-    // ----------------- IMAGE selection (keeps your logic) -----------------
+    // ----------------- IMAGE selection + availableColors -----------------
     let variantImages: string[] = [];
+    let availableColors: string[] = [];
+
     if (firstVariantDoc && Array.isArray(firstVariantDoc.images)) {
       const allImgs = firstVariantDoc.images
         .map((img: any) => img?.url ?? img?.filename ?? img)
@@ -1508,6 +1511,14 @@ export const getProductByModelSku = async (
         PRIMARY_METALS.filter((pm) => tokenRegex(pm).test(url)).map((x) =>
           x.toUpperCase()
         );
+
+      // NEW: compute availableColors from all images of this variant
+      const availableColorsSet = new Set<string>();
+      for (const url of allImgs) {
+        const primaries = detectPrimariesInFilename(url);
+        primaries.forEach((p) => availableColorsSet.add(p));
+      }
+      availableColors = Array.from(availableColorsSet);
 
       const strictPrimaryOnlyMatches = (token: string) => {
         if (!token) return [];
@@ -1633,6 +1644,9 @@ export const getProductByModelSku = async (
     };
     const priceIncompleteReasons: string[] = [];
 
+    // <-- net weight in grams (metal net weight for this variant)
+    let netWeightGrams: number | null = null;
+
     if (firstVariantDoc) {
       try {
         const variant = firstVariantDoc;
@@ -1736,7 +1750,7 @@ export const getProductByModelSku = async (
             pricingMap[seq] = pd;
           }
 
-          // === NEW LOGGING: show resolved per-sequence pricing info ===
+          // === LOGGING: show resolved per-sequence pricing info ===
           console.debug(
             "[getProductByModelSku] resolved pricingMap (raw -> normalized):"
           );
@@ -1778,7 +1792,7 @@ export const getProductByModelSku = async (
           diamondCost += pricePerCt * st.cts;
         }
 
-        // ----------------- METAL DETECTION LOGIC (modified as requested) -----------------
+        // ----------------- METAL DETECTION LOGIC -----------------
         // If SKU contains SLV -> SILVER
         // If SKU contains PT -> PLATINUM
         // If SKU contains 18 or 9 -> GOLD
@@ -1804,8 +1818,6 @@ export const getProductByModelSku = async (
           .toString()
           .toUpperCase();
 
-        // ------------------------------------------------------------------------------
-
         let karatStr: string | number =
           variant?.meta?.metalKt ??
           (Array.isArray(goldKarats) ? goldKarats[0] : goldKarats) ??
@@ -1817,25 +1829,26 @@ export const getProductByModelSku = async (
             (metalType === "PLATINUM" ? 950 : 18)
         );
 
-        let metalWeightGrams: number | null = null;
+        // Resolve net weight in grams (metal net weight for pricing and response)
+        netWeightGrams = null;
         if (variant?.meta?.metalWeightGrams != null)
-          metalWeightGrams = toNumberRobust(variant.meta.metalWeightGrams);
+          netWeightGrams = toNumberRobust(variant.meta.metalWeightGrams);
         else if (variant?.meta?.netWeightGrams != null)
-          metalWeightGrams = toNumberRobust(variant.meta.netWeightGrams);
+          netWeightGrams = toNumberRobust(variant.meta.netWeightGrams);
         else if (variant?.netWeightGrams != null)
-          metalWeightGrams = toNumberRobust(variant.netWeightGrams);
+          netWeightGrams = toNumberRobust(variant.netWeightGrams);
 
-        if (Number.isNaN(metalWeightGrams as any)) metalWeightGrams = null;
+        if (Number.isNaN(netWeightGrams as any)) netWeightGrams = null;
 
         if (
-          (metalWeightGrams == null || Number.isNaN(metalWeightGrams as any)) &&
+          (netWeightGrams == null || Number.isNaN(netWeightGrams as any)) &&
           includedStones.length
         ) {
           const sum = includedStones.reduce(
             (acc, s) => acc + (s.netWeightGrams ? Number(s.netWeightGrams) : 0),
             0
           );
-          metalWeightGrams = sum > 0 ? sum : null;
+          netWeightGrams = sum > 0 ? sum : null;
         }
 
         let metalPricePerGram = NaN;
@@ -1878,12 +1891,12 @@ export const getProductByModelSku = async (
           ? 0
           : gstPercentDefault;
 
-        if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
-          metalCost = metalPricePerGram * metalWeightGrams;
+        if (netWeightGrams && !Number.isNaN(metalPricePerGram)) {
+          metalCost = metalPricePerGram * netWeightGrams;
           labourCost = resolvedLabourCost;
         } else {
           metalIncomplete = true;
-          if (!metalWeightGrams)
+          if (!netWeightGrams)
             priceIncompleteReasons.push("missing_metal_weight");
           if (Number.isNaN(metalPricePerGram))
             priceIncompleteReasons.push("missing_metal_unit_price");
@@ -1933,7 +1946,7 @@ export const getProductByModelSku = async (
           chosenVariantSku,
           metalType: mType,
           karatNum,
-          metalWeightGrams,
+          netWeightGrams,
           metalPricePerGram,
           metalCost,
           diamondCost,
@@ -2013,7 +2026,7 @@ export const getProductByModelSku = async (
 
     // ----------------- Final response -----------------
     const response = {
-      _id: product._id, // Add MongoDB _id for cart compatibility
+      _id: (product as any)._id, // Add MongoDB _id for cart compatibility
       success: true,
       modelSku,
       title,
@@ -2024,7 +2037,6 @@ export const getProductByModelSku = async (
       diamondSize,
       diamondColorClarity,
       isEngraving,
-      // new structured engraving info (from variant if available, else product)
       engravingInfo: finalEngravingObj
         ? {
             fontSize:
@@ -2033,8 +2045,6 @@ export const getProductByModelSku = async (
               engravingMaxCharacters !== undefined
                 ? engravingMaxCharacters
                 : null,
-            // include the raw object for troubleshooting if you want:
-            // raw: finalEngravingObj
           }
         : null,
       variantCount,
@@ -2045,9 +2055,10 @@ export const getProductByModelSku = async (
       priceIncompleteReasons,
       chosenVariantSku: chosenVariantSku ?? null,
       variantImages,
+      availableColors, // <-- WG / YG / RG / BR etc inferred from image filenames
+      netWeightGrams, // <-- exposed net weight in grams for the chosen variant
     };
 
-    // response stays exactly as before plus engravingInfo
     return res.status(200).json(response);
   } catch (err) {
     console.error("getProductByModelSku error:", err);
@@ -2075,7 +2086,7 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
     const builderColl = conn.collection("builder");
     const variantsColl = conn.collection("variants");
 
-    // Fetch all builder rows for the styling (trimmed)
+    // Fetch builder rows for the styling (trimmed)
     const builderRows = await builderColl
       .aggregate([
         {
@@ -2104,14 +2115,15 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
     const escapeRegExp = (s: string) =>
       s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+    const STOP_PARTS = new Set(["WG", "RG", "YG"]);
+
     const entries: Array<{
-      parentSku: string;
+      parentSku: string | null;
       builderView: string;
       selectedImage: string | null;
       variants: { sku: string }[];
     }> = [];
 
-    // Process each builder row individually so you get one image per builder row
     for (const row of builderRows) {
       const parentSkuRaw = (row.parentSku || "").toString().trim();
       const builderViewRaw = (row.builderView || "").toString().trim();
@@ -2120,42 +2132,77 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
       const parentSku = parentSkuRaw.toUpperCase();
       const builderView = builderViewRaw.toUpperCase();
 
-      // build flexible prefix allowing leading zeros in third segment
-      const parts = builderView
+      // split and trim parts, then stop before any STOP_PARTS (WG, RG, YG)
+      const rawParts = builderView
         .split("-")
         .map((p) => p.trim())
         .filter(Boolean);
+      let parts: string[] = [];
+      for (const p of rawParts) {
+        const pu = p.toUpperCase();
+        if (STOP_PARTS.has(pu)) break;
+        parts.push(pu);
+      }
+      if (parts.length === 0) parts = rawParts.slice();
+
+      // Build prefixRegexStr
       let prefixRegexStr: string;
       if (parts.length >= 3) {
         const p0 = escapeRegExp(parts[0]);
         const p1 = escapeRegExp(parts[1]);
         const thirdRaw = parts[2];
-        const thirdDigits = thirdRaw.replace(/^0+/, "") || thirdRaw;
-        // allow any number of leading zeros before canonical digits
-        prefixRegexStr = `^${p0}-${p1}-0*${escapeRegExp(thirdDigits)}`;
+
+        if (/^\d+$/.test(thirdRaw)) {
+          const thirdDigits = thirdRaw.replace(/^0+/, "") || thirdRaw;
+          prefixRegexStr = `^${p0}-${p1}-0*${escapeRegExp(thirdDigits)}`;
+        } else {
+          const firstThree = escapeRegExp(parts.slice(0, 3).join("-"));
+          prefixRegexStr = `^${firstThree}`;
+        }
+      } else if (parts.length > 0) {
+        const joined = escapeRegExp(parts.join("-"));
+        prefixRegexStr = `^${joined}`;
       } else {
         prefixRegexStr = `^${escapeRegExp(builderView)}`;
       }
 
-      // Build query: modelSku (if present) + sku starts with prefix
-      const andClauses: any[] = [];
-      if (parentSku) {
-        andClauses.push({
-          modelSku: { $regex: `^${escapeRegExp(parentSku)}$`, $options: "i" },
-        });
+      // Query clauses
+      const skuClause = { sku: { $regex: prefixRegexStr, $options: "i" } };
+      const modelSkuClause = parentSku
+        ? { modelSku: { $regex: `^${escapeRegExp(parentSku)}`, $options: "i" } }
+        : null;
+
+      // 1) Try modelSku + sku
+      let matchedVariants: any[] = [];
+      if (modelSkuClause) {
+        matchedVariants = await variantsColl
+          .find({ $and: [modelSkuClause, skuClause] })
+          .project({ sku: 1, images: 1 })
+          .toArray();
       }
-      andClauses.push({ sku: { $regex: prefixRegexStr, $options: "i" } });
 
-      const matchedVariants = await variantsColl
-        .find({ $and: andClauses })
-        .project({ sku: 1, images: 1 })
-        .toArray();
+      // 2) Fallback: sku-only
+      if (!matchedVariants || matchedVariants.length === 0) {
+        matchedVariants = await variantsColl
+          .find({ sku: skuClause.sku })
+          .project({ sku: 1, images: 1 })
+          .toArray();
+      }
 
-      // select single image for this builderView: prefer image whose basename or url contains full builderView
+      // 3) Last ditch: contains match on the whole builderView
+      if (!matchedVariants || matchedVariants.length === 0) {
+        matchedVariants = await variantsColl
+          .find({ sku: { $regex: escapeRegExp(builderView), $options: "i" } })
+          .project({ sku: 1, images: 1 })
+          .toArray();
+      }
+
+      // Select image: prefer image whose filename/url contains the original builderView (full)
       let selectedImage: string | null = null;
       for (const v of matchedVariants) {
-        if (!Array.isArray(v.images) || !v.images.length) continue;
-        for (const img of v.images) {
+        const imgs = Array.isArray(v.images) ? v.images : [];
+        if (!imgs.length) continue;
+        for (const img of imgs) {
           const candidate = (img?.url ?? img?.filename ?? img) as
             | string
             | undefined;
@@ -2178,7 +2225,7 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
         if (selectedImage) break;
       }
 
-      // fallback to first image of first matched variant if no exact match found
+      // Fallback to first available image
       if (!selectedImage) {
         const v = matchedVariants.find(
           (x: any) => Array.isArray(x.images) && x.images.length
@@ -2189,7 +2236,7 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
         }
       }
 
-      const variantsOut = matchedVariants.map((v) => ({
+      const variantsOut = (matchedVariants || []).map((v: any) => ({
         sku: v.sku,
       }));
 
@@ -2208,7 +2255,7 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
       entries,
     });
   } catch (err) {
-    console.error("getBuilderImagesPerRow error:", err);
+    console.error("getBuilderVariants error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",

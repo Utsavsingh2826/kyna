@@ -193,6 +193,11 @@ export interface ICart extends Document {
         totalBeforeGst?: number;
         totalWithGst?: number;
       };
+      // Engraving support
+      hasEngraving?: boolean;
+      engravingText?: string;
+      engravingMotifPath?: string;
+      engravingImageUrl?: string;
     };
     quantity: number;
     price: number;

@@ -1,5 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { Package, Search, Mail, AlertCircle, Clock, RefreshCw, XCircle, FileText } from "lucide-react";
+import {
+  Package,
+  Search,
+  Mail,
+  AlertCircle,
+  Clock,
+  RefreshCw,
+  XCircle,
+  FileText,
+} from "lucide-react";
 import { useLocation } from "react-router-dom";
 import TrackingProgress from "@/components/tracking/TrackingProgress";
 import TrackingTimeline from "@/components/tracking/TrackingTimeline";
@@ -11,7 +20,7 @@ interface TrackingData {
   orderNumber: string;
   customerEmail: string;
   status: string;
-  orderType?: 'normal' | 'customized';
+  orderType?: "normal" | "customized";
   estimatedDelivery?: string;
   docketNumber?: string;
   createdAt?: string; // ✅ For 2-day cancellation policy
@@ -53,7 +62,7 @@ interface TestOrder {
   email: string;
   customerName: string;
   status: string;
-  orderType: 'normal' | 'customized';
+  orderType: "normal" | "customized";
   amount: number;
   productName: string;
   docketNumber?: string;
@@ -65,64 +74,64 @@ const AUTO_REFRESH_INTERVAL = 180000; // 3 minutes
 const trackingApi = {
   trackOrder: async (orderNumber: string, email: string) => {
     const token = getAccessToken();
-    const response = await fetch(`http://localhost:5000/api/tracking/track`, {
-      method: 'POST',
+    const response = await fetch(`/api/tracking/track`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({ orderNumber, email }),
     });
     return response.json();
   },
   getAllTestOrders: async () => {
     const token = getAccessToken();
-    const response = await fetch(`http://localhost:5000/api/tracking/my-orders`, {
-      method: 'GET',
+    const response = await fetch(`/api/tracking/my-orders`, {
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      credentials: 'include',
+      credentials: "include",
     });
     return response.json();
   },
   cancelShipment: async (data: any) => {
     const token = getAccessToken();
-    const response = await fetch(`http://localhost:5000/api/tracking/cancel-shipment`, {
-      method: 'POST',
+    const response = await fetch(`/api/tracking/cancel-shipment`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify(data),
     });
     return response.json();
   },
   downloadPOD: async (data: any) => {
     const token = getAccessToken();
-    const response = await fetch(`http://localhost:5000/api/tracking/download-pod`, {
-      method: 'POST',
+    const response = await fetch(`/api/tracking/download-pod`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify(data),
     });
     return response.json();
   },
   returnOrder: async (data: any) => {
     const token = getAccessToken();
-    const response = await fetch(`http://localhost:5000/api/tracking/return-order`, {
-      method: 'POST',
+    const response = await fetch(`/api/tracking/return-order`, {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify(data),
     });
     return response.json();
@@ -153,7 +162,7 @@ export default function TrackOrderPage() {
       const state = location.state as any;
       if (state.orderNumber) setOrderNumber(state.orderNumber);
       if (state.email) setEmail(state.email);
-      
+
       // Auto-track if we have both values
       if (state.orderNumber && state.email) {
         fetchTrackingData(true);
@@ -166,98 +175,86 @@ export default function TrackOrderPage() {
     console.log("\n" + "=".repeat(60));
     console.log("🔄 TrackOrderPage: Initializing...");
     console.log("=".repeat(60));
-    
+
     const currentToken = getAccessToken();
-    console.log("🔑 Token Status:", currentToken ? `✅ ${currentToken.substring(0, 20)}...` : "❌ NONE");
-    
+    console.log(
+      "🔑 Token Status:",
+      currentToken ? `✅ ${currentToken.substring(0, 20)}...` : "❌ NONE"
+    );
+
     if (!currentToken) {
       console.error("\n❌❌❌ AUTHENTICATION FAILED ❌❌❌");
       console.error("No token found. Please log in.");
-      setError('Please log in to view your orders');
+      setError("Please log in to view your orders");
       return;
-    }
-    
-    const cachedData = localStorage.getItem("lastTrackedOrder");
-    if (cachedData) {
-      try {
-        const parsed = JSON.parse(cachedData);
-        setTrackingData(parsed.data);
-        setOrderNumber(parsed.orderNumber);
-        setEmail(parsed.email);
-      } catch (e) {
-        console.error("Failed to load cached data", e);
-      }
     }
 
     // Fetch orders for the logged-in user from database
     const fetchTestOrders = async () => {
       try {
-        console.log('🔐 Fetching orders for logged-in user...');
-        
+        console.log("🔐 Fetching orders for logged-in user...");
+
         const response = await trackingApi.getAllTestOrders();
-        console.log('📦 Orders response:', response);
-        
+        console.log("📦 Orders response:", response);
+
         if (response.success && response.data) {
           setTestOrders(response.data as TestOrder[]);
-          console.log('✅ Loaded orders:', response.data);
+          console.log("✅ Loaded orders:", response.data);
         } else {
-          console.error('❌ Failed to fetch orders:', response.error);
-          if (response.error?.includes('token') || response.error?.includes('authenticated')) {
-            setError('Please log in to view your orders');
+          console.error("❌ Failed to fetch orders:", response.error);
+          if (
+            response.error?.includes("token") ||
+            response.error?.includes("authenticated")
+          ) {
+            setError("Please log in to view your orders");
           }
         }
       } catch (err) {
         console.error("❌ Failed to fetch test orders:", err);
-        setError('Failed to load orders. Please try again.');
+        setError("Failed to load orders. Please try again.");
       }
     };
-    
+
     fetchTestOrders();
   }, []);
 
-  const fetchTrackingData = useCallback(async (showLoader = true) => {
-    if (!orderNumber || !email) {
-      setError("Please enter both order number and email");
-      return;
-    }
-
-    if (showLoader) {
-      setLoading(true);
-    } else {
-      setIsRefreshing(true);
-    }
-    setError("");
-
-    try {
-      const response = await trackingApi.trackOrder(orderNumber, email);
-      
-      if (response.success && response.data) {
-        console.log('🔍 Tracking Data Received:', response.data);
-        console.log('📦 Order Type:', response.data.orderType);
-        setTrackingData(response.data as TrackingData);
-        
-        // Cache the data
-        localStorage.setItem(
-          "lastTrackedOrder",
-          JSON.stringify({
-            data: response.data,
-            orderNumber,
-            email,
-            timestamp: new Date().toISOString(),
-          })
-        );
-      } else {
-        setError(response.error || "Order not found. Please check your details.");
-        setTrackingData(null);
+  const fetchTrackingData = useCallback(
+    async (showLoader = true) => {
+      if (!orderNumber || !email) {
+        setError("Please enter both order number and email");
+        return;
       }
-    } catch (err) {
-      setError("Failed to fetch tracking data. Please try again.");
-      console.error("Tracking error:", err);
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [orderNumber, email]);
+
+      if (showLoader) {
+        setLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+      setError("");
+
+      try {
+        const response = await trackingApi.trackOrder(orderNumber, email);
+
+        if (response.success && response.data) {
+          console.log("🔍 Tracking Data Received:", response.data);
+          console.log("📦 Order Type:", response.data.orderType);
+          setTrackingData(response.data as TrackingData);
+        } else {
+          setError(
+            response.error || "Order not found. Please check your details."
+          );
+          setTrackingData(null);
+        }
+      } catch (err) {
+        setError("Failed to fetch tracking data. Please try again.");
+        console.error("Tracking error:", err);
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [orderNumber, email]
+  );
 
   // Auto-refresh tracking data
   useEffect(() => {
@@ -306,9 +303,11 @@ export default function TrackOrderPage() {
         await fetchTrackingData(false);
         setShowCancelDialog(false);
         setCancelReason("");
-        alert(trackingData.docketNumber 
-          ? "Shipment cancelled successfully!" 
-          : "Order cancelled successfully!");
+        alert(
+          trackingData.docketNumber
+            ? "Shipment cancelled successfully!"
+            : "Order cancelled successfully!"
+        );
       } else {
         setError(response.error || "Failed to cancel order");
       }
@@ -323,16 +322,17 @@ export default function TrackOrderPage() {
   const canCancelOrder = () => {
     if (!trackingData) return false;
     const status = trackingData.status.toUpperCase();
-    
+
     // NEW POLICY: Check if order is within 2 days of creation (applies to ALL orders)
     const orderCreatedAt = trackingData.createdAt || trackingData.orderedAt;
     if (!orderCreatedAt) return false;
-    
+
     const currentTime = new Date();
     const orderTime = new Date(orderCreatedAt);
-    const hoursSinceOrder = (currentTime.getTime() - orderTime.getTime()) / (1000 * 60 * 60);
+    const hoursSinceOrder =
+      (currentTime.getTime() - orderTime.getTime()) / (1000 * 60 * 60);
     const twoDaysInHours = 48;
-    
+
     // Can cancel if: not delivered, not cancelled, and within 2 days
     return (
       status !== "DELIVERED" &&
@@ -342,31 +342,32 @@ export default function TrackOrderPage() {
   };
 
   const getCancellationMessage = () => {
-    if (!trackingData) return '';
-    
+    if (!trackingData) return "";
+
     const status = trackingData.status.toUpperCase();
-    if (status === "DELIVERED" || status === "CANCELLED") return '';
-    
+    if (status === "DELIVERED" || status === "CANCELLED") return "";
+
     const orderCreatedAt = trackingData.createdAt || trackingData.orderedAt;
-    if (!orderCreatedAt) return '';
-    
+    if (!orderCreatedAt) return "";
+
     const currentTime = new Date();
     const orderTime = new Date(orderCreatedAt);
-    const hoursSinceOrder = (currentTime.getTime() - orderTime.getTime()) / (1000 * 60 * 60);
+    const hoursSinceOrder =
+      (currentTime.getTime() - orderTime.getTime()) / (1000 * 60 * 60);
     const hoursRemaining = 48 - hoursSinceOrder;
-    
+
     if (hoursRemaining > 0 && hoursRemaining <= 48) {
       const daysRemaining = Math.floor(hoursRemaining / 24);
       const hoursRemainingInDay = Math.floor(hoursRemaining % 24);
-      
+
       if (daysRemaining > 0) {
         return `⏰ Cancellation available for ${daysRemaining}d ${hoursRemainingInDay}h`;
       } else {
         return `⏰ Cancellation available for ${hoursRemainingInDay}h`;
       }
     }
-    
-    return '⚠️ Cancellation window expired (2-day limit)';
+
+    return "⚠️ Cancellation window expired (2-day limit)";
   };
 
   const handleDownloadPOD = async () => {
@@ -421,7 +422,7 @@ export default function TrackOrderPage() {
         email: trackingData.customerEmail || email, // Use email from form if customerEmail not available
         reason: returnReason,
         hasManufacturerFault: hasManufacturerFault,
-        customerName: trackingData.shippingAddress?.name || 'Customer',
+        customerName: trackingData.shippingAddress?.name || "Customer",
         orderAmount: trackingData.totalAmount || 0,
       });
 
@@ -434,7 +435,7 @@ export default function TrackOrderPage() {
             ? "Return request submitted successfully! ✅\n\nNo charges will be applied as this is a manufacturer fault.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
             : "Return request submitted successfully! ✅\n\n₹1,800 return charges will be deducted from your refund.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
         );
-        
+
         // Refresh tracking data to show the return request notice
         await fetchTrackingData(false);
       } else {
@@ -470,35 +471,56 @@ export default function TrackOrderPage() {
           {/* User's Orders Cards */}
           {testOrders.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Orders</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Your Orders
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {testOrders.map((order) => {
                   const statusColors: Record<string, string> = {
-                    'DELIVERED': 'text-green-600',
-                    'ON_THE_ROAD': 'text-blue-600',
-                    'IN_TRANSIT': 'text-blue-600',
-                    'PACKAGING': 'text-orange-600',
-                    'PROCESSING': 'text-yellow-600',
-                    'ORDER_PLACED': 'text-gray-600',
-                    'CANCELLED': 'text-red-600'
+                    DELIVERED: "text-green-600",
+                    ON_THE_ROAD: "text-blue-600",
+                    IN_TRANSIT: "text-blue-600",
+                    PACKAGING: "text-orange-600",
+                    PROCESSING: "text-yellow-600",
+                    ORDER_PLACED: "text-gray-600",
+                    CANCELLED: "text-red-600",
                   };
 
-                  const statusText = order.status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
-                  const statusColor = statusColors[order.status] || 'text-gray-600';
+                  const statusText = order.status
+                    .replace(/_/g, " ")
+                    .toLowerCase()
+                    .replace(/\b\w/g, (l) => l.toUpperCase());
+                  const statusColor =
+                    statusColors[order.status] || "text-gray-600";
 
                   return (
-                    <div 
+                    <div
                       key={order.orderNumber}
                       className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => { setOrderNumber(order.orderNumber); setEmail(order.email); }}
+                      onClick={() => {
+                        setOrderNumber(order.orderNumber);
+                        setEmail(order.email);
+                      }}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <h4 className="font-semibold text-gray-900">{order.orderNumber}</h4>
-                          <p className="text-xs text-gray-500 mt-1">{order.email}</p>
+                          <h4 className="font-semibold text-gray-900">
+                            {order.orderNumber}
+                          </h4>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {order.email}
+                          </p>
                         </div>
-                        <span className={`px-2 py-1 ${order.orderType === 'normal' ? 'bg-green-100 text-green-800' : 'bg-purple-100 text-purple-800'} text-xs font-medium rounded`}>
-                          {order.orderType === 'normal' ? 'Normal' : 'Customized'}
+                        <span
+                          className={`px-2 py-1 ${
+                            order.orderType === "normal"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-purple-100 text-purple-800"
+                          } text-xs font-medium rounded`}
+                        >
+                          {order.orderType === "normal"
+                            ? "Normal"
+                            : "Customized"}
                         </span>
                       </div>
                       <div className="space-y-2">
@@ -506,14 +528,20 @@ export default function TrackOrderPage() {
                           <Package className={`w-4 h-4 mr-2 ${statusColor}`} />
                           <span className="text-gray-700">{statusText}</span>
                         </div>
-                        <p className="text-xs text-gray-600">{order.productName}</p>
-                        <p className="text-sm font-semibold text-gray-900">₹{order.amount.toLocaleString('en-IN')}</p>
+                        <p className="text-xs text-gray-600">
+                          {order.productName}
+                        </p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          ₹{order.amount.toLocaleString("en-IN")}
+                        </p>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-xs text-gray-500 mt-4 text-center">Click on any card to auto-fill the tracking form</p>
+              <p className="text-xs text-gray-500 mt-4 text-center">
+                Click on any card to auto-fill the tracking form
+              </p>
             </div>
           )}
 
@@ -536,7 +564,9 @@ export default function TrackOrderPage() {
                       type="text"
                       id="orderNumber"
                       value={orderNumber}
-                      onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
+                      onChange={(e) =>
+                        setOrderNumber(e.target.value.toUpperCase())
+                      }
                       placeholder="e.g., ORD123456"
                       className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#126180] focus:border-transparent transition-all"
                       required
@@ -609,7 +639,12 @@ export default function TrackOrderPage() {
                     )}
                   </div>
                   <button
-                    onClick={() => setTrackingData(null)}
+                    onClick={() => {
+                      setTrackingData(null);
+                      setOrderNumber("");
+                      setEmail("");
+                      setError("");
+                    }}
                     className="text-sm text-[#126180] hover:underline font-medium"
                   >
                     Track Another Order
@@ -621,7 +656,8 @@ export default function TrackOrderPage() {
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center text-gray-600">
                       <Clock className="w-4 h-4 mr-2" />
-                      Last updated: {new Date(trackingData.updatedAt).toLocaleString()}
+                      Last updated:{" "}
+                      {new Date(trackingData.updatedAt).toLocaleString()}
                     </div>
                     {getCancellationMessage() && (
                       <div className="text-xs text-teal-600 font-medium ml-6">
@@ -698,25 +734,30 @@ export default function TrackOrderPage() {
                         🔄 Return Request Submitted
                       </p>
                       <p className="text-sm text-orange-700">
-                        You have submitted a return request for this order on{' '}
+                        You have submitted a return request for this order on{" "}
                         <strong>
-                          {new Date(trackingData.returnRequest.requestedAt).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
+                          {new Date(
+                            trackingData.returnRequest.requestedAt
+                          ).toLocaleDateString("en-IN", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
                           })}
                         </strong>
-                        . Our team will review your request and contact you soon.
+                        . Our team will review your request and contact you
+                        soon.
                         {trackingData.returnRequest.hasManufacturerFault && (
                           <span className="block mt-1 text-green-700 font-medium">
-                            ✓ No return charges will be applied (Manufacturer's Fault)
+                            ✓ No return charges will be applied (Manufacturer's
+                            Fault)
                           </span>
                         )}
                         {!trackingData.returnRequest.hasManufacturerFault && (
                           <span className="block mt-1 text-orange-800">
-                            • ₹1,800 return charges will be deducted from your refund
+                            • ₹1,800 return charges will be deducted from your
+                            refund
                           </span>
                         )}
                       </p>
@@ -787,7 +828,8 @@ export default function TrackOrderPage() {
                       </p>
                       {trackingData.totalAmount && (
                         <p className="text-gray-600">
-                          Amount: ₹{trackingData.totalAmount.toLocaleString('en-IN')}
+                          Amount: ₹
+                          {trackingData.totalAmount.toLocaleString("en-IN")}
                         </p>
                       )}
                     </div>
@@ -802,12 +844,16 @@ export default function TrackOrderPage() {
                           Cancellation Fee Notice
                         </p>
                         <p className="text-sm text-yellow-700">
-                          2% of total order amount will be deducted as cancellation charges. The remaining amount will be refunded to you.
+                          2% of total order amount will be deducted as
+                          cancellation charges. The remaining amount will be
+                          refunded to you.
                         </p>
                         {trackingData?.totalAmount && (
                           <p className="text-sm text-yellow-800 font-medium mt-2">
-                            Cancellation Fee: ₹{(trackingData.totalAmount * 0.02).toFixed(2)} | 
-                            Refund Amount: ₹{(trackingData.totalAmount * 0.98).toFixed(2)}
+                            Cancellation Fee: ₹
+                            {(trackingData.totalAmount * 0.02).toFixed(2)} |
+                            Refund Amount: ₹
+                            {(trackingData.totalAmount * 0.98).toFixed(2)}
                           </p>
                         )}
                       </div>
@@ -830,7 +876,6 @@ export default function TrackOrderPage() {
                     required
                   />
                 </div>
-                
 
                 {error && (
                   <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
@@ -875,7 +920,9 @@ export default function TrackOrderPage() {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] flex flex-col">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">Return Order</h3>
+                  <h3 className="text-xl font-bold text-gray-900">
+                    Return Order
+                  </h3>
                   <button
                     onClick={() => {
                       setShowReturnDialog(false);
@@ -892,16 +939,22 @@ export default function TrackOrderPage() {
                 <div className="flex-1 overflow-y-auto pr-1">
                   <div className="mb-4">
                     <p className="text-gray-600 mb-4">
-                      Submit a return request for this delivered order. Our admin team will review and contact you.
+                      Submit a return request for this delivered order. Our
+                      admin team will review and contact you.
                     </p>
 
                     {trackingData && (
                       <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
-                        <p className="font-medium text-gray-900">Order: {trackingData.orderNumber}</p>
-                        <p className="text-gray-600">Tracking: {trackingData.docketNumber}</p>
+                        <p className="font-medium text-gray-900">
+                          Order: {trackingData.orderNumber}
+                        </p>
+                        <p className="text-gray-600">
+                          Tracking: {trackingData.docketNumber}
+                        </p>
                         {trackingData.totalAmount && (
                           <p className="text-gray-600">
-                            Amount: ₹{trackingData.totalAmount.toLocaleString("en-IN")}
+                            Amount: ₹
+                            {trackingData.totalAmount.toLocaleString("en-IN")}
                           </p>
                         )}
                       </div>
@@ -912,9 +965,13 @@ export default function TrackOrderPage() {
                         <div className="flex items-start">
                           <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
                           <div>
-                            <p className="text-sm font-semibold text-orange-800 mb-1">Return Charges Notice</p>
+                            <p className="text-sm font-semibold text-orange-800 mb-1">
+                              Return Charges Notice
+                            </p>
                             <p className="text-sm text-orange-700">
-                              ₹1,800 return charges will be deducted if there is no manufacturer's fault. Please select the checkbox below if this is a manufacturer defect.
+                              ₹1,800 return charges will be deducted if there is
+                              no manufacturer's fault. Please select the
+                              checkbox below if this is a manufacturer defect.
                             </p>
                           </div>
                         </div>
@@ -926,9 +983,13 @@ export default function TrackOrderPage() {
                         <div className="flex items-start">
                           <AlertCircle className="w-5 h-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
                           <div>
-                            <p className="text-sm font-semibold text-green-800 mb-1">Manufacturer Fault - No Charges</p>
+                            <p className="text-sm font-semibold text-green-800 mb-1">
+                              Manufacturer Fault - No Charges
+                            </p>
                             <p className="text-sm text-green-700">
-                              No return charges will be applied for manufacturer defects. Our team will verify and process your return.
+                              No return charges will be applied for manufacturer
+                              defects. Our team will verify and process your
+                              return.
                             </p>
                           </div>
                         </div>
@@ -940,16 +1001,22 @@ export default function TrackOrderPage() {
                         <input
                           type="checkbox"
                           checked={hasManufacturerFault}
-                          onChange={(e) => setHasManufacturerFault(e.target.checked)}
+                          onChange={(e) =>
+                            setHasManufacturerFault(e.target.checked)
+                          }
                           className="mt-1 w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
                         />
                         <span className="text-sm text-gray-700">
-                          This is a manufacturer's fault (defect, damage, wrong item, etc.)
+                          This is a manufacturer's fault (defect, damage, wrong
+                          item, etc.)
                         </span>
                       </label>
                     </div>
 
-                    <label htmlFor="returnReason" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="returnReason"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       Reason for Return *
                     </label>
                     <textarea
@@ -1002,10 +1069,8 @@ export default function TrackOrderPage() {
               </div>
             </div>
           )}
-
         </div>
       </div>
     </>
   );
 }
-

@@ -742,7 +742,7 @@ const ProductDetail = () => {
                 ))}
               </select>
               <a
-                href="/ring-size-guide"
+                href="/RingSize-Education"
                 className="text-sm text-teal-600 font-medium underline mt-2 inline-block hover:text-teal-700"
               >
                 📏 Ring Size Guide

@@ -4,7 +4,7 @@ This document provides comprehensive testing instructions for the Referral and P
 
 ## Prerequisites
 
-1. **Backend Server Running**: Ensure your backend server is running on `http://localhost:5000`
+1. **Backend Server Running**: Ensure your backend server is running on ``
 2. **Database**: MongoDB should be connected and running
 3. **Authentication**: You'll need valid JWT tokens for authenticated endpoints
 4. **Email Configuration**: Set up email environment variables for email functionality
@@ -27,27 +27,29 @@ FRONTEND_URL=http://localhost:5173
 
 ## API Endpoints Overview
 
-| Method | Endpoint | Auth Required | Description |
-|--------|----------|---------------|-------------|
-| POST | `/api/referrals` | Yes | Create a referral |
-| POST | `/api/referrals/promos/redeem` | Yes | Redeem a promo code |
-| GET | `/api/referrals/my-referrals` | Yes | Get user's referrals |
-| GET | `/api/referrals/details/:referFrdId` | No | Get referral details |
-| GET | `/api/settings` | No | Get current settings |
-| POST | `/api/settings` | Yes (Admin) | Create settings |
-| PUT | `/api/settings` | Yes (Admin) | Update settings |
+| Method | Endpoint                             | Auth Required | Description          |
+| ------ | ------------------------------------ | ------------- | -------------------- |
+| POST   | `/api/referrals`                     | Yes           | Create a referral    |
+| POST   | `/api/referrals/promos/redeem`       | Yes           | Redeem a promo code  |
+| GET    | `/api/referrals/my-referrals`        | Yes           | Get user's referrals |
+| GET    | `/api/referrals/details/:referFrdId` | No            | Get referral details |
+| GET    | `/api/settings`                      | No            | Get current settings |
+| POST   | `/api/settings`                      | Yes (Admin)   | Create settings      |
+| PUT    | `/api/settings`                      | Yes (Admin)   | Update settings      |
 
 ## Testing Steps
 
 ### Step 1: Setup and Authentication
 
 1. **Start the backend server:**
+
    ```bash
    cd server
    npm run dev
    ```
 
 2. **Create test users:**
+
    - Register two users: one as referrer, one as friend
    - Note down their JWT tokens for API calls
 
@@ -57,6 +59,7 @@ FRONTEND_URL=http://localhost:5173
 ### Step 2: Initialize Settings (Admin Only)
 
 **Create initial settings:**
+
 ```bash
 curl -X POST https://api.kynajewels.com/api/settings \
   -H "Content-Type: application/json" \
@@ -69,6 +72,7 @@ curl -X POST https://api.kynajewels.com/api/settings \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -88,6 +92,7 @@ curl -X POST https://api.kynajewels.com/api/settings \
 ### Step 3: Create a Referral
 
 **Create referral with friend emails:**
+
 ```bash
 curl -X POST https://api.kynajewels.com/api/referrals \
   -H "Content-Type: application/json" \
@@ -99,6 +104,7 @@ curl -X POST https://api.kynajewels.com/api/referrals \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -109,8 +115,8 @@ curl -X POST https://api.kynajewels.com/api/referrals \
     "expiresAt": "2024-02-15T10:30:00.000Z",
     "toEmails": ["friend1@example.com", "friend2@example.com"],
     "emailResults": [
-      {"email": "friend1@example.com", "sent": true},
-      {"email": "friend2@example.com", "sent": true}
+      { "email": "friend1@example.com", "sent": true },
+      { "email": "friend2@example.com", "sent": true }
     ]
   }
 }
@@ -119,11 +125,13 @@ curl -X POST https://api.kynajewels.com/api/referrals \
 ### Step 4: Validate Referral Code
 
 **Check referral details before redemption:**
+
 ```bash
 curl -X GET https://api.kynajewels.com/api/referrals/details/507f1f77bcf86cd799439011
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -144,6 +152,7 @@ curl -X GET https://api.kynajewels.com/api/referrals/details/507f1f77bcf86cd7994
 ### Step 5: Redeem Promo Code
 
 **Redeem the referral code as a friend:**
+
 ```bash
 curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
   -H "Content-Type: application/json" \
@@ -154,6 +163,7 @@ curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -170,12 +180,14 @@ curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
 ### Step 6: View User's Referrals
 
 **Get referrer's referral history:**
+
 ```bash
 curl -X GET https://api.kynajewels.com/api/referrals/my-referrals \
   -H "Authorization: Bearer YOUR_REFERRER_JWT_TOKEN"
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -205,11 +217,13 @@ curl -X GET https://api.kynajewels.com/api/referrals/my-referrals \
 ### Step 7: Check Current Settings
 
 **Get current system settings:**
+
 ```bash
 curl -X GET https://api.kynajewels.com/api/settings
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -228,6 +242,7 @@ curl -X GET https://api.kynajewels.com/api/settings
 ## Error Testing Scenarios
 
 ### 1. Invalid Referral Code
+
 ```bash
 curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
   -H "Content-Type: application/json" \
@@ -238,6 +253,7 @@ curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": false,
@@ -246,6 +262,7 @@ curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
 ```
 
 ### 2. Already Redeemed Code
+
 ```bash
 # Try to redeem the same code again
 curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
@@ -257,6 +274,7 @@ curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": false,
@@ -265,6 +283,7 @@ curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
 ```
 
 ### 3. Self-Referral Attempt
+
 ```bash
 # Try to redeem your own referral code
 curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
@@ -276,6 +295,7 @@ curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": false,
@@ -284,6 +304,7 @@ curl -X POST https://api.kynajewels.com/api/referrals/promos/redeem \
 ```
 
 ### 4. Invalid Email Format
+
 ```bash
 curl -X POST https://api.kynajewels.com/api/referrals \
   -H "Content-Type: application/json" \
@@ -295,6 +316,7 @@ curl -X POST https://api.kynajewels.com/api/referrals \
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": false,
@@ -305,41 +327,49 @@ curl -X POST https://api.kynajewels.com/api/referrals \
 ## Database Verification
 
 ### Check Referral Collection
+
 ```javascript
 // In MongoDB shell or MongoDB Compass
-db.referrals.find().pretty()
+db.referrals.find().pretty();
 ```
 
 ### Check User's Available Offers
+
 ```javascript
 // Check if rewards were added to user accounts
-db.users.find({}, {firstName: 1, lastName: 1, email: 1, availableOffers: 1})
+db.users.find({}, { firstName: 1, lastName: 1, email: 1, availableOffers: 1 });
 ```
 
 ### Check Settings Collection
+
 ```javascript
 // Verify settings were created
-db.settings.find().pretty()
+db.settings.find().pretty();
 ```
 
 ## Frontend Integration
 
 ### 1. Referral Link Handling
+
 The referral system generates links like: `http://localhost:5173/refer?code=REFERRAL_ID`
 
 In your frontend, handle this URL to:
+
 - Extract the `code` parameter
 - Validate the code using `/api/referrals/details/:referFrdId`
 - Show referral information to the user
 - Allow them to redeem the code
 
 ### 2. User Dashboard
+
 Add sections to show:
+
 - User's available offers balance
 - Referral history
 - Create new referrals form
 
 ### 3. Checkout Integration
+
 - Add promo code input field
 - Validate and redeem codes during checkout
 - Apply rewards to order total
@@ -347,6 +377,7 @@ Add sections to show:
 ## Performance Testing
 
 ### Load Testing with Multiple Referrals
+
 ```bash
 # Create multiple referrals simultaneously
 for i in {1..10}; do
@@ -364,6 +395,7 @@ wait
 ## Security Testing
 
 ### 1. Unauthorized Access
+
 ```bash
 # Try to access protected endpoints without token
 curl -X POST https://api.kynajewels.com/api/referrals \
@@ -372,6 +404,7 @@ curl -X POST https://api.kynajewels.com/api/referrals \
 ```
 
 ### 2. Admin-Only Endpoints
+
 ```bash
 # Try to update settings without admin role
 curl -X PUT https://api.kynajewels.com/api/settings \
@@ -390,15 +423,18 @@ curl -X PUT https://api.kynajewels.com/api/settings \
 4. **Referral not found**: Check if the referral ID is correct and not expired
 
 ### Debug Mode:
+
 Add console.log statements in controllers to debug issues:
+
 ```javascript
-console.log('Creating referral for user:', fromUserId);
-console.log('Referral data:', referral);
+console.log("Creating referral for user:", fromUserId);
+console.log("Referral data:", referral);
 ```
 
 ## Monitoring
 
 ### Key Metrics to Track:
+
 - Number of referrals created per day
 - Referral redemption rate
 - Email delivery success rate

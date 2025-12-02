@@ -45,7 +45,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
   const [fontSize, setFontSize] = useState(24);
   const [engravingText, setEngravingText] = useState(initialText);
   const [activeTab, setActiveTab] = useState("FONT");
-  const [textPosition, setTextPosition] = useState({ x: 50, y: 70 });
+  const [textPosition, setTextPosition] = useState({ x: 52, y: 58 });
   const [isDragging, setIsDragging] = useState(false);
   const [textRotation, setTextRotation] = useState({
     horizontal: 0,

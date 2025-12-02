@@ -1173,6 +1173,81 @@ router.post("/verify", async (req: Request, res: Response) => {
             "📦 Adding product details to OrderModel:",
             JSON.stringify(updateData.productDetails, null, 2)
           );
+          // Collect images from direct purchase product or cart items and add to order update
+          try {
+            const collectedImages: string[] = [];
+            if (orderDetails?.directPurchaseData?.product?.images) {
+              collectedImages.push(
+                ...orderDetails.directPurchaseData.product.images
+              );
+            }
+            if (
+              orderDetails?.cartItems &&
+              Array.isArray(orderDetails.cartItems)
+            ) {
+              orderDetails.cartItems.forEach((ci: any) => {
+                if (
+                  ci?.variantConfig?.variantImages &&
+                  Array.isArray(ci.variantConfig.variantImages)
+                ) {
+                  collectedImages.push(...ci.variantConfig.variantImages);
+                }
+                if (
+                  ci?.variantConfig?.variantImages &&
+                  Array.isArray(ci.variantConfig.variantImages)
+                ) {
+                  // also ensure any product-level images are captured
+                }
+              });
+            }
+
+            if (collectedImages.length) {
+              // set top-level images array on order update (schema expects { url })
+              updateData.images = Array.from(new Set(collectedImages)).map(
+                (u) => ({ url: u })
+              );
+            }
+
+            // For direct purchases, also populate the main items array so frontend/consumers can read variantConfig
+            if (
+              orderDetails?.isDirectPurchase &&
+              orderDetails.directPurchaseData
+            ) {
+              const pd = orderDetails.directPurchaseData;
+              const variantConfig = Object.assign({}, pd.customization || {});
+              variantConfig.variantImages =
+                pd.product?.images || variantConfig.variantImages || [];
+
+              updateData.items = [
+                {
+                  product: pd.product?._id || undefined,
+                  productModel: "Product",
+                  productTitle:
+                    pd.product?.title ||
+                    updateData.productDetails?.productSpecs?.title,
+                  productSku:
+                    pd.product?.modelSku ||
+                    updateData.productDetails?.productSpecs?.modelSku,
+                  variantSku:
+                    pd.product?.variantSku ||
+                    updateData.productDetails?.productSpecs?.variantSku,
+                  variantConfig,
+                  quantity: 1,
+                  price:
+                    pd.product?.price ||
+                    updateData.productDetails?.productSpecs?.sellingPrice ||
+                    0,
+                  total:
+                    pd.product?.price ||
+                    updateData.productDetails?.productSpecs?.sellingPrice ||
+                    0,
+                  priceBreakdown: pd.product?.priceBreakdown,
+                },
+              ];
+            }
+          } catch (e) {
+            console.warn("Failed to collect images for order update:", e);
+          }
         }
 
         await OrderModel.findOneAndUpdate(

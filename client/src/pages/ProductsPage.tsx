@@ -144,7 +144,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           params.set("category3", activeFilters.category3 || "");
           params.set("centerStoneShape", activeFilters.centerStoneShape || "");
 
-          const apiUrl = `http://localhost:5000/api/products/category/earrings?${params.toString()}`;
+          const apiUrl = `/api/products/category/earrings?${params.toString()}`;
           const response = await fetch(apiUrl);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -410,7 +410,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         const filterParams = buildApiFilters();
         const response = await fetch(
-          `http://localhost:5000/api/products/category/${apiCategory}?${filterParams.toString()}`
+          `/api/products/category/${apiCategory}?${filterParams.toString()}`
         );
 
         if (!response.ok) {
@@ -782,15 +782,15 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       return "";
     };
 
-    const setEarringCategory1 = (groupTitle: string) => {
-      const c1 = mapEarringGroupToCategory1(groupTitle);
-      const currentParams = new URLSearchParams(searchParams);
-      currentParams.set("category1", c1);
-      if (!currentParams.has("category2")) currentParams.set("category2", "");
-      if (!currentParams.has("category3")) currentParams.set("category3", "");
-      setSearchParams(currentParams);
-      setActiveFilters((prev) => ({ ...prev, category1: c1 }));
-    };
+    // const setEarringCategory1 = (groupTitle: string) => {
+    //   const c1 = mapEarringGroupToCategory1(groupTitle);
+    //   const currentParams = new URLSearchParams(searchParams);
+    //   currentParams.set("category1", c1);
+    //   if (!currentParams.has("category2")) currentParams.set("category2", "");
+    //   if (!currentParams.has("category3")) currentParams.set("category3", "");
+    //   setSearchParams(currentParams);
+    //   setActiveFilters((prev) => ({ ...prev, category1: c1 }));
+    // };
 
     const setEarringCenterStoneShape = (
       groupTitle: string,
@@ -1580,23 +1580,28 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </button>
         </div>
 
-        <section className="eng-layout mt-5">
-          <aside
-            className="eng-filters"
-            aria-label="Filters"
-            role="complementary"
-          >
-            <div className="eng-filters-header">
-              Filters
-              <button
-                onClick={clearAllFilters}
-                className="text-sm text-teal-600 hover:text-teal-800"
-              >
-                Clear All
-              </button>
-            </div>
-            {renderCategoryFilters()}
-          </aside>
+        <section
+          className={category === "bracelets" ? "mt-5" : "eng-layout mt-5"}
+        >
+          {/*hide sidebar if category is braceclets*/}
+          {category !== "bracelets" && (
+            <aside
+              className="eng-filters"
+              aria-label="Filters"
+              role="complementary"
+            >
+              <div className="eng-filters-header">
+                Filters
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm text-teal-600 hover:text-teal-800"
+                >
+                  Clear All
+                </button>
+              </div>
+              {renderCategoryFilters()}
+            </aside>
+          )}
 
           <section aria-label="Products" className="eng-grid">
             {/* Display active filters summary - removed to avoid confusion */}

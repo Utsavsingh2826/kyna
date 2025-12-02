@@ -1,11 +1,11 @@
-import { Request, Response } from 'express';
-import { AuthRequest, IOrder } from '../types';
-import { OrderStatus } from '../types/tracking';
-import OrderModel from '../models/orderModel';
-import Cart from '../models/cartModel';
-import Product from '../models/productModel';
-import User from '../models/userModel';
-import nodemailer from 'nodemailer';
+import { Request, Response } from "express";
+import { AuthRequest, IOrder } from "../types";
+import { OrderStatus } from "../types/tracking";
+import OrderModel from "../models/orderModel";
+import Cart from "../models/cartModel";
+import Product from "../models/productModel";
+import User from "../models/userModel";
+import nodemailer from "nodemailer";
 
 interface TrackOrderRequest {
   orderNumber: string;
@@ -15,18 +15,23 @@ interface TrackOrderRequest {
 // POST /api/track-order
 // Body: { orderNumber, billingAddress }
 // Returns: order tracking details
-export const trackOrder = async (req: Request, res: Response): Promise<Response> => {
+export const trackOrder = async (
+  req: Request,
+  res: Response
+): Promise<Response> => {
   const { orderNumber, billingAddress } = req.body as TrackOrderRequest;
 
   if (!orderNumber || !billingAddress) {
-    return res.status(400).json({ error: 'Order number and billing address are required.' });
+    return res
+      .status(400)
+      .json({ error: "Order number and billing address are required." });
   }
 
   try {
     const order = await OrderModel.findOne({ orderNumber, billingAddress });
 
     if (!order) {
-      return res.status(404).json({ error: 'Order not found.' });
+      return res.status(404).json({ error: "Order not found." });
     }
 
     return res.json({
@@ -39,8 +44,8 @@ export const trackOrder = async (req: Request, res: Response): Promise<Response>
       createdAt: order.createdAt,
     });
   } catch (err) {
-    console.error('trackOrder error:', err);
-    return res.status(500).json({ error: 'Server error.' });
+    console.error("trackOrder error:", err);
+    return res.status(500).json({ error: "Server error." });
   }
 };
 
@@ -56,7 +61,7 @@ const generateOrderNumber = (): string => {
 
 // Calculate GST (18% for jewelry in India)
 const calculateGST = (subtotal: number): number => {
-  return Math.round((subtotal * 0.18) * 100) / 100;
+  return Math.round(subtotal * 0.18 * 100) / 100;
 };
 
 // Create order directly with items (buy now functionality)
@@ -66,16 +71,16 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
     const { items, shippingAddress, paymentMethod } = req.body;
 
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: 'Items are required' });
+      return res.status(400).json({ message: "Items are required" });
     }
 
     if (!shippingAddress || !paymentMethod) {
       return res.status(400).json({
-        message: 'Shipping address and payment method are required'
+        message: "Shipping address and payment method are required",
       });
     }
 
@@ -87,19 +92,37 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
       const product = await Product.findById(item.productId);
       if (!product) {
         return res.status(404).json({
-          message: `Product not found: ${item.productId}`
+          message: `Product not found: ${item.productId}`,
         });
       }
 
       const itemTotal = product.price * item.quantity;
       subtotal += itemTotal;
 
+      // Ensure variantConfig contains images (prefer item.variantConfig.variantImages else product.images)
+      const variantConfigWithImages = Object.assign(
+        {},
+        item.variantConfig || {}
+      );
+      variantConfigWithImages.variantImages =
+        variantConfigWithImages.variantImages &&
+        Array.isArray(variantConfigWithImages.variantImages)
+          ? variantConfigWithImages.variantImages
+          : product.images && Array.isArray(product.images)
+          ? product.images
+          : [];
+
       orderItems.push({
         product: product._id,
-        productModel: 'Product',
+        productModel: "Product",
+        productTitle: (product as any)?.title || (product as any)?.name || "",
+        productSku: (product as any)?.modelSku || (product as any)?.sku || "",
+        variantSku: item.variantSku || "",
+        variantConfig: variantConfigWithImages,
         quantity: item.quantity,
         price: product.price,
-        total: itemTotal
+        total: itemTotal,
+        priceBreakdown: item.priceBreakdown || undefined,
       });
     }
 
@@ -109,74 +132,111 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
     const totalAmount = subtotal + gst + shippingCharge;
 
     // Create order
+    const collectedImages = orderItems
+      .map((it: any) => it.variantConfig?.variantImages || [])
+      .flat()
+      .filter(Boolean);
+
     const order = new OrderModel({
       user: userId,
       orderNumber: generateOrderNumber(),
       items: orderItems,
       shippingAddress,
       paymentMethod,
-      paymentStatus: 'pending',
-      orderStatus: 'pending',
+      paymentStatus: "pending",
+      orderStatus: "pending",
       subtotal,
       gst,
       shippingCharge,
       totalAmount,
       estimatedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      statusHistory: [{
-        status: 'pending',
-        date: new Date(),
-        note: 'Order placed successfully'
-      }]
+      statusHistory: [
+        {
+          status: "pending",
+          date: new Date(),
+          note: "Order placed successfully",
+        },
+      ],
     });
 
+    // Attach top-level images and productDetails summary
+    if (collectedImages.length) {
+      (order as any).images = Array.from(new Set(collectedImages)).map(
+        (u: string) => ({ url: u })
+      );
+    }
+
+    (order as any).productDetails = {
+      isDirectPurchase: true,
+      description: `Direct purchase: ${
+        (orderItems[0] && (orderItems[0] as any).productTitle) || "product"
+      }`,
+      product: {
+        modelSku: (orderItems[0] as any)?.productSku,
+        title: (orderItems[0] as any)?.productTitle,
+        price: (orderItems[0] as any)?.price,
+        priceBreakdown: (orderItems[0] as any)?.priceBreakdown,
+      },
+      cartItems: orderItems.map((it: any) => ({
+        productId: it.product,
+        productTitle: it.productTitle,
+        productSku: it.productSku,
+        variantSku: it.variantSku,
+        variantConfig: it.variantConfig,
+        quantity: it.quantity,
+        price: it.price,
+        sellingPrice: it.price,
+        priceBreakdown: it.priceBreakdown,
+      })),
+    } as any;
+
     await order.save();
-    await order.populate('items.product');
+    await order.populate("items.product");
 
     // Add order to user's orders array
-    await User.findByIdAndUpdate(
-      userId,
-      { $push: { orders: order._id } }
-    );
+    await User.findByIdAndUpdate(userId, { $push: { orders: order._id } });
     console.log(`Order ${order._id} added to user ${userId} orders array`);
 
     // Create TrackingOrder for this order
     try {
-      const { TrackingOrder } = await import('../models/TrackingOrder');
-      const { OrderStatus } = await import('../types/tracking');
-      
+      const { TrackingOrder } = await import("../models/TrackingOrder");
+      const { OrderStatus } = await import("../types/tracking");
+
       const trackingOrder = new TrackingOrder({
         userId: userId,
-        orderModel: 'Order', // Specify model type for polymorphic reference
+        orderModel: "Order", // Specify model type for polymorphic reference
         order: order._id,
         orderNumber: order.orderNumber,
-        orderType: 'normal', // Direct orders are always normal products
-        customerEmail: req.user?.email || '',
+        orderType: "normal", // Direct orders are always normal products
+        customerEmail: req.user?.email || "",
         status: OrderStatus.ORDER_PLACED,
-        trackingHistory: [{
-          status: OrderStatus.ORDER_PLACED,
-          description: 'Order placed successfully',
-          timestamp: new Date(),
-          code: OrderStatus.ORDER_PLACED
-        }]
+        trackingHistory: [
+          {
+            status: OrderStatus.ORDER_PLACED,
+            description: "Order placed successfully",
+            timestamp: new Date(),
+            code: OrderStatus.ORDER_PLACED,
+          },
+        ],
       });
 
       await trackingOrder.save();
       console.log(`✅ TrackingOrder created for order ${order._id}`);
     } catch (trackingError) {
-      console.error('❌ Failed to create TrackingOrder:', trackingError);
+      console.error("❌ Failed to create TrackingOrder:", trackingError);
       // Don't fail the order creation if tracking creation fails
     }
 
     res.status(201).json({
       success: true,
-      message: 'Order created successfully',
-      data: order
+      message: "Order created successfully",
+      data: order,
     });
   } catch (error) {
-    console.error('Create direct order error:', error);
+    console.error("Create direct order error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create order'
+      message: "Failed to create order",
     });
   }
 };
@@ -187,24 +247,34 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const userId = req.user?._id;
     const { paymentMethod, billingAddress, shippingAddress } = req.body;
 
-    console.log('Create order request:', { userId, paymentMethod, hasBilling: !!billingAddress, hasShipping: !!shippingAddress });
+    console.log("Create order request:", {
+      userId,
+      paymentMethod,
+      hasBilling: !!billingAddress,
+      hasShipping: !!shippingAddress,
+    });
 
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
 
     if (!paymentMethod) {
       return res.status(400).json({
-        message: 'Payment method is required'
+        message: "Payment method is required",
       });
     }
 
     // Get user's cart
-    const cart = await Cart.findOne({ user: userId }).populate('items.product');
-    console.log('Cart found:', cart ? `Items: ${cart.items.length}, Total: ${cart.totalAmount}` : 'No cart found');
-    
+    const cart = await Cart.findOne({ user: userId }).populate("items.product");
+    console.log(
+      "Cart found:",
+      cart
+        ? `Items: ${cart.items.length}, Total: ${cart.totalAmount}`
+        : "No cart found"
+    );
+
     if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ message: 'Cart is empty' });
+      return res.status(400).json({ message: "Cart is empty" });
     }
 
     // Calculate totals
@@ -213,22 +283,89 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const shippingCharge = subtotal > 5000 ? 0 : 200; // Free shipping above ₹5000
     const totalAmount = subtotal + gst + shippingCharge;
 
-    console.log('Order totals:', { subtotal, gst, shippingCharge, totalAmount });
+    console.log("Order totals:", {
+      subtotal,
+      gst,
+      shippingCharge,
+      totalAmount,
+    });
 
     // Prepare order items
-    const orderItems = cart.items.map(item => {
+    const orderItems = cart.items.map((item) => {
       // Handle both populated and non-populated product references
-      const productId = typeof item.product === 'string' ? item.product : item.product._id;
+      const productId =
+        typeof item.product === "string" ? item.product : item.product._id;
+      const productData =
+        typeof item.product === "object" ? item.product : null;
+      // Ensure variantConfig contains variantImages (prefer explicit variantImages, fallback to product images)
+      const variantConfigWithImages = Object.assign(
+        {},
+        item.variantConfig || {}
+      );
+      variantConfigWithImages.variantImages =
+        variantConfigWithImages.variantImages &&
+        Array.isArray(variantConfigWithImages.variantImages)
+          ? variantConfigWithImages.variantImages
+          : (productData as any)?.images &&
+            Array.isArray((productData as any).images)
+          ? (productData as any).images
+          : [];
+
       return {
         product: productId,
-        productModel: 'Product', // Default model
+        productModel: "Product", // Default model
+        productTitle:
+          (productData as any)?.title || (productData as any)?.name || "",
+        productSku:
+          (productData as any)?.modelSku || (productData as any)?.sku || "",
+        variantSku: item.variantSku || "",
+        variantConfig: variantConfigWithImages,
         quantity: item.quantity,
         price: item.price,
-        total: item.price * item.quantity
+        total: item.price * item.quantity,
+        // Map variant config to specific fields
+        metalDetails: item.variantConfig
+          ? {
+              type: item.variantConfig.metalType,
+              color: item.variantConfig.metalColor,
+              karat: item.variantConfig.goldKarat,
+            }
+          : undefined,
+        diamondDetails: item.variantConfig
+          ? {
+              shape: item.variantConfig.diamondShape,
+              size: item.variantConfig.diamondSize,
+              origin: item.variantConfig.diamondOrigin,
+              carat: item.variantConfig.diamondSize,
+            }
+          : undefined,
+        ringDetails: item.variantConfig?.ringSize
+          ? {
+              size: item.variantConfig.ringSize,
+            }
+          : undefined,
+        // Include engraving data
+        engraving: item.variantConfig?.engravingText,
+        engravingImageUrl: item.variantConfig?.engravingImageUrl,
+        hasEngraving: item.variantConfig?.hasEngraving || false,
+        priceBreakdown: item.variantConfig?.priceBreakdown,
       };
     });
 
-    console.log('Order items prepared:', orderItems.length);
+    console.log("Order items prepared:", orderItems.length);
+
+    // Check if any items have engraving
+    const hasEngravingItems = orderItems.some((item) => item.hasEngraving);
+    const engravingTexts = orderItems
+      .filter((item) => item.hasEngraving && item.engraving)
+      .map((item) => item.engraving)
+      .filter(Boolean);
+
+    // Build order-level productDetails and order images (collect images from items)
+    const collectedImages = orderItems
+      .map((it) => it.variantConfig?.variantImages || [])
+      .flat()
+      .filter(Boolean);
 
     // Create order with provided addresses or use defaults
     const order = new OrderModel({
@@ -236,72 +373,103 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       orderNumber: generateOrderNumber(),
       items: orderItems,
       billingAddress: billingAddress || {
-        companyName: '',
-        street: 'Default Street',
-        city: 'Default City',
-        state: 'Default State',
-        country: 'India',
-        zipCode: '000000'
+        companyName: "",
+        street: "Default Street",
+        city: "Default City",
+        state: "Default State",
+        country: "India",
+        zipCode: "000000",
       },
       shippingAddress: shippingAddress || {
-        companyName: '',
-        street: 'Default Street',
-        city: 'Default City',
-        state: 'Default State',
-        country: 'India',
-        zipCode: '000000',
-        sameAsBilling: false
+        companyName: "",
+        street: "Default Street",
+        city: "Default City",
+        state: "Default State",
+        country: "India",
+        zipCode: "000000",
+        sameAsBilling: false,
+      },
+      // Add engraving details at order level
+      engravingDetails: hasEngravingItems
+        ? {
+            text: engravingTexts.join(", "),
+            imageUrl: orderItems.find((item) => item.engravingImageUrl)
+              ?.engravingImageUrl,
+            hasEngraving: hasEngravingItems,
+          }
+        : undefined,
+      // Top-level images: store unique image URLs for the order
+      images: collectedImages.length
+        ? Array.from(new Set(collectedImages)).map((u: string) => ({ url: u }))
+        : undefined,
+      // Product details summary (cart items + product metadata)
+      productDetails: {
+        cartItems: orderItems.map((it) => ({
+          productId: it.product,
+          productTitle: it.productTitle,
+          productSku: it.productSku,
+          variantSku: it.variantSku,
+          variantConfig: it.variantConfig,
+          quantity: it.quantity,
+          price: it.price,
+          sellingPrice: it.price,
+          priceBreakdown: it.priceBreakdown,
+          metalDetails: it.metalDetails,
+          diamondDetails: it.diamondDetails,
+          ringDetails: it.ringDetails,
+        })),
       },
       paymentMethod,
-      paymentStatus: 'pending',
-      orderStatus: 'pending',
+      paymentStatus: "pending",
+      orderStatus: "pending",
       subtotal,
       gst,
       shippingCharge,
       totalAmount,
       estimatedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-      statusHistory: [{
-        status: 'pending',
-        date: new Date(),
-        note: 'Order placed successfully'
-      }]
+      statusHistory: [
+        {
+          status: "pending",
+          date: new Date(),
+          note: "Order placed successfully",
+        },
+      ],
     });
 
     await order.save();
-    console.log('Order saved successfully:', order._id);
+    console.log("Order saved successfully:", order._id);
 
     // Add order to user's orders array
-    await User.findByIdAndUpdate(
-      userId,
-      { $push: { orders: order._id } }
-    );
+    await User.findByIdAndUpdate(userId, { $push: { orders: order._id } });
     console.log(`Order ${order._id} added to user ${userId} orders array`);
 
     // Create TrackingOrder for this order
     try {
-      const { TrackingOrder } = await import('../models/TrackingOrder');
-      const { OrderStatus } = await import('../types/tracking');
-      
+      const { TrackingOrder } = await import("../models/TrackingOrder");
+      const { OrderStatus } = await import("../types/tracking");
+
       const trackingOrder = new TrackingOrder({
         userId: userId,
-        orderModel: 'Order', // Specify model type for polymorphic reference
+        orderModel: "Order", // Specify model type for polymorphic reference
         order: order._id,
         orderNumber: order.orderNumber,
-        orderType: 'normal', // Cart orders are normal products
-        customerEmail: req.user?.email || '',
+        orderType: "normal", // Cart orders are normal products
+        customerEmail: req.user?.email || "",
         status: OrderStatus.ORDER_PLACED,
-        trackingHistory: [{
-          status: OrderStatus.ORDER_PLACED,
-          description: 'Order placed from cart',
-          timestamp: new Date(),
-          code: OrderStatus.ORDER_PLACED
-        }]
+        trackingHistory: [
+          {
+            status: OrderStatus.ORDER_PLACED,
+            description: "Order placed from cart",
+            timestamp: new Date(),
+            code: OrderStatus.ORDER_PLACED,
+          },
+        ],
       });
 
       await trackingOrder.save();
       console.log(`✅ TrackingOrder created for order ${order._id}`);
     } catch (trackingError) {
-      console.error('❌ Failed to create TrackingOrder:', trackingError);
+      console.error("❌ Failed to create TrackingOrder:", trackingError);
       // Don't fail the order creation if tracking creation fails
     }
 
@@ -309,21 +477,21 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     cart.items = [];
     cart.totalAmount = 0;
     await cart.save();
-    console.log('Cart cleared');
+    console.log("Cart cleared");
 
     // Populate order for response
-    await order.populate('items.product');
+    await order.populate("items.product");
 
     res.status(201).json({
       success: true,
-      message: 'Order created successfully',
-      data: order
+      message: "Order created successfully",
+      data: order,
     });
   } catch (error) {
-    console.error('Create order error:', error);
+    console.error("Create order error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to create order'
+      message: "Failed to create order",
     });
   }
 };
@@ -335,7 +503,7 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
     const { page = 1, limit = 10, status } = req.query;
 
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
 
     const query: any = { user: userId };
@@ -344,7 +512,7 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
     }
 
     const orders = await OrderModel.find(query)
-      .populate('items.product')
+      .populate("items.product")
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
@@ -354,32 +522,35 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
       orders.map(async (order) => {
         try {
           // Import TrackingOrder dynamically to avoid circular dependency
-          const { TrackingOrder } = await import('../models/TrackingOrder');
-          
-          const tracking = await TrackingOrder.findOne({ 
-            orderNumber: order.orderNumber 
+          const { TrackingOrder } = await import("../models/TrackingOrder");
+
+          const tracking = await TrackingOrder.findOne({
+            orderNumber: order.orderNumber,
           });
-          
+
           if (tracking) {
             order.trackingInfo = {
               docketNumber: tracking.docketNumber,
               status: tracking.status,
               estimatedDelivery: tracking.estimatedDelivery?.toString(),
               trackingHistory: tracking.trackingHistory,
-              hasTracking: true
+              hasTracking: true,
             };
           } else {
             order.trackingInfo = {
-              hasTracking: false
+              hasTracking: false,
             };
           }
-          
+
           return order;
         } catch (error) {
-          console.error(`Error adding tracking info for order ${order.orderNumber}:`, error);
+          console.error(
+            `Error adding tracking info for order ${order.orderNumber}:`,
+            error
+          );
           order.trackingInfo = {
             hasTracking: false,
-            error: 'Failed to load tracking information'
+            error: "Failed to load tracking information",
           };
           return order;
         }
@@ -396,14 +567,14 @@ export const getMyOrders = async (req: AuthRequest, res: Response) => {
         totalPages: Math.ceil(totalOrders / Number(limit)),
         totalOrders,
         hasNext: Number(page) * Number(limit) < totalOrders,
-        hasPrev: Number(page) > 1
-      }
+        hasPrev: Number(page) > 1,
+      },
     });
   } catch (error) {
-    console.error('Get orders error:', error);
+    console.error("Get orders error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch orders'
+      message: "Failed to fetch orders",
     });
   }
 };
@@ -415,56 +586,59 @@ export const getOrderById = async (req: AuthRequest, res: Response) => {
     const { orderId } = req.params;
 
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
 
     const order = await OrderModel.findOne({
       _id: orderId,
-      user: userId
-    }).populate('items.product');
+      user: userId,
+    }).populate("items.product");
 
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: "Order not found" });
     }
 
     // Add tracking information
     try {
-      const { TrackingOrder } = await import('../models/TrackingOrder');
-      
-      const tracking = await TrackingOrder.findOne({ 
-        orderNumber: order.orderNumber 
+      const { TrackingOrder } = await import("../models/TrackingOrder");
+
+      const tracking = await TrackingOrder.findOne({
+        orderNumber: order.orderNumber,
       });
-      
+
       if (tracking) {
         order.trackingInfo = {
           docketNumber: tracking.docketNumber,
           status: tracking.status,
           estimatedDelivery: tracking.estimatedDelivery?.toString(),
           trackingHistory: tracking.trackingHistory,
-          hasTracking: true
+          hasTracking: true,
         };
       } else {
         order.trackingInfo = {
-          hasTracking: false
+          hasTracking: false,
         };
       }
     } catch (error) {
-      console.error(`Error adding tracking info for order ${order.orderNumber}:`, error);
+      console.error(
+        `Error adding tracking info for order ${order.orderNumber}:`,
+        error
+      );
       order.trackingInfo = {
         hasTracking: false,
-        error: 'Failed to load tracking information'
+        error: "Failed to load tracking information",
       };
     }
 
     res.json({
       success: true,
-      data: order
+      data: order,
     });
   } catch (error) {
-    console.error('Get order error:', error);
+    console.error("Get order error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch order'
+      message: "Failed to fetch order",
     });
   }
 };
@@ -477,46 +651,50 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
     const { reason } = req.body;
 
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
 
     const order = await OrderModel.findOne({
       _id: orderId,
-      user: userId
+      user: userId,
     });
 
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: "Order not found" });
     }
 
     // Check if order can be cancelled
-    if (['shipped', 'delivered', 'cancelled', 'returned'].includes(order.orderStatus)) {
+    if (
+      ["shipped", "delivered", "cancelled", "returned"].includes(
+        order.orderStatus
+      )
+    ) {
       return res.status(400).json({
-        message: `Cannot cancel order with status: ${order.orderStatus}`
+        message: `Cannot cancel order with status: ${order.orderStatus}`,
       });
     }
 
     // Update order status
-    order.orderStatus = 'cancelled';
+    order.orderStatus = "cancelled";
     order.cancelledAt = new Date();
     order.statusHistory?.push({
-      status: 'cancelled',
+      status: "cancelled",
       date: new Date(),
-      note: reason || 'Order cancelled by customer'
+      note: reason || "Order cancelled by customer",
     });
 
     await order.save();
 
     res.json({
       success: true,
-      message: 'Order cancelled successfully',
-      data: order
+      message: "Order cancelled successfully",
+      data: order,
     });
   } catch (error) {
-    console.error('Cancel order error:', error);
+    console.error("Cancel order error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to cancel order'
+      message: "Failed to cancel order",
     });
   }
 };
@@ -525,8 +703,8 @@ export const cancelOrder = async (req: AuthRequest, res: Response) => {
 export const getAllOrders = async (req: AuthRequest, res: Response) => {
   try {
     // Check if user is admin
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
     const { page = 1, limit = 20, status, search } = req.query;
@@ -538,14 +716,14 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
 
     if (search) {
       query.$or = [
-        { orderNumber: { $regex: search, $options: 'i' } },
-        { 'shippingAddress.city': { $regex: search, $options: 'i' } }
+        { orderNumber: { $regex: search, $options: "i" } },
+        { "shippingAddress.city": { $regex: search, $options: "i" } },
       ];
     }
 
     const orders = await OrderModel.find(query)
-      .populate('user', 'firstName lastName email')
-      .populate('items.product')
+      .populate("user", "firstName lastName email")
+      .populate("items.product")
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
@@ -560,14 +738,14 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
         totalPages: Math.ceil(totalOrders / Number(limit)),
         totalOrders,
         hasNext: Number(page) * Number(limit) < totalOrders,
-        hasPrev: Number(page) > 1
-      }
+        hasPrev: Number(page) > 1,
+      },
     });
   } catch (error) {
-    console.error('Get all orders error:', error);
+    console.error("Get all orders error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch orders'
+      message: "Failed to fetch orders",
     });
   }
 };
@@ -576,8 +754,8 @@ export const getAllOrders = async (req: AuthRequest, res: Response) => {
 export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   try {
     // Check if user is admin
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
     const { orderId } = req.params;
@@ -585,22 +763,22 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 
     const order = await OrderModel.findById(orderId);
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: "Order not found" });
     }
 
     // Update order status
     order.orderStatus = status;
 
     // Update specific timestamps based on status
-    if (status === 'shipped') {
+    if (status === "shipped") {
       order.shippedAt = new Date();
       if (trackingNumber) order.trackingNumber = trackingNumber;
       if (courierService) order.courierService = courierService;
-    } else if (status === 'delivered') {
+    } else if (status === "delivered") {
       order.deliveredAt = new Date();
-    } else if (status === 'cancelled') {
+    } else if (status === "cancelled") {
       order.cancelledAt = new Date();
-    } else if (status === 'returned') {
+    } else if (status === "returned") {
       order.returnedAt = new Date();
     }
 
@@ -608,21 +786,21 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
     order.statusHistory?.push({
       status,
       date: new Date(),
-      note: note || `Order status updated to ${status}`
+      note: note || `Order status updated to ${status}`,
     });
 
     await order.save();
 
     res.json({
       success: true,
-      message: 'Order status updated successfully',
-      data: order
+      message: "Order status updated successfully",
+      data: order,
     });
   } catch (error) {
-    console.error('Update order status error:', error);
+    console.error("Update order status error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to update order status'
+      message: "Failed to update order status",
     });
   }
 };
@@ -631,67 +809,69 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
 export const shipOrder = async (req: AuthRequest, res: Response) => {
   try {
     // Check if user is admin
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
     const { orderId } = req.params;
     const { docketNumber, courierService } = req.body;
 
     if (!docketNumber) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Docket number is required for shipping' 
+        message: "Docket number is required for shipping",
       });
     }
 
     const order = await OrderModel.findById(orderId);
     if (!order) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Order not found' 
+        message: "Order not found",
       });
     }
 
     // Update order status to shipped
-    order.orderStatus = 'shipped';
+    order.orderStatus = "shipped";
     order.trackingNumber = docketNumber;
-    order.courierService = courierService || 'Sequel247';
+    order.courierService = courierService || "Sequel247";
     order.shippedAt = new Date();
 
     // Add to status history
     order.statusHistory?.push({
-      status: 'shipped',
+      status: "shipped",
       date: new Date(),
-      note: `Order shipped with docket number: ${docketNumber}`
+      note: `Order shipped with docket number: ${docketNumber}`,
     });
 
     await order.save();
 
     // Create tracking record
     try {
-      const { TrackingOrder } = await import('../models/TrackingOrder');
-      const { OrderStatus } = await import('../types/tracking');
-      
+      const { TrackingOrder } = await import("../models/TrackingOrder");
+      const { OrderStatus } = await import("../types/tracking");
+
       const trackingOrder = new TrackingOrder({
         userId: order.user,
         order: order._id,
         status: OrderStatus.ORDER_PLACED,
-        orderType: order.orderType || 'normal', // Copy orderType from order
+        orderType: order.orderType || "normal", // Copy orderType from order
         docketNumber: docketNumber,
-        trackingHistory: [{
-          status: OrderStatus.ORDER_PLACED,
-          description: 'Order shipped',
-          timestamp: new Date(),
-          code: OrderStatus.ORDER_PLACED
-        }]
+        trackingHistory: [
+          {
+            status: OrderStatus.ORDER_PLACED,
+            description: "Order shipped",
+            timestamp: new Date(),
+            code: OrderStatus.ORDER_PLACED,
+          },
+        ],
       });
-      
+
       await trackingOrder.save();
 
       // Log audit trail for shipping
       try {
-        const { AuditService } = await import('../services/AuditService');
+        const { AuditService } = await import("../services/AuditService");
         const auditService = new AuditService();
         await auditService.logOrderShipped(
           orderId,
@@ -702,53 +882,60 @@ export const shipOrder = async (req: AuthRequest, res: Response) => {
             userEmail: req.user?.email,
             userRole: req.user?.role,
             ipAddress: req.ip,
-            userAgent: req.get('User-Agent'),
-            reason: 'Order shipped by admin'
+            userAgent: req.get("User-Agent"),
+            reason: "Order shipped by admin",
           }
         );
       } catch (auditError) {
-        console.error('Failed to log audit trail:', auditError);
+        console.error("Failed to log audit trail:", auditError);
         // Don't fail the request if audit logging fails
       }
 
       // Send shipping notification
       try {
-        const { NotificationService } = await import('../services/NotificationService');
+        const { NotificationService } = await import(
+          "../services/NotificationService"
+        );
         const notificationService = new NotificationService();
-        await notificationService.sendOrderShippedNotification(order, docketNumber);
+        await notificationService.sendOrderShippedNotification(
+          order,
+          docketNumber
+        );
       } catch (notificationError) {
-        console.error('Failed to send shipping notification:', notificationError);
+        console.error(
+          "Failed to send shipping notification:",
+          notificationError
+        );
         // Don't fail the request if notification fails
       }
 
       res.json({
         success: true,
-        message: 'Order shipped successfully with tracking',
+        message: "Order shipped successfully with tracking",
         data: {
           order: order,
-          tracking: trackingOrder
-        }
+          tracking: trackingOrder,
+        },
       });
-
     } catch (trackingError) {
-      console.error('Failed to create tracking record:', trackingError);
-      
+      console.error("Failed to create tracking record:", trackingError);
+
       // Still return success for order update, but mention tracking issue
       res.json({
         success: true,
-        message: 'Order shipped successfully, but tracking setup failed',
-        warning: 'Tracking record could not be created. Please create manually.',
+        message: "Order shipped successfully, but tracking setup failed",
+        warning:
+          "Tracking record could not be created. Please create manually.",
         data: {
-          order: order
-        }
+          order: order,
+        },
       });
     }
-
   } catch (error) {
-    console.error('Ship order error:', error);
+    console.error("Ship order error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to ship order'
+      message: "Failed to ship order",
     });
   }
 };
@@ -757,16 +944,16 @@ export const shipOrder = async (req: AuthRequest, res: Response) => {
 export const bulkShipOrders = async (req: AuthRequest, res: Response) => {
   try {
     // Check if user is admin
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
     const { orders } = req.body; // Array of { orderId, docketNumber, courierService }
 
     if (!Array.isArray(orders) || orders.length === 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Orders array is required and cannot be empty' 
+        message: "Orders array is required and cannot be empty",
       });
     }
 
@@ -782,7 +969,7 @@ export const bulkShipOrders = async (req: AuthRequest, res: Response) => {
           results.push({
             orderId,
             success: false,
-            error: 'Order ID and docket number are required'
+            error: "Order ID and docket number are required",
           });
           errorCount++;
           continue;
@@ -793,46 +980,48 @@ export const bulkShipOrders = async (req: AuthRequest, res: Response) => {
           results.push({
             orderId,
             success: false,
-            error: 'Order not found'
+            error: "Order not found",
           });
           errorCount++;
           continue;
         }
 
         // Update order status to shipped
-        order.orderStatus = 'shipped';
+        order.orderStatus = "shipped";
         order.trackingNumber = docketNumber;
-        order.courierService = courierService || 'Sequel247';
+        order.courierService = courierService || "Sequel247";
         order.shippedAt = new Date();
 
         // Add to status history
         order.statusHistory?.push({
-          status: 'shipped',
+          status: "shipped",
           date: new Date(),
-          note: `Order shipped with docket number: ${docketNumber}`
+          note: `Order shipped with docket number: ${docketNumber}`,
         });
 
         await order.save();
 
         // Create tracking record
         try {
-          const { TrackingOrder } = await import('../models/TrackingOrder');
-          const { OrderStatus } = await import('../types/tracking');
-          
+          const { TrackingOrder } = await import("../models/TrackingOrder");
+          const { OrderStatus } = await import("../types/tracking");
+
           const trackingOrder = new TrackingOrder({
             userId: order.user,
             order: order._id,
             status: OrderStatus.ORDER_PLACED,
-            orderType: order.orderType || 'normal', // Copy orderType from order
+            orderType: order.orderType || "normal", // Copy orderType from order
             docketNumber: docketNumber,
-            trackingHistory: [{
-              status: OrderStatus.ORDER_PLACED,
-              description: 'Order shipped',
-              timestamp: new Date(),
-              code: OrderStatus.ORDER_PLACED
-            }]
+            trackingHistory: [
+              {
+                status: OrderStatus.ORDER_PLACED,
+                description: "Order shipped",
+                timestamp: new Date(),
+                code: OrderStatus.ORDER_PLACED,
+              },
+            ],
           });
-          
+
           await trackingOrder.save();
 
           results.push({
@@ -840,28 +1029,29 @@ export const bulkShipOrders = async (req: AuthRequest, res: Response) => {
             orderNumber: order.orderNumber,
             success: true,
             docketNumber,
-            tracking: trackingOrder
+            tracking: trackingOrder,
           });
           successCount++;
-
         } catch (trackingError) {
-          console.error(`Failed to create tracking record for order ${orderId}:`, trackingError);
+          console.error(
+            `Failed to create tracking record for order ${orderId}:`,
+            trackingError
+          );
           results.push({
             orderId,
             orderNumber: order.orderNumber,
             success: true,
-            warning: 'Order shipped but tracking setup failed',
-            docketNumber
+            warning: "Order shipped but tracking setup failed",
+            docketNumber,
           });
           successCount++;
         }
-
       } catch (error) {
         console.error(`Failed to ship order ${orderData.orderId}:`, error);
         results.push({
           orderId: orderData.orderId,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : "Unknown error",
         });
         errorCount++;
       }
@@ -874,48 +1064,57 @@ export const bulkShipOrders = async (req: AuthRequest, res: Response) => {
         totalOrders: orders.length,
         successCount,
         errorCount,
-        results
-      }
+        results,
+      },
     });
-
   } catch (error) {
-    console.error('Bulk ship orders error:', error);
+    console.error("Bulk ship orders error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to process bulk ship orders'
+      message: "Failed to process bulk ship orders",
     });
   }
 };
 
 // Admin: Bulk update order status
-export const bulkUpdateOrderStatus = async (req: AuthRequest, res: Response) => {
+export const bulkUpdateOrderStatus = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     // Check if user is admin
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
     const { orders, status, note } = req.body; // Array of orderIds and new status
 
     if (!Array.isArray(orders) || orders.length === 0) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Orders array is required and cannot be empty' 
+        message: "Orders array is required and cannot be empty",
       });
     }
 
     if (!status) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Status is required' 
+        message: "Status is required",
       });
     }
 
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returned'];
+    const validStatuses = [
+      "pending",
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled",
+      "returned",
+    ];
     if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` 
+        message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
       });
     }
 
@@ -930,7 +1129,7 @@ export const bulkUpdateOrderStatus = async (req: AuthRequest, res: Response) => 
           results.push({
             orderId,
             success: false,
-            error: 'Order not found'
+            error: "Order not found",
           });
           errorCount++;
           continue;
@@ -940,11 +1139,11 @@ export const bulkUpdateOrderStatus = async (req: AuthRequest, res: Response) => 
         order.orderStatus = status;
 
         // Update specific timestamps based on status
-        if (status === 'shipped' && !order.shippedAt) {
+        if (status === "shipped" && !order.shippedAt) {
           order.shippedAt = new Date();
-        } else if (status === 'delivered' && !order.deliveredAt) {
+        } else if (status === "delivered" && !order.deliveredAt) {
           order.deliveredAt = new Date();
-        } else if (status === 'cancelled' && !order.cancelledAt) {
+        } else if (status === "cancelled" && !order.cancelledAt) {
           order.cancelledAt = new Date();
         }
 
@@ -952,7 +1151,7 @@ export const bulkUpdateOrderStatus = async (req: AuthRequest, res: Response) => 
         order.statusHistory?.push({
           status: status,
           date: new Date(),
-          note: note || `Status updated from ${previousStatus} to ${status}`
+          note: note || `Status updated from ${previousStatus} to ${status}`,
         });
 
         await order.save();
@@ -962,16 +1161,15 @@ export const bulkUpdateOrderStatus = async (req: AuthRequest, res: Response) => 
           orderNumber: order.orderNumber,
           success: true,
           previousStatus,
-          newStatus: status
+          newStatus: status,
         });
         successCount++;
-
       } catch (error) {
         console.error(`Failed to update order ${orderId}:`, error);
         results.push({
           orderId,
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : "Unknown error",
         });
         errorCount++;
       }
@@ -985,37 +1183,39 @@ export const bulkUpdateOrderStatus = async (req: AuthRequest, res: Response) => 
         successCount,
         errorCount,
         status,
-        results
-      }
+        results,
+      },
     });
-
   } catch (error) {
-    console.error('Bulk update order status error:', error);
+    console.error("Bulk update order status error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to process bulk status update'
+      message: "Failed to process bulk status update",
     });
   }
 };
 
 // Admin: Get orders ready for shipping
-export const getOrdersReadyForShipping = async (req: AuthRequest, res: Response) => {
+export const getOrdersReadyForShipping = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     // Check if user is admin
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
-    const { page = 1, limit = 50, status = 'processing' } = req.query;
+    const { page = 1, limit = 50, status = "processing" } = req.query;
 
-    const query: any = { 
+    const query: any = {
       orderStatus: status,
-      trackingNumber: { $exists: false } // Orders without tracking numbers
+      trackingNumber: { $exists: false }, // Orders without tracking numbers
     };
 
     const orders = await OrderModel.find(query)
-      .populate('user', 'firstName lastName email phone')
-      .populate('items.product')
+      .populate("user", "firstName lastName email phone")
+      .populate("items.product")
       .sort({ createdAt: -1 })
       .limit(Number(limit))
       .skip((Number(page) - 1) * Number(limit));
@@ -1030,120 +1230,129 @@ export const getOrdersReadyForShipping = async (req: AuthRequest, res: Response)
         totalPages: Math.ceil(totalOrders / Number(limit)),
         totalOrders,
         hasNext: Number(page) * Number(limit) < totalOrders,
-        hasPrev: Number(page) > 1
-      }
+        hasPrev: Number(page) > 1,
+      },
     });
-
   } catch (error) {
-    console.error('Get orders ready for shipping error:', error);
+    console.error("Get orders ready for shipping error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch orders ready for shipping'
+      message: "Failed to fetch orders ready for shipping",
     });
   }
 };
 
 // Enhanced cancel order with tracking cleanup
-export const cancelOrderWithCleanup = async (req: AuthRequest, res: Response) => {
+export const cancelOrderWithCleanup = async (
+  req: AuthRequest,
+  res: Response
+) => {
   try {
     const userId = req.user?._id;
     const { orderId } = req.params;
     const { reason } = req.body;
 
     if (!userId) {
-      return res.status(401).json({ message: 'User not authenticated' });
+      return res.status(401).json({ message: "User not authenticated" });
     }
 
     const order = await OrderModel.findOne({
       _id: orderId,
-      user: userId
+      user: userId,
     });
 
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: "Order not found" });
     }
 
     // Check if order can be cancelled
-    if (order.orderStatus === 'delivered') {
-      return res.status(400).json({ 
-        message: 'Cannot cancel delivered order' 
+    if (order.orderStatus === "delivered") {
+      return res.status(400).json({
+        message: "Cannot cancel delivered order",
       });
     }
 
-    if (order.orderStatus === 'cancelled') {
-      return res.status(400).json({ 
-        message: 'Order is already cancelled' 
+    if (order.orderStatus === "cancelled") {
+      return res.status(400).json({
+        message: "Order is already cancelled",
       });
     }
 
     const previousStatus = order.orderStatus;
-    order.orderStatus = 'cancelled';
+    order.orderStatus = "cancelled";
     order.cancelledAt = new Date();
 
     // Add to status history
     order.statusHistory?.push({
-      status: 'cancelled',
+      status: "cancelled",
       date: new Date(),
-      note: reason || 'Order cancelled by customer'
+      note: reason || "Order cancelled by customer",
     });
 
     await order.save();
 
     // Clean up tracking data if exists
     try {
-      const { TrackingOrder } = await import('../models/TrackingOrder');
-      const trackingOrder = await TrackingOrder.findOne({ 
-        orderNumber: order.orderNumber 
+      const { TrackingOrder } = await import("../models/TrackingOrder");
+      const trackingOrder = await TrackingOrder.findOne({
+        orderNumber: order.orderNumber,
       });
 
       if (trackingOrder) {
         // Update tracking status to cancelled
         trackingOrder.status = OrderStatus.CANCELLED;
-        trackingOrder.addTrackingEvent(OrderStatus.CANCELLED, 'Order cancelled by customer');
+        trackingOrder.addTrackingEvent(
+          OrderStatus.CANCELLED,
+          "Order cancelled by customer"
+        );
         await trackingOrder.save();
 
         // Log audit trail for cancellation
-        const { AuditService } = await import('../services/AuditService');
+        const { AuditService } = await import("../services/AuditService");
         const auditService = new AuditService();
         await auditService.logOrderCancelled(
           orderId,
           order.orderNumber,
-          reason || 'Order cancelled by customer',
+          reason || "Order cancelled by customer",
           {
             userId: userId,
             userEmail: req.user?.email,
             userRole: req.user?.role,
             ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
+            userAgent: req.get("User-Agent"),
           }
         );
       }
     } catch (trackingError) {
-      console.error('Failed to cleanup tracking data:', trackingError);
+      console.error("Failed to cleanup tracking data:", trackingError);
       // Don't fail the cancellation if tracking cleanup fails
     }
 
     // Send cancellation notification
     try {
-      const { NotificationService } = await import('../services/NotificationService');
+      const { NotificationService } = await import(
+        "../services/NotificationService"
+      );
       const notificationService = new NotificationService();
       await notificationService.sendOrderCancelledNotification(order);
     } catch (notificationError) {
-      console.error('Failed to send cancellation notification:', notificationError);
+      console.error(
+        "Failed to send cancellation notification:",
+        notificationError
+      );
       // Don't fail the cancellation if notification fails
     }
 
     res.json({
       success: true,
-      message: 'Order cancelled successfully',
-      data: order
+      message: "Order cancelled successfully",
+      data: order,
     });
-
   } catch (error) {
-    console.error('Cancel order error:', error);
+    console.error("Cancel order error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to cancel order'
+      message: "Failed to cancel order",
     });
   }
 };
@@ -1152,102 +1361,109 @@ export const cancelOrderWithCleanup = async (req: AuthRequest, res: Response) =>
 export const adminCancelOrder = async (req: AuthRequest, res: Response) => {
   try {
     // Check if user is admin
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
     const { orderId } = req.params;
     const { reason, notifyCustomer = true } = req.body;
 
-    const order = await OrderModel.findById(orderId).populate('user');
+    const order = await OrderModel.findById(orderId).populate("user");
 
     if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: "Order not found" });
     }
 
     // Check if order can be cancelled
-    if (order.orderStatus === 'delivered') {
-      return res.status(400).json({ 
-        message: 'Cannot cancel delivered order' 
+    if (order.orderStatus === "delivered") {
+      return res.status(400).json({
+        message: "Cannot cancel delivered order",
       });
     }
 
-    if (order.orderStatus === 'cancelled') {
-      return res.status(400).json({ 
-        message: 'Order is already cancelled' 
+    if (order.orderStatus === "cancelled") {
+      return res.status(400).json({
+        message: "Order is already cancelled",
       });
     }
 
     const previousStatus = order.orderStatus;
-    order.orderStatus = 'cancelled';
+    order.orderStatus = "cancelled";
     order.cancelledAt = new Date();
 
     // Add to status history
     order.statusHistory?.push({
-      status: 'cancelled',
+      status: "cancelled",
       date: new Date(),
-      note: reason || 'Order cancelled by admin'
+      note: reason || "Order cancelled by admin",
     });
 
     await order.save();
 
     // Clean up tracking data if exists
     try {
-      const { TrackingOrder } = await import('../models/TrackingOrder');
-      const trackingOrder = await TrackingOrder.findOne({ 
-        orderNumber: order.orderNumber 
+      const { TrackingOrder } = await import("../models/TrackingOrder");
+      const trackingOrder = await TrackingOrder.findOne({
+        orderNumber: order.orderNumber,
       });
 
       if (trackingOrder) {
         // Update tracking status to cancelled
         trackingOrder.status = OrderStatus.CANCELLED;
-        trackingOrder.addTrackingEvent(OrderStatus.CANCELLED, reason || 'Order cancelled by admin');
+        trackingOrder.addTrackingEvent(
+          OrderStatus.CANCELLED,
+          reason || "Order cancelled by admin"
+        );
         await trackingOrder.save();
 
         // Log audit trail for cancellation
-        const { AuditService } = await import('../services/AuditService');
+        const { AuditService } = await import("../services/AuditService");
         const auditService = new AuditService();
         await auditService.logOrderCancelled(
           orderId,
           order.orderNumber,
-          reason || 'Order cancelled by admin',
+          reason || "Order cancelled by admin",
           {
             userId: req.user?._id,
             userEmail: req.user?.email,
             userRole: req.user?.role,
             ipAddress: req.ip,
-            userAgent: req.get('User-Agent')
+            userAgent: req.get("User-Agent"),
           }
         );
       }
     } catch (trackingError) {
-      console.error('Failed to cleanup tracking data:', trackingError);
+      console.error("Failed to cleanup tracking data:", trackingError);
       // Don't fail the cancellation if tracking cleanup fails
     }
 
     // Send cancellation notification if requested
     if (notifyCustomer) {
       try {
-        const { NotificationService } = await import('../services/NotificationService');
+        const { NotificationService } = await import(
+          "../services/NotificationService"
+        );
         const notificationService = new NotificationService();
         await notificationService.sendOrderCancelledNotification(order);
       } catch (notificationError) {
-        console.error('Failed to send cancellation notification:', notificationError);
+        console.error(
+          "Failed to send cancellation notification:",
+          notificationError
+        );
         // Don't fail the cancellation if notification fails
       }
     }
 
     res.json({
       success: true,
-      message: 'Order cancelled successfully by admin',
-      data: order
+      message: "Order cancelled successfully by admin",
+      data: order,
     });
-
   } catch (error) {
-    console.error('Admin cancel order error:', error);
+    console.error("Admin cancel order error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to cancel order'
+      message: "Failed to cancel order",
     });
   }
 };
@@ -1256,24 +1472,24 @@ export const adminCancelOrder = async (req: AuthRequest, res: Response) => {
 export const getOrderStats = async (req: AuthRequest, res: Response) => {
   try {
     // Check if user is admin
-    if (req.user?.role !== 'admin') {
-      return res.status(403).json({ message: 'Access denied. Admin only.' });
+    if (req.user?.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Admin only." });
     }
 
     const stats = await OrderModel.aggregate([
       {
         $group: {
-          _id: '$orderStatus',
+          _id: "$orderStatus",
           count: { $sum: 1 },
-          totalAmount: { $sum: '$totalAmount' }
-        }
-      }
+          totalAmount: { $sum: "$totalAmount" },
+        },
+      },
     ]);
 
     const totalOrders = await OrderModel.countDocuments();
     const totalRevenue = await OrderModel.aggregate([
-      { $match: { orderStatus: { $in: ['delivered', 'shipped'] } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+      { $match: { orderStatus: { $in: ["delivered", "shipped"] } } },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]);
 
     res.json({
@@ -1281,14 +1497,14 @@ export const getOrderStats = async (req: AuthRequest, res: Response) => {
       data: {
         totalOrders,
         totalRevenue: totalRevenue[0]?.total || 0,
-        statusBreakdown: stats
-      }
+        statusBreakdown: stats,
+      },
     });
   } catch (error) {
-    console.error('Get order stats error:', error);
+    console.error("Get order stats error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch order statistics'
+      message: "Failed to fetch order statistics",
     });
   }
 };
@@ -1305,14 +1521,14 @@ export const handleFailedPayment = async (req: Request, res: Response) => {
       quantity,
       price,
       retryPaymentUrl,
-      productImageUrl
+      productImageUrl,
     } = req.body;
 
     // Validate required fields
     if (!email || !orderId || !productName || !price) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: email, orderId, productName, price'
+        message: "Missing required fields: email, orderId, productName, price",
       });
     }
 
@@ -1347,16 +1563,22 @@ export const handleFailedPayment = async (req: Request, res: Response) => {
         </div>
         
         <div class="content">
-            <h2>Hello ${username || 'Valued Customer'}!</h2>
+            <h2>Hello ${username || "Valued Customer"}!</h2>
             <p>We're sorry to inform you that your payment for the following order could not be processed successfully.</p>
             
             <div class="order-details">
                 <h3>Order Details</h3>
                 <div class="product-info">
-                    ${productImageUrl ? `<img src="${productImageUrl}" alt="${productName}" class="product-image">` : ''}
+                    ${
+                      productImageUrl
+                        ? `<img src="${productImageUrl}" alt="${productName}" class="product-image">`
+                        : ""
+                    }
                     <div class="product-details">
                         <h4>${productName}</h4>
-                        <p><strong>Category:</strong> ${productCategory || 'Jewelry'}</p>
+                        <p><strong>Category:</strong> ${
+                          productCategory || "Jewelry"
+                        }</p>
                         <p><strong>Quantity:</strong> ${quantity || 1}</p>
                         <p><strong>Price:</strong> ₹${price}</p>
                         <p><strong>Order ID:</strong> ${orderId}</p>
@@ -1370,7 +1592,9 @@ export const handleFailedPayment = async (req: Request, res: Response) => {
             </div>
             
             <div style="text-align: center;">
-                <a href="${retryPaymentUrl || '#'}" class="retry-button">Retry Payment Now</a>
+                <a href="${
+                  retryPaymentUrl || "#"
+                }" class="retry-button">Retry Payment Now</a>
             </div>
             
             <h3>Next Steps:</h3>
@@ -1394,46 +1618,48 @@ export const handleFailedPayment = async (req: Request, res: Response) => {
 
     // Create transporter with SSL fix
     const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.EMAIL_PORT || '587'),
+      host: process.env.EMAIL_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.EMAIL_PORT || "587"),
       secure: false,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
       tls: {
-        rejectUnauthorized: false // Allow self-signed certificates
-      }
+        rejectUnauthorized: false, // Allow self-signed certificates
+      },
     });
 
     // Send failed payment email
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'noreply@kynajewels.com',
+      from:
+        process.env.EMAIL_FROM ||
+        process.env.EMAIL_USER ||
+        "noreply@kynajewels.com",
       to: email,
       subject: `Payment Failed - Order ${orderId} - Kyna Jewels`,
-      html: failedPaymentEmailTemplate
+      html: failedPaymentEmailTemplate,
     });
 
     console.log(`Failed payment email sent to ${email} for order ${orderId}`);
 
     res.status(200).json({
       success: true,
-      message: 'Failed payment notification sent successfully',
+      message: "Failed payment notification sent successfully",
       data: {
         email,
         orderId,
         productName,
         price,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
-
   } catch (error) {
-    console.error('Failed payment handler error:', error);
+    console.error("Failed payment handler error:", error);
     res.status(500).json({
       success: false,
-      message: 'Failed to process payment failure notification',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      message: "Failed to process payment failure notification",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };

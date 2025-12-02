@@ -23,6 +23,18 @@ import {
 } from "lucide-react";
 import logo from "/logo.png";
 
+declare global {
+  interface CalendlyWidget {
+    initPopupWidget(options: { url: string }): void;
+  }
+
+  interface Window {
+    Calendly: CalendlyWidget;
+  }
+}
+
+export {};
+
 export default function Navbar() {
   const isAuthenticated = useSelector(
     (state: RootState) => state.auth.isAuthenticated
@@ -56,6 +68,12 @@ export default function Navbar() {
     };
   }, [isUserMenuOpen]);
 
+  const openCalendly = () => {
+    window.Calendly.initPopupWidget({
+      url: "https://calendly.com/pranaytiwariprpk",
+    });
+  };
+
   const handleLogout = () => {
     try {
       localStorage.removeItem("isAuthenticated");
@@ -81,11 +99,13 @@ export default function Navbar() {
                   <Phone className="w-6 h-6" />
                   <span>+91 8920610062</span>
                 </div>
-                <span className="hidden md:inline">
+                <button
+                  onClick={openCalendly}
+                  className="hidden md:inline underline ml-2 text-white hover:text-gray-100"
+                >
                   Book Virtual Appointment
-                </span>
+                </button>
               </div>
-
               {/* Brand */}
               <Link
                 to="/"
@@ -161,14 +181,18 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-                <Link 
-                  to="/wishlist" 
-                  aria-label="Wishlist" 
+                <Link
+                  to="/wishlist"
+                  aria-label="Wishlist"
                   className="p-2 hover:text-foreground sm:inline-flex"
                 >
                   <Heart className="h-5 w-5 text-white" />
                 </Link>
-                <Link to="/cart" aria-label="Cart" className="p-2 hover:text-foreground">
+                <Link
+                  to="/cart"
+                  aria-label="Cart"
+                  className="p-2 hover:text-foreground"
+                >
                   <ShoppingCart className="h-5 w-5 text-white" />
                 </Link>
               </div>
