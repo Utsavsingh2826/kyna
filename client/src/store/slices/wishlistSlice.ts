@@ -114,15 +114,38 @@ export const fetchWishlist = () => async (dispatch: any) => {
     dispatch(setLoading(true));
     dispatch(setError(null));
     const response = await apiService.getWishlist();
-    if (response.success && response.data?.wishlist) {
-      dispatch(setItems(response.data.wishlist));
+    
+    if (response.success && response.data && typeof response.data === 'object' && 'wishlist' in response.data) {
+      // Successfully retrieved wishlist (even if empty)
+      const wishlistData = response.data as { wishlist: WishlistEntry[]; count?: number };
+      dispatch(setItems(wishlistData.wishlist || []));
     } else {
-      dispatch(setItems([]));
+      // Handle different error scenarios
+      const errorMessage = response.error || "Failed to load wishlist";
+      
+      // Check if it's an authentication error
+      if (errorMessage.toLowerCase().includes('authenticated') || 
+          errorMessage.toLowerCase().includes('unauthorized') ||
+          errorMessage.toLowerCase().includes('401')) {
+        // Don't set error for auth issues - let the page handle it
+        dispatch(setItems([]));
+        dispatch(setError(null));
+      } else {
+        // Only set error for actual failures, not empty responses
+        dispatch(setError(errorMessage));
+        dispatch(setItems([]));
+      }
     }
   } catch (error) {
-    dispatch(
-      setError(error instanceof Error ? error.message : "Failed to load wishlist")
-    );
+    // Network or other errors
+    const errorMessage = error instanceof Error ? error.message : "Failed to load wishlist";
+    
+    // Don't set error for network issues that might be temporary
+    if (errorMessage.includes('Network error')) {
+      dispatch(setError("Unable to connect to server. Please check your connection."));
+    } else {
+      dispatch(setError(errorMessage));
+    }
     dispatch(setItems([]));
   } finally {
     dispatch(setLoading(false));
@@ -136,8 +159,9 @@ export const addWishlistItem =
       dispatch(setLoading(true));
       dispatch(setError(null));
       const response = await apiService.addToWishlist(payload);
-      if (response.success && response.data?.item) {
-        dispatch(addItem(response.data.item));
+      if (response.success && response.data && typeof response.data === 'object' && 'item' in response.data) {
+        const itemData = response.data as { item: WishlistEntry };
+        dispatch(addItem(itemData.item));
         return { success: true };
       } else {
         const errorMessage =

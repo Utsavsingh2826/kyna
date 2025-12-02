@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
-import type { RootState } from '@/store';
+import type { AppDispatch, RootState } from '@/store';
 import {
   fetchWishlist,
   removeWishlistItemThunk,
@@ -14,8 +14,8 @@ import {
 import type { WishlistEntry } from '@/store/slices/wishlistSlice';
 
 const WishlistPage = () => {
-  const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const wishlist = useSelector(selectWishlistItems);
   const wishlistLoading = useSelector(selectWishlistLoading);
   const wishlistInitialized = useSelector(selectWishlistInitialized);
@@ -48,10 +48,11 @@ const WishlistPage = () => {
   };
 
   useEffect(() => {
-    if (!wishlistInitialized) {
+    // Only fetch wishlist if user is authenticated and wishlist hasn't been initialized
+    if (isAuthenticated && !wishlistInitialized && !wishlistLoading) {
       dispatch(fetchWishlist());
     }
-  }, [dispatch, wishlistInitialized]);
+  }, [dispatch, isAuthenticated, wishlistInitialized, wishlistLoading]);
 
   const handleRemoveFromWishlist = (itemId: string, productTitle: string) => {
     dispatch(removeWishlistItemThunk(itemId));
@@ -91,6 +92,28 @@ const WishlistPage = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading your wishlist...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login message if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Please login to view your wishlist
+          </h3>
+          <p className="text-gray-500 mb-6">
+            Sign in to access your saved items
+          </p>
+          <Link to="/login">
+            <Button className="bg-teal-600 hover:bg-teal-700">
+              Login
+            </Button>
+          </Link>
         </div>
       </div>
     );
