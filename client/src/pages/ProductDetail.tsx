@@ -365,9 +365,13 @@ const ProductDetail = () => {
         setSelectedDiamondOrigin(diamondOrigin);
 
         const clarity = specifications.replace(/^LG|^ND/, "");
-        if (productData.diamondColorClarity.includes(clarity)) {
-          setSelectedColorClarity(clarity);
-        }
+        // Only set clarity IF user has NOT selected one
+        setSelectedColorClarity((prev) => {
+          if (prev) return prev; // user-selected -> do not override
+          if (productData.diamondColorClarity.includes(clarity)) return clarity;
+          return prev;
+        });
+
         console.log("Set diamond origin:", diamondOrigin);
       } else if (parts.length === 3) {
         // 3-part format: modelSku-karat-specs
@@ -969,8 +973,13 @@ const ProductDetail = () => {
     }
 
     try {
+      const currentVariantSku =
+        generateVariantId() ||
+        productData.chosenVariantSku ||
+        productData.firstVariantSku;
+
       const variantData = {
-        variantSku: productData.chosenVariantSku,
+        variantSku: currentVariantSku,
         variantConfig: {
           metalColor: selectedMetalColor,
           metalType: selectedMetalType,
@@ -993,7 +1002,7 @@ const ProductDetail = () => {
       console.log("Adding to cart - Product:", {
         productId: productData._id,
         modelSku: productData.modelSku,
-        variantSku: productData.chosenVariantSku,
+        variantSku: currentVariantSku,
         title: productData.title,
         price: productData.sellingPrice,
         variantConfig: variantData.variantConfig,
@@ -1023,6 +1032,7 @@ const ProductDetail = () => {
     engravingText,
     engravingMotifPath,
     engravingImageUrl,
+    generateVariantId,
   ]);
 
   // Upload engraving data to backend
@@ -1133,6 +1143,12 @@ const ProductDetail = () => {
       }
     }
 
+    // Determine variant SKU (prefer freshly generated SKU reflecting current selections)
+    const currentVariantSku =
+      generateVariantId() ||
+      productData?.chosenVariantSku ||
+      productData?.firstVariantSku;
+
     // Create order data for console logging and payment
     const orderData = {
       orderId: `ORD_${Date.now()}_${Math.random()
@@ -1146,7 +1162,7 @@ const ProductDetail = () => {
       },
       product: {
         modelSku: productData.modelSku,
-        variantSku: productData.chosenVariantSku,
+        variantSku: currentVariantSku,
         title: productData.title,
         description: productData.description,
         price: productData.sellingPrice,
@@ -1162,6 +1178,7 @@ const ProductDetail = () => {
         diamondOrigin: selectedDiamondOrigin,
         ringSize: selectedSize,
         engraving: engravingText,
+        diamondColorClarity: selectedColorClarity,
         engravingImageUrl: cloudinaryEngravingUrl || engravingImageUrl, // Use Cloudinary URL if available
         engravingMotifPath: engravingMotifPath, // Include motif path
         hasEngraving: hasEngraving,
@@ -1176,7 +1193,7 @@ const ProductDetail = () => {
     console.log("=== ORDER CREATED ===");
     console.log("Order Data:", JSON.stringify(orderData, null, 2));
     console.log("=== DETAILED BREAKDOWN ===");
-    console.log("Product SKU:", productData.chosenVariantSku);
+    console.log("Product SKU:", currentVariantSku);
     console.log("Metal Color:", selectedMetalColor);
     console.log("Metal Type:", selectedMetalType);
     console.log("Gold Karat:", selectedGoldKarat);
@@ -1202,7 +1219,7 @@ const ProductDetail = () => {
               price: productData.sellingPrice,
               priceBreakdown: productData.priceBreakdown,
               images: productData.variantImages,
-              sku: productData.chosenVariantSku,
+              sku: currentVariantSku,
             },
             quantity: 1,
             price: productData.sellingPrice,
