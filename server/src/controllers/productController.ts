@@ -56,7 +56,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
     const limit = Math.max(
       1,
-      Math.min(100, parseInt((req.query.limit as string) || "20", 10))
+      Math.min(100, parseInt((req.query.limit as string) || "50", 10))
     );
     const skip = (page - 1) * limit;
 
@@ -343,11 +343,9 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       });
     }
 
-    pipeline.push(
-      { $sort: { modelSku: 1 } },
-      { $skip: skip },
-      { $limit: limit }
-    );
+    pipeline.push({ $sort: { modelSku: 1 } });
+    if (!variantDependentFilterPresent)
+      pipeline.push({ $skip: skip }, { $limit: limit });
 
     const ProductModel = getCollectionModel("products");
     const docs = await ProductModel.aggregate(pipeline)
@@ -797,9 +795,13 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       });
     }
 
-    // Use database-level pagination consistently
+    // Pagination in JS when variant-dependent filters present (we fetched unpaginated)
     let paged = filtered;
     let totalFiltered = filtered.length;
+    if (variantDependentFilterPresent) {
+      paged = filtered.slice(skip, skip + limit);
+      totalFiltered = filtered.length;
+    }
 
     const conn2 = getCatalogConnection();
     const total = await conn2
@@ -811,7 +813,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       count: paged.length,
       total,
       pagination: {
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(totalFiltered / limit),
         currentPage: page,
         limit,
       },
@@ -1074,13 +1076,173 @@ export const getProductByModelSku = async (
       ? attributes.diamondSizes.map(String)
       : [];
 
-    const diamondColorClarity: string[] = Array.isArray(
-      attributes?.diamondColorClarity
-    )
-      ? attributes.diamondColorClarity.map(String)
-      : Array.isArray(attributes?.diamondColors)
-      ? attributes.diamondColors.map(String)
+    // ----------------- diamondColorClarity resolution (SCAN variantIds for LG / ND tokens) -----------------
+    // let diamondColorClarity: string[] = [];
+
+    // const variantIdsArr: string[] = Array.isArray(product?.variantIds)
+    //   ? (product.variantIds as any[]).filter((v) => typeof v === "string")
+    //   : [];
+
+    // if (variantIdsArr.length) {
+    //   const collected: string[] = [];
+
+    //   for (const skuRaw of variantIdsArr) {
+    //     if (!skuRaw || typeof skuRaw !== "string") continue;
+
+    //     // split SKU into parts on common separators
+    //     const parts = skuRaw.split(/[-_\/\.]/).map((p) => (p || "").trim());
+    //     const upParts = parts.map((p) => (p || "").toUpperCase());
+
+    //     // iterate parts to find tokens starting with LG or ND or standalone LG/ND
+    //     for (let i = 0; i < upParts.length; i++) {
+    //       const token = upParts[i];
+    //       if (!token) continue;
+
+    //       let candidate: string | null = null;
+
+    //       // starts-with cases: LGEFVVS -> remove LG prefix -> EFVVS
+    //       if (token.startsWith("LG") && token.length > 2) {
+    //         candidate = token.slice(2);
+    //       } else if (token.startsWith("ND") && token.length > 2) {
+    //         candidate = token.slice(2);
+    //       } else if (token === "LG" && i + 1 < upParts.length) {
+    //         candidate = upParts[i + 1];
+    //       } else if (token === "ND" && i + 1 < upParts.length) {
+    //         candidate = upParts[i + 1];
+    //       }
+
+    //       if (!candidate) {
+    //         // also handle contiguous uppercase runs inside token (e.g. BR1-RD-1-18-LGEFVVS-6)
+    //         // look for substring "LG" or "ND" anywhere and take what's after it
+    //         const idxLG = token.indexOf("LG");
+    //         const idxND = token.indexOf("ND");
+    //         if (idxLG !== -1 && token.length > idxLG + 2) {
+    //           candidate = token.slice(idxLG + 2);
+    //         } else if (idxND !== -1 && token.length > idxND + 2) {
+    //           candidate = token.slice(idxND + 2);
+    //         }
+    //       }
+
+    //       if (!candidate) continue;
+
+    //       // sanitize candidate: keep longest contiguous A-Z run (clarity tokens are letters)
+    //       const match = candidate.match(/[A-Z]{2,10}/i);
+    //       if (match && match[0]) {
+    //         const cleaned = match[0].toUpperCase();
+    //         // basic sanity: ignore clearly non-clarity tokens (short metal codes etc.)
+    //         if (cleaned.length >= 2) collected.push(cleaned);
+    //       }
+    //     }
+
+    //     // also cover edge case: whole SKU may contain runs like ...NDGHVS... without separators
+    //     const extraRuns = skuRaw.match(/(?:LG|ND)?([A-Z]{2,10})(?=[\-_\/\.0-9]|$)/gi);
+    //     if (extraRuns) {
+    //       for (const r of extraRuns) {
+    //         // r may include LG/ND prefix; strip if present
+    //         const up = r.toUpperCase();
+    //         const stripped = up.startsWith("LG") || up.startsWith("ND") ? up.slice(2) : up;
+    //         const m = stripped.match(/[A-Z]{2,10}/);
+    //         if (m && m[0]) collected.push(m[0].toUpperCase());
+    //       }
+    //     }
+    //   }
+
+    //   // filter & dedupe
+    //   const blacklist = new Set([
+    //     "WG",
+    //     "YG",
+    //     "RG",
+    //     "BR",
+    //     "GP",
+    //     "NBV",
+    //     "BV",
+    //     "SV",
+    //     "PV",
+    //     "PG",
+    //     "360",
+    //     "45",
+    //     "FV",
+    //     "EV",
+    //     "LGE",
+    //     "LG",
+    //     "BR1",
+    //     "BRI",
+    //     "RD",
+    //     "RD1",
+    //     "MM",
+    //   ]);
+
+    //   const seen = new Set<string>();
+    //   const uniq: string[] = [];
+    //   for (const token of collected) {
+    //     const t = String(token || "").toUpperCase().trim();
+    //     if (!t) continue;
+    //     if (blacklist.has(t)) continue;
+    //     if (!seen.has(t)) {
+    //       seen.add(t);
+    //       uniq.push(t);
+    //     }
+    //   }
+
+    //   diamondColorClarity = uniq;
+    // }
+
+    // diamondColorClarity = Array.isArray(diamondColorClarity)
+    //   ? diamondColorClarity.map((s) => String(s).toUpperCase()).filter(Boolean)
+    //   : [];
+
+    // ----------------- diamondColorClarity (STRICT: only after LG or ND) -----------------
+    let diamondColorClarity: string[] = [];
+    const variantIdsArr: string[] = Array.isArray(product?.variantIds)
+      ? (product.variantIds as any[]).filter((v) => typeof v === "string")
       : [];
+
+    if (variantIdsArr.length) {
+      const collected: string[] = [];
+      const prefixRegex = /(?:LG|ND)([A-Z]{2,10})/gi; // captures letters after LG/ND in same token
+      for (const rawSku of variantIdsArr) {
+        if (!rawSku || typeof rawSku !== "string") continue;
+        const upSku = rawSku.toUpperCase();
+
+        // 1) capture inline occurrences like ...LGEFVVS... or ...NDGHVS...
+        let m: RegExpExecArray | null;
+        prefixRegex.lastIndex = 0;
+        while ((m = prefixRegex.exec(upSku)) !== null) {
+          if (m[1]) collected.push(m[1].toUpperCase());
+        }
+
+        // 2) capture cases where LG or ND is a standalone SKU part and clarity is next part:
+        const parts = upSku.split(/[-_\/\.]/).map((p) => (p || "").trim());
+        for (let i = 0; i < parts.length; i++) {
+          const p = parts[i];
+          if (p === "LG" || p === "ND") {
+            const next = parts[i + 1] ?? "";
+            const lead = (next.match(/^([A-Z]{2,10})/) || [])[1];
+            if (lead) collected.push(lead.toUpperCase());
+          } else {
+            // also handle tokens that are exactly "LGXXXX" or "NDXXXX" but maybe separated oddly;
+            // already covered by prefixRegex above, so no-op here.
+          }
+        }
+      }
+
+      // dedupe & sanitize
+      const seen = new Set<string>();
+      const uniq: string[] = [];
+      for (const t of collected) {
+        const tok = String(t || "")
+          .toUpperCase()
+          .trim();
+        if (!tok) continue;
+        // sanity: only letters, length 2..10
+        if (!/^[A-Z]{2,10}$/.test(tok)) continue;
+        if (!seen.has(tok)) {
+          seen.add(tok);
+          uniq.push(tok);
+        }
+      }
+      diamondColorClarity = uniq;
+    }
 
     // ----------------- ENGRAVING: maintain legacy behavior AND return object fields ----------
     // Legacy: keep engravingDetailIds array available as `engraving` for compatibility
@@ -1103,11 +1265,11 @@ export const getProductByModelSku = async (
 
     // We'll compute final isEngraving and engravingInfo after variant fetch so variant fields can override product ones.
 
-    const variantIds = Array.isArray(product?.variantIds)
-      ? product.variantIds
-      : [];
-    const variantCount = variantIds.length;
-    const firstVariantSku = variantCount > 0 ? variantIds[0] : null;
+    const variantCount = Array.isArray(product?.variantIds)
+      ? product.variantIds.length
+      : 0;
+    const firstVariantSku =
+      variantCount > 0 ? (product.variantIds as any[])[0] : null;
     const variantIdParam = (req.query.variantId ?? "").toString().trim();
 
     // ----------------- Pricing setup (merge multi-doc defaults) -----------------

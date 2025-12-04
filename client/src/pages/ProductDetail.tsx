@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 // import { Checkbox } from "@/components/ui/checkbox";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+import { cos } from "three/src/nodes/TSL.js";
 
 // Product interface for API data
 interface ProductData {
@@ -228,6 +229,7 @@ const ProductDetail = () => {
   const [selectedMetalType, setSelectedMetalType] = useState("");
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
+  const [selectedColorClarity, setSelectedColorClarity] = useState("");
 
   const activeVariantSku = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -361,6 +363,11 @@ const ProductDetail = () => {
           ? "Lab Grown Diamond"
           : "Natural Diamond";
         setSelectedDiamondOrigin(diamondOrigin);
+
+        const clarity = specifications.replace(/^LG|^ND/, "");
+        if (productData.diamondColorClarity.includes(clarity)) {
+          setSelectedColorClarity(clarity);
+        }
         console.log("Set diamond origin:", diamondOrigin);
       } else if (parts.length === 3) {
         // 3-part format: modelSku-karat-specs
@@ -569,7 +576,7 @@ const ProductDetail = () => {
     // Determine diamond origin and specifications
     const originCode =
       selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
-    const specifications = `${originCode}EFVVS`; // Default specifications
+    const specifications = `${originCode}${selectedColorClarity}`;
 
     // Use the original format from the URL instead of auto-determining
     if (originalVariantFormat === "5-part") {
@@ -608,6 +615,7 @@ const ProductDetail = () => {
     selectedDiamondOrigin,
     selectedMetalType,
     originalVariantFormat,
+    selectedColorClarity,
   ]);
 
   useEffect(() => {
@@ -644,6 +652,7 @@ const ProductDetail = () => {
     if (!newVariantId || !id) return;
 
     console.log("Updating to variant:", newVariantId);
+    console.log(productData?.diamondColorClarity);
 
     // Preserve existing metal color parameter
     const currentUrl = new URL(window.location.href);
@@ -855,6 +864,7 @@ const ProductDetail = () => {
     selectedDiamondOrigin,
     productData,
     updateVariantSelection,
+    selectedColorClarity,
   ]);
 
   // Get available karat values based on selected metal type
@@ -1343,7 +1353,7 @@ const ProductDetail = () => {
   const handleWhatsAppShare = () => {
     const url = getCurrentUrl();
     const message = encodeURIComponent(`I am looking for more details ${url}`);
-    const whatsappUrl = `https://wa.me/917558769753?text=${message}`;
+    const whatsappUrl = `https://wa.me/918928610682?text=${message}`;
     window.open(whatsappUrl, "_blank");
   };
 
@@ -1890,15 +1900,21 @@ const ProductDetail = () => {
                         <label className="block text-xs mb-2">
                           Color & Clarity
                         </label>
-                        <Select>
+                        <Select
+                          value={selectedColorClarity}
+                          onValueChange={(value) => {
+                            setSelectedColorClarity(value);
+                          }}
+                        >
                           <SelectTrigger className="text-sm border-neutral-300">
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
+
                           <SelectContent className="bg-white">
                             {productData.diamondColorClarity.map(
-                              (colorClarity, index) => (
-                                <SelectItem key={index} value={colorClarity}>
-                                  {colorClarity}
+                              (cc, index) => (
+                                <SelectItem key={index} value={cc}>
+                                  {cc}
                                 </SelectItem>
                               )
                             )}
