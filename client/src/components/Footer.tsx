@@ -157,15 +157,27 @@ const Footer: React.FC = () => {
 
           {/* Socials */}
           <div className="flex items-center gap-4 mt-6 text-gray-600">
-            <Youtube size={20} className="hover:text-teal-600 cursor-pointer" />
-            <Facebook
-              size={20}
-              className="hover:text-teal-600 cursor-pointer"
-            />
-            <Instagram
-              size={20}
-              className="hover:text-teal-600 cursor-pointer"
-            />
+            <a
+              href="https://www.facebook.com/share/1LG17RVPN8/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Facebook
+                size={20}
+                className="hover:text-teal-600 cursor-pointer"
+              />
+            </a>
+
+            <a
+              href="https://www.instagram.com/kyna_jewels?utm_source=qr&igsh=MTIyOGZva282ZnJ4bA=="
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Instagram
+                size={20}
+                className="hover:text-teal-600 cursor-pointer"
+              />
+            </a>
           </div>
 
           {/* Copyright */}
@@ -408,19 +420,28 @@ const Footer: React.FC = () => {
                 </Button>
               </form>
 
-              <div className="mt-6 flex items-center gap-4 text-gray-600">
-                <Youtube
-                  size={18}
-                  className="hover:text-teal-600 cursor-pointer"
-                />
-                <Facebook
-                  size={18}
-                  className="hover:text-teal-600 cursor-pointer"
-                />
-                <Instagram
-                  size={18}
-                  className="hover:text-teal-600 cursor-pointer"
-                />
+              <div className="flex items-center gap-4 mt-6 text-gray-600">
+                <a
+                  href="https://www.facebook.com/share/1LG17RVPN8/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Facebook
+                    size={20}
+                    className="hover:text-teal-600 cursor-pointer"
+                  />
+                </a>
+
+                <a
+                  href="https://www.instagram.com/kyna_jewels?utm_source=qr&igsh=MTIyOGZva282ZnJ4bA=="
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Instagram
+                    size={20}
+                    className="hover:text-teal-600 cursor-pointer"
+                  />
+                </a>
               </div>
             </div>
           </div>

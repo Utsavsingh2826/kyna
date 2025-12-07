@@ -56,7 +56,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
     const limit = Math.max(
       1,
-      Math.min(100, parseInt((req.query.limit as string) || "50", 10))
+      Math.min(100, parseInt((req.query.limit as string) || "20", 10))
     );
     const skip = (page - 1) * limit;
 
@@ -344,8 +344,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     }
 
     pipeline.push({ $sort: { modelSku: 1 } });
-    if (!variantDependentFilterPresent)
-      pipeline.push({ $skip: skip }, { $limit: limit });
+    // Always apply DB-level pagination (use $skip/$limit in aggregation)
+    pipeline.push({ $skip: skip }, { $limit: limit });
 
     const ProductModel = getCollectionModel("products");
     const docs = await ProductModel.aggregate(pipeline)
@@ -813,7 +813,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       count: paged.length,
       total,
       pagination: {
-        totalPages: Math.ceil(totalFiltered / limit),
+        // Use DB-level total to compute total pages so frontend pagination matches server paging
+        totalPages: Math.ceil(total / limit),
         currentPage: page,
         limit,
       },

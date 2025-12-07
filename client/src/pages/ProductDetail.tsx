@@ -488,6 +488,15 @@ const ProductDetail = () => {
 
         if (variantId) {
           parseVariantSku(variantId, data);
+          // If parsed variant did not yield a clarity selection, default to first available
+          // This ensures pendants/earrings also get a sensible default clarity like rings.
+          if (
+            (!selectedColorClarity || selectedColorClarity.length === 0) &&
+            data.diamondColorClarity &&
+            data.diamondColorClarity.length > 0
+          ) {
+            setSelectedColorClarity(String(data.diamondColorClarity[0]));
+          }
         } else {
           // Set default metal type if no variant is parsed
           if (data.metalTypes && data.metalTypes.length > 0) {
@@ -1328,24 +1337,24 @@ const ProductDetail = () => {
     );
   };
 
-  // Function to get video thumbnail (first frame)
-  const getVideoThumbnail = (videoUrl: string) => {
-    // For now, return a placeholder. In production, you might want to generate actual thumbnails
-    return videoUrl.replace(/\.(mp4|webm|mov)$/i, "-thumbnail.webp");
-  };
+  // // Function to get video thumbnail (first frame)
+  // const getVideoThumbnail = (videoUrl: string) => {
+  //   // For now, return a placeholder. In production, you might want to generate actual thumbnails
+  //   return videoUrl.replace(/\.(mp4|webm|mov)$/i, "-thumbnail.webp");
+  // };
 
-  // Handle video play/pause
-  const handleVideoToggle = () => {
-    if (videoRef) {
-      if (isVideoPlaying) {
-        videoRef.pause();
-        setIsVideoPlaying(false);
-      } else {
-        videoRef.play();
-        setIsVideoPlaying(true);
-      }
-    }
-  };
+  // // Handle video play/pause
+  // const handleVideoToggle = () => {
+  //   if (videoRef) {
+  //     if (isVideoPlaying) {
+  //       videoRef.pause();
+  //       setIsVideoPlaying(false);
+  //     } else {
+  //       videoRef.play();
+  //       setIsVideoPlaying(true);
+  //     }
+  //   }
+  // };
 
   // Share functionality
   const getCurrentUrl = () => {
@@ -1744,6 +1753,9 @@ const ProductDetail = () => {
                       {productData.variantCount} Variants
                     </span>
                   </div>
+                  <p className="text-muted-foreground text-sm mb-4">
+                    {productData.description}
+                  </p>
                   <div className="flex items-end mb-4 gap-4">
                     <div className="text-2xl mb-1">
                       ₹{productData.sellingPrice.toLocaleString()}
@@ -1756,9 +1768,6 @@ const ProductDetail = () => {
                       /mo
                     </div>
                   </div>
-                  <p className="text-muted-foreground text-sm mb-4">
-                    {productData.description}
-                  </p>
                 </div>
 
                 {/* Diamond Origin */}
