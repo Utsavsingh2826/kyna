@@ -511,23 +511,48 @@ function CollapsibleSection({
     <div className="border-b border-gray-100 last:border-b-0">
       <div className="flex items-center justify-between">
         {/* Main category link */}
-        <SheetClose asChild>
-          <NavLink
-            to={getBasePath(title)}
-            className={({ isActive }) =>
-              `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${
-                isActive
-                  ? "bg-[#68C5C0]/20 text-foreground"
-                  : "text-muted-foreground"
-              }`
-            }
-          >
-            {title}
-          </NavLink>
-        </SheetClose>
+        <div className="flex items-center justify-between">
+  {/* For NON-clickable titles: only toggle, no navigation */}
+  {["Design Your Own", "Upload Your Design", "Build Your Jewellery"].includes(title) ? (
+    <button
+      onClick={onToggle}
+      className="flex-1 text-left rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide text-muted-foreground hover:bg-[#68C5C0]/15"
+    >
+      {title}
+    </button>
+  ) : (
+    <SheetClose asChild>
+      <NavLink
+        to={getBasePath(title)}
+        className={({ isActive }) =>
+          `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${
+            isActive ? "bg-[#68C5C0]/20 text-foreground" : "text-muted-foreground"
+          }`
+        }
+      >
+        {title}
+      </NavLink>
+    </SheetClose>
+  )}
+
+  {/* Expand / collapse arrow */}
+  {hasItems && (
+    <button
+      onClick={onToggle}
+      className="p-2 hover:bg-[#68C5C0]/15 rounded-md"
+    >
+      {isOpen ? (
+        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+      ) : (
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      )}
+    </button>
+  )}
+</div>
+
 
         {/* Expand/Collapse button - only show if there are sub-items */}
-        {hasItems && (
+        {/* {hasItems && (
           <button
             onClick={onToggle}
             className="p-2 hover:bg-[#68C5C0]/15 rounded-md"
@@ -539,7 +564,7 @@ function CollapsibleSection({
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             )}
           </button>
-        )}
+        )} */}
       </div>
 
       {/* Sub-items - only render if expanded and has items and NOT for "Design Your Own" */}
