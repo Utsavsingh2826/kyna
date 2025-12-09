@@ -1,7 +1,7 @@
 import React from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
-import { Facebook, Instagram, Youtube, ArrowRight } from "lucide-react";
+import { Facebook, Instagram, ArrowRight } from "lucide-react";
 import * as Accordion from "@radix-ui/react-accordion";
 
 const columns = [
@@ -117,10 +117,10 @@ const Footer: React.FC = () => {
             </h3>
             <p className="text-sm text-gray-700">+91 8928610682</p>
             <a
-              href="mailto:enquires@hyunjewellery.com"
+              href="mailto:enquires@kynajewels.com"
               className="text-sm text-teal-600 underline"
             >
-              enquires@hyunjewellery.com
+              enquires@kynajewels.com
             </a>
 
             <button
@@ -183,7 +183,7 @@ const Footer: React.FC = () => {
           {/* Copyright */}
           <div className="pt-6 border-t mt-6">
             <p className="text-xs text-gray-500 text-center">
-              © 2024 HYUN Jewellery. All Rights Reserved
+              © 2025 Kyna Jewellery. All Rights Reserved
             </p>
           </div>
         </div>
@@ -274,10 +274,10 @@ const Footer: React.FC = () => {
                 <li className="text-gray-700">+91 8928610682</li>
                 <li>
                   <a
-                    href="mailto:enquires@hyunjewellery.com"
+                    href="mailto:enquires@kynajewels.com"
                     className="text-teal-600 hover:underline"
                   >
-                    enquires@hyunjewellery.com
+                    enquires@kynajewels.com
                   </a>
                 </li>
                 <li>
@@ -404,7 +404,7 @@ const Footer: React.FC = () => {
                 SIGN UP FOR EMAIL
               </h3>
               <p className="mt-3 text-sm text-gray-600">
-                Send me HYUN news, updates and offers.
+                Send me KYNA news, updates and offers.
               </p>
               <form
                 className="mt-4 flex gap-2 w-full max-w-sm"
@@ -449,7 +449,7 @@ const Footer: React.FC = () => {
           {/* Copyright */}
           <div className="mt-12 pt-8 border-t">
             <p className="text-xs text-gray-500">
-              © 2024 HYUN Jewellery. All Rights Reserved
+              © 2025 Kyna Jewellery. All Rights Reserved
             </p>
           </div>
         </div>

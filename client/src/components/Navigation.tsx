@@ -423,7 +423,7 @@ const Navigation: React.FC = () => {
                           <span className="mt-2 text-sm">Tennis Necklaces</span>
                         </a> */}
                         <a
-                          href="/build-your-jewellery/Bands"
+                          href="/build-your-jewellery/Gents-Ring"
                           className="flex flex-col items-center"
                         >
                           <img
@@ -431,7 +431,7 @@ const Navigation: React.FC = () => {
                             alt="Bangles"
                             className="h-40 object-cover rounded"
                           />
-                          <span className="mt-2 text-sm">Wedding Bands</span>
+                          <span className="mt-2 text-sm">Gents Ring</span>
                         </a>
                       </div>
                     </>

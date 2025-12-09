@@ -313,7 +313,7 @@ function App() {
             element={<BuildYourJewelleryBracelets />}
           />
           <Route
-            path="/build-your-jewellery/Bands"
+            path="/build-your-jewellery/Gents-Rings"
             element={<BuildYourJewelleryBands />}
           />
           <Route

@@ -727,7 +727,6 @@ const CartPage = () => {
             {/* Shipping & Returns Information */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="space-y-3 text-sm text-gray-600">
-                <p>Estimated Ship Date: Monday, October 21st</p>
                 <p>Free Shipping | Free Returns</p>
 
                 <div className="flex items-center space-x-4 mt-4">

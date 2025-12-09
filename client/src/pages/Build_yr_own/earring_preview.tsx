@@ -1,5 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import { useNavigate, Link } from "react-router-dom";
+import type { RootState, AppDispatch } from "@/store";
+import apiService from "@/services/api";
+import { fetchCart } from "@/store/slices/cartSlice";
+import { toast } from "sonner";
 import {
   ChevronUp,
   ChevronDown,
@@ -9,11 +14,10 @@ import {
   MessageCircle,
   Share2,
 } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
-import type { RootState, AppDispatch } from "@/store";
-import apiService from "@/services/api";
-import { fetchCart } from "@/store/slices/cartSlice";
-import { toast } from "sonner";
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+// (Link is re-imported above)
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import Engrave from "../Engrave";
@@ -86,8 +90,6 @@ interface ProductModelResponse {
   priceIncompleteReasons: string[];
   chosenVariantSku: string;
   variantImages: string[];
-  availableColors?: string[];
-  netWeightGrams?: number;
 }
 
 interface SubStyle {
@@ -96,32 +98,51 @@ interface SubStyle {
   price: string;
   parentSku?: string;
   variants?: ApiVariant[];
-  productDetails?: ProductModelResponse;
+  productDetails?: string[] | ProductModelResponse;
   availableColors?: string[];
+  isLabGrownAvailable?: boolean;
   thumbnailImages?: string[];
 }
 
 // Hardcoded category mappings
 const categoryMappings: { [key: string]: string } = {
-  SOLITAIRE: "SOLITAIRE",
-  "SOLITAIRE WITH HALO": "SOLITAIRE WITH HALO",
-  "STUD PENDANTS": "STUD PENDANTS",
+  "DANGLE EARINGS": "DANGLE EARINGS",
+  "CLASSIC STUDS": "CLASSIC STUDS",
+  "CLUSTER EARINGS": "CLUSTER EARINGS",
+  "HOOP EARINGS": "HOOP EARINGS",
+  "HALO EARINGS": "HALO EARINGS",
+  "SINGLE STUDS": "SINGLE STUDS",
 };
 
 // Initial hardcoded structure that will be populated with API data
 const getInitialStyleAndDesign = () => [
   {
-    name: "SOLITAIRE",
+    name: "DANGLE EARINGS",
     substyles: [] as SubStyle[],
     isLoaded: false,
   },
   {
-    name: "SOLITAIRE WITH HALO",
+    name: "CLASSIC STUDS",
     substyles: [] as SubStyle[],
     isLoaded: false,
   },
   {
-    name: "STUD PENDANTS",
+    name: "CLUSTER EARINGS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "HOOP EARINGS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "HALO EARINGS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "SINGLE STUDS",
     substyles: [] as SubStyle[],
     isLoaded: false,
   },
@@ -141,60 +162,297 @@ const diamondShapes = {
     { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
   ],
 };
-// iJewel viewer wrapper (uses the remote SDK)
-interface IjewelViewerProps {
-  modelUrl?: string;
+const GLBViewer = ({
+  modelUrl,
+  className,
+  isMain = false,
+}: {
+  modelUrl: string;
   className?: string;
-}
+  isMain?: boolean;
+}) => {
+  const mountRef = useRef<HTMLDivElement | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const modelRef = useRef<THREE.Group | null>(null);
+  const animationIdRef = useRef<number | null>(null);
 
-const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src =
-      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
-    script.async = true;
+    if (!mountRef.current) return;
 
-    script.onload = () => {
-      const container = document.getElementById("ijewel-viewer-container");
-      if (!container) return;
+    const initThreeJS = () => {
+      if (!mountRef.current) return;
 
-      const project = {
-        modelUrl: modelUrl || "/product_detail/glb.glb",
-        basePath: "",
-      };
+      // Scene setup
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xf5f5f5);
+      sceneRef.current = scene;
 
-      const viewerOptions = {
-        showCard: false,
-        showUiButtons: false,
-        showLogo: false,
-        showConfigurator: false,
-      };
+      // Camera setup
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        mountRef.current.clientWidth / mountRef.current.clientHeight,
+        0.1,
+        1000
+      );
+      camera.position.set(0, 0, 5);
 
-      try {
-        new window.ijewelViewer.Viewer(container, project, viewerOptions);
-      } catch (err) {
-        console.error("iJewel init error:", err);
+      // Renderer setup
+      const renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+      });
+      renderer.setSize(
+        mountRef.current.clientWidth,
+        mountRef.current.clientHeight
+      );
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      mountRef.current.appendChild(renderer.domElement);
+      rendererRef.current = renderer;
+
+      // Lighting
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(10, 10, 5);
+      directionalLight.castShadow = true;
+      scene.add(directionalLight);
+
+      const pointLight = new THREE.PointLight(0xffffff, 0.3);
+      pointLight.position.set(-10, -10, -5);
+      scene.add(pointLight);
+
+      let diamond: THREE.Mesh | null = null;
+
+      function createPlaceholderModel() {
+        const group = new THREE.Group();
+
+        // Ring band
+        const ringGeometry = new THREE.TorusGeometry(1.2, 0.15, 8, 32);
+        const ringMaterial = new THREE.MeshStandardMaterial({
+          color: 0xffd700,
+          metalness: 0.9,
+          roughness: 0.1,
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.castShadow = true;
+        group.add(ring);
+
+        // Center diamond (simplified)
+        const diamondGeometry = new THREE.OctahedronGeometry(0.3);
+        const diamondMaterial = new THREE.MeshPhysicalMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.9,
+          roughness: 0,
+          metalness: 0,
+          reflectivity: 1,
+          clearcoat: 1,
+          clearcoatRoughness: 0,
+        });
+        diamond = new THREE.Mesh(diamondGeometry, diamondMaterial);
+        diamond.position.y = 0.2;
+        diamond.castShadow = true;
+        group.add(diamond);
+
+        // Small accent diamonds
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const smallDiamondGeometry = new THREE.OctahedronGeometry(0.08);
+          const smallDiamond = new THREE.Mesh(
+            smallDiamondGeometry,
+            diamondMaterial
+          );
+          smallDiamond.position.set(
+            Math.cos(angle) * 1.3,
+            0.1,
+            Math.sin(angle) * 1.3
+          );
+          smallDiamond.scale.set(0.7, 0.7, 0.7);
+          group.add(smallDiamond);
+        }
+
+        scene.add(group);
+        modelRef.current = group;
       }
+
+      // Load GLB Model
+      if (modelUrl && modelUrl.endsWith(".glb")) {
+        const loader = new GLTFLoader();
+
+        // Setup DRACO loader for compressed models
+        const dracoLoader = new DRACOLoader();
+        // Use CDN for DRACO decoder files
+        dracoLoader.setDecoderPath(
+          "https://www.gstatic.com/draco/versioned/decoders/1.5.6/"
+        );
+        dracoLoader.preload();
+        loader.setDRACOLoader(dracoLoader);
+
+        loader.load(
+          modelUrl,
+          (gltf) => {
+            const model = gltf.scene;
+
+            // Clear any existing models
+            if (modelRef.current) {
+              scene.remove(modelRef.current);
+            }
+
+            // Auto-scale the model to fit the scene
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3()).length();
+            const center = box.getCenter(new THREE.Vector3());
+
+            // Scale the model to fit in the view
+            const scale = isMain ? 2 / size : 1.6 / size;
+            model.scale.setScalar(scale);
+
+            // Center the model
+            model.position.copy(center).multiplyScalar(-scale);
+
+            scene.add(model);
+            modelRef.current = model;
+
+            // Dispose of the DRACO loader after use
+            dracoLoader.dispose();
+          },
+          () => {},
+          (error) => {
+            console.error("Error loading GLB model:", modelUrl, error);
+
+            dracoLoader.dispose();
+            createPlaceholderModel();
+          }
+        );
+      } else {
+        createPlaceholderModel();
+      }
+
+      // Controls for main viewer (mouse interaction)
+      let isDragging = false;
+      let previousMousePosition = { x: 0, y: 0 };
+
+      const handleMouseDown = (event: MouseEvent) => {
+        if (!isMain) return;
+        isDragging = true;
+        previousMousePosition = { x: event.clientX, y: event.clientY };
+        renderer.domElement.style.cursor = "grabbing";
+      };
+
+      const handleMouseMove = (event: MouseEvent) => {
+        if (!isDragging || !isMain || !modelRef.current) return;
+
+        const deltaMove = {
+          x: event.clientX - previousMousePosition.x,
+          y: event.clientY - previousMousePosition.y,
+        };
+
+        const deltaRotationQuaternion = new THREE.Quaternion().setFromEuler(
+          new THREE.Euler(deltaMove.y * 0.01, deltaMove.x * 0.01, 0, "XYZ")
+        );
+
+        modelRef.current.quaternion.multiplyQuaternions(
+          deltaRotationQuaternion,
+          modelRef.current.quaternion
+        );
+        previousMousePosition = { x: event.clientX, y: event.clientY };
+      };
+
+      const handleMouseUp = () => {
+        isDragging = false;
+        if (rendererRef.current) {
+          rendererRef.current.domElement.style.cursor = isMain
+            ? "grab"
+            : "pointer";
+        }
+      };
+
+      const handleWheel = (event: WheelEvent) => {
+        if (!isMain) return;
+        event.preventDefault();
+        camera.position.z += event.deltaY * 0.01;
+        camera.position.z = Math.max(2, Math.min(10, camera.position.z));
+      };
+
+      if (isMain) {
+        renderer.domElement.style.cursor = "grab";
+        renderer.domElement.addEventListener("mousedown", handleMouseDown);
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseup", handleMouseUp);
+        renderer.domElement.addEventListener("wheel", handleWheel);
+      }
+
+      // Animation loop
+      const animate = () => {
+        animationIdRef.current = requestAnimationFrame(animate);
+
+        // Auto-rotate for thumbnail
+        if (!isMain && modelRef.current) {
+          modelRef.current.rotation.y += 0.01;
+        }
+
+        // Sparkle effect for diamond
+        if (diamond) {
+          diamond.rotation.y += 0.02;
+        }
+
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      // Handle resize
+      const handleResize = () => {
+        if (!mountRef.current || !camera || !renderer) return;
+        camera.aspect =
+          mountRef.current.clientWidth / mountRef.current.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(
+          mountRef.current.clientWidth,
+          mountRef.current.clientHeight
+        );
+      };
+
+      window.addEventListener("resize", handleResize);
+
+      // Store cleanup functions
+      const cleanup = () => {
+        if (animationIdRef.current) {
+          cancelAnimationFrame(animationIdRef.current);
+        }
+        if (isMain) {
+          renderer.domElement.removeEventListener("mousedown", handleMouseDown);
+          window.removeEventListener("mousemove", handleMouseMove);
+          window.removeEventListener("mouseup", handleMouseUp);
+          renderer.domElement.removeEventListener("wheel", handleWheel);
+        }
+        window.removeEventListener("resize", handleResize);
+        if (
+          mountRef.current &&
+          renderer.domElement &&
+          mountRef.current.contains(renderer.domElement)
+        ) {
+          mountRef.current.removeChild(renderer.domElement);
+        }
+        renderer.dispose();
+      };
+
+      return cleanup;
     };
 
-    document.body.appendChild(script);
+    const cleanup = initThreeJS();
 
+    // Cleanup on unmount
     return () => {
-      try {
-        document.body.removeChild(script);
-      } catch (err) {
-        // ignore
+      if (cleanup) {
+        cleanup();
       }
     };
-  }, [modelUrl]);
+  }, [modelUrl, isMain]);
 
-  return (
-    <div
-      id="ijewel-viewer-container"
-      className={className}
-      style={{ width: "100%", height: "100%" }}
-    />
-  );
+  return <div ref={mountRef} className={className} />;
 };
 
 // Sample product data for metal types (moved outside component to avoid dependency issues)
@@ -221,15 +479,13 @@ const ProductDetail = () => {
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
-  const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
 
-  // Add missing state variables for pendants builder
+  // Add missing state variables for earings builder
   const [selectedMetalType, setSelectedMetalType] = useState("GOLD");
   const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
   const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
+  const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -246,122 +502,123 @@ const ProductDetail = () => {
 
   // Default to first category
   const [selectedStyleCategory, setSelectedStyleCategory] =
-    useState("SOLITAIRE");
+    useState("DANGLE EARINGS");
   const [selectedRingStyle, setSelectedRingStyle] = useState("");
 
   // Fetch data from API
-  const fetchCategoryData = useCallback(async (categoryName: string) => {
-    if (!categoryMappings[categoryName]) return;
+  const fetchCategoryData = useCallback(
+    async (categoryName: string) => {
+      if (!categoryMappings[categoryName]) return;
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    try {
-      const response = await fetch(
-        `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`
-      );
-      const data: ApiResponse = await response.json();
-
-      if (data.success && data.entries) {
-        // Fetch detailed product data for each entry
-        const validEntries = data.entries.filter(
-          (e) => e.variants && e.variants.length > 0
-        );
-
-        const mappedSubstyles = validEntries.map((entry) => ({
-          img: entry.selectedImage,
-          name: entry.builderView,
-          price: "", // blank initially
-          parentSku: entry.parentSku,
-          variants: entry.variants,
-        }));
-
-        setStyleAndDesign((prev) =>
-          prev.map((cat) =>
-            cat.name === categoryName
-              ? { ...cat, substyles: mappedSubstyles, isLoaded: true }
-              : cat
-          )
-        );
-
-        // auto-select first style
-        if (!selectedRingStyle && mappedSubstyles.length > 0) {
-          setSelectedRingStyle(mappedSubstyles[0].name);
-        }
-      }
-    } catch (err) {
-      console.error("Failed to fetch category data:", err);
-      setError(`Failed to load ${categoryName} data`);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Helper to re-fetch product model for a specific substyle and metal color
-  const updateSubstyleProductDetails = useCallback(
-    async (parentSku: string, variantSku: string, metalColorName: string) => {
       try {
-        const colorCodeMap: { [key: string]: string } = {
-          "White Gold": "WG",
-          "Yellow Gold": "YG",
-          "Rose Gold": "RG",
-          "Black Rhodium": "BR",
-          Silver: "SLV",
-          Platinum: "PT",
-        };
-        const metalCode = colorCodeMap[metalColorName] || "WG";
-        const res = await fetch(
-          `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`
+        const response = await fetch(
+          `/api/products/builder?stylingName=${encodeURIComponent(
+            categoryName
+          )}`
         );
-        const data: ProductModelResponse = await res.json();
-        if (data && data.success) {
-          setStyleAndDesign((prev) =>
-            prev.map((cat) => ({
-              ...cat,
-              substyles: cat.substyles.map((s) =>
-                s.parentSku === parentSku
-                  ? {
-                      ...s,
-                      productDetails: data,
-                      thumbnailImages: data.variantImages,
-                      price: new Intl.NumberFormat("en-IN").format(
-                        data.sellingPrice
-                      ),
-                    }
-                  : s
-              ),
-            }))
+        const data: ApiResponse = await response.json();
+
+        if (data.success && data.entries) {
+          // Fetch detailed product data for each entry
+          const validEntries = data.entries.filter(
+            (e) => e.variants && e.variants.length > 0
           );
+
+          const substylePromises = validEntries.map(async (entry) => {
+            try {
+              // Get the first variant SKU to fetch product details
+              const firstVariantSku = entry.variants[0]?.sku;
+              if (firstVariantSku && entry.parentSku) {
+                const productResponse = await fetch(
+                  `/api/products/model/${entry.parentSku}?variantId=${firstVariantSku}&metalColor=WG`
+                );
+                const productData: ProductModelResponse =
+                  await productResponse.json();
+
+                // Price tracking: log API sellingPrice and formatted display price
+                console.log(
+                  `Price tracking — parentSku: ${
+                    entry.parentSku
+                  }, variant: ${firstVariantSku}, API sellingPrice: ${
+                    productData.sellingPrice
+                  }, formatted: ₹${new Intl.NumberFormat("en-IN").format(
+                    productData.sellingPrice
+                  )}`
+                );
+
+                if (productData.success) {
+                  // detect lab-grown variant presence from SKU
+                  const variantSkuToCheck = (
+                    (productData.firstVariantSku as string) ||
+                    firstVariantSku ||
+                    ""
+                  ).toUpperCase();
+                  const hasLG = variantSkuToCheck.includes("LG");
+
+                  return {
+                    img: entry.selectedImage,
+                    name: entry.builderView,
+                    price: new Intl.NumberFormat("en-IN").format(
+                      productData.sellingPrice
+                    ), // Format price with commas
+                    parentSku: entry.parentSku,
+                    variants: entry.variants,
+                    productDetails: productData,
+                    isLabGrownAvailable: hasLG,
+                    thumbnailImages: productData.variantImages,
+                  };
+                }
+              }
+              // Fallback if product details fail
+              return {
+                img: entry.selectedImage,
+                name: entry.builderView,
+                price: "5,224", // Fallback price
+                parentSku: entry.parentSku,
+                variants: entry.variants,
+              };
+            } catch (err) {
+              console.error(
+                `Failed to fetch product details for ${entry.parentSku}:`,
+                err
+              );
+              return {
+                img: entry.selectedImage,
+                name: entry.builderView,
+                price: "5,224", // Fallback price
+                parentSku: entry.parentSku,
+                variants: entry.variants,
+              };
+            }
+          });
+
+          const substyles = await Promise.all(substylePromises);
+
+          setStyleAndDesign((prev) =>
+            prev.map((category) =>
+              category.name === categoryName
+                ? { ...category, substyles, isLoaded: true }
+                : category
+            )
+          );
+
+          // Set first style as selected if none selected
+          if (!selectedRingStyle && substyles.length > 0) {
+            setSelectedRingStyle(substyles[0].name);
+          }
         }
       } catch (err) {
-        console.error("Failed to update substyle product details:", err);
+        console.error("Failed to fetch category data:", err);
+        setError(`Failed to load ${categoryName} data`);
+      } finally {
+        setLoading(false);
       }
     },
-    []
+    [selectedRingStyle]
   );
-
-  // Get current category's substyles and selected style data
-  const currentCategory = styleAndDesign.find(
-    (cat) => cat.name === selectedStyleCategory
-  );
-  const currentSubstyles = currentCategory?.substyles || [];
-  const selectedStyleData =
-    currentSubstyles.find((style) => style.name === selectedRingStyle) ||
-    currentSubstyles[0];
-
-  // When selectedMetalColor changes for the currently selected style, re-fetch its product details
-  useEffect(() => {
-    const parent = selectedStyleData?.parentSku;
-    const variantSku = selectedStyleData?.variants?.[0]?.sku;
-    if (parent && variantSku) {
-      updateSubstyleProductDetails(parent, variantSku, selectedMetalColor);
-    }
-  }, [
-    selectedMetalColor,
-    selectedStyleData?.parentSku,
-    selectedStyleData?.variants,
-    updateSubstyleProductDetails,
-  ]);
 
   // Load data for current category
   useEffect(() => {
@@ -373,39 +630,35 @@ const ProductDetail = () => {
     }
   }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
 
-  // Load Tennis Bracelet data on component mount
-  // useEffect(() => {
-  //   fetchCategoryData("TENNIS BRACELET");
-  //   fetchCategoryData("PAPPER CLIP");
-  // }, [fetchCategoryData]);
+  // No hardcoded initial fetches — current category effect handles loading.
 
   // Add fallback for categories without API endpoints
-  const getFallbackSubstyles = (categoryName: string): SubStyle[] => {
-    if (categoryName === "PAPPER CLIP") {
-      return [
-        {
-          img: "/build_yr_own/BR1-RD-025-WG-TRV.png",
-          name: "BR1-RD-025-WG-TRV",
-          price: "5,224",
-        },
-      ];
-    }
-    if (categoryName === "MULTI SHAPE") {
-      return [
-        {
-          img: "/build_yr_own/BR8-MIX-025-WG-TRV.png",
-          name: "BR8-MIX-025-WG-TRV",
-          price: "5,224",
-        },
-        {
-          img: "/build_yr_own/BR15-EMMQ-025-WG-TRV.png",
-          name: "BR15-EMMQ-025-WG-TRV",
-          price: "5,224",
-        },
-      ];
-    }
-    return [];
-  };
+  // const getFallbackSubstyles = (categoryName: string): SubStyle[] => {
+  //   if (categoryName === "PAPPER CLIP") {
+  //     return [
+  //       {
+  //         img: "/build_yr_own/BR1-RD-025-WG-TRV.png",
+  //         name: "BR1-RD-025-WG-TRV",
+  //         price: "5,224",
+  //       },
+  //     ];
+  //   }
+  //   if (categoryName === "MULTI SHAPE") {
+  //     return [
+  //       {
+  //         img: "/build_yr_own/BR8-MIX-025-WG-TRV.png",
+  //         name: "BR8-MIX-025-WG-TRV",
+  //         price: "5,224",
+  //       },
+  //       {
+  //         img: "/build_yr_own/BR15-EMMQ-025-WG-TRV.png",
+  //         name: "BR15-EMMQ-025-WG-TRV",
+  //         price: "5,224",
+  //       },
+  //     ];
+  //   }
+  //   return [];
+  // };
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
@@ -463,7 +716,14 @@ const ProductDetail = () => {
     }
   };
 
-  // currentCategory, currentSubstyles and selectedStyleData are already declared above to avoid redeclaration.
+  // Get current category's substyles and selected style data
+  const currentCategory = styleAndDesign.find(
+    (cat) => cat.name === selectedStyleCategory
+  );
+  const currentSubstyles = currentCategory?.substyles || [];
+  const selectedStyleData =
+    currentSubstyles.find((style) => style.name === selectedRingStyle) ||
+    currentSubstyles[0];
 
   // Derive a productId to feed into the ProductReviews component
   const derivedProductId =
@@ -473,13 +733,13 @@ const ProductDetail = () => {
     selectedStyleData?.productDetails?._id ||
     undefined;
 
-  // Detect lab-grown variants
-  const _braceletVariantIdentifier =
-    (selectedStyleData as any)?.variants?.[0]?.sku ||
+  // Detect lab-grown variants (variant sku or parentSku containing '-LG-' or ending/starting with LG)
+  const _earringVariantIdentifier =
+    selectedStyleData?.variants?.[0]?.sku ||
     selectedStyleData?.parentSku ||
     (derivedProductId as string) ||
     "";
-  const isLabGrownVariant = /(^|-)LG/i.test(_braceletVariantIdentifier);
+  const isLabGrownVariant = /(^|-)LG/i.test(_earringVariantIdentifier);
 
   useEffect(() => {
     if (isLabGrownVariant) {
@@ -520,26 +780,37 @@ const ProductDetail = () => {
 
   // Use the thumbnail images from the selected style data
   const thumbnailImages = selectedStyleData?.thumbnailImages || [
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
+    "/product_detail/display.png",
+    "/product_detail/glb.glb",
+    "/product_detail/display.png",
     "/about/2.jpg",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
+    "/product_detail/display.png",
+    "/about/3.jpg",
+    "/product_detail/display.png",
+    "/about/4.jpg",
   ];
+
+  useEffect(() => {
+    // Log all thumbnail images received
+    console.log("Thumbnail images:", thumbnailImages);
+  }, [thumbnailImages]);
+
+  const normalizeMetalType = (type: string) => {
+    if (type.toUpperCase().includes("GOLD")) return "GOLD";
+    if (type.toUpperCase().includes("SILVER")) return "SILVER";
+    if (type.toUpperCase().includes("PLATINUM")) return "PLATINUM";
+    return "GOLD"; // fallback
+  };
 
   const generateVariantId = useCallback(
     (substyle: SubStyle) => {
       const modelSku = substyle.parentSku;
       const variants = substyle.variants;
 
-      // Use first variant if no variant selected
       const base = variants?.[0]?.sku.split("-");
       if (!base) return null;
 
-      const shapeCodeMap: { [key: string]: string } = {
+      const shapeCodeMap: Record<string, string> = {
         ROUND: "RD",
         OVAL: "OV",
         PRINCESS: "PRN",
@@ -553,11 +824,28 @@ const ProductDetail = () => {
       const shapeCode =
         shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
 
+      // Carat code (x100)
       const caratCode = String(
         Math.round(parseFloat(selectedDiamondSize) * 100)
       );
 
-      const karat = selectedGoldKarat.replace("kt", "");
+      // PURITY CODE — FIXED FOR EARRINGS
+      let purityCode = "14"; // default
+
+      const normalizedMetal = normalizeMetalType(selectedMetalType);
+
+      // PURITY CODE
+      if (normalizedMetal === "GOLD") {
+        purityCode = selectedGoldKarat.replace("kt", "");
+      }
+
+      if (normalizedMetal === "SILVER") {
+        purityCode = "SLV";
+      }
+
+      if (normalizedMetal === "PLATINUM") {
+        purityCode = "PT";
+      }
 
       const originCode =
         selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
@@ -568,14 +856,14 @@ const ProductDetail = () => {
         "EFVVS";
       const specifications = `${originCode}${clarityToken}`;
 
-      return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+      return `${modelSku}-${shapeCode}-${caratCode}-${purityCode}-${specifications}`;
     },
     [
       selectedDiamondShape,
       selectedDiamondSize,
       selectedGoldKarat,
+      selectedMetalType,
       selectedDiamondOrigin,
-      selectedColorClarity,
     ]
   );
 
@@ -619,7 +907,7 @@ const ProductDetail = () => {
         );
       }
     },
-    [generateVariantId, selectedMetalColor]
+    [generateVariantId, selectedMetalColor, selectedColorClarity]
   );
 
   // Log when thumbnail images change
@@ -631,22 +919,6 @@ const ProductDetail = () => {
   const is3DModel = (imagePath: string, index: number) => {
     const isGLB = index === 1 && imagePath.endsWith(".glb");
     return isGLB || imagePath.endsWith(".glb");
-  };
-
-  // Function to check if file is a video
-  const isVideo = (filePath: string) => {
-    return (
-      filePath.endsWith(".mp4") ||
-      filePath.endsWith(".webm") ||
-      filePath.endsWith(".mov")
-    );
-  };
-
-  const normalizeMetalType = (type: string) => {
-    if (type.toUpperCase().includes("GOLD")) return "GOLD";
-    if (type.toUpperCase().includes("SILVER")) return "SILVER";
-    if (type.toUpperCase().includes("PLATINUM")) return "PLATINUM";
-    return "GOLD";
   };
 
   // Get available options from selected style's product details
@@ -690,13 +962,15 @@ const ProductDetail = () => {
 
     const goldKarats = selectedStyleData.productDetails.goldKarats;
 
-    if (selectedMetalType === "SILVER") {
-      return ["925"]; // Silver should display 925
-    } else if (selectedMetalType === "PLATINUM") {
-      return ["950"]; // Platinum should display 950
+    const normalizedMetal = normalizeMetalType(selectedMetalType);
+
+    if (normalizedMetal === "SILVER") {
+      return ["SLV"]; // correct backend code
+    } else if (normalizedMetal === "PLATINUM") {
+      return ["PT"]; // correct backend code
     } else {
-      // For GOLD, show gold karats but filter out 925/950 which are silver/platinum
-      return goldKarats.filter((karat) => !["925", "950"].includes(karat));
+      // GOLD
+      return goldKarats.filter((karat) => !["SLV", "PT"].includes(karat));
     }
   }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
 
@@ -721,6 +995,18 @@ const ProductDetail = () => {
       if (diamondSizes.length > 0 && selectedDiamondSize === "") {
         setSelectedDiamondSize(diamondSizes[0]);
       }
+
+      // Initialize clarity from product details
+      const clarities =
+        selectedStyleData.productDetails.diamondColorClarity || [];
+      if (
+        clarities.length > 0 &&
+        (selectedColorClarity === "" ||
+          !clarities.includes(selectedColorClarity))
+      ) {
+        setSelectedColorClarity(clarities[0]);
+      }
+
       if (
         availableKarats.length > 0 &&
         (selectedGoldKarat === "" ||
@@ -758,9 +1044,9 @@ const ProductDetail = () => {
       className="flex justify-center overflow-x-hidden w-full"
     >
       <SEO
-        title="Build Your Pendant - Custom Diamond Pendant Builder"
-        description="Design your perfect pendant with our custom builder. Choose from premium settings and diamonds."
-        canonical="/build-your-jewellery/Pendants"
+        title="Build Your Bracelet - Custom Diamond Bracelet Builder"
+        description="Design your perfect bracelet with our custom builder. Choose from premium settings and diamonds."
+        canonical="/build-your-jewellery/Bracelets"
       />
       <main className="min-h-screen w-full max-w-6xl bg-background overflow-x-hidden">
         {/* Breadcrumb */}
@@ -772,7 +1058,7 @@ const ProductDetail = () => {
             <span>›</span>
             <div className="hover:text-foreground">Build Your Jewellery</div>
             <span>›</span>
-            <span className="text-foreground">Pendant</span>
+            <span className="text-foreground">Bracelet</span>
           </nav>
         </div>
 
@@ -809,8 +1095,9 @@ const ProductDetail = () => {
                             : "border-neutral-200 hover:border-neutral-300"
                         }`}
                       >
-                        {is3DModel(image, index) ? (
+                        {image.endsWith(".glb") ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                            <IjewelViewer modelUrl={image} className="w-full h-full" />
                             <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                               3D
                             </div>
@@ -837,62 +1124,42 @@ const ProductDetail = () => {
                 {/* Main Image */}
                 <div className="flex-1 w-full min-w-0">
                   <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
-                    {(() => {
-                      const currentImage =
-                        thumbnailImages[selectedImage] ||
-                        thumbnailImages[0] ||
-                        "";
-
-                      if (is3DModel(currentImage, selectedImage)) {
-                        return (
-                          <div className="">
-                            <IjewelViewer
-                              modelUrl={currentImage}
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
-                        );
-                      }
-
-                      if (currentImage && isVideo(currentImage)) {
-                        return (
-                          <div className="relative w-full h-full">
-                            <video
-                              ref={(el) => setVideoRef(el)}
-                              src={currentImage}
-                              className="w-full h-full object-cover"
-                              controls
-                              muted
-                              autoPlay
-                              playsInline
-                              onPlay={() => setIsVideoPlaying(true)}
-                              onPause={() => setIsVideoPlaying(false)}
-                              onEnded={() => setIsVideoPlaying(false)}
-                            />
-                          </div>
-                        );
-                      }
-
-                      if (currentImage) {
-                        return (
-                          <img
-                            src={currentImage}
-                            alt={selectedStyleData?.name || "Pendant Style"}
-                            className="w-full h-full object-cover transition-opacity duration-300"
-                          />
-                        );
-                      }
-
-                      return (
-                        <div className="w-full h-full flex items-center justify-center text-gray-500">
-                          No image available
+                    {is3DModel(
+                      thumbnailImages[selectedImage],
+                      selectedImage
+                    ) ? (
+                      <div className="relative w-full h-full">
+                        <GLBViewer
+                          modelUrl={thumbnailImages[selectedImage]}
+                          className="w-full h-full"
+                          isMain={true}
+                        />
+                        <div className="absolute bottom-16 left-4 bg-gradient-to-r from-[#328F94] to-[#2a7a7e] text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+                          🔄 Interactive 3D Model
                         </div>
-                      );
-                    })()}
+                        <div className="absolute bottom-4 left-4 right-4 text-sm text-gray-600 bg-white/95 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium">Controls:</span>
+                            <div className="flex gap-4 text-xs">
+                              <span>🖱️ Drag to rotate</span>
+                              <span>🎯 Scroll to zoom</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        src={
+                          thumbnailImages[selectedImage] || thumbnailImages[0]
+                        }
+                        alt={selectedStyleData?.name || "Ring Style"}
+                        className="w-full h-full object-cover transition-opacity duration-300"
+                      />
+                    )}
 
-                    <button className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold">
+                    <div className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold">
                       RESET
-                    </button>
+                    </div>
                   </div>
                   {/* Thumbnails for mobile (horizontal) */}
                   <div className="flex justify-between md:hidden items-center gap-2 mt-4 w-full">
@@ -924,6 +1191,11 @@ const ProductDetail = () => {
                         >
                           {is3DModel(image, index) ? (
                             <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                              <GLBViewer
+                                modelUrl={image}
+                                className="w-full h-full"
+                                isMain={false}
+                              />
                               <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                                 3D
                               </div>
@@ -952,10 +1224,10 @@ const ProductDetail = () => {
                     <div className="flex flex-row  gap-3 w-full">
                       <div className="flex flex-col min-w-0 flex-1">
                         <p className="text-sm text-[#328F94] mb-1">
-                          Pendant Style & Design
+                          Ring Style & Design
                         </p>
                         <h2 className="text-xl md:text-2xl font-medium leading-tight truncate">
-                          {selectedStyleCategory}
+                          {selectedStyleData?.name}
                         </h2>
                       </div>
                       <div className="text-left sm:text-right flex-shrink-0">
@@ -975,10 +1247,8 @@ const ProductDetail = () => {
               <div className="space-y-6 w-full overflow-x-hidden">
                 <div className="w-full">
                   <h3 className="text-base md:text-lg font-medium mb-4 truncate">
-                    Pendant Style & Design:{" "}
-                    <span className="text-[#328F94]">
-                      {selectedStyleCategory}
-                    </span>
+                    Ring Style & Design:{" "}
+                    <span className="text-[#328F94]">{selectedRingStyle}</span>
                   </h3>
 
                   {/* Style Category Selection - Enhanced Mobile Responsiveness */}
@@ -1002,29 +1272,8 @@ const ProductDetail = () => {
                               setSelectedStyleCategory(category.name);
                               // Load data if not loaded
                               if (!category.isLoaded) {
-                                if (category.name === "TENNIS BRACELET") {
-                                  fetchCategoryData(category.name);
-                                } else {
-                                  // Use fallback data for other categories
-                                  const fallbackSubstyles =
-                                    getFallbackSubstyles(category.name);
-                                  setStyleAndDesign((prev) =>
-                                    prev.map((cat) =>
-                                      cat.name === category.name
-                                        ? {
-                                            ...cat,
-                                            substyles: fallbackSubstyles,
-                                            isLoaded: true,
-                                          }
-                                        : cat
-                                    )
-                                  );
-                                  if (fallbackSubstyles.length > 0) {
-                                    setSelectedRingStyle(
-                                      fallbackSubstyles[0].name
-                                    );
-                                  }
-                                }
+                                // Fetch API data for this category
+                                fetchCategoryData(category.name);
                               } else if (category.substyles.length > 0) {
                                 setSelectedRingStyle(
                                   category.substyles[0].name
@@ -1094,13 +1343,13 @@ const ProductDetail = () => {
                                 setSelectedRingStyle(style.name);
                                 setSelectedImage(0); // Reset to first image when style changes
                               }}
-                              className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
+                              className={`flex flex-col items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
                                 selectedRingStyle === style.name
                                   ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
+                              <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={style.img}
                                   alt={style.name}
@@ -1113,15 +1362,15 @@ const ProductDetail = () => {
                                   }}
                                 />
                               </div>
-                              {/* <span
-                                                 className={`text-xs font-medium text-center leading-tight ${
-                                                   selectedRingStyle === style.name
-                                                     ? "text-[#328F94]"
-                                                     : "text-neutral-600"
-                                                 }`}
-                                               >
-                                                 {style.name}
-                                               </span> */}
+                              <span
+                                className={`text-xs font-medium text-center leading-tight ${
+                                  selectedRingStyle === style.name
+                                    ? "text-[#328F94]"
+                                    : "text-neutral-600"
+                                }`}
+                              >
+                                {style.name}
+                              </span>
                             </button>
                           ))
                         )}
@@ -1239,6 +1488,76 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
+                {/* Diamond Lab & Clarity */}
+                {/* <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs mb-2">Diamond Size</label>
+                    <Select
+                      value={selectedClarity}
+                      onValueChange={setSelectedClarity}
+                    >
+                      <SelectTrigger className="text-sm border-neutral-300">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="vvs1">Center Stone</SelectItem>
+                        <SelectItem value="vvs2">VVS2</SelectItem>
+                        <SelectItem value="vs1">VS1</SelectItem>
+                        <SelectItem value="vs2">VS2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-2">Color Band</label>
+                    <Select>
+                      <SelectTrigger className="text-sm border-neutral-300">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="d">D</SelectItem>
+                        <SelectItem value="e">E</SelectItem>
+                        <SelectItem value="f">F</SelectItem>
+                        <SelectItem value="g">G</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div> */}
+
+                {/* Diamond Size Section */}
+                {selectedStyleData?.productDetails?.diamondSize && (
+                  <div className="w-1/2 mb-6">
+                    <h3 className="mb-3 text-sm md:text-base">
+                      Diamond Size:{" "}
+                      <span className="text-[#8D8A91]">
+                        {selectedDiamondSize ||
+                          selectedStyleData.productDetails.diamondSize[0]}{" "}
+                        carat
+                      </span>
+                    </h3>
+
+                    <Select
+                      value={String(selectedDiamondSize)}
+                      onValueChange={setSelectedDiamondSize}
+                    >
+                      <SelectTrigger className="w-full text-sm border-neutral-300">
+                        <SelectValue>
+                          {selectedDiamondSize
+                            ? `${selectedDiamondSize} ct`
+                            : "Select Diamond Size"}
+                        </SelectValue>
+                      </SelectTrigger>
+
+                      <SelectContent className="bg-white">
+                        {getAvailableDiamondSizes().map((size) => (
+                          <SelectItem key={size} value={String(size)}>
+                            {size} ct
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {/* Diamond Color & Clarity Section */}
                 {selectedStyleData?.productDetails?.diamondColorClarity &&
                   selectedStyleData.productDetails.diamondColorClarity.length >
@@ -1274,43 +1593,6 @@ const ProductDetail = () => {
                     </div>
                   )}
 
-                {/* Diamond Size Section */}
-                {selectedStyleData?.productDetails?.diamondSize && (
-                  <div className="w-full">
-                    <h3 className="mb-3 text-sm md:text-base">
-                      Diamond Size:{" "}
-                      <span className="text-[#8D8A91]">
-                        {selectedDiamondSize ||
-                          selectedStyleData.productDetails.diamondSize[0]}{" "}
-                        carat
-                      </span>
-                    </h3>
-
-                    <div className="mb-2 w-1/2">
-                      <Select
-                        value={selectedDiamondSize}
-                        onValueChange={(value) =>
-                          setSelectedDiamondSize(String(value))
-                        }
-                      >
-                        <SelectTrigger className="text-sm border-neutral-300">
-                          <SelectValue placeholder="Select carat" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {getAvailableDiamondSizes().map((size, index) => (
-                            <SelectItem
-                              key={`${size}-${index}`}
-                              value={String(size)}
-                            >
-                              {size} ct
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
 
                 {/* Metal Type */}
@@ -1325,16 +1607,16 @@ const ProductDetail = () => {
 
                         const newKarats =
                           normalized === "SILVER"
-                            ? ["925"]
+                            ? ["SLV"]
                             : normalized === "PLATINUM"
-                            ? ["950"]
+                            ? ["PT"]
                             : selectedStyleData?.productDetails?.goldKarats || [
                                 "18kt",
                                 "14kt",
                                 "9kt",
                               ];
 
-                        setSelectedGoldKarat(newKarats[0]);
+                        setSelectedGoldKarat(newKarats[0] || "");
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300">
@@ -1492,14 +1774,15 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Estimated Ship Date */}
-                <div className="text-sm">
-                  <div className="text-muted-foreground">
-                    Free Shipping | Free Returns
-                  </div>
-                </div>
-
+                <div className="text-sm"></div>
 
                 {/* Action Buttons - Stack on very small screens */}
+                {/* Add-to-cart and Buy-now handlers */}
+                {/** Handlers placed here so they capture latest selection state */}
+                <div className="mt-2">
+                  {/* handlers */}
+                  {/* eslint-disable-next-line react-hooks/rules-of-hooks */}
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                   <Button
                     className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3"
@@ -1630,7 +1913,7 @@ const ProductDetail = () => {
                         return;
                       }
 
-                      const variantData: any = {
+                      const variantData = {
                         variantSku,
                         variantConfig: {
                           metalColor: selectedMetalColor,
@@ -1755,7 +2038,7 @@ const ProductDetail = () => {
 
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Pendant Style
+                            Earring Style
                           </span>
                           <span className="font-medium">
                             {selectedRingStyle || "Not Selected"}
@@ -1782,8 +2065,7 @@ const ProductDetail = () => {
                           <div className="flex justify-between text-sm py-1">
                             <span>Net Weight:</span>
                             <span>
-                              {selectedStyleData.productDetails.netWeightGrams}{" "}
-                              g
+                              {selectedStyleData.productDetails.netWeightGrams}{" "                              g
                             </span>
                           </div>
                         )}
@@ -1966,28 +2248,30 @@ const ProductDetail = () => {
                               "-"}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Certification
-                          </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            HallMark
-                          </span>
-                          <span className="font-medium">BIS HALLMARK</span>
-                        </div>
-                        <div className="py-2">
-                          <div className="text-muted-foreground mb-2">
-                            Disclaimer For Price
-                          </div>
-                          <p className="text-xs leading-relaxed">
-                            Jewellery weights for metals, diamonds, or
-                            gemstones, may slightly vary post-crafting, but rest
-                            assured the agreed-upon price will stay the same.
-                          </p>
-                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Full Width Disclaimer Section */}
+                  <div className="border-t border-[#328F94] pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Certification Logos */}
+                      <div className="flex items-center gap-4 justify-start md:justify-end">
+                        <img
+                          src="/lovable-uploads/28cda72c-8974-4ea2-aecb-d264b8358551.png"
+                          alt="BIS Hallmark"
+                          className="h-16 w-16 object-contain"
+                        />
+                        <img
+                          src="/lovable-uploads/5392cf55-b28f-4fbd-8889-824dfe20dc8f.png"
+                          alt="IGI Certification"
+                          className="h-16 w-16 object-contain"
+                        />
+                        <img
+                          src="/lovable-uploads/9f89b073-535e-401e-88cd-4905a114937f.png"
+                          alt="SGL Certification"
+                          className="h-16 w-16 object-contain"
+                        />
                       </div>
                     </div>
                   </div>
@@ -1995,6 +2279,7 @@ const ProductDetail = () => {
               </AccordionItem>
             </Accordion>
           </div>
+
           {/* Reviews Section */}
           <div className="mt-16">
             <ProductReviews productId={derivedProductId} />
@@ -2016,14 +2301,3 @@ const ProductDetail = () => {
 
 export default ProductDetail;
 
-declare global {
-  interface Window {
-    ijewelViewer: {
-      Viewer: new (
-        container: HTMLElement,
-        project: object,
-        options: object
-      ) => void;
-    };
-  }
-}

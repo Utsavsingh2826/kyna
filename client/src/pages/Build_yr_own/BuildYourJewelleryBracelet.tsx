@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   ChevronUp,
   ChevronDown,
@@ -87,6 +87,8 @@ interface ProductModelResponse {
   priceIncompleteReasons: string[];
   chosenVariantSku: string;
   variantImages: string[];
+  availableColors?: string[];
+  netWeightGrams?: number;
 }
 
 interface SubStyle {
@@ -96,8 +98,67 @@ interface SubStyle {
   parentSku?: string;
   variants?: ApiVariant[];
   productDetails?: ProductModelResponse;
+  availableColors?: string[];
   thumbnailImages?: string[];
 }
+
+interface IjewelViewerProps {
+  modelUrl?: string;
+  className?: string;
+}
+
+const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
+  useEffect(() => {
+    // Create script element to load iJewel viewer SDK
+    const script = document.createElement("script");
+    script.src =
+      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
+    script.async = true;
+
+    script.onload = () => {
+      const container = document.getElementById("ijewel-viewer-container");
+      if (!container) return;
+
+      // Project configuration using dynamic modelUrl from props
+      const project = {
+        modelUrl: modelUrl || "/product_detail/glb.glb", // Fallback to default if no modelUrl provided
+        basePath: "",
+      };
+
+      // Viewer configuration options
+      const viewerOptions = {
+        showCard: false,
+        showUiButtons: false,
+        showLogo: false,
+        showConfigurator: false,
+      };
+      // Initialize the iJewel Viewer on the container element
+      new window.ijewelViewer.Viewer(container, project, viewerOptions);
+    };
+
+    document.body.appendChild(script);
+
+    // Cleanup script on unmount
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, [modelUrl]); // Add modelUrl as dependency
+
+  // Adjust the style of the iJewel Viewer container to make it responsive
+  return (
+    <div
+      id="ijewel-viewer-container"
+      className={className}
+      style={{
+        width: "100%",
+        height: "100%",
+        aspectRatio: window.innerWidth <= 767 ? "1" : "1 / 2", // Use aspect ratio 1 for mobile view
+        maxWidth: window.innerWidth <= 767 ? "100%" : "40vw", // Full width for mobile view
+        maxHeight: window.innerWidth <= 767 ? "auto" : "80vh", // Adjust height for mobile view
+      }}
+    />
+  );
+};
 
 // Hardcoded category mappings
 const categoryMappings: { [key: string]: string } = {
@@ -124,35 +185,24 @@ const getInitialStyleAndDesign = () => [
     isLoaded: false,
   },
 ];
+
 const diamondShapes = {
   shapes: [
-    { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.webp" },
-    { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.webp" },
-    { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.webp" },
-    { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.jpg" },
-    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
-    { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.webp" },
-    { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.webp" },
-    { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.webp" },
-    { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.webp" },
-    { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.jpg" },
+    { name: "Round", img: "/DIAMOND_SHAPES_WEBP/round.png" },
+    { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.png" },
+    { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.png" },
+    { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.png" },
+    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.png" },
+    { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.png" },
+    { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.png" },
+    { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.png" },
+    { name: "Marquise", img: "/DIAMOND_SHAPES_WEBP/marquise.png" },
+    { name: "Heart", img: "/DIAMOND_SHAPES_WEBP/heart.png" },
   ],
 };
-const braceletSizes = [
-  "4",
-  "4.5",
-  "5",
-  "5.5",
-  "6",
-  "6.5",
-  "7",
-  "7.5",
-  "8",
-  "8.5",
-  "9",
-  "9.5",
-  "10",
-];
+
+const braceletSizes = [6, 7, 8];
+
 const GLBViewer = ({
   modelUrl,
   className,
@@ -310,7 +360,7 @@ const GLBViewer = ({
             // Dispose of the DRACO loader after use
             dracoLoader.dispose();
           },
-          () => {},
+          // (progress) => {},
           (error) => {
             console.error("Error loading GLB model:", modelUrl, error);
 
@@ -466,17 +516,38 @@ const sampleProductData = {
 const ProductDetail = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [showEngraveModal, setShowEngraveModal] = useState(false);
+  // Engraving state: only one engraving allowed for rings
+  const [hasEngraving, setHasEngraving] = useState(false);
+  const [engravingText, setEngravingText] = useState("");
+  const [engravingImageUrl, setEngravingImageUrl] = useState("");
+  const [engravingMotifPath, setEngravingMotifPath] = useState("");
+  // Add states for diamond size and gold karat
+  const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
+  const [savedEngravingData, setSavedEngravingData] = useState<{
+    text: string;
+    motif: string;
+    imageUrl: string;
+  } | null>(null);
+  const [isUploadingEngraving, setIsUploadingEngraving] = useState(false);
+  const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
+
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth
+  );
+  const { loading: cartLoading } = useSelector(
+    (state: RootState) => state.cart
+  );
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
-  const [selectedSize, setSelectedSize] = useState("");
-
-  // Add missing state variables for bracelet builder
-  const [selectedMetalType, setSelectedMetalType] = useState("GOLD");
-  const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
-  const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
+  const [selectedMetalType, setSelectedMetalType] = useState<string>("GOLD");
+  const [selectedSize, setSelectedSize] = useState<string>("6");
+  const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
+  const sizeInitializedRef = useRef(false);
 
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
@@ -487,7 +558,7 @@ const ProductDetail = () => {
 
   // Default to first category
   const [selectedStyleCategory, setSelectedStyleCategory] =
-    useState("TENNIS BRACELET");
+    useState("PAPPER CLIP");
   const [selectedRingStyle, setSelectedRingStyle] = useState("");
 
   // Fetch data from API
@@ -504,11 +575,11 @@ const ProductDetail = () => {
       const data: ApiResponse = await response.json();
 
       if (data.success && data.entries) {
+        // Fetch detailed product data for each entry
         const validEntries = data.entries.filter(
           (e) => e.variants && e.variants.length > 0
         );
 
-        // Only map basic data — no API calls here
         const mappedSubstyles = validEntries.map((entry) => ({
           img: entry.selectedImage,
           name: entry.builderView,
@@ -525,6 +596,7 @@ const ProductDetail = () => {
           )
         );
 
+        // Set first style as selected if none selected
         if (!selectedRingStyle && mappedSubstyles.length > 0) {
           setSelectedRingStyle(mappedSubstyles[0].name);
         }
@@ -550,23 +622,11 @@ const ProductDetail = () => {
           Platinum: "PT",
         };
         const metalCode = colorCodeMap[metalColorName] || "WG";
-        const apiUrl = `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`;
-
-        console.log(`🔄 Metal Color Change API CALL — URL: ${apiUrl}`);
-        console.log(
-          `🎨 Metal Color Update — Parent: ${parentSku}, Variant: ${variantSku}, Color: ${metalColorName} (${metalCode})`
+        const res = await fetch(
+          `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`
         );
-
-        const res = await fetch(apiUrl);
         const data: ProductModelResponse = await res.json();
         if (data && data.success) {
-          const formattedPrice = new Intl.NumberFormat("en-IN").format(
-            data.sellingPrice
-          );
-          console.log(
-            `💰 Metal Color Price Update — Parent: ${parentSku}, Raw Price: ${data.sellingPrice}, Formatted: ₹${formattedPrice}`
-          );
-
           setStyleAndDesign((prev) =>
             prev.map((cat) => ({
               ...cat,
@@ -576,16 +636,13 @@ const ProductDetail = () => {
                       ...s,
                       productDetails: data,
                       thumbnailImages: data.variantImages,
-                      price: formattedPrice,
+                      price: new Intl.NumberFormat("en-IN").format(
+                        data.sellingPrice
+                      ),
                     }
                   : s
               ),
             }))
-          );
-        } else {
-          console.log(
-            `❌ Metal Color API FAILED — Parent: ${parentSku}, Variant: ${variantSku}, Response:`,
-            data
           );
         }
       } catch (err) {
@@ -600,24 +657,9 @@ const ProductDetail = () => {
     (cat) => cat.name === selectedStyleCategory
   );
   const currentSubstyles = currentCategory?.substyles || [];
-  const selectedStyleData = useMemo(() => {
-    const styleData =
-      currentSubstyles.find((style) => style.name === selectedRingStyle) ||
-      currentSubstyles[0];
-
-    if (styleData) {
-      console.log(
-        `🎭 Style Selection — Selected: ${styleData.name}, Parent SKU: ${styleData.parentSku}`
-      );
-      if (styleData.productDetails?.chosenVariantSku) {
-        console.log(
-          `🏷️ Current Product Variant: ${styleData.productDetails.chosenVariantSku}, Price: ₹${styleData.price}`
-        );
-      }
-    }
-
-    return styleData;
-  }, [currentSubstyles, selectedRingStyle]);
+  const selectedStyleData =
+    currentSubstyles.find((style) => style.name === selectedRingStyle) ||
+    currentSubstyles[0];
 
   // When selectedMetalColor changes for the currently selected style, re-fetch its product details
   useEffect(() => {
@@ -626,7 +668,12 @@ const ProductDetail = () => {
     if (parent && variantSku) {
       updateSubstyleProductDetails(parent, variantSku, selectedMetalColor);
     }
-  }, [selectedMetalColor]);
+  }, [
+    selectedMetalColor,
+    selectedStyleData?.parentSku,
+    selectedStyleData?.variants,
+    updateSubstyleProductDetails,
+  ]);
 
   // Load data for current category
   useEffect(() => {
@@ -634,41 +681,37 @@ const ProductDetail = () => {
       (cat) => cat.name === selectedStyleCategory
     );
     if (currentCategory && !currentCategory.isLoaded) {
-      console.log(
-        `🏗️ Category Loading — Fetching data for: ${selectedStyleCategory}`
-      );
       fetchCategoryData(selectedStyleCategory);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStyleCategory, fetchCategoryData]);
+  }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
 
   // Add fallback for categories without API endpoints
-  const getFallbackSubstyles = (categoryName: string): SubStyle[] => {
-    if (categoryName === "PAPPER CLIP") {
-      return [
-        {
-          img: "/build_yr_own/BR1-RD-025-WG-TRV.png",
-          name: "BR1-RD-025-WG-TRV",
-          price: "5,224",
-        },
-      ];
-    }
-    if (categoryName === "MULTI SHAPE") {
-      return [
-        {
-          img: "/build_yr_own/BR8-MIX-025-WG-TRV.png",
-          name: "BR8-MIX-025-WG-TRV",
-          price: "5,224",
-        },
-        {
-          img: "/build_yr_own/BR15-EMMQ-025-WG-TRV.png",
-          name: "BR15-EMMQ-025-WG-TRV",
-          price: "5,224",
-        },
-      ];
-    }
-    return [];
-  };
+  // const getFallbackSubstyles = (categoryName: string): SubStyle[] => {
+  //   if (categoryName === "PAPPER CLIP") {
+  //     return [
+  //       {
+  //         img: "/build_yr_own/BR1-RD-025-WG-TRV.png",
+  //         name: "BR1-RD-025-WG-TRV",
+  //         price: "5,224",
+  //       },
+  //     ];
+  //   }
+  //   if (categoryName === "MULTI SHAPE") {
+  //     return [
+  //       {
+  //         img: "/build_yr_own/BR8-MIX-025-WG-TRV.png",
+  //         name: "BR8-MIX-025-WG-TRV",
+  //         price: "5,224",
+  //       },
+  //       {
+  //         img: "/build_yr_own/BR15-EMMQ-025-WG-TRV.png",
+  //         name: "BR15-EMMQ-025-WG-TRV",
+  //         price: "5,224",
+  //       },
+  //     ];
+  //   }
+  //   return [];
+  // };
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
@@ -738,9 +781,9 @@ const ProductDetail = () => {
 
   // Detect lab-grown variants
   const _braceletVariantIdentifier =
-    selectedStyleData?.variants?.[0]?.sku ||
+    (selectedStyleData as any)?.variants?.[0]?.sku ||
     selectedStyleData?.parentSku ||
-    derivedProductId ||
+    (derivedProductId as string) ||
     "";
   const isLabGrownVariant = /(^|-)LG/i.test(_braceletVariantIdentifier);
 
@@ -793,124 +836,129 @@ const ProductDetail = () => {
     "/build_yr_own/sample1.png",
   ];
 
-  const generateVariantId = useCallback(
-    (substyle: SubStyle) => {
-      const modelSku = substyle.parentSku;
-      const variants = substyle.variants;
+  const generateVariantId = (substyle: SubStyle) => {
+    const modelSku = substyle.parentSku;
+    const variants = substyle.variants;
 
-      // Use first variant if no variant selected
-      const base = variants?.[0]?.sku.split("-");
-      if (!base) return null;
+    // Use first variant if no variant selected
+    const base = variants?.[0]?.sku.split("-");
+    if (!base) return null;
 
-      const shapeCodeMap: { [key: string]: string } = {
-        ROUND: "RD",
-        OVAL: "OV",
-        PRINCESS: "PRN",
-        EMERALD: "EM",
-        MARQUISE: "MQ",
-        PEAR: "PRS",
-        HEART: "HRT",
-        CUSHION: "CUS",
-      };
+    const shapeCodeMap: any = {
+      ROUND: "RD",
+      OVAL: "OV",
+      PRINCESS: "PRN",
+      EMERALD: "EM",
+      MARQUISE: "MQ",
+      PEAR: "PRS",
+      HEART: "HRT",
+      CUSHION: "CUS",
+    };
 
-      const shapeCode =
-        shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
+    const shapeCode = shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
 
-      const caratCode = String(
-        Math.round(parseFloat(selectedDiamondSize) * 100)
+    const caratCode = String(Math.round(parseFloat(selectedDiamondSize) * 100));
+
+    const karat = selectedGoldKarat.replace("kt", "");
+
+    const originCode =
+      selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
+
+    const clarityToken =
+      selectedColorClarity ||
+      substyle?.productDetails?.diamondColorClarity?.[0] ||
+      "EFVVS";
+    const specifications = `${originCode}${clarityToken}`;
+
+    // Append bracelet size as the trailing token for 6-part SKUs
+    const sizeToken = selectedSize || "6";
+    return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}-${sizeToken}`;
+  };
+
+  const refetchUpdatedProduct = async (substyle: SubStyle) => {
+    const variantId = generateVariantId(substyle);
+    if (!variantId) return;
+
+    const colorCodeMap: Record<string, string> = {
+      "White Gold": "WG",
+      "Yellow Gold": "YG",
+      "Rose Gold": "RG",
+      "Black Rhodium": "BR",
+      Silver: "SLV",
+      Platinum: "PT",
+    };
+    const metalColor = colorCodeMap[selectedMetalColor] || "WG";
+
+    const res = await fetch(
+      `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`
+    );
+
+    const data: ProductModelResponse = await res.json();
+    if (data.success) {
+      setStyleAndDesign((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          substyles: cat.substyles.map((s) =>
+            s.parentSku === substyle.parentSku
+              ? {
+                  ...s,
+                  productDetails: data,
+                  price: new Intl.NumberFormat("en-IN").format(
+                    data.sellingPrice
+                  ),
+                  thumbnailImages: data.variantImages,
+                }
+              : s
+          ),
+        }))
       );
-
-      const karat = selectedGoldKarat.replace("kt", "");
-
-      const originCode =
-        selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
-
-      const specifications = `${originCode}EFVVS`;
-
-      return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
-    },
-    [
-      selectedDiamondShape,
-      selectedDiamondSize,
-      selectedGoldKarat,
-      selectedDiamondOrigin,
-    ]
-  );
-
-  const refetchUpdatedProduct = useCallback(
-    async (substyle: SubStyle) => {
-      const variantId = generateVariantId(substyle);
-      if (!variantId) {
-        console.log(`❌ No variant ID generated for ${substyle.parentSku}`);
-        return;
-      }
-
-      const colorCodeMap: { [key: string]: string } = {
-        "White Gold": "WG",
-        "Yellow Gold": "YG",
-        "Rose Gold": "RG",
-        "Black Rhodium": "BR",
-        Silver: "SLV",
-        Platinum: "PT",
-      };
-      const metalColor = colorCodeMap[selectedMetalColor] || "WG";
-      const apiUrl = `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`;
-
-      console.log(`📡 API CALL — URL: ${apiUrl}`);
-      console.log(
-        `🔍 Variant Details — Parent: ${substyle.parentSku}, Variant: ${variantId}, Metal Color: ${metalColor}`
-      );
-
-      const res = await fetch(apiUrl);
-
-      const data: ProductModelResponse = await res.json();
-      if (data.success) {
-        const formattedPrice = new Intl.NumberFormat("en-IN").format(
-          data.sellingPrice
-        );
-        console.log(
-          `💰 PRICE RECEIVED — Parent: ${substyle.parentSku}, Variant: ${variantId}, Raw Price: ${data.sellingPrice}, Formatted: ₹${formattedPrice}`
-        );
-        console.log(
-          `📦 API Response — Success: ${data.success}, Chosen Variant: ${data.chosenVariantSku}`
-        );
-
-        setStyleAndDesign((prev) =>
-          prev.map((cat) => ({
-            ...cat,
-            substyles: cat.substyles.map((s) =>
-              s.parentSku === substyle.parentSku
-                ? {
-                    ...s,
-                    productDetails: data,
-                    price: formattedPrice,
-                    thumbnailImages: data.variantImages,
-                  }
-                : s
-            ),
-          }))
-        );
-      } else {
-        console.log(
-          `❌ API FAILED — Parent: ${substyle.parentSku}, Variant: ${variantId}, Response:`,
-          data
-        );
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      selectedMetalColor,
-      selectedDiamondShape,
-      selectedDiamondSize,
-      selectedGoldKarat,
-      selectedDiamondOrigin,
-    ]
-  );
+    }
+  };
 
   // Log when thumbnail images change
   useEffect(() => {
     // Removed console log for thumbnail changes
   }, [selectedRingStyle, selectedStyleData?.thumbnailImages]);
+
+  // Initialize bracelet size from chosenVariantSku (if SKU contains size token) - only once
+  useEffect(() => {
+    if (sizeInitializedRef.current) return;
+
+    const sku =
+      selectedStyleData?.productDetails?.chosenVariantSku ||
+      (selectedStyleData as any)?.variants?.[0]?.sku;
+    if (!sku) return;
+
+    const parts = sku.split("-");
+    // Expecting 6-part SKU for bracelets: model-shape-carat-karat-specs-size
+    if (parts.length === 6) {
+      const sizeToken = parts[5];
+      if (sizeToken) {
+        setSelectedSize(String(sizeToken));
+        sizeInitializedRef.current = true;
+      }
+    } else {
+      // Ensure we have a sensible default
+      if (!selectedSize) {
+        setSelectedSize("6");
+      }
+      sizeInitializedRef.current = true;
+    }
+  }, [selectedStyleData]);
+
+  // When bracelet size changes, refetch product data so price updates
+  useEffect(() => {
+    if (!selectedStyleData || !selectedSize) return;
+    // Call the refetch to update productDetails/pricing for the current substyle
+    refetchUpdatedProduct(selectedStyleData);
+  }, [
+    selectedSize,
+    selectedColorClarity,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedGoldKarat,
+    selectedMetalColor,
+  ]);
 
   // Function to check if image is a 3D model
   const is3DModel = (imagePath: string, index: number) => {
@@ -925,6 +973,13 @@ const ProductDetail = () => {
     }
     return selectedStyleData.productDetails.metalTypes;
   }, [selectedStyleData?.productDetails?.metalTypes]);
+
+  const getAvailableGoldKarats = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.goldKarats) {
+      return ["14kt", "18kt", "22kt"]; // Fallback
+    }
+    return selectedStyleData.productDetails.goldKarats;
+  }, [selectedStyleData?.productDetails?.goldKarats]);
 
   const getAvailableDiamondShapes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.diamondShape) {
@@ -948,103 +1003,71 @@ const ProductDetail = () => {
     return selectedStyleData.productDetails.diamondSize;
   }, [selectedStyleData?.productDetails?.diamondSize]);
 
-  // Ref for metal types scroll container
-  const metalTypesRef = useRef<HTMLDivElement>(null);
+  // Engraving upload helpers (mirror ProductDetail behavior)
+  const uploadEngravingToBackend = useCallback(
+    async (
+      text: string,
+      motifPath: string,
+      imageUrl?: string
+    ): Promise<string | null> => {
+      try {
+        const formData = new FormData();
 
-  // Function to get available karats based on selected metal type
-  const getAvailableKarats = useCallback(() => {
-    if (!selectedStyleData?.productDetails?.goldKarats) {
-      return ["18kt", "14kt", "9kt"]; // Fallback for gold
-    }
+        if (imageUrl) {
+          try {
+            const res = await fetch(imageUrl);
+            const blob = await res.blob();
+            formData.append("image", blob, "engraving.png");
+          } catch (err) {
+            console.warn(
+              "Failed to fetch engraving image URL, skipping appending image:",
+              err
+            );
+          }
+        }
 
-    const goldKarats = selectedStyleData.productDetails.goldKarats;
+        formData.append("text", text);
+        formData.append("motifPath", motifPath);
 
-    if (selectedMetalType === "SILVER") {
-      return ["SLV"]; // Silver is always 925
-    } else if (selectedMetalType === "PLATINUM") {
-      return ["PT"]; // Platinum is 950
-    } else {
-      // For GOLD, filter out silver/platinum karats
-      return goldKarats.filter((karat) => !["925", "950"].includes(karat));
-    }
-  }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
+        const uploadResponse = await fetch("/api/upload/engravingOnly", {
+          method: "POST",
+          body: formData,
+        });
 
-  // Update selected options when style changes
-  useEffect(() => {
-    if (selectedStyleData?.productDetails) {
-      const metalTypes = getAvailableMetalTypes();
-      const diamondShapes = getAvailableDiamondShapes();
-      const diamondSizes = getAvailableDiamondSizes();
-      const availableKarats = getAvailableKarats();
+        if (!uploadResponse.ok) {
+          throw new Error(`Upload failed: ${uploadResponse.status}`);
+        }
 
-      // Set default selections from API data
-      if (metalTypes.length > 0 && !metalTypes.includes(selectedMetalType)) {
-        setSelectedMetalType("GOLD"); // Always default to GOLD
+        const result = await uploadResponse.json();
+        return result.data?.imageUrl || null;
+      } catch (error) {
+        console.error("Error uploading engraving to backend:", error);
+        return null;
       }
-      if (
-        diamondShapes.length > 0 &&
-        !diamondShapes.find((shape) => shape.name === selectedDiamondShape)
-      ) {
-        setSelectedDiamondShape(diamondShapes[0].name);
-      }
-      if (diamondSizes.length > 0 && selectedDiamondSize === "") {
-        setSelectedDiamondSize(diamondSizes[0]);
-      }
-      if (
-        availableKarats.length > 0 &&
-        (selectedGoldKarat === "" ||
-          !availableKarats.includes(selectedGoldKarat))
-      ) {
-        setSelectedGoldKarat(availableKarats[0]);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    selectedStyleData?.productDetails?.metalTypes,
-    selectedStyleData?.productDetails?.goldKarats,
-    selectedStyleData?.productDetails?.diamondShape,
-    selectedStyleData?.productDetails?.diamondSize,
-  ]);
-
-  useEffect(() => {
-    if (!selectedStyleData?.parentSku) return;
-
-    const id = generateVariantId(selectedStyleData);
-    console.log(
-      `🔄 Field Change Detected — Generated Variant ID: ${id}, Parent SKU: ${selectedStyleData?.parentSku}, Current Variant: ${selectedStyleData?.productDetails?.chosenVariantSku}`
-    );
-    console.log(
-      `📊 Current Selections — Shape: ${selectedDiamondShape}, Size: ${selectedDiamondSize}, Karat: ${selectedGoldKarat}, Origin: ${selectedDiamondOrigin}, Metal: ${selectedMetalColor}`
-    );
-
-    if (id && selectedStyleData?.productDetails?.chosenVariantSku === id) {
-      console.log(`⏭️ Skipping API call - Variant already matches: ${id}`);
-      return;
-    }
-
-    console.log(`🚀 Triggering API refetch for variant: ${id}`);
-    refetchUpdatedProduct(selectedStyleData);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    selectedStyleData?.parentSku,
-    selectedDiamondShape,
-    selectedDiamondSize,
-    selectedGoldKarat,
-    selectedDiamondOrigin,
-    selectedMetalColor,
-  ]);
-
-  // Redux and navigation
-  const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
-  const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
-  );
-  const { loading: cartLoading } = useSelector(
-    (state: RootState) => state.cart
+    },
+    []
   );
 
-  // Handle Add To Cart for Bracelet (no engraving)
+  const generateAndUploadEngravingImage = useCallback(async (): Promise<
+    string | null
+  > => {
+    if (!hasEngraving || !savedEngravingData) return null;
+    setIsUploadingEngraving(true);
+    try {
+      const uploadedUrl = await uploadEngravingToBackend(
+        savedEngravingData.text,
+        savedEngravingData.motif,
+        savedEngravingData.imageUrl
+      );
+      return uploadedUrl;
+    } catch (err) {
+      console.error("Error generating/uploading engraving image:", err);
+      return null;
+    } finally {
+      setIsUploadingEngraving(false);
+    }
+  }, [hasEngraving, savedEngravingData, uploadEngravingToBackend]);
+
   const handleAddToCart = useCallback(async () => {
     if (!isAuthenticated) {
       alert("Please log in to add items to cart");
@@ -1060,20 +1083,24 @@ const ProductDetail = () => {
     const productDetails = selectedStyleData?.productDetails;
     const productId =
       productDetails?._id || selectedStyleData?.parentSku || derivedProductId;
-
-    // Use generated variant ID if available, otherwise fall back to default
-    const generatedVariantSku = selectedStyleData
-      ? generateVariantId(selectedStyleData)
-      : null;
     const variantSku =
       productDetails?.chosenVariantSku ||
-      generatedVariantSku ||
       selectedStyleData?.variants?.[0]?.sku ||
       derivedProductId;
 
     if (!productId || !variantSku) {
       alert("Please select a product variant");
       return;
+    }
+
+    // Upload engraving if present
+    let cloudinaryEngravingUrl: string | null = null;
+    if (hasEngraving && savedEngravingData) {
+      cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
+      if (!cloudinaryEngravingUrl) {
+        alert("Failed to upload engraving image. Please try again.");
+        return;
+      }
     }
 
     const variantData = {
@@ -1085,11 +1112,15 @@ const ProductDetail = () => {
         diamondShape: selectedDiamondShape,
         diamondSize: selectedDiamondSize,
         diamondOrigin: selectedDiamondOrigin,
-        braceletSize: selectedSize,
         ringSize: selectedSize,
-        engraving: "",
-        engravingImageUrl: "",
-        engravingMotifPath: "",
+        engraving: engravingText,
+        engravingImageUrl:
+          cloudinaryEngravingUrl ||
+          engravingImageUrl ||
+          savedEngravingData?.imageUrl ||
+          "",
+        engravingMotifPath:
+          engravingMotifPath || savedEngravingData?.motif || "",
         variantImages:
           productDetails?.variantImages ||
           selectedStyleData?.thumbnailImages ||
@@ -1106,27 +1137,36 @@ const ProductDetail = () => {
       console.error("Error adding to cart:", err);
       alert("Failed to add product to cart");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isAuthenticated,
     navigate,
     selectedSize,
     selectedStyleData,
     derivedProductId,
+    hasEngraving,
+    savedEngravingData,
+    generateAndUploadEngravingImage,
     selectedMetalColor,
     selectedMetalType,
     selectedGoldKarat,
     selectedDiamondShape,
     selectedDiamondSize,
     selectedDiamondOrigin,
+    engravingText,
+    engravingImageUrl,
+    engravingMotifPath,
     dispatch,
   ]);
 
-  // Handle Buy Now for Bracelet (no engraving)
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
       alert("Please log in to purchase");
       navigate("/login");
+      return;
+    }
+
+    if (!selectedDiamondSize) {
+      alert("Please select a diamond size");
       return;
     }
 
@@ -1138,20 +1178,25 @@ const ProductDetail = () => {
     const productDetails = selectedStyleData?.productDetails;
     const productId =
       productDetails?._id || selectedStyleData?.parentSku || derivedProductId;
-
-    // Use generated variant ID if available, otherwise fall back to default
-    const generatedVariantSku = selectedStyleData
-      ? generateVariantId(selectedStyleData)
-      : null;
     const variantSku =
       productDetails?.chosenVariantSku ||
-      generatedVariantSku ||
       selectedStyleData?.variants?.[0]?.sku ||
       derivedProductId;
 
     if (!productId || !variantSku) {
       alert("Please select a product variant");
       return;
+    }
+
+    let cloudinaryEngravingUrl: string | null = null;
+    if (hasEngraving && savedEngravingData) {
+      setIsUploadingEngraving(true);
+      cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
+      setIsUploadingEngraving(false);
+      if (!cloudinaryEngravingUrl) {
+        alert("Failed to upload engraving image. Please try again.");
+        return;
+      }
     }
 
     const productTitle = productDetails?.title || selectedStyleData?.name || "";
@@ -1184,12 +1229,16 @@ const ProductDetail = () => {
         diamondShape: selectedDiamondShape,
         diamondSize: selectedDiamondSize,
         diamondOrigin: selectedDiamondOrigin,
-        braceletSize: selectedSize,
         ringSize: selectedSize,
-        engraving: "",
-        engravingImageUrl: "",
-        engravingMotifPath: "",
-        hasEngraving: false,
+        engraving: engravingText,
+        engravingImageUrl:
+          cloudinaryEngravingUrl ||
+          engravingImageUrl ||
+          savedEngravingData?.imageUrl ||
+          "",
+        engravingMotifPath:
+          engravingMotifPath || savedEngravingData?.motif || "",
+        hasEngraving: hasEngraving,
       },
       quantity: 1,
       totalAmount: price,
@@ -1223,32 +1272,129 @@ const ProductDetail = () => {
               diamondShape: selectedDiamondShape,
               diamondSize: selectedDiamondSize,
               diamondOrigin: selectedDiamondOrigin,
-              braceletSize: selectedSize,
               ringSize: selectedSize,
-              engraving: "",
-              engravingImageUrl: "",
-              engravingMotifPath: "",
-              hasEngraving: false,
+              engraving: engravingText,
+              engravingImageUrl:
+                cloudinaryEngravingUrl ||
+                engravingImageUrl ||
+                savedEngravingData?.imageUrl ||
+                "",
+              engravingMotifPath:
+                engravingMotifPath || savedEngravingData?.motif || "",
+              hasEngraving: hasEngraving,
             },
           },
         ],
         totalAmount: price,
       },
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isAuthenticated,
     navigate,
     selectedSize,
     selectedStyleData,
     derivedProductId,
+    hasEngraving,
+    savedEngravingData,
+    generateAndUploadEngravingImage,
     selectedMetalColor,
     selectedMetalType,
     selectedGoldKarat,
     selectedDiamondShape,
     selectedDiamondSize,
     selectedDiamondOrigin,
+    engravingText,
+    engravingImageUrl,
+    engravingMotifPath,
     user,
+  ]);
+
+  // Ref for metal types scroll container
+  const metalTypesRef = useRef<HTMLDivElement>(null);
+
+  // Function to get available karats based on selected metal type
+  const getAvailableKarats = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.goldKarats) {
+      return ["18kt", "14kt", "9kt"]; // Fallback for gold
+    }
+
+    const goldKarats = selectedStyleData.productDetails.goldKarats;
+
+    if (selectedMetalType === "SILVER") {
+      return ["SLV"]; // Silver is always 925
+    } else if (selectedMetalType === "PLATINUM") {
+      return ["PT"]; // Platinum is 950
+    } else {
+      // For GOLD, filter out silver/platinum karats
+      return goldKarats.filter((karat) => !["925", "950"].includes(karat));
+    }
+  }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
+
+  // Update selected options when style changes
+  useEffect(() => {
+    if (selectedStyleData?.productDetails) {
+      const metalTypes = getAvailableMetalTypes();
+      const goldKarats = getAvailableGoldKarats();
+      const diamondShapes = getAvailableDiamondShapes();
+      const diamondSizes = getAvailableDiamondSizes();
+      const availableKarats = getAvailableKarats();
+
+      // Set default selections from API data
+      if (metalTypes.length > 0 && !metalTypes.includes(selectedMetalType)) {
+        setSelectedMetalType("GOLD"); // Always default to GOLD
+      }
+      if (
+        diamondShapes.length > 0 &&
+        !diamondShapes.find((shape) => shape.name === selectedDiamondShape)
+      ) {
+        setSelectedDiamondShape(diamondShapes[0].name);
+      }
+      if (diamondSizes.length > 0 && selectedDiamondSize === "") {
+        setSelectedDiamondSize(diamondSizes[0]);
+      }
+      // Initialize clarity from product details
+      const clarities =
+        selectedStyleData.productDetails.diamondColorClarity || [];
+      if (
+        clarities.length > 0 &&
+        (selectedColorClarity === "" ||
+          !clarities.includes(selectedColorClarity))
+      ) {
+        setSelectedColorClarity(clarities[0]);
+      }
+      if (
+        availableKarats.length > 0 &&
+        (selectedGoldKarat === "" ||
+          !availableKarats.includes(selectedGoldKarat))
+      ) {
+        setSelectedGoldKarat(availableKarats[0]);
+      }
+    }
+  }, [
+    selectedStyleData,
+    selectedMetalType,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedGoldKarat,
+    getAvailableMetalTypes,
+    getAvailableGoldKarats,
+    getAvailableDiamondShapes,
+    getAvailableDiamondSizes,
+    getAvailableKarats,
+  ]);
+
+  useEffect(() => {
+    if (!selectedStyleData?.parentSku) return;
+    refetchUpdatedProduct(selectedStyleData);
+    //eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    selectedDiamondOrigin,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedMetalColor,
+    selectedMetalType,
+    selectedGoldKarat,
+    selectedColorClarity,
   ]);
 
   return (
@@ -1271,7 +1417,7 @@ const ProductDetail = () => {
             <span>›</span>
             <div className="hover:text-foreground">Build Your Jewellery</div>
             <span>›</span>
-            <span className="text-foreground">Bracelet</span>
+            <span className="text-foreground">Bracelets</span>
           </nav>
         </div>
 
@@ -1310,11 +1456,6 @@ const ProductDetail = () => {
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <GLBViewer
-                              modelUrl={image}
-                              className="w-full h-full"
-                              isMain={false}
-                            />
                             <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
                               3D
                             </div>
@@ -1345,24 +1486,11 @@ const ProductDetail = () => {
                       thumbnailImages[selectedImage],
                       selectedImage
                     ) ? (
-                      <div className="relative w-full h-full">
-                        <GLBViewer
+                      <div className="">
+                        <IjewelViewer
                           modelUrl={thumbnailImages[selectedImage]}
-                          className="w-full h-full"
-                          isMain={true}
+                          className="w-full h-full object-contain"
                         />
-                        <div className="absolute bottom-16 left-4 bg-gradient-to-r from-[#328F94] to-[#2a7a7e] text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg">
-                          🔄 Interactive 3D Model
-                        </div>
-                        <div className="absolute bottom-4 left-4 right-4 text-sm text-gray-600 bg-white/95 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium">Controls:</span>
-                            <div className="flex gap-4 text-xs">
-                              <span>🖱️ Drag to rotate</span>
-                              <span>🎯 Scroll to zoom</span>
-                            </div>
-                          </div>
-                        </div>
                       </div>
                     ) : (
                       <img
@@ -1374,9 +1502,12 @@ const ProductDetail = () => {
                       />
                     )}
 
-                    <div className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold">
+                    <Button
+                      onClick={() => setSelectedStyleCategory("PAPPER CLIP")}
+                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold"
+                    >
                       RESET
-                    </div>
+                    </Button>
                   </div>
                   {/* Thumbnails for mobile (horizontal) */}
                   <div className="flex justify-between md:hidden items-center gap-2 mt-4 w-full">
@@ -1444,7 +1575,7 @@ const ProductDetail = () => {
                           Ring Style & Design
                         </p>
                         <h2 className="text-xl md:text-2xl font-medium leading-tight truncate">
-                          {selectedStyleData?.name}
+                          {selectedStyleCategory}
                         </h2>
                       </div>
                       <div className="text-left sm:text-right flex-shrink-0">
@@ -1465,7 +1596,9 @@ const ProductDetail = () => {
                 <div className="w-full">
                   <h3 className="text-base md:text-lg font-medium mb-4 truncate">
                     Ring Style & Design:{" "}
-                    <span className="text-[#328F94]">{selectedRingStyle}</span>
+                    <span className="text-[#328F94]">
+                      {selectedStyleCategory}
+                    </span>
                   </h3>
 
                   {/* Style Category Selection - Enhanced Mobile Responsiveness */}
@@ -1487,35 +1620,17 @@ const ProductDetail = () => {
                             key={`${category.name}-${index}`}
                             onClick={() => {
                               setSelectedStyleCategory(category.name);
-                              // Load data if not loaded
+
+                              // Load category data if not loaded
                               if (!category.isLoaded) {
-                                if (category.name === "TENNIS BRACELET") {
-                                  fetchCategoryData(category.name);
-                                } else {
-                                  // Use fallback data for other categories
-                                  const fallbackSubstyles =
-                                    getFallbackSubstyles(category.name);
-                                  setStyleAndDesign((prev) =>
-                                    prev.map((cat) =>
-                                      cat.name === category.name
-                                        ? {
-                                            ...cat,
-                                            substyles: fallbackSubstyles,
-                                            isLoaded: true,
-                                          }
-                                        : cat
-                                    )
+                                fetchCategoryData(category.name);
+                              } else {
+                                // If already loaded, select first substyle
+                                if (category.substyles.length > 0) {
+                                  setSelectedRingStyle(
+                                    category.substyles[0].name
                                   );
-                                  if (fallbackSubstyles.length > 0) {
-                                    setSelectedRingStyle(
-                                      fallbackSubstyles[0].name
-                                    );
-                                  }
                                 }
-                              } else if (category.substyles.length > 0) {
-                                setSelectedRingStyle(
-                                  category.substyles[0].name
-                                );
                               }
                             }}
                             className={`px-3 md:px-4 py-2 md:py-2.5 rounded-lg border text-xs md:text-sm font-medium min-w-max whitespace-nowrap transition-all capitalize flex-shrink-0 ${
@@ -1581,13 +1696,13 @@ const ProductDetail = () => {
                                 setSelectedRingStyle(style.name);
                                 setSelectedImage(0); // Reset to first image when style changes
                               }}
-                              className={`flex flex-col items-center gap-2 md:gap-3 p-2 md:p-3 rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
+                              className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
                                 selectedRingStyle === style.name
                                   ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg overflow-hidden bg-gray-100">
+                              <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={style.img}
                                   alt={style.name}
@@ -1600,7 +1715,7 @@ const ProductDetail = () => {
                                   }}
                                 />
                               </div>
-                              <span
+                              {/* <span
                                 className={`text-xs font-medium text-center leading-tight ${
                                   selectedRingStyle === style.name
                                     ? "text-[#328F94]"
@@ -1608,7 +1723,7 @@ const ProductDetail = () => {
                                 }`}
                               >
                                 {style.name}
-                              </span>
+                              </span> */}
                             </button>
                           ))
                         )}
@@ -1686,6 +1801,7 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
+                {/* Diamond Shape */}
                 <div className="mb-6">
                   <h3 className="mb-3 text-sm md:text-base">
                     Diamond Shape:{" "}
@@ -1764,31 +1880,69 @@ const ProductDetail = () => {
                 {/* Diamond Size Section */}
                 {selectedStyleData?.productDetails?.diamondSize && (
                   <div className="w-full">
-                    <h3 className="mb-3 text-sm md:text-base">
-                      Diamond Size:{" "}
-                      <span className="text-[#8D8A91]">
-                        {selectedDiamondSize ||
-                          selectedStyleData.productDetails.diamondSize[0]}{" "}
-                        carat
-                      </span>
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full">
-                      {getAvailableDiamondSizes().map((size, index) => (
-                        <button
-                          key={`${size}-${index}`}
-                          onClick={() => setSelectedDiamondSize(size)}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
-                            selectedDiamondSize === size
-                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                              : "border-neutral-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          {size} ct
-                        </button>
-                      ))}
+                    <div className="mb-6 w-1/2">
+                      <h3 className="mb-3 text-sm md:text-base">
+                        Diamond Size:{" "}
+                        {/* <span className="text-[#8D8A91]">
+                          {selectedDiamondSize || getAvailableDiamondSizes()[0]}{" "}
+                          carat
+                        </span> */}
+                      </h3>
+
+                      <Select
+                        value={selectedDiamondSize}
+                        onValueChange={setSelectedDiamondSize}
+                      >
+                        <SelectTrigger className="w-full text-sm border-neutral-300">
+                          <SelectValue placeholder="Select Diamond Size" />
+                        </SelectTrigger>
+
+                        <SelectContent className="bg-white">
+                          {getAvailableDiamondSizes().map((size) => (
+                            <SelectItem key={size} value={size}>
+                              {size} ct
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 )}
+
+                {/* Diamond Color & Clarity Section */}
+                {selectedStyleData?.productDetails?.diamondColorClarity &&
+                  selectedStyleData.productDetails.diamondColorClarity.length >
+                    0 && (
+                    <div className="w-1/2 mb-6">
+                      <h3 className="mb-3 text-sm md:text-base">
+                        Diamond Color & Clarity:{" "}
+                        <span className="text-[#8D8A91]">
+                          {selectedColorClarity ||
+                            selectedStyleData.productDetails
+                              .diamondColorClarity[0]}
+                        </span>
+                      </h3>
+
+                      <Select
+                        value={selectedColorClarity}
+                        onValueChange={setSelectedColorClarity}
+                      >
+                        <SelectTrigger className="w-full text-sm border-neutral-300">
+                          <SelectValue placeholder="Select Color & Clarity" />
+                        </SelectTrigger>
+
+                        <SelectContent className="bg-white">
+                          {selectedStyleData.productDetails.diamondColorClarity.map(
+                            (clarity) => (
+                              <SelectItem key={clarity} value={clarity}>
+                                {clarity}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
 
@@ -1803,9 +1957,9 @@ const ProductDetail = () => {
                         // Reset karat selection when metal type changes
                         const newKarats =
                           value === "SILVER"
-                            ? ["925"]
+                            ? ["SLV"]
                             : value === "PLATINUM"
-                            ? ["950"]
+                            ? ["PT"]
                             : selectedStyleData?.productDetails?.goldKarats?.filter(
                                 (k) => !["925", "950"].includes(k)
                               ) || ["18kt", "14kt", "9kt"];
@@ -1835,7 +1989,13 @@ const ProductDetail = () => {
                         : "Metal Purity"}
                       :{" "}
                       <span className="text-[#8D8A91]">
-                        {selectedGoldKarat || getAvailableKarats()[0]}
+                        {selectedMetalType === "GOLD"
+                          ? `${selectedGoldKarat || getAvailableKarats()[0]}`
+                          : selectedMetalType === "SILVER"
+                          ? "925"
+                          : selectedMetalType === "PLATINUM"
+                          ? "950"
+                          : ""}
                       </span>
                     </h3>
                     <div className="flex items-center gap-2">
@@ -1857,19 +2017,43 @@ const ProductDetail = () => {
                         ref={metalTypesRef}
                         className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
                       >
-                        {getAvailableKarats().map((karat, index) => (
+                        {selectedMetalType === "GOLD" ? (
+                          getAvailableKarats().map((karat, index) => (
+                            <button
+                              key={`${karat}-${index}`}
+                              onClick={() => setSelectedGoldKarat(karat)}
+                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
+                                selectedGoldKarat === karat
+                                  ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                                  : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              {karat}
+                            </button>
+                          ))
+                        ) : selectedMetalType === "SILVER" ? (
                           <button
-                            key={`${karat}-${index}`}
-                            onClick={() => setSelectedGoldKarat(karat)}
+                            onClick={() => setSelectedGoldKarat("SLV")}
                             className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                              selectedGoldKarat === karat
+                              selectedGoldKarat === "SLV"
                                 ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
                                 : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
                             }`}
                           >
-                            {karat}
+                            925
                           </button>
-                        ))}
+                        ) : selectedMetalType === "PLATINUM" ? (
+                          <button
+                            onClick={() => setSelectedGoldKarat("PLT")}
+                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
+                              selectedGoldKarat === "PLT"
+                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                                : "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                            }`}
+                          >
+                            950
+                          </button>
+                        ) : null}
                       </div>
                       <button
                         onClick={() => {
@@ -1966,7 +2150,7 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
-                {/* Ring Size - Full width on mobile */}
+                {/* Bracelet Size - Full width on mobile */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm mb-2">Bracelet Size</label>
@@ -1979,7 +2163,7 @@ const ProductDetail = () => {
                       </SelectTrigger>
                       <SelectContent className="bg-white">
                         {braceletSizes.map((size) => (
-                          <SelectItem key={size} value={size}>
+                          <SelectItem key={size} value={String(size)}>
                             Size {size}
                           </SelectItem>
                         ))}
@@ -1996,11 +2180,128 @@ const ProductDetail = () => {
                   Bracelet Size Guide
                 </Link>
 
+                {/* Free Engraving */}
+                <div className="hidden items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="engraving"
+                    checked={hasEngraving}
+                    onChange={(e) => {
+                      const willEnable = e.target.checked;
+                      if (willEnable) {
+                        // If no engraving exists, open the engrave modal with EV image
+                        if (!hasEngraving) {
+                          setShowEngraveModal(true);
+                        }
+                      } else {
+                        // Undo engraving
+                        setHasEngraving(false);
+                        setSavedEngravingData(null);
+                        setEngravingText("");
+                        setEngravingImageUrl("");
+                        setEngravingMotifPath("");
+                      }
+                    }}
+                    className="border-primary accent-[#68C5C0] w-4 h-4"
+                  />
+                  <label
+                    htmlFor="engraving"
+                    className="text-sm text-primary cursor-pointer"
+                  >
+                    Add Free Engraving
+                  </label>
+                </div>
+
+                {/* Show saved engraving summary with Undo when present */}
+                {hasEngraving && savedEngravingData && (
+                  <div className="hidden bg-green-50 border border-green-200 rounded-lg p-3 mt-2  items-center justify-between">
+                    <div className="text-sm">
+                      <div className="font-medium">Engraving added</div>
+                      <div className="text-muted-foreground text-xs">
+                        {savedEngravingData.text || savedEngravingData.motif}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="text-sm text-[#328F94] underline"
+                        onClick={() => {
+                          // Undo engraving
+                          setHasEngraving(false);
+                          setSavedEngravingData(null);
+                          setEngravingText("");
+                          setEngravingImageUrl("");
+                          setEngravingMotifPath("");
+                        }}
+                      >
+                        Undo
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Engrave Modal Pop-Up */}
+                {showEngraveModal && (
+                  <div className="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center">
+                    <div className="relative w-full h-full bg-white overflow-auto">
+                      {(() => {
+                        // Determine EV image from selected style data (prefer productDetails.variantImages)
+                        const originalImage =
+                          selectedStyleData?.productDetails
+                            ?.variantImages?.[0] ||
+                          selectedStyleData?.thumbnailImages?.[0] ||
+                          selectedStyleData?.img ||
+                          "";
+
+                        let evImage = originalImage || "";
+                        if (evImage) {
+                          evImage = evImage.replace(
+                            /-(FV|SV|TV|BV|LV|RV|GP)\.webp$/i,
+                            "-EV.webp"
+                          );
+                          if (evImage === originalImage) {
+                            // Fallback: replace extension with -EV.webp
+                            evImage = originalImage.replace(
+                              /\.webp$/i,
+                              "-EV.webp"
+                            );
+                          }
+                        }
+
+                        return (
+                          <Engrave
+                            onClose={() => setShowEngraveModal(false)}
+                            onSave={(
+                              text?: string,
+                              imageUrl?: string,
+                              motifPath?: string
+                            ) => {
+                              // Save a single engraving entry
+                              const img = (imageUrl || evImage) as string;
+                              setSavedEngravingData({
+                                text: text || "",
+                                motif: motifPath || "",
+                                imageUrl: img || "",
+                              });
+                              setEngravingText(text || "");
+                              setEngravingImageUrl(img || "");
+                              setEngravingMotifPath(motifPath || "");
+                              setHasEngraving(true);
+                              setShowEngraveModal(false);
+                            }}
+                            selectedImage={
+                              // Pass EV image to Engrave component
+                              evImage || undefined
+                            }
+                            jewelryType={selectedRingStyle}
+                          />
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+
                 {/* Estimated Ship Date */}
                 <div className="text-sm">
-                  <div className="font-medium">
-                    Estimated Ship Date: Monday, October 21st
-                  </div>
                   <div className="text-muted-foreground">
                     Free Shipping | Free Returns
                   </div>
@@ -2009,18 +2310,19 @@ const ProductDetail = () => {
                 {/* Action Buttons - Stack on very small screens */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                   <Button
-                    className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3"
                     onClick={handleBuyNow}
+                    disabled={cartLoading || isUploadingEngraving}
+                    className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3"
                   >
                     Buy Now
                   </Button>
                   <Button
+                    onClick={handleAddToCart}
+                    disabled={cartLoading || isUploadingEngraving}
                     variant="outline"
                     className="w-full border-[#328F94] text-[#328F94] py-3"
-                    onClick={handleAddToCart}
-                    disabled={cartLoading}
                   >
-                    {cartLoading ? "Adding..." : "Add To Cart"}
+                    Add To Cart
                   </Button>
                 </div>
 
@@ -2267,53 +2569,33 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Gold/Silver/Platinum Value
                           </span>
-                          <span className="font-medium">
-                            Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.metalCost?.toLocaleString() ||
-                              "-"}
-                          </span>
+                          <span className="font-medium">Rs </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Diamond Value
                           </span>
-                          <span className="font-medium">
-                            Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.diamondCost?.toLocaleString() ||
-                              "-"}
-                          </span>
+                          <span className="font-medium">Rs.</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstones Value
                           </span>
-                          <span className="font-medium">Rs -</span>
+                          <span className="font-medium">Rs.</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Making Charges
                           </span>
-                          <span className="font-medium">
-                            Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.labourCost?.toLocaleString() ||
-                              "-"}
-                          </span>
+                          <span className="font-medium">Rs.</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
-                          <span className="font-medium">
-                            Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.gstAmount?.toLocaleString() ||
-                              "-"}
-                          </span>
+                          <span className="font-medium">Rs.</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
-                          <span>
-                            Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.totalWithGst?.toLocaleString() ||
-                              "-"}
-                          </span>
+                          <span>Rs.</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
@@ -2340,30 +2622,6 @@ const ProductDetail = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Full Width Disclaimer Section */}
-                  <div className="border-t border-[#328F94] pt-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Certification Logos */}
-                      <div className="flex items-center gap-4 justify-start md:justify-end">
-                        <img
-                          src="/lovable-uploads/28cda72c-8974-4ea2-aecb-d264b8358551.png"
-                          alt="BIS Hallmark"
-                          className="h-16 w-16 object-contain"
-                        />
-                        <img
-                          src="/lovable-uploads/5392cf55-b28f-4fbd-8889-824dfe20dc8f.png"
-                          alt="IGI Certification"
-                          className="h-16 w-16 object-contain"
-                        />
-                        <img
-                          src="/lovable-uploads/9f89b073-535e-401e-88cd-4905a114937f.png"
-                          alt="SGL Certification"
-                          className="h-16 w-16 object-contain"
-                        />
-                      </div>
-                    </div>
-                  </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -2374,14 +2632,7 @@ const ProductDetail = () => {
           </div>
         </div>
 
-        {/* Engrave Modal Overlay - Show as full-screen overlay */}
-        {showEngraveModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="relative w-full h-full bg-white overflow-auto">
-              <Engrave onClose={() => setShowEngraveModal(false)} />
-            </div>
-          </div>
-        )}
+        {/* Engrave Modal Overlay is handled inline where the checkbox opens the Engrave modal (EV-aware). */}
       </main>
     </div>
   );
