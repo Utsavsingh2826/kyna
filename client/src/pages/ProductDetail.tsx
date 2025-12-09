@@ -2371,7 +2371,7 @@ const ProductDetail = () => {
                 {/* Share Options */}
                 <div className="mt-3">
                   {/* <h3 className="font-medium mb-3 text-sm">Share</h3> */}
-                  <div className="flex text-[#328F94] gap-3">
+                  <div className="flex flex-row flex-nowrap text-[#328F94] gap-3">
                     <Button
                       size="sm"
                       className="flex items-center gap-2 text-xs"

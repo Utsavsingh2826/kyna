@@ -239,7 +239,10 @@ function MobileMenu() {
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-80 bg-white">
+      <SheetContent
+        side="left"
+        className="w-80 bg-white max-h-screen overflow-y-auto"
+      >
         <nav className="mt-6 space-y-2">
           <CollapsibleSection
             title="Rings"
@@ -295,12 +298,12 @@ function MobileMenu() {
                 <CollapsibleSection
                   title="Upload Your Design"
                   items={[
-                    "Ring",
-                    "Earring",
-                    "Pendant",
-                    "Bracelet",
-                    "Necklace",
-                    "Bangle",
+                    "Rings",
+                    "Earrings",
+                    "Pendants",
+                    "Bracelets",
+                    "Necklaces",
+                    "Bangles",
                   ]}
                   isOpen={!!openSections["Upload Your Design"]}
                   onToggle={() => toggleSection("Upload Your Design")}
@@ -315,7 +318,7 @@ function MobileMenu() {
                     "Pendants",
                     "Bracelets",
                     "Necklaces",
-                    "Bangles",
+                    "Gents Rings",
                   ]}
                   isOpen={!!openSections["Build Your Jewellery"]}
                   onToggle={() => toggleSection("Build Your Jewellery")}
@@ -356,12 +359,9 @@ function MobileMenu() {
 // Helpers to generate links for mobile menu items
 function slugify(label: string): string {
   return label
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[/]+/g, " ")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .trim()
-    .replace(/\s+/g, "-");
+    .replace(/\s+/g, "+") // Replace spaces with '+'
+    .replace(/[^a-zA-Z0-9+]/g, "") // Remove special characters except '+'
+    .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
 }
 
 function getBasePath(sectionTitle: string): string {
@@ -386,12 +386,43 @@ function getBasePath(sectionTitle: string): string {
 function getLinkForItem(sectionTitle: string, itemLabel: string): string {
   switch (sectionTitle) {
     case "Rings":
-      return `/rings/${slugify(itemLabel)}`;
+      switch (itemLabel) {
+        case "Solitaire Rings":
+          return "/rings?ring_category=Solitaire+Rings";
+        case "Engagement Rings":
+          return "/rings?ring_category=Engagement+Rings";
+        case "Fashion Rings":
+          return "/rings?ring_category=Fashion+Rings";
+        default:
+          return "/rings";
+      }
     case "Earrings":
-      return `/earrings/${slugify(itemLabel)}`;
+      switch (itemLabel) {
+        case "Studs":
+          return "/earrings?category1=studs&centerStoneShape=&category2=&category3=";
+        case "Hoops / Huggies":
+          return "/earrings?category1=hoops&centerStoneShape=&category2=&category3=";
+        case "Halo Earrings":
+          return "/earrings?category1=halo&centerStoneShape=&category2=&category3=";
+        case "Fashion Earrings":
+          return "/earrings?category1=fashion&centerStoneShape=&category2=&category3=";
+        case "Drop Earrings":
+          return "/earrings?category1=drop&centerStoneShape=&category2=&category3=";
+        default:
+          return "/earrings";
+      }
     case "Pendants":
-      return `/pendants/${slugify(itemLabel)}`;
-    case "Jewellery": {
+      switch (itemLabel) {
+        case "Solitaire Pendants":
+          return "/pendants?ring_category=Solitaire+Pendants";
+        case "Fashion Pendants":
+          return "/pendants?ring_category=Fashion+Pendants";
+        case "Solitaire Halo":
+          return "/pendants?ring_category=Solitaire+Halo";
+        default:
+          return "/pendants";
+      }
+    case "Jewellery":
       switch (itemLabel) {
         case "Rings":
           return "/rings";
@@ -400,32 +431,64 @@ function getLinkForItem(sectionTitle: string, itemLabel: string): string {
         case "Pendants":
           return "/pendants";
         case "Bracelets":
-          return "/jewellery/bracelets";
-        case "Design Your Own":
-          return "/design-your-own";
+          return "/bracelets";
         case "Upload Your Design":
-          return "/upload-design";
+          return "/upload-your-design/rings";
         case "Build Your Jewellery":
-          return "/build-jewellery";
+          return "/build-your-jewellery/Rings";
         case "Engraving":
           return "/engravings";
         default:
-          return `/jewellery/${slugify(itemLabel)}`;
+          return "/jewellery";
       }
-    }
-    case "Gifting": {
-      if (itemLabel.toLowerCase().includes("gift card")) {
-        return "/gifting/gift-card";
+    case "Design Your Own":
+      switch (itemLabel) {
+        case "Upload Your Design":
+          return "/upload-your-design/rings";
+        case "Build Your Jewellery":
+          return "/build-your-jewellery/Rings";
+        default:
+          return "/design-your-own";
       }
-      return `/gifting/${slugify(itemLabel)}`;
-    }
-    case "About": {
-      if (itemLabel === "Our Story") return "/about";
-      if (itemLabel === "Contact") return "/customer-service";
-      return "/about";
-    }
+    case "Build Your Jewellery":
+      switch (itemLabel) {
+        case "Rings":
+          return "/build-your-jewellery/Rings";
+        case "Earrings":
+          return "/build-your-jewellery/Earrings";
+        case "Bracelets":
+          return "/build-your-jewellery/Bracelets";
+        case "Pendants":
+          return "/build-your-jewellery/Pendants";
+        case "Necklaces":
+          return "/build-your-jewellery/Necklaces";
+        case "Gents Rings":
+          return "/build-your-jewellery/Gents-Rings";
+        default:
+          return "/build-your-jewellery";
+      }
+    case "Gifting":
+      switch (itemLabel) {
+        case "Under Rs. 25,000/-":
+          return "/gifting/0-25000";
+        case "Rs. 25,001/- to 50,000/-":
+          return "/gifting/25000-50000";
+        case "Gift Card":
+          return "/gifting/gift-card";
+        default:
+          return "/gifting";
+      }
+    case "About":
+      switch (itemLabel) {
+        case "Our Story":
+          return "/about";
+        case "Contact":
+          return "/customer-service";
+        default:
+          return "/about";
+      }
     default:
-      return getBasePath(sectionTitle);
+      return "/";
   }
 }
 

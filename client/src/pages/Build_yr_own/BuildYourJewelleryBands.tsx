@@ -2309,7 +2309,7 @@ const ProductDetail = () => {
                 {/* Share Options - Stack on mobile */}
                 <div>
                   <h3 className="font-medium mb-3 text-sm">Share</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 text-[#328F94] gap-2 md:gap-3">
+                  <div className="grid grid-cols-3 text-[#328F94] gap-2 md:gap-3">
                     <Button
                       size="sm"
                       className="flex items-center justify-center gap-2 text-xs"

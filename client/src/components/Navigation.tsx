@@ -19,9 +19,8 @@ const Navigation: React.FC = () => {
     ["/earrings", "Earrings"],
     ["/pendants", "Pendants"],
     ["/bracelets", "Bracelets"],
-    ["/design-your-own", "Design Your Own"],
-    ["/upload-design", "Upload Your Design"],
-    ["/build-jewellery", "Build Your Jewellery"],
+    ["/upload-your-design/rings", "Upload Your Design"],
+    ["/build-your-jewellery/Rings", "Build Your Jewellery"],
   ];
   const rightLinks = [
     ["/rings?ring_category=Men%27s+Rings", "Men's Rings"],
@@ -29,11 +28,13 @@ const Navigation: React.FC = () => {
       "/earrings?category1=studs&centerStoneShape=&category2=&category3=men%27s+stud",
       "Men's Studs",
     ],
-    ["/bracelets?bracelet_category=Men's Bracelets", "Men's Bracelets"],
-    ["/platinum", "Platinum Jewellery"],
-    ["/silver", "Silver Jewellery"],
-    ["/silver-gold-plated", "Silver Gold Plated Jewellery"],
-    ["/engraving", "Engraving"],
+    [
+      "/earrings?category1=fashion&centerStoneShape=&category2=&category3=",
+      "Fashion Earrings",
+    ],
+    ["/pendants?ring_category=fashion", "Fashion Pendants"],
+
+    ["/engravings", "Engraving"],
   ];
 
   return (
@@ -54,19 +55,19 @@ const Navigation: React.FC = () => {
               <div className="absolute top-full left-0 bg-white shadow-lg border rounded-md w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-2">
                   <Link
-                    to="/rings/solitaire"
+                    to="/rings?ring_category=Solitaire+Rings"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#68C5C0] hover:text-white"
                   >
                     Solitaire Rings
                   </Link>
                   <Link
-                    to="/rings/engagement"
+                    to="/rings?ring_category=Engagement+Rings"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#68C5C0] hover:text-white"
                   >
                     Engagement Rings
                   </Link>
                   <Link
-                    to="/rings/fashion"
+                    to="/rings?ring_category=Fashion+Rings"
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#68C5C0] hover:text-white"
                   >
                     Fashion Rings
@@ -87,11 +88,26 @@ const Navigation: React.FC = () => {
               <div className="absolute top-full left-0 bg-white shadow-lg border rounded-md w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-2">
                   {[
-                    ["studs", "Studs"],
-                    ["hoops", "Hoops / Huggies"],
-                    ["halo", "Halo Earrings"],
-                    ["fashion", "Fashion Earrings"],
-                    ["drop", "Drop Earrings"],
+                    [
+                      "?category1=studs&centerStoneShape=round&category2=&category3=",
+                      "Studs",
+                    ],
+                    [
+                      "?category1=hoops&centerStoneShape=&category2=&category3=",
+                      "Hoops / Huggies",
+                    ],
+                    [
+                      "?category1=halo&centerStoneShape=&category2=&category3=",
+                      "Halo Earrings",
+                    ],
+                    [
+                      "?category1=fashion&centerStoneShape=&category2=&category3=",
+                      "Fashion Earrings",
+                    ],
+                    [
+                      "?category1=drop&centerStoneShape=&category2=&category3=",
+                      "Drop Earrings",
+                    ],
                   ].map(([path, label]) => (
                     <Link
                       key={path}
@@ -117,9 +133,9 @@ const Navigation: React.FC = () => {
               <div className="absolute top-full left-0 bg-white shadow-lg border rounded-md w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-2">
                   {[
-                    ["solitaire", "Solitaire Pendants"],
-                    ["fashion", "Fashion Pendants"],
-                    ["halo", "Solitaire Halo"],
+                    ["?ring_category=Solitaire+Pendants", "Solitaire Pendants"],
+                    ["?ring_category=Fashion+Pendants", "Fashion Pendants"],
+                    ["?ring_category=Solitaire+Halo", "Solitaire Halo"],
                   ].map(([path, label]) => (
                     <Link
                       key={path}
