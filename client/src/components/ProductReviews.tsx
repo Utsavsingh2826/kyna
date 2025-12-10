@@ -253,25 +253,58 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
       {/* Review Form */}
       {showReviewForm && auth?.isAuthenticated && (
         <div className="border rounded-lg p-6 bg-gray-50 space-y-4">
-          <div className="flex items-start gap-4">
-            <Avatar className="w-12 h-12 bg-purple-600">
-              {auth?.user?.profileImage ? (
-                <AvatarImage
-                  src={auth.user.profileImage}
-                  alt={auth.user.firstName || "User"}
-                />
-              ) : null}
-              <AvatarFallback className="bg-purple-600 text-white font-semibold">
-                {auth?.user?.firstName
-                  ? auth.user.firstName.charAt(0).toUpperCase()
-                  : auth?.user?.email?.charAt(0).toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
+          <div className="flex flex-col md:flex-row items-center gap-4">
+            <div className="flex md:hidden items-center gap-4 w-full md:w-auto">
+              <Avatar className="w-12 h-12 bg-purple-600">
+                {auth?.user?.profileImage ? (
+                  <AvatarImage
+                    src={auth.user.profileImage}
+                    alt={auth.user.firstName || "User"}
+                  />
+                ) : null}
+                <AvatarFallback className="bg-purple-600 text-white font-semibold">
+                  {auth?.user?.firstName
+                    ? auth.user.firstName.charAt(0).toUpperCase()
+                    : auth?.user?.email?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
 
-            <div className="flex-1 space-y-4">
-              <div className="flex items-center justify-between">
+              {auth?.isAuthenticated && auth?.user ? (
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-2 text-sm w-full">
+                  <span className="text-gray-700">
+                    Logged in as{" "}
+                    {auth.user.firstName ||
+                      auth.user.displayName ||
+                      auth.user.email}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-teal-600 cursor-pointer hover:underline">
+                    Log in
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 w-full space-y-4">
+              <div className="hidden md:flex items-center gap-4 w-full md:w-auto">
+                <Avatar className="w-12 h-12 bg-purple-600">
+                  {auth?.user?.profileImage ? (
+                    <AvatarImage
+                      src={auth.user.profileImage}
+                      alt={auth.user.firstName || "User"}
+                    />
+                  ) : null}
+                  <AvatarFallback className="bg-purple-600 text-white font-semibold">
+                    {auth?.user?.firstName
+                      ? auth.user.firstName.charAt(0).toUpperCase()
+                      : auth?.user?.email?.charAt(0).toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+
                 {auth?.isAuthenticated && auth?.user ? (
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-2 text-sm w-full">
                     <span className="text-gray-700">
                       Logged in as{" "}
                       {auth.user.firstName ||
@@ -286,7 +319,9 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
                     </span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
+              </div>
+              <div className="flex flex-col md:flex-row items-start gap-4">
+                <div className="flex items-start gap-2">
                   <span className="text-sm text-gray-600">Rate Us</span>
                   <div className="flex gap-1">
                     {renderRatingStars(reviewRating, true)}
@@ -316,8 +351,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
                   className="bg-white min-h-[100px] resize-none"
                 />
                 <div className="space-y-3">
-                  {/* File Upload Input */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col md:flex-row items-center gap-2">
                     <input
                       type="file"
                       accept="image/*"
@@ -331,7 +365,6 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
                     </span>
                   </div>
 
-                  {/* Display Selected Images */}
                   {files.length > 0 && (
                     <div className="grid grid-cols-2 gap-2">
                       {files.map((file, index) => (

@@ -18,6 +18,7 @@ import {
   selectWishlistKeyMap,
   selectWishlistLoading,
 } from "@/store/slices/wishlistSlice";
+import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 
 type MainCategory = "rings" | "earrings" | "pendants" | "bracelets";
 
@@ -1499,7 +1500,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         {/* API Applied Filters Display */}
         {appliedFilters && !loading && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+          <div className="hidden mb-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-sm font-medium text-blue-900 mb-2">
               Applied Filters (from API):
             </p>
@@ -1601,14 +1602,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             {/* Display active filters summary - removed to avoid confusion */}
 
             {/* Loading State */}
-            {loading && (
-              <div className="col-span-full flex justify-center items-center py-12">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
-                  <p className="mt-4 text-gray-600">Loading products...</p>
-                </div>
-              </div>
-            )}
+            {loading &&
+              Array.from({ length: 20 }).map((_, i) => (
+                <ProductCardSkeleton key={i} />
+              ))}
 
             {/* Error State */}
             {error && !loading && (

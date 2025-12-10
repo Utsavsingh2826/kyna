@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/select";
 // import { Checkbox } from "@/components/ui/checkbox";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
 
 // Product interface for API data
 interface ProductData {
@@ -1549,16 +1550,7 @@ const ProductDetail = () => {
 
   // Loading state
   if (loading) {
-    return (
-      <div style={{ fontFamily: "Poppins" }} className="flex justify-center">
-        <main className="min-h-screen max-w-6xl bg-background flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#328F94] mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading product...</p>
-          </div>
-        </main>
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   // Error state
