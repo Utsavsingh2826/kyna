@@ -619,7 +619,7 @@ const ProductDetail = () => {
 
   // Default to first category
   const [selectedStyleCategory, setSelectedStyleCategory] =
-    useState("TIMELESS");
+    useState("CHANNEL SET");
   const [selectedRingStyle, setSelectedRingStyle] = useState("");
 
   // Fetch data from API
@@ -971,6 +971,7 @@ const ProductDetail = () => {
           ),
         }))
       );
+      console.log("Thumnbnail images after refetch:", data.variantImages);
     }
   };
 
@@ -1417,16 +1418,13 @@ const ProductDetail = () => {
   ]);
 
   return (
-    <div
-      style={{ fontFamily: "Poppins" }}
-      className="flex justify-center overflow-x-hidden w-full"
-    >
+    <div style={{ fontFamily: "Poppins" }} className="flex justify-center">
       <SEO
         title="Build Your Ring - Custom Diamond Ring Builder"
         description="Design your perfect ring with our custom builder. Choose from premium settings and diamonds."
         canonical="/build-your-jewellery/Rings"
       />
-      <main className="min-h-screen w-full max-w-6xl bg-background overflow-x-hidden">
+      <main className="min-h-screen max-w-6xl bg-background">
         {/* Breadcrumb */}
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1440,10 +1438,10 @@ const ProductDetail = () => {
           </nav>
         </div>
 
-        <div className="container mx-auto px-4 overflow-x-hidden w-full">
+        <div className="container mx-auto px-4">
           <StickyTwoColumnLayout
             leftColumn={
-              <div className="flex gap-4 flex-col md:flex-row w-full overflow-x-hidden">
+              <div className="flex gap-4 flex-col md:flex-row">
                 {/* Thumbnails for desktop (vertical) */}
                 <div className="hidden md:flex flex-col gap-2 relative">
                   <button
@@ -1499,8 +1497,8 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Main Image */}
-                <div className="flex-1 w-full min-w-0">
-                  <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
+                <div className="flex-1">
+                  <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4">
                     {is3DModel(
                       thumbnailImages[selectedImage],
                       selectedImage
@@ -1522,14 +1520,14 @@ const ProductDetail = () => {
                     )}
 
                     <Button
-                      onClick={() => setSelectedStyleCategory("TIMELESS")}
+                      onClick={() => setSelectedStyleCategory("CHANNEL SET")}
                       className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold"
                     >
                       RESET
                     </Button>
                   </div>
                   {/* Thumbnails for mobile (horizontal) */}
-                  <div className="flex justify-between md:hidden items-center gap-2 mt-4 w-full">
+                  <div className="flex justify-between md:hidden items-center gap-2 mt-4">
                     <button
                       onClick={scrollThumbnailsLeft}
                       aria-label="Scroll thumbnails left"
@@ -1539,7 +1537,7 @@ const ProductDetail = () => {
                     </button>
                     <div
                       ref={thumbnailsRef}
-                      className="flex gap-2 overflow-x-auto scrollbar-hide flex-1  max-w-[270px] py-1"
+                      className="flex gap-2 overflow-x-auto scrollbar-hide max-w-[260px] py-1"
                       style={{
                         scrollbarWidth: "none",
                         msOverflowStyle: "none",
@@ -1587,8 +1585,8 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Name and Price Display - Responsive like ProductDetail */}
-                  <div className="flex flex-col gap-4 md:gap-0 w-full">
-                    <div className="flex flex-row  gap-3 w-full">
+                  <div className="flex flex-col gap-4 md:gap-0">
+                    <div className="flex flex-row gap-3">
                       <div className="flex flex-col min-w-0 flex-1">
                         <p className="text-sm text-[#328F94] mb-1">
                           Ring Style & Design
@@ -1611,8 +1609,8 @@ const ProductDetail = () => {
               </div>
             }
             rightColumn={
-              <div className="space-y-6 w-full overflow-x-hidden">
-                <div className="w-full">
+              <div className="space-y-6">
+                <div>
                   <h3 className="text-base md:text-lg font-medium mb-4 truncate">
                     Ring Style & Design:{" "}
                     <span className="text-[#328F94]">
@@ -1621,8 +1619,8 @@ const ProductDetail = () => {
                   </h3>
 
                   {/* Style Category Selection - Enhanced Mobile Responsiveness */}
-                  <div className="mb-6 w-full">
-                    <div className="flex items-center gap-2 md:gap-3 w-full">
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 md:gap-3">
                       <button
                         onClick={scrollStyleCategoryLeft}
                         aria-label="Scroll style categories left"
@@ -1632,7 +1630,7 @@ const ProductDetail = () => {
                       </button>
                       <div
                         ref={styleCategoryRef}
-                        className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
+                        className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1"
                       >
                         {styleAndDesign.map((category, index) => (
                           <button
@@ -1673,8 +1671,8 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Ring Design Selection - Enhanced Mobile Layout */}
-                  <div className="mb-6 w-full">
-                    <div className="flex items-center gap-2 md:gap-3 w-full">
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 md:gap-3">
                       <button
                         onClick={scrollRingStylesLeft}
                         aria-label="Scroll ring styles left"
@@ -1684,7 +1682,7 @@ const ProductDetail = () => {
                       </button>
                       <div
                         ref={ringStylesRef}
-                        className="flex gap-2 md:gap-4 overflow-x-hidden scroll-smooth flex-1 w-[200px]"
+                        className="flex gap-2 md:gap-4 overflow-x-hidden scroll-smooth flex-1"
                       >
                         {loading && currentSubstyles.length === 0 ? (
                           // Loading state

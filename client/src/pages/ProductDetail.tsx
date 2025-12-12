@@ -132,64 +132,6 @@ const sampleProduct = {
   inStock: true,
 };
 
-interface IjewelViewerProps {
-  modelUrl?: string;
-  className?: string;
-}
-
-const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
-  useEffect(() => {
-    // Create script element to load iJewel viewer SDK
-    const script = document.createElement("script");
-    script.src =
-      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
-    script.async = true;
-
-    script.onload = () => {
-      const container = document.getElementById("ijewel-viewer-container");
-      if (!container) return;
-
-      // Project configuration using dynamic modelUrl from props
-      const project = {
-        modelUrl: modelUrl || "/product_detail/glb.glb", // Fallback to default if no modelUrl provided
-        basePath: "",
-      };
-
-      // Viewer configuration options
-      const viewerOptions = {
-        showCard: false,
-        showUiButtons: false,
-        showLogo: false,
-        showConfigurator: false,
-      };
-      // Initialize the iJewel Viewer on the container element
-      new window.ijewelViewer.Viewer(container, project, viewerOptions);
-    };
-
-    document.body.appendChild(script);
-
-    // Cleanup script on unmount
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, [modelUrl]); // Add modelUrl as dependency
-
-  // Adjust the style of the iJewel Viewer container to make it responsive
-  return (
-    <div
-      id="ijewel-viewer-container"
-      className={className}
-      style={{
-        width: "100%",
-        height: "100%",
-        aspectRatio: window.innerWidth <= 767 ? "1" : "1 / 2", // Use aspect ratio 1 for mobile view
-        maxWidth: window.innerWidth <= 767 ? "100%" : "40vw", // Full width for mobile view
-        maxHeight: window.innerWidth <= 767 ? "auto" : "80vh", // Adjust height for mobile view
-      }}
-    />
-  );
-};
-
 const ProductDetail = () => {
   const { id, category } = useParams();
   const currentCategorySlug = category || "rings";
@@ -231,6 +173,8 @@ const ProductDetail = () => {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [selectedColorClarity, setSelectedColorClarity] = useState("");
+  const [is3DModelLoaded, setIs3DModelLoaded] = useState(false);
+  const [is3DViewerVisible, setIs3DViewerVisible] = useState(false);
 
   const activeVariantSku = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -276,6 +220,7 @@ const ProductDetail = () => {
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
   const metalTypesRef = useRef<HTMLDivElement>(null);
+  const mainViewerRef = useRef<HTMLDivElement | null>(null);
 
   // Helper function to parse karat and set metal type
   const parseKaratAndSetMetalType = useCallback(
@@ -591,6 +536,76 @@ const ProductDetail = () => {
 
     fetchProductData();
   }, [id, category, location.search, parseVariantSku]);
+
+  // ---------- iJewel Preload (Silent) ----------
+  useEffect(() => {
+    if (!productData) return;
+    if ((window as any).__ijewelPreloadLoaded) return;
+
+    const glb =
+      (productData.variantImages || []).find(
+        (u: string) => !!u && u.endsWith && u.endsWith(".glb")
+      ) ||
+      (productData.variantImages && productData.variantImages[1]) ||
+      "";
+
+    const preloadContainerId = "ijewel-preload";
+
+    // ensure hidden container exists
+    let hidden = document.getElementById(preloadContainerId);
+    if (!hidden) {
+      hidden = document.createElement("div");
+      hidden.id = preloadContainerId;
+      hidden.style.width = "0px";
+      hidden.style.height = "0px";
+      hidden.style.overflow = "hidden";
+      hidden.style.position = "absolute";
+      hidden.style.left = "-9999px";
+      hidden.style.top = "-9999px";
+      document.body.appendChild(hidden);
+    }
+
+    const script = document.createElement("script");
+    script.src =
+      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
+    script.async = true;
+
+    script.onload = () => {
+      try {
+        const container = document.getElementById(preloadContainerId);
+        if (!container || !(window as any).ijewelViewer) return;
+        const project = {
+          modelUrl: glb || "/product_detail/glb.glb",
+          basePath: "",
+        };
+        const viewerOptions = {
+          showCard: false,
+          showUiButtons: false,
+          showLogo: false,
+          showConfigurator: false,
+        };
+        const pre = new (window as any).ijewelViewer.Viewer(
+          container,
+          project,
+          viewerOptions
+        );
+        (window as any).__ijewelPreloadViewer = pre;
+        (window as any).__ijewelPreloadLoaded = true;
+        setIs3DModelLoaded(true);
+      } catch (err) {
+        console.warn("iJewel preload failed:", err);
+      }
+    };
+
+    script.onerror = (e) => {
+      console.warn("Failed to load iJewel script for preload", e);
+    };
+
+    document.body.appendChild(script);
+
+    // Do not remove script/container on cleanup — keep preload alive
+    return () => {};
+  }, [productData]);
 
   // Separate useEffect to handle URL parameter changes for metal color
   // This ensures that URL parameters always take precedence
@@ -1470,25 +1485,6 @@ const ProductDetail = () => {
     );
   };
 
-  // // Function to get video thumbnail (first frame)
-  // const getVideoThumbnail = (videoUrl: string) => {
-  //   // For now, return a placeholder. In production, you might want to generate actual thumbnails
-  //   return videoUrl.replace(/\.(mp4|webm|mov)$/i, "-thumbnail.webp");
-  // };
-
-  // // Handle video play/pause
-  // const handleVideoToggle = () => {
-  //   if (videoRef) {
-  //     if (isVideoPlaying) {
-  //       videoRef.pause();
-  //       setIsVideoPlaying(false);
-  //     } else {
-  //       videoRef.play();
-  //       setIsVideoPlaying(true);
-  //     }
-  //   }
-  // };
-
   // Share functionality
   const getCurrentUrl = () => {
     const currentUrl = new URL(window.location.href);
@@ -1547,6 +1543,61 @@ const ProductDetail = () => {
     setSelectedDiamondOrigin(origin);
     // Price will update automatically via useEffect
   };
+
+  // Attach preloaded viewer canvas to main viewer container when selected image is 3D
+  useEffect(() => {
+    const currentImage = (thumbnailImages || [])[selectedImage] || "";
+    if (!mainViewerRef?.current) return;
+    const main = mainViewerRef.current;
+
+    if (is3DModel(currentImage || "", selectedImage)) {
+      const pre = (window as any).__ijewelPreloadViewer;
+      if (pre && pre.canvas) {
+        try {
+          // Move canvas from hidden preload container into the visible container
+          main.innerHTML = "";
+          main.appendChild(pre.canvas);
+          setIs3DViewerVisible(true);
+          return;
+        } catch (err) {
+          console.warn("Error moving preloaded canvas:", err);
+        }
+      }
+
+      // Fallback: if no preload viewer, initialize directly in main
+      if ((window as any).ijewelViewer) {
+        try {
+          main.innerHTML = "";
+          new (window as any).ijewelViewer.Viewer(
+            main,
+            { modelUrl: currentImage },
+            {
+              showCard: false,
+              showUiButtons: false,
+              showLogo: false,
+              showConfigurator: false,
+            }
+          );
+          setIs3DViewerVisible(true);
+        } catch (err) {
+          console.warn("Failed to init ijewel viewer fallback:", err);
+        }
+      }
+    } else {
+      // Optionally move canvas back to preload container if not viewing 3D
+      const pre = (window as any).__ijewelPreloadViewer;
+      if (pre && pre.canvas) {
+        const preloadContainer = document.getElementById("ijewel-preload");
+        if (preloadContainer && pre.canvas.parentElement !== preloadContainer) {
+          try {
+            preloadContainer.appendChild(pre.canvas);
+          } catch (err) {
+            // ignore
+          }
+        }
+      }
+    }
+  }, [selectedImage, thumbnailImages]);
 
   // Loading state
   if (loading) {
@@ -1695,9 +1746,10 @@ const ProductDetail = () => {
                     const currentImage = thumbnailImages[selectedImage] || "";
                     if (is3DModel(currentImage || "", selectedImage)) {
                       return (
-                        <div className="">
-                          <IjewelViewer
-                            modelUrl={currentImage}
+                        <div className="w-full h-full object-contain">
+                          <div
+                            ref={mainViewerRef}
+                            id="ijewel-viewer-main"
                             className="w-full h-full object-contain"
                           />
                         </div>

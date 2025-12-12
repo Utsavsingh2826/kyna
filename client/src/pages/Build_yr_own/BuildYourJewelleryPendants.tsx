@@ -753,16 +753,13 @@ const ProductDetail = () => {
   ]);
 
   return (
-    <div
-      style={{ fontFamily: "Poppins" }}
-      className="flex justify-center overflow-x-hidden w-full"
-    >
+    <div style={{ fontFamily: "Poppins" }} className="flex justify-center">
       <SEO
         title="Build Your Pendant - Custom Diamond Pendant Builder"
         description="Design your perfect pendant with our custom builder. Choose from premium settings and diamonds."
         canonical="/build-your-jewellery/Pendants"
       />
-      <main className="min-h-screen w-full max-w-6xl bg-background overflow-x-hidden">
+      <main className="min-h-screen max-w-6xl bg-background">
         {/* Breadcrumb */}
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -776,10 +773,10 @@ const ProductDetail = () => {
           </nav>
         </div>
 
-        <div className="container mx-auto px-4 overflow-x-hidden w-full">
+        <div className="container mx-auto px-4">
           <StickyTwoColumnLayout
             leftColumn={
-              <div className="flex gap-4 flex-col md:flex-row w-full overflow-x-hidden">
+              <div className="flex gap-4 flex-col md:flex-row">
                 {/* Thumbnails for desktop (vertical) */}
                 <div className="hidden md:flex flex-col gap-2 relative">
                   <button
@@ -1497,7 +1494,6 @@ const ProductDetail = () => {
                     Free Shipping | Free Returns
                   </div>
                 </div>
-
 
                 {/* Action Buttons - Stack on very small screens */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
