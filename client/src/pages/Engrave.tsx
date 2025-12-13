@@ -42,7 +42,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
     formData: null,
   });
   const [selectedFont, setSelectedFont] = useState("My Script One");
-  const [fontSize, setFontSize] = useState(24);
+  const [fontSize, setFontSize] = useState(12);
   const [engravingText, setEngravingText] = useState(initialText);
   const [activeTab, setActiveTab] = useState("FONT");
   const [textPosition, setTextPosition] = useState({ x: 52, y: 58 });
@@ -281,7 +281,11 @@ const EngravingPage: React.FC<EngraveProps> = ({
       };
 
       // Use selected image or fallback to default
-      img.src = currentSelectedImage || "/newring.jpg";
+      img.crossOrigin = "anonymous";
+
+      img.src = currentSelectedImage
+        ? `http://localhost:5000/api/image-proxy?url=${currentSelectedImage}`
+        : "/newring.jpg";
     });
   };
 
@@ -397,16 +401,14 @@ const EngravingPage: React.FC<EngraveProps> = ({
                   {/* Display selected image or fallback to default */}
                   {currentSelectedImage ? (
                     <img
-                      src={currentSelectedImage}
+                      src={
+                        currentSelectedImage
+                          ? `http://localhost:5000/api/image-proxy?url=${encodeURIComponent(
+                              currentSelectedImage
+                            )}`
+                          : "/newring.jpg"
+                      }
                       alt="Selected jewelry for engraving"
-                      className="w-full h-auto rounded-lg border-2 border-gray-200"
-                      draggable={false}
-                      onError={(e) => {
-                        console.warn(
-                          "Failed to load selected image, using fallback"
-                        );
-                        e.currentTarget.src = "/newring.jpg";
-                      }}
                     />
                   ) : (
                     <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">

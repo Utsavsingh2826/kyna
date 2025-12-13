@@ -905,6 +905,18 @@ const ProductDetail = () => {
     }
   }, [selectedMetalType, productData, selectedGoldKarat]);
 
+  // Reset engraving when diamond shape or metal color changes
+  useEffect(() => {
+    if (hasEngraving) {
+      // console.log("🔄 Resetting engraving due to product variant change");
+      setEngravingText("");
+      setEngravingImageUrl("");
+      setEngravingMotifPath("");
+      setHasEngraving(false);
+      setSavedEngravingData(null);
+    }
+  }, [selectedDiamondShape, selectedMetalColor]);
+
   // Update metal color and URL parameter
   const updateMetalColor = useCallback(
     (colorName: string) => {
@@ -1190,13 +1202,26 @@ const ProductDetail = () => {
   const uploadEngravingToBackend = useCallback(
     async (text: string, motifPath: string): Promise<string | null> => {
       try {
-        // Use a placeholder image for now - in real implementation this would be the generated engraving
         const formData = new FormData();
 
-        // Add a placeholder image file (you can replace this with actual engraving generation later)
-        const response = await fetch("/rings.jpg");
-        const blob = await response.blob();
-        formData.append("image", blob, "engraving.png");
+        // Fetch the actual engraved image blob from the blob URL
+        if (engravingImageUrl && engravingImageUrl.startsWith("blob:")) {
+          console.log(
+            "🎨 Fetching engraved image from blob URL:",
+            engravingImageUrl
+          );
+          const response = await fetch(engravingImageUrl);
+          const blob = await response.blob();
+          formData.append("image", blob, "engraving.png");
+        } else {
+          console.warn(
+            "⚠️ No valid engraving image URL found, using placeholder"
+          );
+          const response = await fetch("/rings.jpg");
+          const blob = await response.blob();
+          formData.append("image", blob, "engraving.png");
+        }
+
         formData.append("text", text);
         formData.append("motifPath", motifPath);
 
@@ -1216,7 +1241,7 @@ const ProductDetail = () => {
         return null;
       }
     },
-    []
+    [engravingImageUrl]
   );
 
   // Generate and upload engraving data

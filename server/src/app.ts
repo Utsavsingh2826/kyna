@@ -36,6 +36,7 @@ import blogRoutes from "./routes/blog";
 import addressRoutes from "./routes/address";
 import customizationRoutes from "./routes/customization";
 import uploadRoutes from "./routes/upload";
+import imageProxy from "./routes/imageProxy";
 
 // Import tracking services
 import { TrackingController } from "./controllers/trackingController";
@@ -327,6 +328,7 @@ app.use("/api/blogs", blogRoutes);
 app.use("/api/address", addressRoutes);
 app.use("/api/customization", customizationRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/image-proxy", imageProxy);
 
 // Home route
 app.get("/", (req: Request, res: Response) => {

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import rring from "/3ring.png";
 export default function DesignBanner() {
   return (
@@ -37,18 +38,17 @@ export default function DesignBanner() {
 
               {/* Buttons */}
               <div className="mt-6 flex flex-wrap gap-3">
-                <a
-                  href="#upload"
-                  className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white border border-white bg-transparent rounded-full shadow-md backdrop-blur-sm transition hover:bg-white hover:text-[#267d79]"
-                >
-                  Upload Your Design
-                </a>
-                <a
-                  href="#build"
-                  className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white border border-white bg-transparent rounded-full shadow-md backdrop-blur-sm transition hover:bg-white hover:text-[#267d79]"
-                >
-                  Build Your Jewellery
-                </a>
+                <Link to="/upload-your-design/rings">
+                  <button className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white border border-white bg-transparent rounded-full shadow-md backdrop-blur-sm transition hover:bg-white hover:text-[#267d79]">
+                    Upload Your Design
+                  </button>
+                </Link>
+
+                <Link to="/build-your-jewellery/Rings">
+                  <button className="inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white border border-white bg-transparent rounded-full shadow-md backdrop-blur-sm transition hover:bg-white hover:text-[#267d79]">
+                    Build Your Jewellery
+                  </button>
+                </Link>
               </div>
             </div>
 

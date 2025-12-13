@@ -162,11 +162,11 @@ const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
 
 // Hardcoded category mappings
 const categoryMappings: { [key: string]: string } = {
+  CLASSIC: "CLASSIC",
   "CHANNEL SET": "CHANNEL SET",
   "DOUBLE ROW": "DOUBLE ROW",
   LUXURY: "LUXURY",
   SPORT: "SPORT",
-  CLASSIC: "CLASSIC",
   "NATURE INSPIRED": "NATURE INSPIRED",
   TIMELESS: "TIMELESS",
   "EAST WEST SETTING": "EAST WEST SETTING",
@@ -618,8 +618,7 @@ const ProductDetail = () => {
   const [error, setError] = useState<string | null>(null);
 
   // Default to first category
-  const [selectedStyleCategory, setSelectedStyleCategory] =
-    useState("CHANNEL SET");
+  const [selectedStyleCategory, setSelectedStyleCategory] = useState("CLASSIC");
   const [selectedRingStyle, setSelectedRingStyle] = useState("");
 
   // Fetch data from API
@@ -1049,7 +1048,7 @@ const ProductDetail = () => {
         formData.append("text", text);
         formData.append("motifPath", motifPath);
 
-        const uploadResponse = await fetch("/api/upload/engravingOnly", {
+        const uploadResponse = await fetch("/api/upload/engraving", {
           method: "POST",
           body: formData,
         });
@@ -1520,7 +1519,7 @@ const ProductDetail = () => {
                     )}
 
                     <Button
-                      onClick={() => setSelectedStyleCategory("CHANNEL SET")}
+                      onClick={() => setSelectedStyleCategory("CLASSIC")}
                       className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold"
                     >
                       RESET
