@@ -56,7 +56,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
     const limit = Math.max(
       1,
-      Math.min(100, parseInt((req.query.limit as string) || "20", 10))
+      Math.min(100, parseInt((req.query.limit as string) || "50", 10))
     );
     const skip = (page - 1) * limit;
 
@@ -344,8 +344,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     }
 
     pipeline.push({ $sort: { modelSku: 1 } });
-    // Always apply DB-level pagination (use $skip/$limit in aggregation)
-    pipeline.push({ $skip: skip }, { $limit: limit });
+    if (!variantDependentFilterPresent)
+      pipeline.push({ $skip: skip }, { $limit: limit });
 
     const ProductModel = getCollectionModel("products");
     const docs = await ProductModel.aggregate(pipeline)
@@ -813,8 +813,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       count: paged.length,
       total,
       pagination: {
-        // Use DB-level total to compute total pages so frontend pagination matches server paging
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(totalFiltered / limit),
         currentPage: page,
         limit,
       },
@@ -1077,120 +1076,61 @@ export const getProductByModelSku = async (
       ? attributes.diamondSizes.map(String)
       : [];
 
-    // ----------------- diamondColorClarity resolution (SCAN variantIds for LG / ND tokens) -----------------
-    // let diamondColorClarity: string[] = [];
+    const conn = getCatalogConnection();
 
-    // const variantIdsArr: string[] = Array.isArray(product?.variantIds)
-    //   ? (product.variantIds as any[]).filter((v) => typeof v === "string")
-    //   : [];
+    // =================================================================
+    // ===================== ADDED: METAL OPTIONS ======================
+    // =================================================================
+    const metalOptions: Record<string, string[]> = {};
+    metalTypes.forEach((m) => (metalOptions[m] = []));
 
-    // if (variantIdsArr.length) {
-    //   const collected: string[] = [];
+    const metalColorDocs = await conn
+      .collection("metalcolorsupports")
+      .find({
+        metalType: { $in: metalTypes },
+        isSupported: true,
+      })
+      .toArray();
 
-    //   for (const skuRaw of variantIdsArr) {
-    //     if (!skuRaw || typeof skuRaw !== "string") continue;
+    for (const doc of metalColorDocs) {
+      const metal = String(doc.metalType).toUpperCase();
+      const color = String(doc.metalColor).toUpperCase();
+      if (!metalOptions[metal]) metalOptions[metal] = [];
+      metalOptions[metal].push(color);
+    }
 
-    //     // split SKU into parts on common separators
-    //     const parts = skuRaw.split(/[-_\/\.]/).map((p) => (p || "").trim());
-    //     const upParts = parts.map((p) => (p || "").toUpperCase());
+    for (const m of Object.keys(metalOptions)) {
+      metalOptions[m] = Array.from(new Set(metalOptions[m]));
+    }
 
-    //     // iterate parts to find tokens starting with LG or ND or standalone LG/ND
-    //     for (let i = 0; i < upParts.length; i++) {
-    //       const token = upParts[i];
-    //       if (!token) continue;
+    // =================================================================
+    // ===================== ADDED: DIAMOND OPTIONS ====================
+    // =================================================================
+    const diamondOptions: Record<string, Record<string, string[]>> = {};
 
-    //       let candidate: string | null = null;
+    const diamondDocs = await conn
+      .collection("diamondqualitysupports")
+      .find({ isSupported: true })
+      .toArray();
 
-    //       // starts-with cases: LGEFVVS -> remove LG prefix -> EFVVS
-    //       if (token.startsWith("LG") && token.length > 2) {
-    //         candidate = token.slice(2);
-    //       } else if (token.startsWith("ND") && token.length > 2) {
-    //         candidate = token.slice(2);
-    //       } else if (token === "LG" && i + 1 < upParts.length) {
-    //         candidate = upParts[i + 1];
-    //       } else if (token === "ND" && i + 1 < upParts.length) {
-    //         candidate = upParts[i + 1];
-    //       }
+    for (const doc of diamondDocs) {
+      const dType = String(doc.diamondType).toUpperCase(); // LAB / NATURAL
+      const metal = String(doc.metalType).toUpperCase();
+      const quality = String(doc.quality).toUpperCase();
 
-    //       if (!candidate) {
-    //         // also handle contiguous uppercase runs inside token (e.g. BR1-RD-1-18-LGEFVVS-6)
-    //         // look for substring "LG" or "ND" anywhere and take what's after it
-    //         const idxLG = token.indexOf("LG");
-    //         const idxND = token.indexOf("ND");
-    //         if (idxLG !== -1 && token.length > idxLG + 2) {
-    //           candidate = token.slice(idxLG + 2);
-    //         } else if (idxND !== -1 && token.length > idxND + 2) {
-    //           candidate = token.slice(idxND + 2);
-    //         }
-    //       }
+      if (!diamondOptions[dType]) diamondOptions[dType] = {};
+      if (!diamondOptions[dType][metal]) diamondOptions[dType][metal] = [];
 
-    //       if (!candidate) continue;
+      diamondOptions[dType][metal].push(quality);
+    }
 
-    //       // sanitize candidate: keep longest contiguous A-Z run (clarity tokens are letters)
-    //       const match = candidate.match(/[A-Z]{2,10}/i);
-    //       if (match && match[0]) {
-    //         const cleaned = match[0].toUpperCase();
-    //         // basic sanity: ignore clearly non-clarity tokens (short metal codes etc.)
-    //         if (cleaned.length >= 2) collected.push(cleaned);
-    //       }
-    //     }
-
-    //     // also cover edge case: whole SKU may contain runs like ...NDGHVS... without separators
-    //     const extraRuns = skuRaw.match(/(?:LG|ND)?([A-Z]{2,10})(?=[\-_\/\.0-9]|$)/gi);
-    //     if (extraRuns) {
-    //       for (const r of extraRuns) {
-    //         // r may include LG/ND prefix; strip if present
-    //         const up = r.toUpperCase();
-    //         const stripped = up.startsWith("LG") || up.startsWith("ND") ? up.slice(2) : up;
-    //         const m = stripped.match(/[A-Z]{2,10}/);
-    //         if (m && m[0]) collected.push(m[0].toUpperCase());
-    //       }
-    //     }
-    //   }
-
-    //   // filter & dedupe
-    //   const blacklist = new Set([
-    //     "WG",
-    //     "YG",
-    //     "RG",
-    //     "BR",
-    //     "GP",
-    //     "NBV",
-    //     "BV",
-    //     "SV",
-    //     "PV",
-    //     "PG",
-    //     "360",
-    //     "45",
-    //     "FV",
-    //     "EV",
-    //     "LGE",
-    //     "LG",
-    //     "BR1",
-    //     "BRI",
-    //     "RD",
-    //     "RD1",
-    //     "MM",
-    //   ]);
-
-    //   const seen = new Set<string>();
-    //   const uniq: string[] = [];
-    //   for (const token of collected) {
-    //     const t = String(token || "").toUpperCase().trim();
-    //     if (!t) continue;
-    //     if (blacklist.has(t)) continue;
-    //     if (!seen.has(t)) {
-    //       seen.add(t);
-    //       uniq.push(t);
-    //     }
-    //   }
-
-    //   diamondColorClarity = uniq;
-    // }
-
-    // diamondColorClarity = Array.isArray(diamondColorClarity)
-    //   ? diamondColorClarity.map((s) => String(s).toUpperCase()).filter(Boolean)
-    //   : [];
+    for (const dType of Object.keys(diamondOptions)) {
+      for (const metal of Object.keys(diamondOptions[dType])) {
+        diamondOptions[dType][metal] = Array.from(
+          new Set(diamondOptions[dType][metal])
+        );
+      }
+    }
 
     // ----------------- diamondColorClarity (STRICT: only after LG or ND) -----------------
     let diamondColorClarity: string[] = [];
@@ -1274,7 +1214,7 @@ export const getProductByModelSku = async (
     const variantIdParam = (req.query.variantId ?? "").toString().trim();
 
     // ----------------- Pricing setup (merge multi-doc defaults) -----------------
-    const conn = getCatalogConnection();
+    // const conn = getCatalogConnection();
     const finalPricingColl = conn.collection("final_pricing");
     const defaultsColl = conn.collection("defaultValues");
 
@@ -2193,9 +2133,11 @@ export const getProductByModelSku = async (
       title,
       description,
       metalTypes,
+      metalOptions,
       goldKarats,
       diamondShape,
       diamondSize,
+      diamondOptions,
       diamondColorClarity,
       isEngraving,
       engravingInfo: finalEngravingObj
