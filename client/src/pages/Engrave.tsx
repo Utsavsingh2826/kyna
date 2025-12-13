@@ -284,7 +284,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
       img.crossOrigin = "anonymous";
 
       img.src = currentSelectedImage
-        ? `http://localhost:5000/api/image-proxy?url=${currentSelectedImage}`
+        ? `/api/image-proxy?url=${currentSelectedImage}`
         : "/newring.jpg";
     });
   };
@@ -403,7 +403,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                     <img
                       src={
                         currentSelectedImage
-                          ? `http://localhost:5000/api/image-proxy?url=${encodeURIComponent(
+                          ? `/api/image-proxy?url=${encodeURIComponent(
                               currentSelectedImage
                             )}`
                           : "/newring.jpg"
