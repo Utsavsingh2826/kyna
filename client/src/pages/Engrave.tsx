@@ -20,6 +20,7 @@ interface EngraveProps {
   ) => void;
   initialText?: string;
   initialMotif?: string;
+  fontSize?: number;
 }
 
 const EngravingPage: React.FC<EngraveProps> = ({
@@ -30,6 +31,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
   onSave,
   initialText = "",
   initialMotif = "",
+  fontSize: propFontSize,
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -41,11 +43,14 @@ const EngravingPage: React.FC<EngraveProps> = ({
     returnTo: "",
     formData: null,
   });
-  const [selectedFont, setSelectedFont] = useState("My Script One");
-  const [fontSize, setFontSize] = useState(12);
+  const [selectedFont, setSelectedFont] = useState("");
+  const [fonts, setFonts] = useState<string[]>([]);
+  const [fontSize, setFontSize] = useState(
+    propFontSize ? propFontSize * 10 : 24
+  );
   const [engravingText, setEngravingText] = useState(initialText);
   const [activeTab, setActiveTab] = useState("FONT");
-  const [textPosition, setTextPosition] = useState({ x: 52, y: 58 });
+  const [textPosition, setTextPosition] = useState({ x: 52, y: 64 });
   const [isDragging, setIsDragging] = useState(false);
   const [textRotation, setTextRotation] = useState({
     horizontal: 0,
@@ -58,6 +63,55 @@ const EngravingPage: React.FC<EngraveProps> = ({
   const [motifScale, setMotifScale] = useState<number>(1); // multiplier of fontSize (1 = same height as text)
   const maxCount = 12; // maximum total units (characters + motif cost)
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Load fonts from fonts folder
+  useEffect(() => {
+    const loadFonts = async () => {
+      try {
+        const fontFiles = [
+          "Arsenal-Regular.ttf",
+          "Arsenal-Bold.ttf",
+          "Arsenal-Italic.ttf",
+          "Arsenal-BoldItalic.ttf",
+          "PinyonScript-Regular.ttf",
+          "OpenSans.ttf",
+        ];
+
+        const fontNames: string[] = [];
+
+        for (const fontFile of fontFiles) {
+          const fontName = fontFile
+            .replace(".ttf", "")
+            .replace(/-Regular|-Bold|-Italic|-BoldItalic/g, "")
+            .replace(/([A-Z])/g, " $1")
+            .trim();
+
+          // Create @font-face rule
+          const fontFace = new FontFace(fontName, `url(/fonts/${fontFile})`);
+
+          try {
+            await fontFace.load();
+            document.fonts.add(fontFace);
+
+            if (!fontNames.includes(fontName)) {
+              fontNames.push(fontName);
+            }
+          } catch (err) {
+            console.debug(`Failed to load font ${fontFile}:`, err);
+          }
+        }
+
+        setFonts(fontNames);
+        if (fontNames.length > 0 && !selectedFont) {
+          setSelectedFont(fontNames[0]);
+        }
+      } catch (err) {
+        console.error("Failed to load fonts:", err);
+      }
+    };
+
+    loadFonts();
+  }, []);
 
   // Load motif index from public/motif/index.json (if available)
   useEffect(() => {
@@ -86,21 +140,6 @@ const EngravingPage: React.FC<EngraveProps> = ({
       setEngravingText((prev) => prev.slice(0, allowed));
     }
   }, [selectedMotif, engravingText]);
-
-  const fonts = [
-    "My Script One",
-    "Arial",
-    "Times New Roman",
-    "Helvetica",
-    "Georgia",
-    "Verdana",
-    "Courier New",
-    "Brush Script MT",
-    "Lucida Handwriting",
-    "Pacifico",
-  ];
-
-  const fontSizes = [12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 36, 40, 48];
 
   // Get data from navigation state or props
   useEffect(() => {
@@ -142,14 +181,16 @@ const EngravingPage: React.FC<EngraveProps> = ({
     setEngravingText("");
   };
 
-  const handleMouseDown = () => {
+  const handleMouseDown = (e: React.MouseEvent) => {
     if (engravingText) {
+      e.preventDefault();
       setIsDragging(true);
     }
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && engravingText) {
+      e.preventDefault();
       const rect = e.currentTarget.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -162,6 +203,30 @@ const EngravingPage: React.FC<EngraveProps> = ({
   };
 
   const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (engravingText) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDragging && engravingText && e.touches.length > 0) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = ((touch.clientX - rect.left) / rect.width) * 100;
+      const y = ((touch.clientY - rect.top) / rect.height) * 100;
+
+      const constrainedX = Math.max(10, Math.min(90, x));
+      const constrainedY = Math.max(20, Math.min(90, y));
+
+      setTextPosition({ x: constrainedX, y: constrainedY });
+    }
+  };
+
+  const handleTouchEnd = () => {
     setIsDragging(false);
   };
 
@@ -339,7 +404,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                   Back
                 </button>
                 {currentSelectedImage && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
                     <span>•</span>
                     <span>Working with selected image</span>
                     <div className="w-6 h-6 rounded border overflow-hidden">
@@ -352,7 +417,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                   </div>
                 )}
               </div>
-              <h1 className="text-2xl font-light text-teal-500 tracking-wide">
+              <h1 className="text-lg sm:text-2xl font-light text-teal-500 tracking-wide">
                 ADD ENGRAVING
               </h1>
               <button
@@ -365,8 +430,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
           </div>
         </div>
 
-        <div className="p-6">
-          <div className="flex flex-col lg:flex-row gap-8">
+        <div className="sm:p-6">
+          <div className="flex flex-col lg:flex-row sm:gap-8">
             {/* Left Side - Selected Image Display */}
             <div className="lg:w-1/2">
               <div className="bg-gray-50 rounded-lg p-6">
@@ -392,11 +457,14 @@ const EngravingPage: React.FC<EngraveProps> = ({
                 )}
 
                 <div
-                  className="relative cursor-move select-none"
+                  className="relative cursor-move select-none touch-none overflow-hidden"
                   onMouseDown={handleMouseDown}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   onMouseLeave={handleMouseUp}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
                 >
                   {/* Display selected image or fallback to default */}
                   {currentSelectedImage ? (
@@ -409,6 +477,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
                           : "/newring.jpg"
                       }
                       alt="Selected jewelry for engraving"
+                      draggable={false}
+                      className="pointer-events-none select-none"
                     />
                   ) : (
                     <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
@@ -488,7 +558,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                 </div>
 
                 {/* Position Controls */}
-                <div className="mt-4 p-4 bg-white rounded-lg shadow-sm">
+                {/* <div className="mt-4 p-4 bg-white rounded-lg shadow-sm">
                   <h4 className="text-sm font-medium text-gray-700 mb-3">
                     Text Position & Rotation
                   </h4>
@@ -538,7 +608,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <button
+                    {/* <button
                       onClick={() => {
                         setTextPosition({ x: 50, y: 70 });
                         setTextRotation({ horizontal: 0, vertical: 0 });
@@ -565,7 +635,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                     >
                       Side
                     </button>
-                    <button
+                 <button
                       onClick={() =>
                         setTextRotation({ horizontal: 0, vertical: 0 })
                       }
@@ -574,13 +644,13 @@ const EngravingPage: React.FC<EngraveProps> = ({
                       Reset
                     </button>
                   </div>
-                </div>
+                </div>  */}
               </div>
             </div>
 
             {/* Right Side - Controls */}
             <div className="lg:w-1/2">
-              <div className="bg-gray-50 rounded-lg p-6">
+              <div className="bg-gray-50 rounded-lg py-0 sm:py-6 p-6">
                 {/* Tabs */}
                 <div className="flex mb-6">
                   <button
@@ -638,13 +708,14 @@ const EngravingPage: React.FC<EngraveProps> = ({
                         <select
                           value={fontSize}
                           onChange={(e) => setFontSize(Number(e.target.value))}
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-transparent bg-white"
+                          disabled={!!propFontSize}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
-                          {fontSizes.map((size) => (
-                            <option key={size} value={size}>
-                              {size}
+                          {propFontSize && (
+                            <option value={propFontSize * 10}>
+                              {propFontSize * 10}
                             </option>
-                          ))}
+                          )}
                         </select>
                       </div>
                     </div>
@@ -674,7 +745,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                         rows={4}
                         style={{
                           fontFamily: selectedFont,
-                          fontSize: `${Math.min(fontSize, 16)}px`,
+                          fontSize: `${Math.max(fontSize, 16)}px`,
                         }}
                       />
 
@@ -702,7 +773,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                     <div className="flex gap-4">
                       <button
                         onClick={handleClear}
-                        className="flex-1 py-3 px-6 border-2 border-purple-400 text-purple-400 rounded-lg hover:bg-purple-50 transition-colors font-medium"
+                        className="flex-1 py-1 px-2 sm:py-3 sm:px-6 border-2 border-teal-400 text-teal-400 rounded-lg hover:bg-teal-50 transition-colors font-medium"
                       >
                         CLEAR
                       </button>
@@ -731,7 +802,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                           await handleSaveEngraving(engravingText);
                         }}
                         disabled={!engravingText.trim() && !selectedMotif}
-                        className={`flex-1 py-3 px-6 rounded-lg font-medium flex items-center justify-center transition-colors ${
+                        className={`flex-1 py-1 px-2 sm:py-3 sm:px-6 rounded-lg font-medium flex items-center justify-center transition-colors ${
                           engravingText.trim() || selectedMotif
                             ? "bg-teal-400 text-white hover:bg-teal-500"
                             : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -745,7 +816,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                     </div>
 
                     {/* Enhanced engraving preview */}
-                    {engravingText && (
+                    {/* {engravingText && (
                       <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
                         <p className="text-xs text-green-700">
                           <strong>Preview:</strong> "{engravingText}" will be
@@ -756,7 +827,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
                           add it to your design collection
                         </p>
                       </div>
-                    )}
+                    )} */}
+                    <img src="/sample.png" alt="" />
 
                     {/* Instructions */}
                     {/* <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">

@@ -69,6 +69,9 @@ interface ProductData {
     totalWithGst: number;
   };
   engraving: string[];
+  engravingInfo?: {
+    fontSize?: number;
+  };
   variantCount: number;
   firstVariantSku: string;
   sellingPrice: number;
@@ -121,7 +124,7 @@ const sampleProduct = {
   ],
   metalTypes: ["Gold", "Silver", "Platinum", "Palladium", "Titanium", "Cobalt"],
   metalColors: [
-    { name: "White Gold", img: "/colors/white.png" },
+    { name: "White Gold", img: "/metal_colors/Platinum.svg" },
     { name: "Yellow Gold", img: "/colors/gold.png" },
     { name: "Rose Gold", img: "/colors/rosegold.png" },
     { name: "Silver", color: "#C0C0C0" },
@@ -2229,7 +2232,10 @@ const ProductDetail = () => {
                         string,
                         { name: string; img: string }
                       > = {
-                        WG: { name: "White Gold", img: "/colors/white.png" },
+                        WG: {
+                          name: "White Gold",
+                          img: "/colors/white.png",
+                        },
                         YG: { name: "Yellow Gold", img: "/colors/gold.png" },
                         RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
                       };
@@ -2388,6 +2394,7 @@ const ProductDetail = () => {
                         selectedImage={productData?.variantImages?.[0]}
                         jewelryType={productData?.title}
                         userId={user?.id}
+                        fontSize={productData?.engravingInfo?.fontSize}
                       />
                     </div>
                   </div>
@@ -2802,6 +2809,7 @@ const ProductDetail = () => {
                     userId={user?.id}
                     initialText={engravingText}
                     initialMotif={engravingMotifPath}
+                    fontSize={productData?.engravingInfo?.fontSize}
                   />
                 </div>
               </div>
