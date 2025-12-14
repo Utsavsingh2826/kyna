@@ -56,7 +56,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
     const limit = Math.max(
       1,
-      Math.min(100, parseInt((req.query.limit as string) || "50", 10))
+      Math.min(100, parseInt((req.query.limit as string) || "20", 10))
     );
     const skip = (page - 1) * limit;
 
@@ -808,12 +808,17 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       .collection("products")
       .countDocuments({ category });
 
+    // When no variant-dependent filters, use the total from DB for pagination calculation
+    const totalForPagination = variantDependentFilterPresent
+      ? totalFiltered
+      : total;
+
     return res.status(200).json({
       success: true,
       count: paged.length,
       total,
       pagination: {
-        totalPages: Math.ceil(totalFiltered / limit),
+        totalPages: Math.ceil(totalForPagination / limit),
         currentPage: page,
         limit,
       },

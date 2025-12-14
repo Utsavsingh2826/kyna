@@ -1727,7 +1727,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         {!loading && !error && pagination.totalPages > 1 && (
           <div className="flex justify-center items-center mt-8 space-x-2">
             <button
-              onClick={() => fetchProducts(pagination.currentPage - 1)}
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                fetchProducts(pagination.currentPage - 1);
+              }}
               disabled={pagination.currentPage === 1}
               className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
             >
@@ -1739,7 +1742,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </span>
 
             <button
-              onClick={() => fetchProducts(pagination.currentPage + 1)}
+              onClick={() => {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+                fetchProducts(pagination.currentPage + 1);
+              }}
               disabled={pagination.currentPage === pagination.totalPages}
               className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
             >
