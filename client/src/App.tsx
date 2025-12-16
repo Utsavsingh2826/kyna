@@ -192,7 +192,10 @@ function App() {
             path="/earrings/:subcategory"
             element={<ProductsPage category="earrings" />}
           />
-          <Route path="/engravings" element={<Engraving />} />
+          <Route
+            path="/engravings"
+            element={<ProductsPage category="rings" />}
+          />
           <Route
             path="/pendants"
             element={<ProductsPage category="pendants" />}

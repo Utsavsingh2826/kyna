@@ -57,6 +57,8 @@ interface ApiResponse {
 }
 
 export default function ProductsPage({ category }: { category: MainCategory }) {
+  const location = window.location;
+  const isEngravingsPage = location.pathname === "/engravings";
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   // Separate UI state (updates immediately while sliding) and API state (debounced)
   const [minPriceUI, setMinPriceUI] = useState<number>(0);
@@ -253,6 +255,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
             if (ringTypes.size > 0) {
               params.set("ringType", Array.from(ringTypes).join(","));
+            }
+
+            // Add isEngraving parameter if on engravings page
+            if (isEngravingsPage) {
+              params.set("isEngraving", "true");
             }
           }
 
@@ -802,6 +809,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     pendants: "Pendants",
     bracelets: "Bracelets",
   };
+
+  // Override title for engravings page
+  const pageTitle = isEngravingsPage
+    ? "Engravable Ring Products"
+    : titleMap[category];
 
   // Function to render category-specific filters
   const renderCategoryFilters = () => {
@@ -1775,15 +1787,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     <main aria-labelledby="products-heading" className="eng-root">
       <div className="eng-wrap">
         <nav aria-label="Breadcrumb" className="eng-breadcrumb">
-          <Link to="/">Home</Link> <span> - </span>{" "}
-          <span>{titleMap[category]}</span>
+          <Link to="/">Home</Link> <span> - </span> <span>{pageTitle}</span>
         </nav>
 
         <div className="eng-header">
           <h2 id="products-heading" className="eng-title">
-            {titleMap[category]} Products ({loading ? "..." : pagination.total})
+            {pageTitle} ({loading ? "..." : pagination.total})
           </h2>
-          <div className="eng-actions">
+          {/* <div className="eng-actions">
             <label>
               Sort by:{" "}
               <select className="eng-sort" aria-label="Sort products">
@@ -1793,7 +1804,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 <option>Newest</option>
               </select>
             </label>
-          </div>
+          </div> */}
         </div>
 
         {/* API Applied Filters Display */}
