@@ -6,7 +6,7 @@ const ScrollToTop = () => {
 
   useEffect(() => {
     // Force scroll to top immediately and synchronously
-    console.log("🔝 ScrollToTop triggered for:", pathname);
+    // console.log("🔝 ScrollToTop triggered for:", pathname);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
     window.scrollTo(0, 0);

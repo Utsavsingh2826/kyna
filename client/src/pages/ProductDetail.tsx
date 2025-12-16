@@ -2554,7 +2554,7 @@ const ProductDetail = () => {
                             Metal Type
                           </span>
                           <span className="font-medium">
-                            {selectedMetalType}||"Not Selected"
+                            {selectedMetalType}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2645,7 +2645,9 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Diamond Color & Clarity
                           </span>
-                          <span className="font-medium">14K White Gold</span>
+                          <span className="font-medium">
+                            {selectedColorClarity}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
@@ -2691,7 +2693,7 @@ const ProductDetail = () => {
                             SKU Number
                           </span>
                           <span className="font-medium">
-                            BRDTXR07400Q300GW4
+                            {productData.modelSku}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">

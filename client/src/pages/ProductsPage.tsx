@@ -64,6 +64,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(50000);
   const priceDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +135,16 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const fetchProducts = useCallback(
     async (page: number = 1, limit: number = 20) => {
       try {
+        // Cancel any previous request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          console.log("🚫 Cancelled previous API request");
+        }
+
+        // Create new AbortController for this request
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
         setLoading(true);
         setError(null);
 
@@ -145,8 +156,16 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           params.set("category3", activeFilters.category3 || "");
           params.set("centerStoneShape", activeFilters.centerStoneShape || "");
 
+          // Add price filters for earrings
+          if (minPrice !== 0) {
+            params.set("minPrice", minPrice.toString());
+          }
+          if (maxPrice !== 50000) {
+            params.set("maxPrice", maxPrice.toString());
+          }
+
           const apiUrl = `/api/products/category/earrings?${params.toString()}`;
-          const response = await fetch(apiUrl);
+          const response = await fetch(apiUrl, { signal });
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -182,11 +201,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           params.set("page", page.toString());
           params.set("limit", limit.toString());
 
-          // Handle diamond shapes - collect all selected shapes from different categories
-          const allSelectedShapes = new Set<string>();
-
           if (category === "rings") {
             // Collect shapes from all ring subcategories
+            const allSelectedShapes = new Set<string>();
             activeFilters.solitaire_diamond_shape.forEach((shape) =>
               allSelectedShapes.add(shape)
             );
@@ -242,6 +259,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           // Handle earrings filters
           if (category === "earrings") {
             // Collect shapes from all earring subcategories
+            const allSelectedShapes = new Set<string>();
             activeFilters.studs_diamond_shape.forEach((shape) =>
               allSelectedShapes.add(shape)
             );
@@ -306,6 +324,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
           // Handle pendants filters
           if (category === "pendants") {
+            const allSelectedShapes = new Set<string>();
             activeFilters.solitaire_pendant_diamond_shape.forEach((shape) =>
               allSelectedShapes.add(shape)
             );
@@ -352,6 +371,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
           // Handle bracelets filters
           if (category === "bracelets") {
+            const allSelectedShapes = new Set<string>();
             activeFilters.tennis_bracelet_diamond_shape.forEach((shape) =>
               allSelectedShapes.add(shape)
             );
@@ -411,7 +431,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         const filterParams = buildApiFilters();
         const response = await fetch(
-          `/api/products/category/${apiCategory}?${filterParams.toString()}`
+          `/api/products/category/${apiCategory}?${filterParams.toString()}`,
+          { signal }
         );
 
         if (!response.ok) {
@@ -443,6 +464,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           throw new Error("API returned success: false");
         }
       } catch (err) {
+        // Ignore abort errors - these are intentional cancellations
+        if (err instanceof Error && err.name === "AbortError") {
+          console.log("✅ Request cancelled successfully");
+          return;
+        }
+
         console.error("Error fetching products:", err);
         setError(
           err instanceof Error ? err.message : "Failed to fetch products"
@@ -565,44 +592,30 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     }));
   };
 
+  // Handlers for slider input events (fires while dragging - updates UI only)
   const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
-    console.log("🔵 MIN THUMB MOVED:", value);
-    // Ensure min price doesn't exceed max price - 2000
     const clampedValue = Math.min(value, maxPriceUI - 2000);
-
-    // Update UI immediately for smooth sliding
-    setMinPriceUI(clampedValue);
-
-    // Debounce API call
-    if (priceDebounceRef.current) {
-      clearTimeout(priceDebounceRef.current);
-    }
-
-    priceDebounceRef.current = setTimeout(() => {
-      setMinPrice(clampedValue);
-      updatePriceFilter("min_price", clampedValue.toString());
-    }, 500); // 500ms debounce for API calls
+    setMinPriceUI(clampedValue); // Update UI only for smooth sliding
   };
 
   const handleMaxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
-    console.log("🔶 MAX THUMB MOVED:", value);
-    // Ensure max price doesn't go below min price + 2000
     const clampedValue = Math.max(value, minPriceUI + 2000);
+    setMaxPriceUI(clampedValue); // Update UI only for smooth sliding
+  };
 
-    // Update UI immediately for smooth sliding
-    setMaxPriceUI(clampedValue);
+  // Handlers for when user releases the slider (mouseup/touchend)
+  const handleMinRelease = () => {
+    console.log("🔵 MIN SLIDER RELEASED - Calling API with:", minPriceUI);
+    setMinPrice(minPriceUI);
+    updatePriceFilter("min_price", minPriceUI.toString());
+  };
 
-    // Debounce API call
-    if (priceDebounceRef.current) {
-      clearTimeout(priceDebounceRef.current);
-    }
-
-    priceDebounceRef.current = setTimeout(() => {
-      setMaxPrice(clampedValue);
-      updatePriceFilter("max_price", clampedValue.toString());
-    }, 500); // 500ms debounce for API calls
+  const handleMaxRelease = () => {
+    console.log("🔶 MAX SLIDER RELEASED - Calling API with:", maxPriceUI);
+    setMaxPrice(maxPriceUI);
+    updatePriceFilter("max_price", maxPriceUI.toString());
   };
 
   // Clear all filters
@@ -649,36 +662,61 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     });
   }, [setSearchParams]);
 
-  // Cleanup debounce timeout on component unmount
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
+      // Cancel any in-flight requests
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        console.log("🚫 Cancelled API request on unmount");
+      }
+      // Clear debounce timer
       if (priceDebounceRef.current) {
         clearTimeout(priceDebounceRef.current);
       }
     };
   }, []);
 
-  // Fetch products when category changes
-  useEffect(() => {
-    fetchProducts();
-  }, [category, fetchProducts]);
+  // Ref to track if it's the first load
+  const isFirstLoadRef = useRef(true);
 
-  // Trigger API call when filters change (with debounce)
+  // Single useEffect to fetch products - triggers on category or filter changes
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchProducts(1); // Reset to first page when filters change
-    }, 300); // 300ms debounce
+    // No debounce on first load or category change for instant response
+    if (isFirstLoadRef.current) {
+      isFirstLoadRef.current = false;
+      fetchProducts(1);
+      return;
+    }
 
-    return () => clearTimeout(timeoutId);
-  }, [
-    fetchProducts,
-    category,
-    activeFilters.category1,
-    activeFilters.category2,
-    activeFilters.centerStoneShape,
-    minPrice,
-    maxPrice,
-  ]);
+    // No additional debounce - price handlers already debounce at 300ms
+    // Other filters don't need debouncing as they're discrete clicks
+    fetchProducts(1);
+  }, [fetchProducts]);
+
+  // Reset first load flag and clear price filters when category changes
+  useEffect(() => {
+    isFirstLoadRef.current = true;
+
+    // CRITICAL: Cancel any in-flight API requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      console.log("🚫 Cancelled API request due to category change");
+    }
+
+    // CRITICAL: Clear any pending price debounce timers to prevent stale requests
+    if (priceDebounceRef.current) {
+      clearTimeout(priceDebounceRef.current);
+      priceDebounceRef.current = null;
+    }
+
+    // Reset price filters to defaults when changing categories
+    setMinPrice(0);
+    setMaxPrice(50000);
+    setMinPriceUI(0);
+    setMaxPriceUI(50000);
+  }, [category]);
 
   // Initialize filters from URL on component mount
   useEffect(() => {
@@ -792,7 +830,6 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       shape: string,
       checked: boolean
     ) => {
-      const c1 = mapEarringGroupToCategory1(groupTitle);
       const shapeLower = shape.toLowerCase();
 
       const currentParams = new URLSearchParams(searchParams);
@@ -810,41 +847,215 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         }
       }
 
-      currentParams.set("category1", c1);
+      // Build category1 from all subcategories that have selected shapes
+      const category1Array = new Set<string>();
+
+      // Check each earring subcategory to see if it has any selected shapes
+      if (
+        activeFilters.studs_diamond_shape.length > 0 ||
+        (groupTitle === "Studs" && checked)
+      ) {
+        category1Array.add("studs");
+      }
+      if (
+        activeFilters.hoops_diamond_shape.length > 0 ||
+        (groupTitle === "Hoops / Huggies" && checked)
+      ) {
+        category1Array.add("hoops/huggies");
+      }
+      if (
+        activeFilters.drop_diamond_shape.length > 0 ||
+        (groupTitle === "Drop Earrings" && checked)
+      ) {
+        category1Array.add("drop earrings");
+      }
+      if (
+        activeFilters.fashion_earring_diamond_shape.length > 0 ||
+        (groupTitle === "Fashion Earrings" && checked)
+      ) {
+        category1Array.add("fashion earrings");
+      }
+
+      // Remove current subcategory if unchecking and no shapes remain
+      const currentSubcategory = mapEarringGroupToCategory1(groupTitle);
+      const currentFilterKey =
+        groupTitle === "Studs"
+          ? "studs_diamond_shape"
+          : groupTitle === "Hoops / Huggies"
+          ? "hoops_diamond_shape"
+          : groupTitle === "Drop Earrings"
+          ? "drop_diamond_shape"
+          : "fashion_earring_diamond_shape";
+
+      const currentShapes = activeFilters[currentFilterKey] as string[];
+      if (!checked && currentShapes.filter((s) => s !== shape).length === 0) {
+        category1Array.delete(currentSubcategory);
+      }
+
+      const category1Value = Array.from(category1Array).join(",");
+
+      // Update URL params
+      currentParams.set("category1", category1Value);
       currentParams.set("centerStoneShape", shapeArray.join(","));
       if (!currentParams.has("category2")) currentParams.set("category2", "");
       if (!currentParams.has("category3")) currentParams.set("category3", "");
+
+      // Also update the URL for the category-specific filter (already defined above)
+      const categoryShapes = (
+        activeFilters[currentFilterKey] as string[]
+      ).slice();
+      if (checked) {
+        if (!categoryShapes.includes(shape)) {
+          categoryShapes.push(shape);
+        }
+      } else {
+        const idx = categoryShapes.indexOf(shape);
+        if (idx > -1) {
+          categoryShapes.splice(idx, 1);
+        }
+      }
+
+      if (categoryShapes.length > 0) {
+        currentParams.set(currentFilterKey, categoryShapes.join(","));
+      } else {
+        currentParams.delete(currentFilterKey);
+      }
+
       setSearchParams(currentParams);
 
       setActiveFilters((prev) => ({
         ...prev,
-        category1: c1,
+        category1: category1Value,
         centerStoneShape: shapeArray.join(","),
+        [currentFilterKey]: categoryShapes,
       }));
     };
 
     const setEarringCategory2 = (
       groupTitle: string,
-      rawValue: string,
-      checked: boolean
+      category2Value: string,
+      hasStyles: boolean
     ) => {
-      const c1 = mapEarringGroupToCategory1(groupTitle);
-      let c2 = rawValue;
-      if (rawValue.startsWith("Small")) c2 = "Small";
-      if (rawValue.startsWith("Medium")) c2 = "Medium";
-      if (rawValue.startsWith("Large")) c2 = "Large";
+      // category2Value can be comma-separated styles or length values
+      // This contains ALL selected styles from all subcategories
+
+      // Check if this is a length value (contains "mm")
+      const isLengthValue = category2Value.includes("mm");
+
+      // Parse existing category2 to separate styles and lengths (ARRAY, not single value)
+      const existingCategory2 = activeFilters.category2;
+      let existingStyles: string[] = [];
+      let existingLengths: string[] = [];
+
+      if (existingCategory2) {
+        const parts = existingCategory2.split(",");
+        existingStyles = parts.filter(
+          (p) => p && !["Small", "Medium", "Large"].includes(p)
+        );
+        existingLengths = parts.filter((p) =>
+          ["Small", "Medium", "Large"].includes(p)
+        );
+      }
+
+      // Determine what to update
+      let newLengths = existingLengths;
+      let newStyles = existingStyles;
+
+      if (isLengthValue) {
+        // Setting lengths - extract ALL lengths from category2Value and preserve existing styles
+        newLengths = category2Value
+          .split(",")
+          .map((item) => {
+            if (item.startsWith("Small")) return "Small";
+            else if (item.startsWith("Medium")) return "Medium";
+            else if (item.startsWith("Large")) return "Large";
+            return "";
+          })
+          .filter((s) => s);
+      } else {
+        // Setting styles - preserve existing lengths
+        newStyles = category2Value.split(",").filter((s) => s && s.trim());
+      }
+
+      // Build final category2 with both styles and ALL lengths
+      const finalCategory2Parts: string[] = [];
+      if (newStyles.length > 0) finalCategory2Parts.push(...newStyles);
+      if (newLengths.length > 0) finalCategory2Parts.push(...newLengths);
+      const finalCategory2 = finalCategory2Parts.join(",");
 
       const currentParams = new URLSearchParams(searchParams);
-      currentParams.set("category1", c1);
-      currentParams.set("category2", checked ? c2 : "");
-      if (!currentParams.has("category3")) currentParams.set("category3", "");
-      setSearchParams(currentParams);
 
+      // Build category1 from all subcategories that have selected shapes (preserve existing selections)
+      const category1Array = new Set<string>();
+
+      // CRITICAL: Preserve existing category1 subcategories from URL/state
+      const existingCategory1 = activeFilters.category1;
+      if (existingCategory1) {
+        existingCategory1.split(",").forEach((cat) => {
+          if (cat.trim()) category1Array.add(cat.trim());
+        });
+      }
+
+      // Check each earring subcategory to see if it has any selected shapes
+      if (activeFilters.studs_diamond_shape.length > 0) {
+        category1Array.add("studs");
+      }
+      if (activeFilters.hoops_diamond_shape.length > 0) {
+        category1Array.add("hoops/huggies");
+      }
+      if (activeFilters.drop_diamond_shape.length > 0) {
+        category1Array.add("drop earrings");
+      }
+      if (activeFilters.fashion_earring_diamond_shape.length > 0) {
+        category1Array.add("fashion earrings");
+      }
+
+      // Add current subcategory if setting category2
+      if (hasStyles) {
+        const currentSubcategory = mapEarringGroupToCategory1(groupTitle);
+        category1Array.add(currentSubcategory);
+      }
+
+      const category1Value = Array.from(category1Array).join(",");
+
+      // Extract the style values (excluding length) for the style array
+      const styleValues = newStyles;
+
+      // Extract length values from category2Value for earring_length persistence
+      const lengthValues = category2Value
+        .split(",")
+        .filter((s) => s && s.includes("mm"));
+
+      // Update activeFilters BEFORE setSearchParams so state is ready when URL changes
       setActiveFilters((prev) => ({
         ...prev,
-        category1: c1,
-        category2: checked ? c2 : "",
+        category1: category1Value,
+        category2: hasStyles ? finalCategory2 : "",
+        style: styleValues,
+        earring_length:
+          lengthValues.length > 0 ? lengthValues : prev.earring_length,
       }));
+
+      // Set category2 with both styles and length
+      currentParams.set("category1", category1Value);
+      currentParams.set("category2", hasStyles ? finalCategory2 : "");
+      if (!currentParams.has("category3")) currentParams.set("category3", "");
+
+      // CRITICAL: Also set the "style" URL parameter for checkbox persistence
+      if (styleValues.length > 0) {
+        currentParams.set("style", styleValues.join(","));
+      } else {
+        currentParams.delete("style");
+      }
+
+      // CRITICAL: Also set the "earring_length" URL parameter for length checkbox persistence
+      if (lengthValues.length > 0) {
+        currentParams.set("earring_length", lengthValues.join(","));
+      } else {
+        currentParams.delete("earring_length");
+      }
+
+      setSearchParams(currentParams);
     };
     // Enhanced filter components with URL updates and category tracking
     const renderStyleOptions = (
@@ -859,17 +1070,38 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               type="checkbox"
               checked={activeFilters.style.includes(style)}
               onChange={(e) => {
-                updateUrlFilters("style", style, e.target.checked);
-                // Update appropriate category when style is selected
-                if (e.target.checked) {
-                  updateUrlFilters(categoryType, categoryName, true);
-                }
-                // For earrings, map sub-option to category2 without changing UI
+                // For earrings, ONLY use setEarringCategory2 (don't call updateUrlFilters)
                 if (
                   category === "earrings" &&
                   categoryType === "earring_category"
                 ) {
-                  setEarringCategory2(categoryName, style, e.target.checked);
+                  // Update style array
+                  const currentStyles = activeFilters.style.slice();
+                  if (e.target.checked) {
+                    if (!currentStyles.includes(style)) {
+                      currentStyles.push(style);
+                    }
+                  } else {
+                    const idx = currentStyles.indexOf(style);
+                    if (idx > -1) {
+                      currentStyles.splice(idx, 1);
+                    }
+                  }
+
+                  // Call setEarringCategory2 with the combined styles
+                  const category2Value = currentStyles.join(",");
+                  setEarringCategory2(
+                    categoryName,
+                    category2Value,
+                    currentStyles.length > 0
+                  );
+                } else {
+                  // For non-earrings, use the regular updateUrlFilters
+                  updateUrlFilters("style", style, e.target.checked);
+                  // Update appropriate category when style is selected
+                  if (e.target.checked) {
+                    updateUrlFilters(categoryType, categoryName, true);
+                  }
                 }
               }}
             />
@@ -892,14 +1124,34 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               type="checkbox"
               checked={activeFilters.earring_length.includes(item)}
               onChange={(e) => {
-                updateUrlFilters("earring_length", item, e.target.checked);
-                // Also update earring_category when length is selected
-                if (e.target.checked) {
-                  updateUrlFilters("earring_category", earringCategory, true);
-                }
-                // Map length to category2 in earrings API
+                // For earrings, ONLY use setEarringCategory2 (don't call updateUrlFilters)
                 if (category === "earrings") {
-                  setEarringCategory2(earringCategory, item, e.target.checked);
+                  // Update earring_length array
+                  const currentLengths = activeFilters.earring_length.slice();
+                  if (e.target.checked) {
+                    if (!currentLengths.includes(item)) {
+                      currentLengths.push(item);
+                    }
+                  } else {
+                    const idx = currentLengths.indexOf(item);
+                    if (idx > -1) {
+                      currentLengths.splice(idx, 1);
+                    }
+                  }
+
+                  // Call setEarringCategory2 with the combined lengths
+                  const category2Value = currentLengths.join(",");
+                  setEarringCategory2(
+                    earringCategory,
+                    category2Value,
+                    currentLengths.length > 0
+                  );
+                } else {
+                  // For non-earrings, use the regular updateUrlFilters
+                  updateUrlFilters("earring_length", item, e.target.checked);
+                  if (e.target.checked) {
+                    updateUrlFilters("earring_category", earringCategory, true);
+                  }
                 }
               }}
             />
@@ -925,7 +1177,25 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 }
                 // Map drop styles to category2 for earrings
                 if (category === "earrings") {
-                  setEarringCategory2(earringCategory, item, e.target.checked);
+                  // Update style array
+                  const currentStyles = activeFilters.style.slice();
+                  if (e.target.checked) {
+                    if (!currentStyles.includes(item)) {
+                      currentStyles.push(item);
+                    }
+                  } else {
+                    const idx = currentStyles.indexOf(item);
+                    if (idx > -1) {
+                      currentStyles.splice(idx, 1);
+                    }
+                  }
+
+                  const category2Value = currentStyles.join(",");
+                  setEarringCategory2(
+                    earringCategory,
+                    category2Value,
+                    currentStyles.length > 0
+                  );
                 }
               }}
             />
@@ -963,11 +1233,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         diamondShapeFilterKey
       ] as string[];
 
-      // For earrings, also check centerStoneShape for selection state
+      // For earrings, use the category-specific shape arrays (same as other categories)
       const isEarrings = (category as string) === "earrings";
-      const centerStoneShapes = isEarrings
-        ? (activeFilters.centerStoneShape || "").split(",").filter((s) => s)
-        : [];
 
       return (
         <div
@@ -979,9 +1246,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           }}
         >
           {shapes.map((shape) => {
-            const isSelected = isEarrings
-              ? centerStoneShapes.includes(shape.toLowerCase())
-              : categoryDiamondShapes.includes(shape);
+            // Always check the category-specific array, not the shared centerStoneShape
+            const isSelected = categoryDiamondShapes.includes(shape);
 
             return (
               <label
@@ -1005,7 +1271,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                   checked={isSelected}
                   onChange={(e) => {
                     if (isEarrings) {
-                      // Handle earrings with comma-separated centerStoneShape
+                      // Handle earrings - updates both category-specific array AND centerStoneShape
                       setEarringCenterStoneShape(
                         ringCategory,
                         shape,
@@ -1118,6 +1384,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1136,6 +1404,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
             <div className="eng-sublist pt-2">
               <p className="eng-label-muted">STYLE</p>
@@ -1158,6 +1428,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1182,6 +1454,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1200,6 +1474,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup> */}
         </FilterGroup>
@@ -1224,6 +1500,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1248,6 +1526,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1256,7 +1536,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.fashion_earring_diamond_shape}
-              showImages={false}
+              showImages={true}
               ringCategory="Fashion Earrings"
               diamondShapeFilterKey="fashion_earring_diamond_shape"
             />
@@ -1274,6 +1554,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1282,7 +1564,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.drop_diamond_shape}
-              showImages={false}
+              showImages={true}
               ringCategory="Drop Earrings"
               diamondShapeFilterKey="drop_diamond_shape"
             />
@@ -1296,6 +1578,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
         </FilterGroup>
@@ -1324,6 +1608,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1332,7 +1618,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.fashion_pendant_diamond_shape}
-              showImages={false}
+              showImages={true}
               ringCategory="Fashion Pendants"
               diamondShapeFilterKey="fashion_pendant_diamond_shape"
             />
@@ -1350,6 +1636,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1372,6 +1660,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
         </FilterGroup>
@@ -1400,6 +1690,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1426,6 +1718,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1445,6 +1739,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
 
@@ -1464,6 +1760,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               maxPrice={maxPriceUI}
               onMinChange={handleMinChange}
               onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
             />
           </FilterGroup>
         </FilterGroup>
@@ -1500,7 +1798,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         {/* API Applied Filters Display */}
         {appliedFilters && !loading && (
-          <div className="hidden mb-4 p-3 bg-blue-50 rounded-lg">
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-sm font-medium text-blue-900 mb-2">
               Applied Filters (from API):
             </p>

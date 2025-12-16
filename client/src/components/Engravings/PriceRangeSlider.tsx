@@ -5,6 +5,8 @@ interface PriceRangeSliderProps {
   maxPrice: number;
   onMinChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onMaxChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onMinRelease?: () => void;
+  onMaxRelease?: () => void;
 }
 
 export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
@@ -12,6 +14,8 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
   maxPrice,
   onMinChange,
   onMaxChange,
+  onMinRelease,
+  onMaxRelease,
 }) => {
   // Define the slider absolute maximum so it can be reused (500k)
   const SLIDER_MAX = 500000;
@@ -62,6 +66,8 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
           max={SLIDER_MAX}
           value={maxPrice}
           onChange={onMaxChange}
+          onMouseUp={onMaxRelease}
+          onTouchEnd={onMaxRelease}
           className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none z-10
                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5
                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-teal-500 [&::-webkit-slider-thumb]:border-2 
@@ -78,6 +84,8 @@ export const PriceRangeSlider: React.FC<PriceRangeSliderProps> = ({
           max={SLIDER_MAX}
           value={minPrice}
           onChange={onMinChange}
+          onMouseUp={onMinRelease}
+          onTouchEnd={onMinRelease}
           className="absolute inset-0 w-full appearance-none bg-transparent pointer-events-none z-20
                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5
                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:border-2 
