@@ -6,6 +6,7 @@ interface FilterGroupProps {
   children: React.ReactNode;
   defaultOpen?: boolean;
   isSubGroup?: boolean;
+  onToggle?: (isOpen: boolean) => void;
 }
 
 export const FilterGroup: React.FC<FilterGroupProps> = ({
@@ -13,9 +14,16 @@ export const FilterGroup: React.FC<FilterGroupProps> = ({
   children,
   defaultOpen = false,
   isSubGroup = false,
+  onToggle,
 }) => {
+  const handleToggle = (e: React.SyntheticEvent<HTMLDetailsElement>) => {
+    if (onToggle) {
+      onToggle(e.currentTarget.open);
+    }
+  };
+
   return (
-    <details className="eng-group" open={defaultOpen}>
+    <details className="eng-group" open={defaultOpen} onToggle={handleToggle}>
       <summary>
         {isSubGroup ? (
           <span

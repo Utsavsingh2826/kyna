@@ -13,7 +13,6 @@ import { logoutSucceeded } from "@/store/slices/authSlice";
 import { clearAccessToken } from "@/lib/authToken";
 import {
   Menu,
-  Search,
   User,
   Heart,
   ShoppingCart,
@@ -122,9 +121,7 @@ export default function Navbar() {
                 <button
                   aria-label="Search"
                   className="p-2 hover:text-foreground"
-                >
-                  <Search className="h-5 w-5 text-white" />
-                </button>
+                ></button>
                 <div className="relative" ref={userMenuRef}>
                   <button
                     aria-label="Account"
@@ -401,24 +398,24 @@ function getLinkForItem(sectionTitle: string, itemLabel: string): string {
         case "Studs":
           return "/earrings?category1=studs&centerStoneShape=&category2=&category3=";
         case "Hoops / Huggies":
-          return "/earrings?category1=hoops&centerStoneShape=&category2=&category3=";
+          return "/earrings?category1=hoops/huggies&centerStoneShape=&category2=&category3=";
         case "Halo Earrings":
           return "/earrings?category1=halo&centerStoneShape=&category2=&category3=";
         case "Fashion Earrings":
-          return "/earrings?category1=fashion&centerStoneShape=&category2=&category3=";
+          return "/earrings?category1=fashion+earrings&centerStoneShape=&category2=&category3=";
         case "Drop Earrings":
-          return "/earrings?category1=drop&centerStoneShape=&category2=&category3=";
+          return "/earrings?category1=drop+earrings&centerStoneShape=&category2=&category3=";
         default:
           return "/earrings";
       }
     case "Pendants":
       switch (itemLabel) {
         case "Solitaire Pendants":
-          return "/pendants?ring_category=Solitaire+Pendants";
+          return "/pendants?pendant_category=Solitaire+Pendants";
         case "Fashion Pendants":
-          return "/pendants?ring_category=Fashion+Pendants";
+          return "/pendants?pendant_category=Fashion+Pendants";
         case "Solitaire Halo":
-          return "/pendants?ring_category=Solitaire+Halo";
+          return "/pendants?pendant_category=Solitaire+Halo";
         default:
           return "/pendants";
       }

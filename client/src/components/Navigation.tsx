@@ -23,7 +23,7 @@ const Navigation: React.FC = () => {
     ["/build-your-jewellery/Rings", "Build Your Jewellery"],
   ];
   const rightLinks = [
-    ["/rings?ring_category=Men%27s+Rings", "Men's Rings"],
+    ["/rings?ring_category=Mens+Rings", "Men's Rings"],
     [
       "/earrings?category1=studs&centerStoneShape=&category2=&category3=men%27s+stud",
       "Men's Studs",
@@ -133,9 +133,12 @@ const Navigation: React.FC = () => {
               <div className="absolute top-full left-0 bg-white shadow-lg border rounded-md w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-2">
                   {[
-                    ["?ring_category=Solitaire+Pendants", "Solitaire Pendants"],
-                    ["?ring_category=Fashion+Pendants", "Fashion Pendants"],
-                    ["?ring_category=Solitaire+Halo", "Solitaire Halo"],
+                    [
+                      "?pendant_category=Solitaire+Pendants",
+                      "Solitaire Pendants",
+                    ],
+                    ["?pendant_category=Fashion+Pendants", "Fashion Pendants"],
+                    ["?pendant_category=Solitaire+Halo", "Solitaire Halo"],
                   ].map(([path, label]) => (
                     <Link
                       key={path}

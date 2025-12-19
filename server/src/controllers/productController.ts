@@ -44,37 +44,855 @@ const parseNumeric = (v: any): number => {
   return Number(cleaned) || NaN;
 };
 
+// export const getProductsByCategory = async (req: Request, res: Response) => {
+//   try {
+//     const rawCategory = (req.params.category || "").toString();
+//     if (!rawCategory)
+//       return res
+//         .status(400)
+//         .json({ success: false, message: "Category required" });
+//     const category = rawCategory.toUpperCase();
+
+//     const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+//     const limit = Math.max(
+//       1,
+//       Math.min(100, parseInt((req.query.limit as string) || "20", 10))
+//     );
+//     const skip = (page - 1) * limit;
+
+//     // Price filters
+//     const minPrice = n(req.query.minPrice);
+//     const maxPrice = n(req.query.maxPrice);
+
+//     // centerStoneShape - always passed as centerStoneShape
+//     const shapesRaw = (req.query.centerStoneShape || "").toString().trim();
+//     const shapesUpper = shapesRaw
+//       ? shapesRaw.split(",").map((s) => s.trim().toUpperCase())
+//       : [];
+
+//     // ringType / ring -> SKU prefixes (for rings)
+//     const ringRaw = (req.query.ringType || req.query.ring || "")
+//       .toString()
+//       .trim();
+//     const ringTokens = ringRaw ? ringRaw.split(",").map((s) => s.trim()) : [];
+//     const mapRingTypeToPrefixes = (token: string): string[] => {
+//       const t = token
+//         .trim()
+//         .toLowerCase()
+//         .replace(/[-_\s]+/g, "");
+//       if (
+//         [
+//           "engagement",
+//           "eng",
+//           "engring",
+//           "engagementring",
+//           "engagement-ring",
+//         ].includes(t)
+//       )
+//         return ["ENG"];
+//       if (
+//         ["solitaire", "sol", "sr", "solitairering", "solitaire-ring"].includes(
+//           t
+//         )
+//       )
+//         return ["SR"];
+//       if (["fashion", "fash", "fr", "fashionring", "fashion-ring"].includes(t))
+//         return ["FR"];
+//       if (["men", "mens", "gr", "menring", "men-ring"].includes(t))
+//         return ["GR"];
+//       if (/^(eng|sr|fr|gr)$/i.test(t)) return [t.toUpperCase()];
+//       return [];
+//     };
+//     const ringPrefixes = Array.from(
+//       new Set(ringTokens.flatMap(mapRingTypeToPrefixes))
+//     );
+
+//     // category1/category2/category3 filters (substring, case-insensitive)
+//     const parseCatParam = (v: any) =>
+//       v
+//         ? String(v)
+//             .split(",")
+//             .map((s: string) => s.trim())
+//             .filter(Boolean)
+//             .map((x: string) => x.toUpperCase())
+//         : [];
+//     const cat1Filters = parseCatParam(req.query.category1);
+//     const cat2Filters = parseCatParam(req.query.category2);
+//     const cat3Filters = parseCatParam(req.query.category3);
+
+//     // metalTypes filter (comma-separated, case-insensitive)
+//     const parseMetalParam = (v: any) =>
+//       v
+//         ? String(v)
+//             .split(",")
+//             .map((s: string) => s.trim().toUpperCase())
+//             .filter(Boolean)
+//         : [];
+//     const metalFilters = parseMetalParam(req.query.metalTypes);
+
+//     // NEW: isEngraving filter (only meaningful for RINGS)
+//     const isEngravingRaw = (req.query.isEngraving ?? "")
+//       .toString()
+//       .trim()
+//       .toLowerCase();
+//     const isEngraving =
+//       isEngravingRaw === "true" ||
+//       isEngravingRaw === "1" ||
+//       isEngravingRaw === "yes";
+
+//     // helpers
+//     const normalizeStr = (s: any): string => {
+//       if (s == null) return "";
+//       return String(s)
+//         .replace(/[^\w\s]/g, " ")
+//         .replace(/\s+/g, " ")
+//         .trim()
+//         .toUpperCase();
+//     };
+
+//     const centerShapeArrayExpr = {
+//       $cond: [
+//         { $isArray: "$attributes.centerStoneShape" },
+//         "$attributes.centerStoneShape",
+//         {
+//           $cond: [
+//             { $in: ["$attributes.centerStoneShape", [null]] },
+//             [],
+//             ["$attributes.centerStoneShape"],
+//           ],
+//         },
+//       ],
+//     };
+
+//     // categories that require variant-dependent checks and pricing
+//     const VARIANT_PRICE_CATEGORIES = new Set([
+//       "RINGS",
+//       "EARRINGS",
+//       "PENDANTS",
+//       "BRACELETS",
+//     ]);
+
+//     const variantDependentFilterPresent =
+//       shapesUpper.length > 0 ||
+//       ringPrefixes.length > 0 ||
+//       (VARIANT_PRICE_CATEGORIES.has(category) &&
+//         (!Number.isNaN(minPrice) || !Number.isNaN(maxPrice)));
+
+//     // Build aggregation pipeline
+//     const pipeline: any[] = [{ $match: { category } }];
+
+//     // ring/sku-prefix filter
+//     if (
+//       (category === "RINGS" ||
+//         category === "EARRINGS" ||
+//         category === "PENDANTS" ||
+//         category === "BRACELETS") &&
+//       ringPrefixes.length > 0
+//     ) {
+//       const prefixExprs = ringPrefixes.map((prefix) => ({
+//         $regexMatch: {
+//           input: { $ifNull: ["$modelSku", ""] },
+//           regex: `^${prefix}`,
+//           options: "i",
+//         },
+//       }));
+//       pipeline.push({ $match: { $expr: { $or: prefixExprs } } });
+//     }
+
+//     // attribute category filters (substring)
+//     if (cat1Filters.length > 0) {
+//       pipeline.push({
+//         $match: {
+//           $or: cat1Filters.map((v) => ({
+//             "attributes.category1": { $regex: v, $options: "i" },
+//           })),
+//         },
+//       });
+//     }
+//     if (cat2Filters.length > 0) {
+//       pipeline.push({
+//         $match: {
+//           $or: cat2Filters.map((v) => ({
+//             "attributes.category2": { $regex: v, $options: "i" },
+//           })),
+//         },
+//       });
+//     }
+//     if (cat3Filters.length > 0) {
+//       pipeline.push({
+//         $match: {
+//           $or: cat3Filters.map((v) => ({
+//             "attributes.category3": { $regex: v, $options: "i" },
+//           })),
+//         },
+//       });
+//     }
+
+//     // metalTypes DB-level filter (matches if any attribute metalType equals requested metals)
+//     if (metalFilters.length > 0) {
+//       pipeline.push({
+//         $match: {
+//           $expr: {
+//             $gt: [
+//               {
+//                 $size: {
+//                   $filter: {
+//                     input: { $ifNull: ["$attributes.metalTypes", []] },
+//                     as: "mt",
+//                     cond: { $in: [{ $toUpper: "$$mt" }, metalFilters] },
+//                   },
+//                 },
+//               },
+//               0,
+//             ],
+//           },
+//         },
+//       });
+//     }
+
+//     // DB-level shape match only for categories where attributes.centerStoneShape is authoritative
+//     if (
+//       shapesUpper.length > 0 &&
+//       category !== "EARRINGS" &&
+//       category !== "PENDANTS"
+//     ) {
+//       pipeline.push({
+//         $match: {
+//           $expr: {
+//             $gt: [
+//               {
+//                 $size: {
+//                   $filter: {
+//                     input: centerShapeArrayExpr,
+//                     as: "sh",
+//                     cond: { $in: [{ $toUpper: "$$sh" }, shapesUpper] },
+//                   },
+//                 },
+//               },
+//               0,
+//             ],
+//           },
+//         },
+//       });
+//     }
+
+//     // Project + lookup first variant — include engraving fields in projection
+//     pipeline.push(
+//       {
+//         $project: {
+//           modelSku: 1,
+//           "attributes.metalTypes": 1,
+//           "attributes.goldKarats": 1,
+//           "attributes.centerStoneShape": 1,
+//           "attributes.category1": 1,
+//           "attributes.category2": 1,
+//           "attributes.category3": 1,
+//           "seo.metaTitle": 1,
+//           engraving: 1,
+//           engravingDetailIds: 1, // left for compatibility but NOT used for engraving decision anymore
+//           firstVariantSku: { $arrayElemAt: ["$variantIds", 0] },
+//           variantCount: { $size: { $ifNull: ["$variantIds", []] } },
+//         },
+//       },
+//       {
+//         $lookup: {
+//           from: "variants",
+//           localField: "firstVariantSku",
+//           foreignField: "sku",
+//           as: "firstVariantDoc",
+//         },
+//       },
+//       {
+//         $unwind: { path: "$firstVariantDoc", preserveNullAndEmptyArrays: true },
+//       },
+//       {
+//         $project: {
+//           modelSku: 1,
+//           metalTypes: "$attributes.metalTypes",
+//           goldKarats: "$attributes.goldKarats",
+//           title: {
+//             $ifNull: [
+//               "$firstVariantDoc.meta.title",
+//               "$seo.metaTitle",
+//               "$title",
+//             ],
+//           },
+//           variantCount: 1,
+//           firstVariantSku: 1,
+//           firstVariantDoc: 1,
+//           attributesCenterShape: "$attributes.centerStoneShape",
+//           attributesCategory1: "$attributes.category1",
+//           attributesCategory2: "$attributes.category2",
+//           attributesCategory3: "$attributes.category3",
+//           engraving: 1,
+//           engravingDetailIds: 1,
+//         },
+//       }
+//     );
+
+//     // NEW: if isEngraving=true and category is RINGS, enforce DB-level filter now that variant is available
+//     // BUT per your instruction: only check product engraving object presence — do NOT check ids or variant fields.
+//     if (category === "RINGS" && isEngraving) {
+//       pipeline.push({
+//         $match: {
+//           $expr: {
+//             // require the product-level 'engraving' field to be an object
+//             $eq: [{ $type: "$engraving" }, "object"],
+//           },
+//         },
+//       });
+//     }
+
+//     pipeline.push({ $sort: { modelSku: 1 } });
+//     if (!variantDependentFilterPresent)
+//       pipeline.push({ $skip: skip }, { $limit: limit });
+
+//     const ProductModel = getCollectionModel("products");
+//     const docs = await ProductModel.aggregate(pipeline)
+//       .allowDiskUse(true)
+//       .exec();
+
+//     // Prepare pricing/defaults
+//     const conn = getCatalogConnection();
+//     const finalPricingColl = conn.collection("final_pricing");
+//     const defaultsColl = conn.collection("defaultValues");
+
+//     // ----------------- Helper functions reused for robust default lookup -----------------
+//     const toNumberRobust = (v: unknown): number => {
+//       if (v == null) return NaN;
+//       if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+//       if (typeof v === "string") {
+//         const cleaned = v.replace(/[₹$,£€\s]/g, "").replace(/,/g, "");
+//         const n = Number(cleaned);
+//         if (!Number.isNaN(n) && Number.isFinite(n)) return n;
+//         const m = cleaned.match(/-?\d+(\.\d+)?/);
+//         if (m) {
+//           const nf = Number(m[0]);
+//           return Number.isFinite(nf) ? nf : NaN;
+//         }
+//         return NaN;
+//       }
+//       try {
+//         const s = (v as any).toString?.();
+//         const n = Number(s);
+//         return Number.isFinite(n) ? n : NaN;
+//       } catch {
+//         return NaN;
+//       }
+//     };
+
+//     const normalizeKey = (k: string) =>
+//       k
+//         .toString()
+//         .trim()
+//         .toLowerCase()
+//         .replace(/[^a-z0-9]/g, "");
+
+//     const findNumericDefault = (
+//       obj: Record<string, any>,
+//       candidateNames: string[]
+//     ): { value: number; matchedKey?: string } => {
+//       if (!obj || typeof obj !== "object") return { value: NaN };
+
+//       const candNorm = candidateNames.map((c) => normalizeKey(c));
+
+//       // 1) exact-normalized match
+//       for (const [k, v] of Object.entries(obj)) {
+//         const kn = normalizeKey(k);
+//         if (candNorm.includes(kn)) {
+//           const val = toNumberRobust(v);
+//           if (!Number.isNaN(val)) return { value: val, matchedKey: k };
+//         }
+//       }
+
+//       // 2) substring-normalized match
+//       for (const [k, v] of Object.entries(obj)) {
+//         const kn = normalizeKey(k);
+//         for (const cn of candNorm) {
+//           if (kn.includes(cn) || cn.includes(kn)) {
+//             const val = toNumberRobust(v);
+//             if (!Number.isNaN(val)) return { value: val, matchedKey: k };
+//           }
+//         }
+//       }
+
+//       // 3) one-level nested objects
+//       for (const [k, v] of Object.entries(obj)) {
+//         if (v && typeof v === "object" && !Array.isArray(v)) {
+//           for (const [k2, v2] of Object.entries(v as Record<string, any>)) {
+//             const kn2 = normalizeKey(k2);
+//             if (candNorm.includes(kn2)) {
+//               const val = toNumberRobust(v2);
+//               if (!Number.isNaN(val))
+//                 return { value: val, matchedKey: `${k}.${k2}` };
+//             }
+//             for (const cn of candNorm) {
+//               if (kn2.includes(cn) || cn.includes(kn2)) {
+//                 const val = toNumberRobust(v2);
+//                 if (!Number.isNaN(val))
+//                   return { value: val, matchedKey: `${k}.${k2}` };
+//               }
+//             }
+//           }
+//         }
+//       }
+
+//       return { value: NaN };
+//     };
+//     // ----------------- end helpers -----------------
+
+//     // Merge all default docs (same approach as used in the other controller)
+//     const defaultDocs = (await defaultsColl.find({}).toArray()) as Record<
+//       string,
+//       any
+//     >[];
+//     const mergedDefaults: Record<string, any> = Object.assign(
+//       {},
+//       ...defaultDocs.map((doc) => {
+//         const copy = { ...doc };
+//         delete (copy as any)._id;
+//         return copy;
+//       })
+//     );
+
+//     // Resolve base metal prices from merged defaults robustly
+//     const goldRes = findNumericDefault(mergedDefaults, [
+//       "goldValue24PerGram",
+//       "goldValue24",
+//       "goldPerGram",
+//       "gold24",
+//       "goldvalue24pergram",
+//     ]);
+//     const platinumRes = findNumericDefault(mergedDefaults, [
+//       "platinumPricePerGram",
+//       "platinumPricePerGrm",
+//       "platinumPerGram",
+//       "ptPricePerGram",
+//     ]);
+//     const silverRes = findNumericDefault(mergedDefaults, [
+//       "silverPricePerGram",
+//       "silverPerGram",
+//       "silverPrice",
+//       "svPricePerGram",
+//     ]);
+//     const titaniumRes = findNumericDefault(mergedDefaults, [
+//       "titaniumPricePerGram",
+//       "titaniumPerGram",
+//       "titaniumPrice",
+//     ]);
+
+//     const goldValue24 = goldRes.value;
+//     const silverPricePerGram = silverRes.value;
+//     const platinumPricePerGram = platinumRes.value;
+//     const titaniumPricePerGram = titaniumRes.value;
+
+//     // Prepare normalized output
+//     const normalized: any[] = [];
+
+//     for (const d of docs) {
+//       // image
+//       let imageUrl: string | null = null;
+//       if (
+//         Array.isArray(d.firstVariantDoc?.images) &&
+//         d.firstVariantDoc.images.length > 0
+//       ) {
+//         const img = d.firstVariantDoc.images[1] ?? d.firstVariantDoc.images[1];
+//         if (img) imageUrl = (img.url ?? img.filename) || null;
+//       }
+
+//       const engravingObj = d.engraving ?? null;
+//       const engravingMaxChars =
+//         engravingObj && typeof engravingObj.maxCharacters === "number"
+//           ? engravingObj.maxCharacters
+//           : null;
+//       const engravingFontSize =
+//         engravingObj && engravingObj.fontSize != null
+//           ? engravingObj.fontSize
+//           : null;
+
+//       const baseOut: any = {
+//         _id: d._id, // Add MongoDB _id for cart compatibility
+//         modelSku: d.modelSku,
+//         metalTypes: Array.isArray(d.metalTypes)
+//           ? d.metalTypes
+//           : d.metalTypes
+//           ? [d.metalTypes]
+//           : [],
+//         title: d.title ?? null,
+//         variantCount: d.variantCount ?? 0,
+//         firstVariantSku: d.firstVariantSku ?? null,
+//         firstVariantImageUrl: imageUrl,
+//         attributesCategory1: d.attributesCategory1 ?? null,
+//         attributesCategory2: d.attributesCategory2 ?? null,
+//         attributesCategory3: d.attributesCategory3 ?? null,
+//         // engraving fields returned only for rings (per request) — keep null otherwise
+//         engravingMaxCharacters: category === "RINGS" ? engravingMaxChars : null,
+//         engravingFontSize: category === "RINGS" ? engravingFontSize : null,
+//         sellingPrice: null,
+//         priceIncomplete: true,
+//       };
+
+//       // If isEngraving filter requested but engraving info missing, skip.
+//       if (category === "RINGS" && isEngraving) {
+//         // Per requirement: only consider product-level engraving object presence.
+//         if (!d.engraving || typeof d.engraving !== "object") {
+//           continue;
+//         }
+//       }
+
+//       // SHAPE check (JS-side for EARRINGS and PENDANTS; extra check for other categories too)
+//       if (shapesUpper.length > 0) {
+//         const productShapes: string[] = [];
+//         if (d.attributesCenterShape) {
+//           if (Array.isArray(d.attributesCenterShape))
+//             productShapes.push(
+//               ...d.attributesCenterShape.map((s: any) => normalizeStr(s))
+//             );
+//           else productShapes.push(normalizeStr(d.attributesCenterShape));
+//         }
+
+//         const variant = d.firstVariantDoc;
+//         const variantShapes: string[] = [];
+//         if (variant) {
+//           const stonesArr: any[] =
+//             Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
+//               ? variant.meta.stones
+//               : Array.isArray(variant?.stones)
+//               ? variant.stones
+//               : [];
+
+//           for (const st of stonesArr) {
+//             if (category === "EARRINGS" || category === "PENDANTS") {
+//               if (st?.diamondGemstoneShapes) {
+//                 if (Array.isArray(st.diamondGemstoneShapes))
+//                   variantShapes.push(
+//                     ...st.diamondGemstoneShapes.map((x: any) => normalizeStr(x))
+//                   );
+//                 else variantShapes.push(normalizeStr(st.diamondGemstoneShapes));
+//               }
+//               if (st?.diamondGemstoneShape)
+//                 variantShapes.push(normalizeStr(st.diamondGemstoneShape));
+//             } else if (category === "BRACELETS") {
+//               if (st?.centerStoneShape)
+//                 variantShapes.push(normalizeStr(st.centerStoneShape));
+//               if (st?.diamondGemstoneShapes) {
+//                 if (Array.isArray(st.diamondGemstoneShapes))
+//                   variantShapes.push(
+//                     ...st.diamondGemstoneShapes.map((x: any) => normalizeStr(x))
+//                   );
+//                 else variantShapes.push(normalizeStr(st.diamondGemstoneShapes));
+//               }
+//             } else {
+//               if (st?.centerStoneShape)
+//                 variantShapes.push(normalizeStr(st.centerStoneShape));
+//               if (st?.diamondGemstoneShapes) {
+//                 if (Array.isArray(st.diamondGemstoneShapes))
+//                   variantShapes.push(
+//                     ...st.diamondGemstoneShapes.map((x: any) => normalizeStr(x))
+//                   );
+//                 else variantShapes.push(normalizeStr(st.diamondGemstoneShapes));
+//               }
+//               if (st?.diamondGemstoneShape)
+//                 variantShapes.push(normalizeStr(st.diamondGemstoneShape));
+//             }
+
+//             if (Array.isArray(st?.sequences)) {
+//               for (const seq of st.sequences) {
+//                 if (category === "EARRINGS" || category === "PENDANTS") {
+//                   if (seq?.diamondGemstoneShapes) {
+//                     if (Array.isArray(seq.diamondGemstoneShapes))
+//                       variantShapes.push(
+//                         ...seq.diamondGemstoneShapes.map((x: any) =>
+//                           normalizeStr(x)
+//                         )
+//                       );
+//                     else
+//                       variantShapes.push(
+//                         normalizeStr(seq.diamondGemstoneShapes)
+//                       );
+//                   }
+//                   if (seq?.diamondGemstoneShape)
+//                     variantShapes.push(normalizeStr(seq.diamondGemstoneShape));
+//                 } else if (category === "BRACELETS") {
+//                   if (seq?.centerStoneShape)
+//                     variantShapes.push(normalizeStr(seq.centerStoneShape));
+//                   if (seq?.diamondGemstoneShapes) {
+//                     if (Array.isArray(seq.diamondGemstoneShapes))
+//                       variantShapes.push(
+//                         ...seq.diamondGemstoneShapes.map((x: any) =>
+//                           normalizeStr(x)
+//                         )
+//                       );
+//                     else
+//                       variantShapes.push(
+//                         normalizeStr(seq.diamondGemstoneShapes)
+//                       );
+//                   }
+//                 } else {
+//                   if (seq?.centerStoneShape)
+//                     variantShapes.push(normalizeStr(seq.centerStoneShape));
+//                   if (seq?.diamondGemstoneShapes) {
+//                     if (Array.isArray(seq.diamondGemstoneShapes))
+//                       variantShapes.push(
+//                         ...seq.diamondGemstoneShapes.map((x: any) =>
+//                           normalizeStr(x)
+//                         )
+//                       );
+//                     else
+//                       variantShapes.push(
+//                         normalizeStr(seq.diamondGemstoneShapes)
+//                       );
+//                   }
+//                   if (seq?.diamondGemstoneShape)
+//                     variantShapes.push(normalizeStr(seq.diamondGemstoneShape));
+//                 }
+//               }
+//             }
+//           }
+//         }
+
+//         const combinedShapes = Array.from(
+//           new Set([...productShapes, ...variantShapes].filter(Boolean))
+//         );
+//         const targets = shapesUpper.map((t) => normalizeStr(t));
+//         const matched = combinedShapes.some((h) =>
+//           targets.some((t) => t && (h === t || h.includes(t) || t.includes(h)))
+//         );
+//         if (!matched) continue;
+//       }
+
+//       // PRICE calc for VARIANT_PRICE_CATEGORIES
+//       if (VARIANT_PRICE_CATEGORIES.has(category) && d.firstVariantDoc) {
+//         try {
+//           const variant = d.firstVariantDoc;
+//           const stonesArr: any[] =
+//             Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
+//               ? variant.meta.stones
+//               : Array.isArray(variant?.stones)
+//               ? variant.stones
+//               : [];
+
+//           const includedStones: {
+//             sequence: string;
+//             cts: number;
+//             netWeightGrams: number | null;
+//           }[] = [];
+//           for (let i = 0; i < stonesArr.length; i++) {
+//             const st = stonesArr[i];
+//             const seq =
+//               st?.sequence ||
+//               (Array.isArray(st?.sequences) && st.sequences[0]?.sequence) ||
+//               st?.sequenceNo;
+//             if (!seq) continue;
+//             const cts =
+//               typeof st?.cts === "number"
+//                 ? st.cts
+//                 : Array.isArray(st?.sequences) &&
+//                   typeof st.sequences[0]?.cts === "number"
+//                 ? st.sequences[0].cts
+//                 : null;
+//             if (cts == null) continue;
+//             const net =
+//               st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
+//             if (i > 0 && net !== null) break;
+//             includedStones.push({ sequence: seq, cts, netWeightGrams: net });
+//           }
+
+//           let diamondCost = 0;
+//           let diamondIncomplete = false;
+//           for (const st of includedStones) {
+//             const pricingDoc: any =
+//               (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
+//             const pricePerCt = parseNumeric(
+//               pricingDoc.selling_price ??
+//                 pricingDoc.sellingPrice ??
+//                 pricingDoc.price
+//             );
+//             if (Number.isNaN(pricePerCt)) {
+//               diamondIncomplete = true;
+//               continue;
+//             }
+//             diamondCost += pricePerCt * st.cts;
+//           }
+
+//           const metalType = (
+//             variant?.meta?.metalType ||
+//             (Array.isArray(d.metalTypes) ? d.metalTypes[0] : d.metalTypes) ||
+//             "GOLD"
+//           )
+//             .toString()
+//             .toUpperCase();
+//           let karatStr =
+//             variant?.meta?.metalKt ||
+//             (Array.isArray(d.goldKarats) ? d.goldKarats[0] : d.goldKarats) ||
+//             "18";
+//           const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
+
+//           let metalWeightGrams: number | null =
+//             variant?.meta?.metalWeightGrams != null
+//               ? n(variant.meta.metalWeightGrams)
+//               : variant?.netWeightGrams != null
+//               ? n(variant.netWeightGrams)
+//               : null;
+//           if (
+//             (metalWeightGrams == null || Number.isNaN(metalWeightGrams)) &&
+//             includedStones.length
+//           ) {
+//             const sum = includedStones.reduce(
+//               (acc, s) =>
+//                 acc + (s.netWeightGrams ? Number(s.netWeightGrams) : 0),
+//               0
+//             );
+//             metalWeightGrams = sum > 0 ? sum : null;
+//           }
+
+//           let metalPricePerGram = NaN;
+//           if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
+//             const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
+//             metalPricePerGram = goldValue24 * factor;
+//           } else if (metalType === "SILVER")
+//             metalPricePerGram = silverPricePerGram;
+//           else if (metalType === "PLATINUM")
+//             metalPricePerGram = platinumPricePerGram;
+//           else if (metalType === "TITANIUM")
+//             metalPricePerGram = titaniumPricePerGram;
+
+//           let metalCost = 0,
+//             labourCost = 0,
+//             metalIncomplete = false;
+//           if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
+//             metalCost = metalPricePerGram * metalWeightGrams;
+//             labourCost = LABOUR_RATE[metalType] ?? LABOUR_RATE.GOLD; // flat fee
+//           } else metalIncomplete = true;
+
+//           const sellingPrice = metalCost + diamondCost + labourCost;
+//           baseOut.sellingPrice =
+//             !Number.isNaN(sellingPrice) && sellingPrice > 0
+//               ? Math.round(sellingPrice)
+//               : null;
+//           baseOut.priceIncomplete = metalIncomplete || diamondIncomplete;
+//         } catch (err) {
+//           baseOut.sellingPrice = null;
+//           baseOut.priceIncomplete = true;
+//         }
+//       }
+
+//       normalized.push(baseOut);
+//     }
+
+//     // Apply min/max price filter for VARIANT_PRICE_CATEGORIES
+//     let filtered = normalized;
+//     const shouldApplyPriceFilter =
+//       VARIANT_PRICE_CATEGORIES.has(category) &&
+//       (!Number.isNaN(minPrice) || !Number.isNaN(maxPrice));
+//     if (shouldApplyPriceFilter) {
+//       filtered = normalized.filter((p) => {
+//         if (p.priceIncomplete || !p.sellingPrice) return false;
+//         if (!Number.isFinite(p.sellingPrice)) return false;
+//         if (!Number.isNaN(minPrice) && p.sellingPrice < minPrice) return false;
+//         if (!Number.isNaN(maxPrice) && p.sellingPrice > maxPrice) return false;
+//         return true;
+//       });
+//     }
+
+//     // Pagination in JS when variant-dependent filters present (we fetched unpaginated)
+//     let paged = filtered;
+//     let totalFiltered = filtered.length;
+//     if (variantDependentFilterPresent) {
+//       paged = filtered.slice(skip, skip + limit);
+//       totalFiltered = filtered.length;
+//     }
+
+//     const conn2 = getCatalogConnection();
+//     const total = await conn2
+//       .collection("products")
+//       .countDocuments({ category });
+
+//     // When no variant-dependent filters, use the total from DB for pagination calculation
+//     const totalForPagination = variantDependentFilterPresent
+//       ? totalFiltered
+//       : total;
+
+//     return res.status(200).json({
+//       success: true,
+//       count: paged.length,
+//       total,
+//       pagination: {
+//         totalPages: Math.ceil(totalForPagination / limit),
+//         currentPage: page,
+//         limit,
+//       },
+//       appliedFilters: {
+//         category,
+//         centerStoneShape: shapesUpper,
+//         ringTypeRequested: ringTokens,
+//         ringPrefixesApplied: ringPrefixes,
+//         category1: cat1Filters.length ? cat1Filters : null,
+//         category2: cat2Filters.length ? cat2Filters : null,
+//         category3: cat3Filters.length ? cat3Filters : null,
+//         metalTypes: metalFilters.length ? metalFilters : null,
+//         isEngraving: category === "RINGS" ? (isEngraving ? true : false) : null,
+//         minPrice: !Number.isNaN(minPrice) ? minPrice : null,
+//         maxPrice: !Number.isNaN(maxPrice) ? maxPrice : null,
+//       },
+//       products: paged,
+//     });
+//   } catch (err) {
+//     console.error("getProductsByCategory error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error",
+//       error: err instanceof Error ? err.message : String(err),
+//     });
+//   }
+// };
+
 export const getProductsByCategory = async (req: Request, res: Response) => {
   try {
-    const rawCategory = (req.params.category || "").toString();
+    const rawCategory = String(req.params.category || "").trim();
     if (!rawCategory)
       return res
         .status(400)
         .json({ success: false, message: "Category required" });
+
     const category = rawCategory.toUpperCase();
 
-    const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
-    const limit = Math.max(
-      1,
-      Math.min(100, parseInt((req.query.limit as string) || "20", 10))
+    const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(String(req.query.limit || "20"), 10))
     );
     const skip = (page - 1) * limit;
 
-    // Price filters
     const minPrice = n(req.query.minPrice);
     const maxPrice = n(req.query.maxPrice);
 
-    // centerStoneShape - always passed as centerStoneShape
-    const shapesRaw = (req.query.centerStoneShape || "").toString().trim();
-    const shapesUpper = shapesRaw
-      ? shapesRaw.split(",").map((s) => s.trim().toUpperCase())
+    // Parse filters
+    const shapesRaw = String(req.query.centerStoneShape || "").trim();
+    const shapes = shapesRaw
+      ? shapesRaw
+          .split(",")
+          .map((s) => s.trim().toUpperCase())
+          .filter(Boolean)
       : [];
 
-    // ringType / ring -> SKU prefixes (for rings)
-    const ringRaw = (req.query.ringType || req.query.ring || "")
-      .toString()
-      .trim();
+    const metalTypesRaw = String(req.query.metalTypes || "").trim();
+    const metalTypes = metalTypesRaw
+      ? metalTypesRaw
+          .split(",")
+          .map((s) => s.trim().toUpperCase())
+          .filter(Boolean)
+      : [];
+
+    const isEngravingRaw = String(req.query.isEngraving || "")
+      .trim()
+      .toLowerCase();
+    const isEngraving = ["true", "1", "yes"].includes(isEngravingRaw);
+
+    // Ring type filters
+    const ringRaw = String(req.query.ringType || req.query.ring || "").trim();
     const ringTokens = ringRaw ? ringRaw.split(",").map((s) => s.trim()) : [];
+
     const mapRingTypeToPrefixes = (token: string): string[] => {
       const t = token
         .trim()
@@ -103,11 +921,12 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       if (/^(eng|sr|fr|gr)$/i.test(t)) return [t.toUpperCase()];
       return [];
     };
+
     const ringPrefixes = Array.from(
       new Set(ringTokens.flatMap(mapRingTypeToPrefixes))
     );
 
-    // category1/category2/category3 filters (substring, case-insensitive)
+    // Category filters
     const parseCatParam = (v: any) =>
       v
         ? String(v)
@@ -116,248 +935,128 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
             .filter(Boolean)
             .map((x: string) => x.toUpperCase())
         : [];
+
     const cat1Filters = parseCatParam(req.query.category1);
     const cat2Filters = parseCatParam(req.query.category2);
     const cat3Filters = parseCatParam(req.query.category3);
 
-    // metalTypes filter (comma-separated, case-insensitive)
-    const parseMetalParam = (v: any) =>
-      v
-        ? String(v)
-            .split(",")
-            .map((s: string) => s.trim().toUpperCase())
-            .filter(Boolean)
-        : [];
-    const metalFilters = parseMetalParam(req.query.metalTypes);
+    const VariantModel = getCollectionModel("variants");
 
-    // NEW: isEngraving filter (only meaningful for RINGS)
-    const isEngravingRaw = (req.query.isEngraving ?? "")
-      .toString()
-      .trim()
-      .toLowerCase();
-    const isEngraving =
-      isEngravingRaw === "true" ||
-      isEngravingRaw === "1" ||
-      isEngravingRaw === "yes";
+    /**
+     * BUILD VARIANT MATCH
+     */
+    const variantMatch: any = { category };
 
-    // helpers
-    const normalizeStr = (s: any): string => {
-      if (s == null) return "";
-      return String(s)
-        .replace(/[^\w\s]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toUpperCase();
-    };
-
-    const centerShapeArrayExpr = {
-      $cond: [
-        { $isArray: "$attributes.centerStoneShape" },
-        "$attributes.centerStoneShape",
-        {
-          $cond: [
-            { $in: ["$attributes.centerStoneShape", [null]] },
-            [],
-            ["$attributes.centerStoneShape"],
-          ],
-        },
-      ],
-    };
-
-    // categories that require variant-dependent checks and pricing
-    const VARIANT_PRICE_CATEGORIES = new Set([
-      "RINGS",
-      "EARRINGS",
-      "PENDANTS",
-      "BRACELETS",
-    ]);
-
-    const variantDependentFilterPresent =
-      shapesUpper.length > 0 ||
-      ringPrefixes.length > 0 ||
-      (VARIANT_PRICE_CATEGORIES.has(category) &&
-        (!Number.isNaN(minPrice) || !Number.isNaN(maxPrice)));
-
-    // Build aggregation pipeline
-    const pipeline: any[] = [{ $match: { category } }];
-
-    // ring/sku-prefix filter
-    if (
-      (category === "RINGS" ||
-        category === "EARRINGS" ||
-        category === "PENDANTS" ||
-        category === "BRACELETS") &&
-      ringPrefixes.length > 0
-    ) {
-      const prefixExprs = ringPrefixes.map((prefix) => ({
-        $regexMatch: {
-          input: { $ifNull: ["$modelSku", ""] },
-          regex: `^${prefix}`,
-          options: "i",
-        },
-      }));
-      pipeline.push({ $match: { $expr: { $or: prefixExprs } } });
+    // Metal type filter
+    if (metalTypes.length > 0) {
+      variantMatch["meta.metalType"] = { $in: metalTypes };
     }
 
-    // attribute category filters (substring)
+    // Engraving filter
+    if (isEngraving) {
+      variantMatch["engraving"] = { $type: "object" };
+    }
+
+    // Shape filter
+    if (shapes.length > 0) {
+      variantMatch.$or = [
+        { "meta.stones.centerStoneShape": { $in: shapes } },
+        { "meta.stones.diamondGemstoneShape": { $in: shapes } },
+        { "meta.stones.diamondGemstoneShapes": { $in: shapes } },
+        { "meta.stones.sequences.centerStoneShape": { $in: shapes } },
+        { "meta.stones.sequences.diamondGemstoneShape": { $in: shapes } },
+        { "meta.stones.sequences.diamondGemstoneShapes": { $in: shapes } },
+      ];
+    }
+
+    // Ring type (SKU prefix) filter
+    if (ringPrefixes.length > 0) {
+      const prefixRegexes = ringPrefixes.map(
+        (prefix) => new RegExp(`^${prefix}`, "i")
+      );
+      variantMatch.modelSku = { $in: prefixRegexes };
+    }
+
+    /**
+     * AGGREGATION PIPELINE
+     */
+    const pipeline: any[] = [
+      { $match: variantMatch },
+
+      // Group by modelSku - keep FULL variant document
+      {
+        $group: {
+          _id: "$modelSku",
+          firstVariant: { $first: "$$ROOT" },
+        },
+      },
+
+      // Lookup product
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "modelSku",
+          as: "product",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: false } },
+    ];
+
+    // Apply product-level category filters
     if (cat1Filters.length > 0) {
       pipeline.push({
         $match: {
           $or: cat1Filters.map((v) => ({
-            "attributes.category1": { $regex: v, $options: "i" },
+            "product.attributes.category1": { $regex: v, $options: "i" },
           })),
         },
       });
     }
+
     if (cat2Filters.length > 0) {
       pipeline.push({
         $match: {
           $or: cat2Filters.map((v) => ({
-            "attributes.category2": { $regex: v, $options: "i" },
+            "product.attributes.category2": { $regex: v, $options: "i" },
           })),
         },
       });
     }
+
     if (cat3Filters.length > 0) {
       pipeline.push({
         $match: {
           $or: cat3Filters.map((v) => ({
-            "attributes.category3": { $regex: v, $options: "i" },
+            "product.attributes.category3": { $regex: v, $options: "i" },
           })),
         },
       });
     }
 
-    // metalTypes DB-level filter (matches if any attribute metalType equals requested metals)
-    if (metalFilters.length > 0) {
-      pipeline.push({
-        $match: {
-          $expr: {
-            $gt: [
-              {
-                $size: {
-                  $filter: {
-                    input: { $ifNull: ["$attributes.metalTypes", []] },
-                    as: "mt",
-                    cond: { $in: [{ $toUpper: "$$mt" }, metalFilters] },
-                  },
-                },
-              },
-              0,
-            ],
-          },
-        },
-      });
-    }
+    pipeline.push({ $sort: { _id: 1 } });
 
-    // DB-level shape match only for categories where attributes.centerStoneShape is authoritative
-    if (
-      shapesUpper.length > 0 &&
-      category !== "EARRINGS" &&
-      category !== "PENDANTS"
-    ) {
-      pipeline.push({
-        $match: {
-          $expr: {
-            $gt: [
-              {
-                $size: {
-                  $filter: {
-                    input: centerShapeArrayExpr,
-                    as: "sh",
-                    cond: { $in: [{ $toUpper: "$$sh" }, shapesUpper] },
-                  },
-                },
-              },
-              0,
-            ],
-          },
-        },
-      });
-    }
-
-    // Project + lookup first variant — include engraving fields in projection
-    pipeline.push(
-      {
-        $project: {
-          modelSku: 1,
-          "attributes.metalTypes": 1,
-          "attributes.goldKarats": 1,
-          "attributes.centerStoneShape": 1,
-          "attributes.category1": 1,
-          "attributes.category2": 1,
-          "attributes.category3": 1,
-          "seo.metaTitle": 1,
-          engraving: 1,
-          engravingDetailIds: 1, // left for compatibility but NOT used for engraving decision anymore
-          firstVariantSku: { $arrayElemAt: ["$variantIds", 0] },
-          variantCount: { $size: { $ifNull: ["$variantIds", []] } },
-        },
-      },
-      {
-        $lookup: {
-          from: "variants",
-          localField: "firstVariantSku",
-          foreignField: "sku",
-          as: "firstVariantDoc",
-        },
-      },
-      {
-        $unwind: { path: "$firstVariantDoc", preserveNullAndEmptyArrays: true },
-      },
-      {
-        $project: {
-          modelSku: 1,
-          metalTypes: "$attributes.metalTypes",
-          goldKarats: "$attributes.goldKarats",
-          title: {
-            $ifNull: [
-              "$firstVariantDoc.meta.title",
-              "$seo.metaTitle",
-              "$title",
-            ],
-          },
-          variantCount: 1,
-          firstVariantSku: 1,
-          firstVariantDoc: 1,
-          attributesCenterShape: "$attributes.centerStoneShape",
-          attributesCategory1: "$attributes.category1",
-          attributesCategory2: "$attributes.category2",
-          attributesCategory3: "$attributes.category3",
-          engraving: 1,
-          engravingDetailIds: 1,
-        },
-      }
-    );
-
-    // NEW: if isEngraving=true and category is RINGS, enforce DB-level filter now that variant is available
-    // BUT per your instruction: only check product engraving object presence — do NOT check ids or variant fields.
-    if (category === "RINGS" && isEngraving) {
-      pipeline.push({
-        $match: {
-          $expr: {
-            // require the product-level 'engraving' field to be an object
-            $eq: [{ $type: "$engraving" }, "object"],
-          },
-        },
-      });
-    }
-
-    pipeline.push({ $sort: { modelSku: 1 } });
-    if (!variantDependentFilterPresent)
-      pipeline.push({ $skip: skip }, { $limit: limit });
-
-    const ProductModel = getCollectionModel("products");
-    const docs = await ProductModel.aggregate(pipeline)
+    const allResults = await VariantModel.aggregate(pipeline)
       .allowDiskUse(true)
       .exec();
 
-    // Prepare pricing/defaults
+    /**
+     * PRICING CALCULATION (SAME AS OLD CONTROLLER)
+     */
     const conn = getCatalogConnection();
     const finalPricingColl = conn.collection("final_pricing");
     const defaultsColl = conn.collection("defaultValues");
 
-    // ----------------- Helper functions reused for robust default lookup -----------------
+    const defaultDocs = await defaultsColl.find({}).toArray();
+    const mergedDefaults = Object.assign(
+      {},
+      ...defaultDocs.map((d) => {
+        const c = { ...d };
+        delete (c as any)._id;
+        return c;
+      })
+    );
+
     const toNumberRobust = (v: unknown): number => {
       if (v == null) return NaN;
       if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
@@ -393,10 +1092,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       candidateNames: string[]
     ): { value: number; matchedKey?: string } => {
       if (!obj || typeof obj !== "object") return { value: NaN };
-
       const candNorm = candidateNames.map((c) => normalizeKey(c));
 
-      // 1) exact-normalized match
       for (const [k, v] of Object.entries(obj)) {
         const kn = normalizeKey(k);
         if (candNorm.includes(kn)) {
@@ -405,7 +1102,6 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
         }
       }
 
-      // 2) substring-normalized match
       for (const [k, v] of Object.entries(obj)) {
         const kn = normalizeKey(k);
         for (const cn of candNorm) {
@@ -416,7 +1112,6 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
         }
       }
 
-      // 3) one-level nested objects
       for (const [k, v] of Object.entries(obj)) {
         if (v && typeof v === "object" && !Array.isArray(v)) {
           for (const [k2, v2] of Object.entries(v as Record<string, any>)) {
@@ -439,23 +1134,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
 
       return { value: NaN };
     };
-    // ----------------- end helpers -----------------
 
-    // Merge all default docs (same approach as used in the other controller)
-    const defaultDocs = (await defaultsColl.find({}).toArray()) as Record<
-      string,
-      any
-    >[];
-    const mergedDefaults: Record<string, any> = Object.assign(
-      {},
-      ...defaultDocs.map((doc) => {
-        const copy = { ...doc };
-        delete (copy as any)._id;
-        return copy;
-      })
-    );
-
-    // Resolve base metal prices from merged defaults robustly
     const goldRes = findNumericDefault(mergedDefaults, [
       "goldValue24PerGram",
       "goldValue24",
@@ -486,21 +1165,21 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     const platinumPricePerGram = platinumRes.value;
     const titaniumPricePerGram = titaniumRes.value;
 
-    // Prepare normalized output
-    const normalized: any[] = [];
+    const products: any[] = [];
 
-    for (const d of docs) {
-      // image
+    for (const row of allResults) {
+      const variant = row.firstVariant;
+      const product = row.product;
+
+      // Get image
       let imageUrl: string | null = null;
-      if (
-        Array.isArray(d.firstVariantDoc?.images) &&
-        d.firstVariantDoc.images.length > 0
-      ) {
-        const img = d.firstVariantDoc.images[1] ?? d.firstVariantDoc.images[1];
-        if (img) imageUrl = (img.url ?? img.filename) || null;
+      if (Array.isArray(variant.images) && variant.images.length > 0) {
+        const img = variant.images[1];
+        imageUrl = img?.url || img?.filename || null;
       }
 
-      const engravingObj = d.engraving ?? null;
+      // Get engraving from variant (not product)
+      const engravingObj = variant.engraving ?? null;
       const engravingMaxChars =
         engravingObj && typeof engravingObj.maxCharacters === "number"
           ? engravingObj.maxCharacters
@@ -510,328 +1189,201 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           ? engravingObj.fontSize
           : null;
 
+      // Get metal types from PRODUCT attributes
+      const productMetalTypes = Array.isArray(product.attributes?.metalTypes)
+        ? product.attributes.metalTypes
+        : product.attributes?.metalTypes
+        ? [product.attributes.metalTypes]
+        : [];
+
       const baseOut: any = {
-        _id: d._id, // Add MongoDB _id for cart compatibility
-        modelSku: d.modelSku,
-        metalTypes: Array.isArray(d.metalTypes)
-          ? d.metalTypes
-          : d.metalTypes
-          ? [d.metalTypes]
-          : [],
-        title: d.title ?? null,
-        variantCount: d.variantCount ?? 0,
-        firstVariantSku: d.firstVariantSku ?? null,
+        _id: product._id,
+        modelSku: product.modelSku,
+        metalTypes: productMetalTypes,
+        title:
+          variant.meta?.title ||
+          product.seo?.metaTitle ||
+          product.title ||
+          null,
+        variantCount: Array.isArray(product.variantIds)
+          ? product.variantIds.length
+          : 0,
+        firstVariantSku: variant.sku,
         firstVariantImageUrl: imageUrl,
-        attributesCategory1: d.attributesCategory1 ?? null,
-        attributesCategory2: d.attributesCategory2 ?? null,
-        attributesCategory3: d.attributesCategory3 ?? null,
-        // engraving fields returned only for rings (per request) — keep null otherwise
+        attributesCategory1: product.attributes?.category1 ?? null,
+        attributesCategory2: product.attributes?.category2 ?? null,
+        attributesCategory3: product.attributes?.category3 ?? null,
         engravingMaxCharacters: category === "RINGS" ? engravingMaxChars : null,
         engravingFontSize: category === "RINGS" ? engravingFontSize : null,
         sellingPrice: null,
         priceIncomplete: true,
       };
 
-      // If isEngraving filter requested but engraving info missing, skip.
-      if (category === "RINGS" && isEngraving) {
-        // Per requirement: only consider product-level engraving object presence.
-        if (!d.engraving || typeof d.engraving !== "object") {
-          continue;
-        }
-      }
+      // Calculate price
+      try {
+        const stonesArr: any[] =
+          Array.isArray(variant.meta?.stones) && variant.meta.stones.length
+            ? variant.meta.stones
+            : Array.isArray(variant.stones)
+            ? variant.stones
+            : [];
 
-      // SHAPE check (JS-side for EARRINGS and PENDANTS; extra check for other categories too)
-      if (shapesUpper.length > 0) {
-        const productShapes: string[] = [];
-        if (d.attributesCenterShape) {
-          if (Array.isArray(d.attributesCenterShape))
-            productShapes.push(
-              ...d.attributesCenterShape.map((s: any) => normalizeStr(s))
-            );
-          else productShapes.push(normalizeStr(d.attributesCenterShape));
-        }
+        const includedStones: {
+          sequence: string;
+          cts: number;
+          netWeightGrams: number | null;
+        }[] = [];
 
-        const variant = d.firstVariantDoc;
-        const variantShapes: string[] = [];
-        if (variant) {
-          const stonesArr: any[] =
-            Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
-              ? variant.meta.stones
-              : Array.isArray(variant?.stones)
-              ? variant.stones
-              : [];
+        for (let i = 0; i < stonesArr.length; i++) {
+          const st = stonesArr[i];
+          const seq =
+            st?.sequence ||
+            (Array.isArray(st?.sequences) && st.sequences[0]?.sequence) ||
+            st?.sequenceNo;
+          if (!seq) continue;
 
-          for (const st of stonesArr) {
-            if (category === "EARRINGS" || category === "PENDANTS") {
-              if (st?.diamondGemstoneShapes) {
-                if (Array.isArray(st.diamondGemstoneShapes))
-                  variantShapes.push(
-                    ...st.diamondGemstoneShapes.map((x: any) => normalizeStr(x))
-                  );
-                else variantShapes.push(normalizeStr(st.diamondGemstoneShapes));
-              }
-              if (st?.diamondGemstoneShape)
-                variantShapes.push(normalizeStr(st.diamondGemstoneShape));
-            } else if (category === "BRACELETS") {
-              if (st?.centerStoneShape)
-                variantShapes.push(normalizeStr(st.centerStoneShape));
-              if (st?.diamondGemstoneShapes) {
-                if (Array.isArray(st.diamondGemstoneShapes))
-                  variantShapes.push(
-                    ...st.diamondGemstoneShapes.map((x: any) => normalizeStr(x))
-                  );
-                else variantShapes.push(normalizeStr(st.diamondGemstoneShapes));
-              }
-            } else {
-              if (st?.centerStoneShape)
-                variantShapes.push(normalizeStr(st.centerStoneShape));
-              if (st?.diamondGemstoneShapes) {
-                if (Array.isArray(st.diamondGemstoneShapes))
-                  variantShapes.push(
-                    ...st.diamondGemstoneShapes.map((x: any) => normalizeStr(x))
-                  );
-                else variantShapes.push(normalizeStr(st.diamondGemstoneShapes));
-              }
-              if (st?.diamondGemstoneShape)
-                variantShapes.push(normalizeStr(st.diamondGemstoneShape));
-            }
-
-            if (Array.isArray(st?.sequences)) {
-              for (const seq of st.sequences) {
-                if (category === "EARRINGS" || category === "PENDANTS") {
-                  if (seq?.diamondGemstoneShapes) {
-                    if (Array.isArray(seq.diamondGemstoneShapes))
-                      variantShapes.push(
-                        ...seq.diamondGemstoneShapes.map((x: any) =>
-                          normalizeStr(x)
-                        )
-                      );
-                    else
-                      variantShapes.push(
-                        normalizeStr(seq.diamondGemstoneShapes)
-                      );
-                  }
-                  if (seq?.diamondGemstoneShape)
-                    variantShapes.push(normalizeStr(seq.diamondGemstoneShape));
-                } else if (category === "BRACELETS") {
-                  if (seq?.centerStoneShape)
-                    variantShapes.push(normalizeStr(seq.centerStoneShape));
-                  if (seq?.diamondGemstoneShapes) {
-                    if (Array.isArray(seq.diamondGemstoneShapes))
-                      variantShapes.push(
-                        ...seq.diamondGemstoneShapes.map((x: any) =>
-                          normalizeStr(x)
-                        )
-                      );
-                    else
-                      variantShapes.push(
-                        normalizeStr(seq.diamondGemstoneShapes)
-                      );
-                  }
-                } else {
-                  if (seq?.centerStoneShape)
-                    variantShapes.push(normalizeStr(seq.centerStoneShape));
-                  if (seq?.diamondGemstoneShapes) {
-                    if (Array.isArray(seq.diamondGemstoneShapes))
-                      variantShapes.push(
-                        ...seq.diamondGemstoneShapes.map((x: any) =>
-                          normalizeStr(x)
-                        )
-                      );
-                    else
-                      variantShapes.push(
-                        normalizeStr(seq.diamondGemstoneShapes)
-                      );
-                  }
-                  if (seq?.diamondGemstoneShape)
-                    variantShapes.push(normalizeStr(seq.diamondGemstoneShape));
-                }
-              }
-            }
-          }
-        }
-
-        const combinedShapes = Array.from(
-          new Set([...productShapes, ...variantShapes].filter(Boolean))
-        );
-        const targets = shapesUpper.map((t) => normalizeStr(t));
-        const matched = combinedShapes.some((h) =>
-          targets.some((t) => t && (h === t || h.includes(t) || t.includes(h)))
-        );
-        if (!matched) continue;
-      }
-
-      // PRICE calc for VARIANT_PRICE_CATEGORIES
-      if (VARIANT_PRICE_CATEGORIES.has(category) && d.firstVariantDoc) {
-        try {
-          const variant = d.firstVariantDoc;
-          const stonesArr: any[] =
-            Array.isArray(variant?.meta?.stones) && variant.meta.stones.length
-              ? variant.meta.stones
-              : Array.isArray(variant?.stones)
-              ? variant.stones
-              : [];
-
-          const includedStones: {
-            sequence: string;
-            cts: number;
-            netWeightGrams: number | null;
-          }[] = [];
-          for (let i = 0; i < stonesArr.length; i++) {
-            const st = stonesArr[i];
-            const seq =
-              st?.sequence ||
-              (Array.isArray(st?.sequences) && st.sequences[0]?.sequence) ||
-              st?.sequenceNo;
-            if (!seq) continue;
-            const cts =
-              typeof st?.cts === "number"
-                ? st.cts
-                : Array.isArray(st?.sequences) &&
-                  typeof st.sequences[0]?.cts === "number"
-                ? st.sequences[0].cts
-                : null;
-            if (cts == null) continue;
-            const net =
-              st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
-            if (i > 0 && net !== null) break;
-            includedStones.push({ sequence: seq, cts, netWeightGrams: net });
-          }
-
-          let diamondCost = 0;
-          let diamondIncomplete = false;
-          for (const st of includedStones) {
-            const pricingDoc: any =
-              (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
-            const pricePerCt = parseNumeric(
-              pricingDoc.selling_price ??
-                pricingDoc.sellingPrice ??
-                pricingDoc.price
-            );
-            if (Number.isNaN(pricePerCt)) {
-              diamondIncomplete = true;
-              continue;
-            }
-            diamondCost += pricePerCt * st.cts;
-          }
-
-          const metalType = (
-            variant?.meta?.metalType ||
-            (Array.isArray(d.metalTypes) ? d.metalTypes[0] : d.metalTypes) ||
-            "GOLD"
-          )
-            .toString()
-            .toUpperCase();
-          let karatStr =
-            variant?.meta?.metalKt ||
-            (Array.isArray(d.goldKarats) ? d.goldKarats[0] : d.goldKarats) ||
-            "18";
-          const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
-
-          let metalWeightGrams: number | null =
-            variant?.meta?.metalWeightGrams != null
-              ? n(variant.meta.metalWeightGrams)
-              : variant?.netWeightGrams != null
-              ? n(variant.netWeightGrams)
+          const cts =
+            typeof st?.cts === "number"
+              ? st.cts
+              : Array.isArray(st?.sequences) &&
+                typeof st.sequences[0]?.cts === "number"
+              ? st.sequences[0].cts
               : null;
-          if (
-            (metalWeightGrams == null || Number.isNaN(metalWeightGrams)) &&
-            includedStones.length
-          ) {
-            const sum = includedStones.reduce(
-              (acc, s) =>
-                acc + (s.netWeightGrams ? Number(s.netWeightGrams) : 0),
-              0
-            );
-            metalWeightGrams = sum > 0 ? sum : null;
-          }
+          if (cts == null) continue;
 
-          let metalPricePerGram = NaN;
-          if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
-            const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
-            metalPricePerGram = goldValue24 * factor;
-          } else if (metalType === "SILVER")
-            metalPricePerGram = silverPricePerGram;
-          else if (metalType === "PLATINUM")
-            metalPricePerGram = platinumPricePerGram;
-          else if (metalType === "TITANIUM")
-            metalPricePerGram = titaniumPricePerGram;
+          const net = st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
+          if (i > 0 && net !== null) break;
 
-          let metalCost = 0,
-            labourCost = 0,
-            metalIncomplete = false;
-          if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
-            metalCost = metalPricePerGram * metalWeightGrams;
-            labourCost = LABOUR_RATE[metalType] ?? LABOUR_RATE.GOLD; // flat fee
-          } else metalIncomplete = true;
-
-          const sellingPrice = metalCost + diamondCost + labourCost;
-          baseOut.sellingPrice =
-            !Number.isNaN(sellingPrice) && sellingPrice > 0
-              ? Math.round(sellingPrice)
-              : null;
-          baseOut.priceIncomplete = metalIncomplete || diamondIncomplete;
-        } catch (err) {
-          baseOut.sellingPrice = null;
-          baseOut.priceIncomplete = true;
+          includedStones.push({ sequence: seq, cts, netWeightGrams: net });
         }
+
+        let diamondCost = 0;
+        let diamondIncomplete = false;
+
+        for (const st of includedStones) {
+          const pricingDoc: any =
+            (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
+          const pricePerCt = parseNumeric(
+            pricingDoc.selling_price ??
+              pricingDoc.sellingPrice ??
+              pricingDoc.price
+          );
+          if (Number.isNaN(pricePerCt)) {
+            diamondIncomplete = true;
+            continue;
+          }
+          diamondCost += pricePerCt * st.cts;
+        }
+
+        const metalType = (
+          variant?.meta?.metalType ||
+          (Array.isArray(productMetalTypes)
+            ? productMetalTypes[0]
+            : productMetalTypes) ||
+          "GOLD"
+        )
+          .toString()
+          .toUpperCase();
+
+        let karatStr =
+          variant?.meta?.metalKt ||
+          (Array.isArray(product.attributes?.goldKarats)
+            ? product.attributes.goldKarats[0]
+            : product.attributes?.goldKarats) ||
+          "18";
+        const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
+
+        let metalWeightGrams: number | null =
+          variant?.meta?.metalWeightGrams != null
+            ? n(variant.meta.metalWeightGrams)
+            : variant?.netWeightGrams != null
+            ? n(variant.netWeightGrams)
+            : null;
+
+        if (
+          (metalWeightGrams == null || Number.isNaN(metalWeightGrams)) &&
+          includedStones.length
+        ) {
+          const sum = includedStones.reduce(
+            (acc, s) => acc + (s.netWeightGrams ? Number(s.netWeightGrams) : 0),
+            0
+          );
+          metalWeightGrams = sum > 0 ? sum : null;
+        }
+
+        let metalPricePerGram = NaN;
+        if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
+          const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
+          metalPricePerGram = goldValue24 * factor;
+        } else if (metalType === "SILVER")
+          metalPricePerGram = silverPricePerGram;
+        else if (metalType === "PLATINUM")
+          metalPricePerGram = platinumPricePerGram;
+        else if (metalType === "TITANIUM")
+          metalPricePerGram = titaniumPricePerGram;
+
+        let metalCost = 0,
+          labourCost = 0,
+          metalIncomplete = false;
+
+        if (metalWeightGrams && !Number.isNaN(metalPricePerGram)) {
+          metalCost = metalPricePerGram * metalWeightGrams;
+          labourCost = LABOUR_RATE[metalType] ?? LABOUR_RATE.GOLD;
+        } else metalIncomplete = true;
+
+        const sellingPrice = metalCost + diamondCost + labourCost;
+        baseOut.sellingPrice =
+          !Number.isNaN(sellingPrice) && sellingPrice > 0
+            ? Math.round(sellingPrice)
+            : null;
+        baseOut.priceIncomplete = metalIncomplete || diamondIncomplete;
+      } catch (err) {
+        baseOut.sellingPrice = null;
+        baseOut.priceIncomplete = true;
       }
 
-      normalized.push(baseOut);
+      // Price filter
+      if (
+        !Number.isNaN(minPrice) &&
+        (baseOut.sellingPrice === null || baseOut.sellingPrice < minPrice)
+      )
+        continue;
+      if (
+        !Number.isNaN(maxPrice) &&
+        (baseOut.sellingPrice === null || baseOut.sellingPrice > maxPrice)
+      )
+        continue;
+
+      products.push(baseOut);
     }
 
-    // Apply min/max price filter for VARIANT_PRICE_CATEGORIES
-    let filtered = normalized;
-    const shouldApplyPriceFilter =
-      VARIANT_PRICE_CATEGORIES.has(category) &&
-      (!Number.isNaN(minPrice) || !Number.isNaN(maxPrice));
-    if (shouldApplyPriceFilter) {
-      filtered = normalized.filter((p) => {
-        if (p.priceIncomplete || !p.sellingPrice) return false;
-        if (!Number.isFinite(p.sellingPrice)) return false;
-        if (!Number.isNaN(minPrice) && p.sellingPrice < minPrice) return false;
-        if (!Number.isNaN(maxPrice) && p.sellingPrice > maxPrice) return false;
-        return true;
-      });
-    }
+    // Pagination
+    const totalFiltered = products.length;
+    const paged = products.slice(skip, skip + limit);
 
-    // Pagination in JS when variant-dependent filters present (we fetched unpaginated)
-    let paged = filtered;
-    let totalFiltered = filtered.length;
-    if (variantDependentFilterPresent) {
-      paged = filtered.slice(skip, skip + limit);
-      totalFiltered = filtered.length;
-    }
-
-    const conn2 = getCatalogConnection();
-    const total = await conn2
-      .collection("products")
-      .countDocuments({ category });
-
-    // When no variant-dependent filters, use the total from DB for pagination calculation
-    const totalForPagination = variantDependentFilterPresent
-      ? totalFiltered
-      : total;
+    const ProductModel = getCollectionModel("products");
+    const totalProducts = await ProductModel.countDocuments({ category });
 
     return res.status(200).json({
       success: true,
       count: paged.length,
-      total,
+      total: totalProducts,
+      totalFiltered,
       pagination: {
-        totalPages: Math.ceil(totalForPagination / limit),
+        totalPages: Math.ceil(totalFiltered / limit),
         currentPage: page,
         limit,
       },
       appliedFilters: {
         category,
-        centerStoneShape: shapesUpper,
-        ringTypeRequested: ringTokens,
-        ringPrefixesApplied: ringPrefixes,
-        category1: cat1Filters.length ? cat1Filters : null,
-        category2: cat2Filters.length ? cat2Filters : null,
-        category3: cat3Filters.length ? cat3Filters : null,
-        metalTypes: metalFilters.length ? metalFilters : null,
-        isEngraving: category === "RINGS" ? (isEngraving ? true : false) : null,
+        centerStoneShape: shapes.length > 0 ? shapes : null,
+        ringTypeRequested: ringTokens.length > 0 ? ringTokens : null,
+        ringPrefixesApplied: ringPrefixes.length > 0 ? ringPrefixes : null,
+        category1: cat1Filters.length > 0 ? cat1Filters : null,
+        category2: cat2Filters.length > 0 ? cat2Filters : null,
+        category3: cat3Filters.length > 0 ? cat3Filters : null,
+        metalTypes: metalTypes.length > 0 ? metalTypes : null,
+        isEngraving: category === "RINGS" ? isEngraving : null,
         minPrice: !Number.isNaN(minPrice) ? minPrice : null,
         maxPrice: !Number.isNaN(maxPrice) ? maxPrice : null,
       },

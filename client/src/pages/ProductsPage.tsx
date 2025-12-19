@@ -108,6 +108,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     hoops_diamond_shape: [] as string[],
     drop_diamond_shape: [] as string[],
     fashion_earring_diamond_shape: [] as string[],
+    halo_earring_diamond_shape: [] as string[],
     earring_length: [] as string[], // Backend parameter for earring lengths
 
     // Pendant categories and filters
@@ -279,6 +280,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             activeFilters.fashion_earring_diamond_shape.forEach((shape) =>
               allSelectedShapes.add(shape)
             );
+            activeFilters.halo_earring_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape)
+            );
 
             if (allSelectedShapes.size > 0) {
               params.set(
@@ -314,6 +318,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               activeFilters.fashion_earring_diamond_shape.length > 0
             ) {
               earringTypes.add("fashion");
+            }
+            if (
+              activeFilters.earring_category.includes("Halo Earrings") ||
+              activeFilters.halo_earring_diamond_shape.length > 0
+            ) {
+              earringTypes.add("halo");
             }
 
             if (earringTypes.size > 0) {
@@ -651,6 +661,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       hoops_diamond_shape: [],
       drop_diamond_shape: [],
       fashion_earring_diamond_shape: [],
+      halo_earring_diamond_shape: [],
       earring_length: [],
       pendant_category: [], // Add this missing field
       solitaire_pendant_diamond_shape: [],
@@ -764,6 +775,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         fashion_earring_diamond_shape: getFilterValues(
           "fashion_earring_diamond_shape"
         ),
+        halo_earring_diamond_shape: getFilterValues(
+          "halo_earring_diamond_shape"
+        ),
         earring_length: getFilterValues("earring_length"),
 
         // Pendant filters
@@ -815,6 +829,44 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     ? "Engravable Ring Products"
     : titleMap[category];
 
+  // Helper to determine if a filter group should be open based on URL params
+  const shouldGroupBeOpen = (
+    groupName: string,
+    categoryParam: string
+  ): boolean => {
+    const paramValue = searchParams.get(categoryParam);
+    if (!paramValue) return false;
+
+    const values = paramValue.split(",");
+    return values.includes(groupName);
+  };
+
+  // Helper to handle filter group toggle
+  const handleFilterGroupToggle = (
+    groupName: string,
+    categoryParam: string,
+    isOpen: boolean
+  ) => {
+    if (isOpen) {
+      // When opening a group, add it to the category parameter
+      const currentParams = new URLSearchParams(searchParams);
+      const existingParam = currentParams.get(categoryParam);
+      const existingValues = existingParam ? existingParam.split(",") : [];
+
+      if (!existingValues.includes(groupName)) {
+        existingValues.push(groupName);
+        currentParams.set(categoryParam, existingValues.join(","));
+        setSearchParams(currentParams);
+
+        // Update local state
+        setActiveFilters((prev) => ({
+          ...prev,
+          [categoryParam]: existingValues,
+        }));
+      }
+    }
+  };
+
   // Function to render category-specific filters
   const renderCategoryFilters = () => {
     // Helpers for Earrings mapping (do not change UI, just wire to API fields)
@@ -824,7 +876,43 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       if (g.includes("hoops")) return "hoops/huggies";
       if (g.includes("fashion")) return "fashion earrings";
       if (g.includes("drop")) return "drop earrings";
+      if (g.includes("halo")) return "halo";
       return "";
+    };
+
+    // Helper for earring groups to check if should be open
+    const shouldEarringGroupBeOpen = (groupTitle: string): boolean => {
+      const category1Value = searchParams.get("category1");
+      if (!category1Value) return false;
+
+      const mappedValue = mapEarringGroupToCategory1(groupTitle);
+      const values = category1Value.split(",");
+      return values.includes(mappedValue);
+    };
+
+    // Helper to handle earring group toggle
+    const handleEarringGroupToggle = (groupTitle: string, isOpen: boolean) => {
+      if (isOpen) {
+        const mappedValue = mapEarringGroupToCategory1(groupTitle);
+        const currentParams = new URLSearchParams(searchParams);
+        const existingCategory1 = currentParams.get("category1");
+        const values = existingCategory1 ? existingCategory1.split(",") : [];
+
+        if (!values.includes(mappedValue)) {
+          values.push(mappedValue);
+          currentParams.set("category1", values.join(","));
+          if (!currentParams.has("category2"))
+            currentParams.set("category2", "");
+          if (!currentParams.has("category3"))
+            currentParams.set("category3", "");
+          setSearchParams(currentParams);
+
+          setActiveFilters((prev) => ({
+            ...prev,
+            category1: values.join(","),
+          }));
+        }
+      }
     };
 
     // const setEarringCategory1 = (groupTitle: string) => {
@@ -887,6 +975,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       ) {
         category1Array.add("fashion earrings");
       }
+      if (
+        activeFilters.halo_earring_diamond_shape.length > 0 ||
+        (groupTitle === "Halo Earrings" && checked)
+      ) {
+        category1Array.add("halo");
+      }
 
       // Remove current subcategory if unchecking and no shapes remain
       const currentSubcategory = mapEarringGroupToCategory1(groupTitle);
@@ -897,6 +991,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           ? "hoops_diamond_shape"
           : groupTitle === "Drop Earrings"
           ? "drop_diamond_shape"
+          : groupTitle === "Halo Earrings"
+          ? "halo_earring_diamond_shape"
           : "fashion_earring_diamond_shape";
 
       const currentShapes = activeFilters[currentFilterKey] as string[];
@@ -1108,12 +1204,50 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                     currentStyles.length > 0
                   );
                 } else {
-                  // For non-earrings, use the regular updateUrlFilters
-                  updateUrlFilters("style", style, e.target.checked);
-                  // Update appropriate category when style is selected
+                  // For non-earrings, batch URL updates to prevent race conditions
+                  const currentParams = new URLSearchParams(searchParams);
+
+                  // Update style parameter
+                  const existingStyles = currentParams.get("style");
+                  const styleValues = existingStyles
+                    ? existingStyles.split(",")
+                    : [];
+
                   if (e.target.checked) {
-                    updateUrlFilters(categoryType, categoryName, true);
+                    if (!styleValues.includes(style)) {
+                      styleValues.push(style);
+                    }
+                    // Also add category if not present
+                    const existingCategories = currentParams.get(categoryType);
+                    const categoryValues = existingCategories
+                      ? existingCategories.split(",")
+                      : [];
+                    if (!categoryValues.includes(categoryName)) {
+                      categoryValues.push(categoryName);
+                    }
+                    if (categoryValues.length > 0) {
+                      currentParams.set(categoryType, categoryValues.join(","));
+                    }
+                  } else {
+                    const index = styleValues.indexOf(style);
+                    if (index > -1) {
+                      styleValues.splice(index, 1);
+                    }
                   }
+
+                  // Update or delete style parameter
+                  if (styleValues.length > 0) {
+                    currentParams.set("style", styleValues.join(","));
+                  } else {
+                    currentParams.delete("style");
+                  }
+
+                  // Update URL and state together
+                  setSearchParams(currentParams);
+                  setActiveFilters((prev) => ({
+                    ...prev,
+                    style: styleValues,
+                  }));
                 }
               }}
             />
@@ -1275,43 +1409,31 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                     ? "2px solid #10b981"
                     : "1px solid var(--border)",
                   borderRadius: "6px",
-                  backgroundColor: isSelected ? "#dcfce7" : "transparent",
+                  backgroundColor: isSelected ? "transparent" : "transparent",
+                }}
+                onClick={() => {
+                  const newChecked = !isSelected;
+                  if (isEarrings) {
+                    // Handle earrings - updates both category-specific array AND centerStoneShape
+                    setEarringCenterStoneShape(ringCategory, shape, newChecked);
+                  } else {
+                    // Handle other categories with legacy logic
+                    updateUrlFilters(diamondShapeFilterKey, shape, newChecked);
+                    // Only add ring_category if diamond shape is being checked and category not already present
+                    if (
+                      newChecked &&
+                      !activeFilters.ring_category.includes(ringCategory)
+                    ) {
+                      updateUrlFilters("ring_category", ringCategory, true);
+                    }
+                  }
                 }}
               >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  onChange={(e) => {
-                    if (isEarrings) {
-                      // Handle earrings - updates both category-specific array AND centerStoneShape
-                      setEarringCenterStoneShape(
-                        ringCategory,
-                        shape,
-                        e.target.checked
-                      );
-                    } else {
-                      // Handle other categories with legacy logic
-                      updateUrlFilters(
-                        diamondShapeFilterKey,
-                        shape,
-                        e.target.checked
-                      );
-                      // Only add ring_category if diamond shape is being checked and category not already present
-                      if (
-                        e.target.checked &&
-                        !activeFilters.ring_category.includes(ringCategory)
-                      ) {
-                        updateUrlFilters("ring_category", ringCategory, true);
-                      }
-                    }
-                  }}
-                  style={{ marginBottom: "4px" }}
-                />
                 {showImages && (
                   <img
                     src={`/DIAMOND_SHAPES_WEBP/${shape.toLowerCase()}.png`}
                     alt={shape}
-                    className="h-8 w-8 mb-1"
+                    className="h-10 w-10 mb-1"
                     onError={(e) => {
                       // Replace with a simple placeholder if image fails to load
                       e.currentTarget.style.display = "none";
@@ -1376,12 +1498,19 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
     if (category === "rings") {
       return (
-        <FilterGroup title="Rings" defaultOpen={false}>
+        <FilterGroup title="Rings" defaultOpen={true}>
           {/* Solitaire Rings */}
           <FilterGroup
             title="Solitaire Rings"
-            defaultOpen={true}
+            defaultOpen={shouldGroupBeOpen("Solitaire Rings", "ring_category")}
             isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Solitaire Rings",
+                "ring_category",
+                isOpen
+              )
+            }
           >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
@@ -1402,7 +1531,18 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Engagement Rings */}
-          <FilterGroup title="Engagement Rings" isSubGroup={true}>
+          <FilterGroup
+            title="Engagement Rings"
+            defaultOpen={shouldGroupBeOpen("Engagement Rings", "ring_category")}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Engagement Rings",
+                "ring_category",
+                isOpen
+              )
+            }
+          >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.engagement_diamond_shape}
@@ -1426,7 +1566,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Mens Rings */}
-          <FilterGroup title="Mens Rings" isSubGroup={true}>
+          <FilterGroup
+            title="Mens Rings"
+            defaultOpen={shouldGroupBeOpen("Mens Rings", "ring_category")}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle("Mens Rings", "ring_category", isOpen)
+            }
+          >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.mens_diamond_shape}
@@ -1446,7 +1593,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Fashion Rings */}
-          <FilterGroup title="Fashion Rings" isSubGroup={true}>
+          <FilterGroup
+            title="Fashion Rings"
+            defaultOpen={shouldGroupBeOpen("Fashion Rings", "ring_category")}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle("Fashion Rings", "ring_category", isOpen)
+            }
+          >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.fashion_diamond_shape}
@@ -1498,7 +1652,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       return (
         <FilterGroup title="Earrings" defaultOpen={true}>
           {/* Studs */}
-          <FilterGroup title="Studs" defaultOpen={true} isSubGroup={true}>
+          <FilterGroup
+            title="Studs"
+            defaultOpen={shouldEarringGroupBeOpen("Studs")}
+            isSubGroup={true}
+            onToggle={(isOpen) => handleEarringGroupToggle("Studs", isOpen)}
+          >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.studs_diamond_shape}
@@ -1520,8 +1679,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           {/* Hoops / Huggies */}
           <FilterGroup
             title="Hoops / Huggies"
-            defaultOpen={false}
+            defaultOpen={shouldEarringGroupBeOpen("Hoops / Huggies")}
             isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleEarringGroupToggle("Hoops / Huggies", isOpen)
+            }
           >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
@@ -1544,7 +1706,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Fashion Earrings */}
-          <FilterGroup title="Fashion Earrings" isSubGroup={true}>
+          <FilterGroup
+            title="Fashion Earrings"
+            defaultOpen={shouldEarringGroupBeOpen("Fashion Earrings")}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleEarringGroupToggle("Fashion Earrings", isOpen)
+            }
+          >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.fashion_earring_diamond_shape}
@@ -1571,8 +1740,42 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
           </FilterGroup>
 
+          {/* Halo Earrings */}
+          <FilterGroup
+            title="Halo Earrings"
+            defaultOpen={shouldEarringGroupBeOpen("Halo Earrings")}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleEarringGroupToggle("Halo Earrings", isOpen)
+            }
+          >
+            <p className="eng-label-muted">DIAMOND SHAPE</p>
+            <EnhancedDiamondShapeSelector
+              selectedShapes={activeFilters.halo_earring_diamond_shape}
+              showImages={true}
+              ringCategory="Halo Earrings"
+              diamondShapeFilterKey="halo_earring_diamond_shape"
+            />
+            <p className="eng-label-muted">PRICE</p>
+            <PriceRangeSlider
+              minPrice={minPriceUI}
+              maxPrice={maxPriceUI}
+              onMinChange={handleMinChange}
+              onMaxChange={handleMaxChange}
+              onMinRelease={handleMinRelease}
+              onMaxRelease={handleMaxRelease}
+            />
+          </FilterGroup>
+
           {/* Drop Earrings */}
-          <FilterGroup title="Drop Earrings" isSubGroup={true}>
+          <FilterGroup
+            title="Drop Earrings"
+            defaultOpen={shouldEarringGroupBeOpen("Drop Earrings")}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleEarringGroupToggle("Drop Earrings", isOpen)
+            }
+          >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.drop_diamond_shape}
@@ -1604,8 +1807,18 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           {/* Solitaire Pendants */}
           <FilterGroup
             title="Solitaire Pendants"
-            defaultOpen={true}
+            defaultOpen={shouldGroupBeOpen(
+              "Solitaire Pendants",
+              "pendant_category"
+            )}
             isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Solitaire Pendants",
+                "pendant_category",
+                isOpen
+              )
+            }
           >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
@@ -1626,7 +1839,21 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Fashion Pendants */}
-          <FilterGroup title="Fashion Pendants" isSubGroup={true}>
+          <FilterGroup
+            title="Fashion Pendants"
+            defaultOpen={shouldGroupBeOpen(
+              "Fashion Pendants",
+              "pendant_category"
+            )}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Fashion Pendants",
+                "pendant_category",
+                isOpen
+              )
+            }
+          >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.fashion_pendant_diamond_shape}
@@ -1656,8 +1883,18 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           {/* Solitaire Halo */}
           <FilterGroup
             title="Solitaire Halo"
-            defaultOpen={false}
+            defaultOpen={shouldGroupBeOpen(
+              "Solitaire Halo",
+              "pendant_category"
+            )}
             isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Solitaire Halo",
+                "pendant_category",
+                isOpen
+              )
+            }
           >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
@@ -1686,8 +1923,18 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           {/* Tennis Bracelets */}
           <FilterGroup
             title="Tennis Bracelets"
-            defaultOpen={true}
+            defaultOpen={shouldGroupBeOpen(
+              "Tennis Bracelets",
+              "bracelet_category"
+            )}
             isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Tennis Bracelets",
+                "bracelet_category",
+                isOpen
+              )
+            }
           >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
@@ -1708,7 +1955,21 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Fashion Bracelets */}
-          <FilterGroup title="Fashion Bracelets" isSubGroup={true}>
+          <FilterGroup
+            title="Fashion Bracelets"
+            defaultOpen={shouldGroupBeOpen(
+              "Fashion Bracelets",
+              "bracelet_category"
+            )}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Fashion Bracelets",
+                "bracelet_category",
+                isOpen
+              )
+            }
+          >
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.fashion_bracelet_diamond_shape}
@@ -1736,7 +1997,21 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Chain Bracelets */}
-          <FilterGroup title="Chain Bracelets" isSubGroup={true}>
+          <FilterGroup
+            title="Chain Bracelets"
+            defaultOpen={shouldGroupBeOpen(
+              "Chain Bracelets",
+              "bracelet_category"
+            )}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Chain Bracelets",
+                "bracelet_category",
+                isOpen
+              )
+            }
+          >
             <div className="eng-sublist pt-2">
               <p className="eng-label-muted">STYLE</p>
               {renderStyleOptions(
@@ -1757,7 +2032,21 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </FilterGroup>
 
           {/* Charm Bracelets */}
-          <FilterGroup title="Charm Bracelets" isSubGroup={true}>
+          <FilterGroup
+            title="Charm Bracelets"
+            defaultOpen={shouldGroupBeOpen(
+              "Charm Bracelets",
+              "bracelet_category"
+            )}
+            isSubGroup={true}
+            onToggle={(isOpen) =>
+              handleFilterGroupToggle(
+                "Charm Bracelets",
+                "bracelet_category",
+                isOpen
+              )
+            }
+          >
             <div className="eng-sublist pt-2">
               <p className="eng-label-muted">STYLE</p>
               {renderStyleOptions(
@@ -1809,7 +2098,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         {/* API Applied Filters Display */}
         {appliedFilters && !loading && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+          <div className="hidden mb-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-sm font-medium text-blue-900 mb-2">
               Applied Filters (from API):
             </p>
@@ -2072,14 +2361,24 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       >
         <aside className="eng-drawer-aside">
           <div className="eng-drawer-head">
-            <span>Filters</span>
-            <button
-              className="eng-close"
-              onClick={() => setMobileFiltersOpen(false)}
-              aria-label="Close filters"
-            >
-              <X size={16} />
-            </button>
+            <div className="flex items-center justify-between w-full">
+              <span>Filters</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={clearAllFilters}
+                  className="text-sm text-teal-600 hover:text-teal-800 font-medium"
+                >
+                  Clear All
+                </button>
+                <button
+                  className="eng-close"
+                  onClick={() => setMobileFiltersOpen(false)}
+                  aria-label="Close filters"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
           </div>
           <div className="eng-drawer-content">{renderCategoryFilters()}</div>
         </aside>
