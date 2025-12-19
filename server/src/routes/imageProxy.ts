@@ -31,6 +31,43 @@ router.get("/", async (req, res) => {
       decodeCount: decodeCount,
     });
 
+    // Reject unsupported protocols like blob:
+    if (imageUrl.startsWith("blob:")) {
+      console.error(
+        "❌ Unsupported protocol: blob URLs are not fetchable by the server."
+      );
+      return res.status(400).json({
+        success: false,
+        error: "Unsupported URL protocol",
+        message:
+          "The server cannot fetch blob URLs. Please provide an HTTP(S) URL.",
+      });
+    }
+
+    // Prevent recursive proxy calls
+    if (imageUrl.includes("/api/image-proxy")) {
+      console.error("❌ Recursive proxy call detected:", imageUrl);
+      return res.status(400).json({
+        success: false,
+        error: "Recursive proxy call",
+        message:
+          "The server detected a recursive proxy call. Please provide a valid URL.",
+      });
+    }
+
+    // Validate absolute URLs
+    if (!/^https?:\/\//.test(imageUrl)) {
+      console.error(
+        "❌ Invalid URL: Only absolute URLs are supported:",
+        imageUrl
+      );
+      return res.status(400).json({
+        success: false,
+        error: "Invalid URL",
+        message: "Only absolute URLs (http/https) are supported.",
+      });
+    }
+
     const response = await fetch(imageUrl, {
       headers: {
         "User-Agent":

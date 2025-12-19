@@ -45,9 +45,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
   });
   const [selectedFont, setSelectedFont] = useState("");
   const [fonts, setFonts] = useState<string[]>([]);
-  const [fontSize, setFontSize] = useState(
-    propFontSize ? propFontSize * 10 : 24
-  );
+  const [fontSize, setFontSize] = useState(propFontSize ? propFontSize : 24);
   const [engravingText, setEngravingText] = useState(initialText);
   const [activeTab, setActiveTab] = useState("FONT");
   const [textPosition, setTextPosition] = useState({ x: 52, y: 64 });
@@ -143,39 +141,27 @@ const EngravingPage: React.FC<EngraveProps> = ({
 
   // Get data from navigation state or props
   useEffect(() => {
-    if (location.state) {
-      const {
-        selectedImage: navImage,
-        jewelryType: navJewelryType,
-        userId: navUserId,
-        returnTo,
-        formData,
-      } = location.state;
-      console.log("🎨 Engraving page received navigation data:", {
-        selectedImage: navImage,
-        jewelryType: navJewelryType,
-        userId: navUserId,
-        returnTo,
-      });
 
-      setCurrentSelectedImage(navImage || selectedImage);
-      setEngravingData({
-        jewelryType: navJewelryType || jewelryType,
-        userId: navUserId || userId,
-        returnTo: returnTo || "",
-        formData: formData,
-      });
+    // Simplified logic to handle image source
+    let imageSource = selectedImage;
+    if (selectedImage.startsWith("blob:")) {
+      // Use blob directly
+      imageSource = selectedImage;
     } else {
-      // Use props directly
-      setCurrentSelectedImage(selectedImage);
-      setEngravingData({
-        jewelryType: jewelryType,
-        userId: userId,
-        returnTo: "",
-        formData: null,
-      });
+      // Apply proxy for other URLs
+      imageSource = `/api/image-proxy?url=${encodeURIComponent(selectedImage)}`;
     }
-  }, [location.state, selectedImage, jewelryType, userId]);
+
+    console.log("🔍 Determined image source:", imageSource);
+
+    setCurrentSelectedImage(imageSource);
+    setEngravingData({
+      jewelryType: jewelryType,
+      userId: userId,
+      returnTo: "",
+      formData: null,
+    });
+  }, [selectedImage, jewelryType, userId]);
 
   const handleClear = () => {
     setEngravingText("");
@@ -348,9 +334,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
       // Use selected image or fallback to default
       img.crossOrigin = "anonymous";
 
-      img.src = currentSelectedImage
-        ? `/api/image-proxy?url=${currentSelectedImage}`
-        : "/newring.jpg";
+      // currentSelectedImage is already processed in useEffect (either blob or proxy URL)
+      img.src = currentSelectedImage || "/newring.jpg";
     });
   };
 
@@ -449,11 +434,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                     </div> */}
                   </div>
                 ) : (
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold mb-3 text-gray-800">
-                      Default Ring for Engraving
-                    </h3>
-                  </div>
+                  <p className="text-gray-500">No image selected.</p>
                 )}
 
                 <div
@@ -469,13 +450,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                   {/* Display selected image or fallback to default */}
                   {currentSelectedImage ? (
                     <img
-                      src={
-                        currentSelectedImage
-                          ? `/api/image-proxy?url=${encodeURIComponent(
-                              currentSelectedImage
-                            )}`
-                          : "/newring.jpg"
-                      }
+                      src={currentSelectedImage || "/newring.jpg"}
                       alt="Selected jewelry for engraving"
                       draggable={false}
                       className="pointer-events-none select-none"
@@ -711,10 +686,16 @@ const EngravingPage: React.FC<EngraveProps> = ({
                           disabled={!!propFontSize}
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
                         >
-                          {propFontSize && (
-                            <option value={propFontSize * 10}>
-                              {propFontSize * 10}
-                            </option>
+                          {propFontSize ? (
+                            <option value={propFontSize}>{propFontSize}</option>
+                          ) : (
+                            <>
+                              <option value={16}>Small (16px)</option>
+                              <option value={20}>Medium (20px)</option>
+                              <option value={24}>Large (24px)</option>
+                              <option value={28}>Extra Large (28px)</option>
+                              <option value={32}>Huge (32px)</option>
+                            </>
                           )}
                         </select>
                       </div>
@@ -745,7 +726,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                         rows={4}
                         style={{
                           fontFamily: selectedFont,
-                          fontSize: `${Math.max(fontSize, 16)}px`,
+                          fontSize: `${16}px`,
                         }}
                       />
 
