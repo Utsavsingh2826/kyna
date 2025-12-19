@@ -2651,33 +2651,15 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Total Diamond Weight (Approx carats)
+                            Certification
                           </span>
-                          <span className="font-medium">8.60</span>
+                          <span className="font-medium">IGI/SGL Certified</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Gemstone Origin
+                            HallMark
                           </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstone Color
-                          </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstone Clarity
-                          </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Total Gemstone Weight (Approx carats)
-                          </span>
-                          <span className="font-medium">Oval</span>
+                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                       </div>
                     </div>
@@ -2690,19 +2672,12 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            SKU Number
-                          </span>
-                          <span className="font-medium">
-                            {productData.modelSku}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
                             Gold/Silver/Platinum Value
                           </span>
                           <span className="font-medium">
-                            Rs{" "}
+                            Rs.{" "}
                             {productData.priceBreakdown.metalCost.toLocaleString()}
+                            /-
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2710,52 +2685,36 @@ const ProductDetail = () => {
                             Diamond Value
                           </span>
                           <span className="font-medium">
-                            Rs.
+                            Rs.{" "}
                             {productData.priceBreakdown.diamondCost.toLocaleString()}
+                            /-
                           </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstones Value
-                          </span>
-                          <span className="font-medium">Rs.</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Making Charges
                           </span>
                           <span className="font-medium">
-                            Rs
+                            Rs.{" "}
                             {productData.priceBreakdown.labourCost.toLocaleString()}
-                            .
+                            /-
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
-                            Rs
+                            Rs.{" "}
                             {productData.priceBreakdown.gstAmount.toLocaleString()}
-                            .
+                            /-
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
                           <span>
-                            Rs.
+                            Rs.{" "}
                             {productData.priceBreakdown.totalWithGst.toLocaleString()}
+                            /-
                           </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Certification
-                          </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            HallMark
-                          </span>
-                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                         <div className="py-2">
                           <div className="text-muted-foreground mb-2">
