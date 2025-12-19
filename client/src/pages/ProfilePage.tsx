@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
+import { useDispatch, useSelector } from "react-redux";
+import { updateUser } from "@/store/slices/authSlice";
+import type { RootState } from "@/store";
 import apiService from "@/services/api";
 
 interface UserData {
@@ -31,7 +34,12 @@ interface UserData {
 }
 
 const ProfilePage: React.FC = () => {
+  const dispatch = useDispatch();
+  const user = useSelector((state: RootState) => state.auth.user);
+
   const [activeSection, setActiveSection] = useState("User Account");
+  const [isLoading, setIsLoading] = useState(true);
+  const [profileImageUrl, setProfileImageUrl] = useState<string>(""); // Cloudinary URL
   const [profileData, setProfileData] = useState<UserData>({
     firstName: "",
     lastName: "",
@@ -63,19 +71,30 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleSaveChanges = async () => {
+    // Validate required fields before saving
+    if (!profileData.firstName.trim()) {
+      alert("First name is required");
+      return;
+    }
+
+    if (!profileData.email.trim()) {
+      alert("Email is required");
+      return;
+    }
+
     try {
       const updateData = profileData;
 
       // Map frontend fields to backend expected fields
       const profileUpdateData = {
-        firstName: updateData.firstName,
-        lastName: updateData.lastName,
-        phone: updateData.phoneNumber,
-        secondaryEmail: updateData.secondaryEmail,
-        country: updateData.country,
-        state: updateData.state,
-        city: updateData.city,
-        zipCode: updateData.zipCode,
+        firstName: updateData.firstName.trim(),
+        lastName: updateData.lastName?.trim() || "",
+        phone: updateData.phoneNumber?.trim() || "",
+        secondaryEmail: updateData.secondaryEmail?.trim() || "",
+        country: updateData.country?.trim() || "",
+        state: updateData.state?.trim() || "",
+        city: updateData.city?.trim() || "",
+        zipCode: updateData.zipCode?.trim() || "",
       };
 
       interface UpdateProfileResponse {
@@ -89,33 +108,47 @@ const ProfilePage: React.FC = () => {
           state?: string;
           city?: string;
           zipCode?: string;
+          profileImage?: string;
           [key: string]: unknown;
         };
         message?: string;
       }
 
+      // Pass the profile image if it exists
       const response = (await apiService.updateProfile(
-        profileUpdateData
+        profileUpdateData,
+        profileData.profileImage || undefined
       )) as UpdateProfileResponse;
-      console.log("Update response:", response);
 
-      if (response.success && response.data) {
-        // Update local state with the response data
-        const updatedUser = response.data;
-        setProfileData((prev) => ({
-          ...prev,
-          firstName: updatedUser.firstName || "",
-          lastName: updatedUser.lastName || "",
-          phoneNumber: updatedUser.phone || "",
-          secondaryEmail: updatedUser.secondaryEmail || "",
-          country: updatedUser.country || "",
-          state: updatedUser.state || "",
-          city: updatedUser.city || "",
-          zipCode: updatedUser.zipCode || "",
-        }));
+      if (response.success) {
+        // Fetch fresh profile data from backend to ensure all fields are up to date
+        const profileResponse = await apiService.getProfile();
 
-        // Update localStorage
-        localStorage.setItem("user", JSON.stringify(updatedUser));
+        if (profileResponse.success && profileResponse.data) {
+          const userData =
+            (profileResponse.data as any).user || profileResponse.data;
+
+          // Update Redux store with the complete fresh data
+          dispatch(updateUser(userData));
+
+          // Update local state with the fresh data
+          setProfileData({
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
+            displayName: userData.displayName || userData.firstName || "",
+            email: userData.email || "",
+            secondaryEmail: userData.secondaryEmail || "",
+            phoneNumber: userData.phone || userData.phoneNumber || "",
+            country: userData.country || "",
+            state: userData.state || "",
+            city: userData.city || "",
+            zipCode: userData.zipCode || "",
+            profileImage: undefined, // Clear the file from local state after upload
+          });
+
+          // Update profile image URL from Cloudinary
+          setProfileImageUrl(userData.profileImage || "");
+        }
 
         alert("Profile updated successfully!");
       } else {
@@ -142,97 +175,111 @@ const ProfilePage: React.FC = () => {
     alert("Delete account feature will be implemented soon.");
   };
 
-  interface GetProfileResponse {
-    success: boolean;
-    data?: {
-      user?: {
-        firstName?: string;
-        lastName?: string;
-        displayName?: string;
-        email?: string;
-        secondaryEmail?: string;
-        phone?: string;
-        country?: string;
-        state?: string;
-        city?: string;
-        zipCode?: string;
-        [key: string]: unknown;
-      };
-    };
-    user?: {
-      firstName?: string;
-      lastName?: string;
-      displayName?: string;
-      email?: string;
-      secondaryEmail?: string;
-      phone?: string;
-      country?: string;
-      state?: string;
-      city?: string;
-      zipCode?: string;
-      [key: string]: unknown;
-    };
-    message?: string;
-  }
-
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = (await apiService.getProfile()) as GetProfileResponse;
-        console.log("Profile response:", response);
+    // Always fetch fresh profile data from API on component mount
+    const loadProfileData = async () => {
+      setIsLoading(true);
 
-        if (response.success && response.data?.user) {
-          const user = response.data.user;
+      try {
+        const response = await apiService.getProfile();
+
+        if (response.success && response.data) {
+          const userData = (response.data as any).user || response.data; // Handle both {user} and direct user object
+
+          // Update Redux store with fetched data
+          dispatch(updateUser(userData));
+
+          // Set profile data
           setProfileData({
-            firstName: user.firstName || "",
-            lastName: user.lastName || "",
-            displayName: user.displayName || user.firstName || "",
-            email: user.email || "",
-            secondaryEmail: user.secondaryEmail || "",
-            phoneNumber: user.phone || "",
-            country: user.country || "",
-            state: user.state || "",
-            city: user.city || "",
-            zipCode: user.zipCode || "",
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
+            displayName: userData.displayName || userData.firstName || "",
+            email: userData.email || "",
+            secondaryEmail: userData.secondaryEmail || "",
+            phoneNumber: userData.phone || userData.phoneNumber || "",
+            country: userData.country || "",
+            state: userData.state || "",
+            city: userData.city || "",
+            zipCode: userData.zipCode || "",
+            profileImage: undefined,
           });
-        } else if (response.success && response.data) {
-          // Handle direct user object in data
-          const user = response.data;
-          setProfileData({
-            firstName: user.firstName || "",
-            lastName: user.lastName || "",
-            displayName: user.displayName || user.firstName || "",
-            email: user.email || "",
-            secondaryEmail: user.secondaryEmail || "",
-            phoneNumber: user.phone || "",
-            country: user.country || "",
-            state: user.state || "",
-            city: user.city || "",
-            zipCode: user.zipCode || "",
-          });
-        } else if (response.user) {
-          // Handle direct user object response
-          const user = response.user;
-          setProfileData({
-            firstName: user.firstName || "",
-            lastName: user.lastName || "",
-            displayName: user.displayName || user.firstName || "",
-            email: user.email || "",
-            secondaryEmail: user.secondaryEmail || "",
-            phoneNumber: user.phone || "",
-            country: user.country || "",
-            state: user.state || "",
-            city: user.city || "",
-            zipCode: user.zipCode || "",
-          });
+
+          // Set profile image URL from Cloudinary
+          setProfileImageUrl(userData.profileImage || "");
+        } else {
+          console.log("ProfilePage: API call failed or returned no data");
+          // If API fails, try to use Redux data as fallback
+          if (user) {
+            setProfileData({
+              firstName: user.firstName || "",
+              lastName: user.lastName || "",
+              displayName: user.displayName || user.firstName || "",
+              email: user.email || "",
+              secondaryEmail: user.secondaryEmail || "",
+              phoneNumber: user.phone || user.phoneNumber || "",
+              country: user.country || "",
+              state: user.state || "",
+              city: user.city || "",
+              zipCode: user.zipCode || "",
+              profileImage: undefined,
+            });
+          } else {
+            // Set minimal default state
+            setProfileData({
+              firstName: "",
+              lastName: "",
+              displayName: "",
+              email: "",
+              secondaryEmail: "",
+              phoneNumber: "",
+              country: "",
+              state: "",
+              city: "",
+              zipCode: "",
+              profileImage: undefined,
+            });
+          }
         }
       } catch (error) {
-        console.error("❌ Failed to fetch profile:", error);
+        console.error("ProfilePage: Failed to fetch profile data:", error);
+        // Use Redux data as fallback
+        if (user) {
+          setProfileData({
+            firstName: user.firstName || "",
+            lastName: user.lastName || "",
+            displayName: user.displayName || user.firstName || "",
+            email: user.email || "",
+            secondaryEmail: user.secondaryEmail || "",
+            phoneNumber: user.phone || user.phoneNumber || "",
+            country: user.country || "",
+            state: user.state || "",
+            city: user.city || "",
+            zipCode: user.zipCode || "",
+            profileImage: undefined,
+          });
+        } else {
+          // Set minimal default state
+          setProfileData({
+            firstName: "",
+            lastName: "",
+            displayName: "",
+            email: "",
+            secondaryEmail: "",
+            phoneNumber: "",
+            country: "",
+            state: "",
+            city: "",
+            zipCode: "",
+            profileImage: undefined,
+          });
+        }
+      } finally {
+        setIsLoading(false);
       }
     };
 
-    fetchProfile();
-  }, []);
+    loadProfileData();
+  }, [dispatch]); // Remove user from dependencies to always fetch fresh data
 
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; // optional chaining
@@ -291,7 +338,34 @@ const ProfilePage: React.FC = () => {
                   : "ACCOUNT SETTING"}
               </h1>
 
-              {activeSection === "Signout" ? (
+              {isLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#328F94]"></div>
+                  <span className="ml-3 text-gray-600">
+                    Loading profile data...
+                  </span>
+                </div>
+              ) : !isLoading && !profileData.email ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-500 mb-4">
+                    <User className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">
+                      Profile Information Not Available
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      We couldn't load your profile information. Please try
+                      refreshing the page or contact support if the problem
+                      persists.
+                    </p>
+                    <Button
+                      onClick={() => window.location.reload()}
+                      className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
+                    >
+                      Refresh Page
+                    </Button>
+                  </div>
+                </div>
+              ) : activeSection === "Signout" ? (
                 /* Sign Out Section */
                 <div className="flex flex-col lg:flex-row gap-8">
                   {/* Profile Image Section - Keep unchanged */}
@@ -301,6 +375,12 @@ const ProfilePage: React.FC = () => {
                         {profileData.profileImage ? (
                           <img
                             src={URL.createObjectURL(profileData.profileImage)}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : profileImageUrl ? (
+                          <img
+                            src={profileImageUrl}
                             alt="Profile"
                             className="w-full h-full object-cover"
                           />
@@ -314,9 +394,9 @@ const ProfilePage: React.FC = () => {
                     </div>
                     <div className="text-center">
                       <h3 className="text-lg font-semibold text-gray-800">
-                        {profileData.firstName} {profileData.lastName}
+                        {user?.firstName} {user?.lastName}
                       </h3>
-                      <p className="text-gray-600">{profileData.email}</p>
+                      <p className="text-gray-600">{user?.email}</p>
                     </div>
                   </div>
 
@@ -359,6 +439,12 @@ const ProfilePage: React.FC = () => {
                             alt="Profile"
                             className="w-full h-full object-cover"
                           />
+                        ) : profileImageUrl ? (
+                          <img
+                            src={profileImageUrl}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           getInitials(
                             profileData.firstName,
@@ -388,7 +474,7 @@ const ProfilePage: React.FC = () => {
                       {/* First Name */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          First Name
+                          First Name <span className="text-red-500">*</span>
                         </label>
                         <Input
                           type="text"
@@ -397,6 +483,7 @@ const ProfilePage: React.FC = () => {
                             handleInputChange("firstName", e.target.value)
                           }
                           className="w-full"
+                          required
                         />
                       </div>
 
@@ -419,7 +506,7 @@ const ProfilePage: React.FC = () => {
                       {/* Email */}
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Email
+                          Email <span className="text-red-500">*</span>
                         </label>
                         <Input
                           type="email"

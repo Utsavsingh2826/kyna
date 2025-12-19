@@ -176,9 +176,34 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("combined"));
 }
 
-// Body parsing middleware
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// Body parsing middleware - conditionally apply based on content-type
+// IMPORTANT: This must be done carefully to avoid consuming the request stream for multipart uploads
+const jsonParser = express.json({ limit: "10mb" });
+const urlencodedParser = express.urlencoded({ extended: true, limit: "10mb" });
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const contentType = req.get("content-type") || "";
+
+  // Skip all body parsing for multipart/form-data (handled by multer)
+  if (contentType.toLowerCase().includes("multipart/form-data")) {
+    console.log("Skipping body parsing for multipart request");
+    return next();
+  }
+
+  // Apply JSON parser for JSON content
+  if (contentType.toLowerCase().includes("application/json")) {
+    return jsonParser(req, res, next);
+  }
+
+  // Apply URL-encoded parser for form data
+  if (contentType.toLowerCase().includes("application/x-www-form-urlencoded")) {
+    return urlencodedParser(req, res, next);
+  }
+
+  // For other content types, try JSON parsing (backwards compatibility)
+  return jsonParser(req, res, next);
+});
+
 app.use(cookieParser());
 
 // Request metrics middleware
@@ -400,11 +425,31 @@ app.use("*", (req: Request, res: Response) => {
 });
 
 // Global error handling middleware
-app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   console.error("Global error:", err);
-  res.status(500).json({
+
+  // Handle body-parser errors specifically
+  if (err.type === "entity.parse.failed") {
+    return res.status(400).json({
+      success: false,
+      error: "Invalid request format",
+      message:
+        "The request body could not be parsed. For file uploads, ensure Content-Type is multipart/form-data.",
+    });
+  }
+
+  // Handle multer errors
+  if (err.name === "MulterError") {
+    return res.status(400).json({
+      success: false,
+      error: "File upload error",
+      message: err.message,
+    });
+  }
+
+  res.status(err.statusCode || 500).json({
     success: false,
-    error: "Internal server error",
+    error: err.statusCode ? err.message : "Internal server error",
     message: process.env.NODE_ENV === "development" ? err.message : undefined,
   });
 });

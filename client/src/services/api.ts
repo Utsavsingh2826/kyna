@@ -18,14 +18,22 @@ class ApiService {
     try {
       const url = `${API_BASE_URL}${endpoint}`;
       const token = getAccessToken();
+
+      // Build headers - don't set Content-Type for FormData (browser will set it with boundary)
+      const headers: Record<string, string> = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers as Record<string, string> | undefined),
+      };
+
+      // Only add Content-Type if not FormData and not already set
+      if (!(options.body instanceof FormData) && !headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+
       const response = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...options.headers,
-        },
-        credentials: "include",
         ...options,
+        headers,
+        credentials: "include",
       });
 
       const data = await response.json();

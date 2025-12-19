@@ -1,19 +1,21 @@
 import bcryptjs from "bcryptjs";
 import crypto from "crypto";
-import { NextFunction, Request, Response } from 'express';
-import User from '../models/userModel';
-import { generateTokenAndSetCookie } from '../utils/generateTokenAndSetCookie';
+import { NextFunction, Request, Response } from "express";
+import User from "../models/userModel";
+import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie";
 import { IUser } from "../types";
 import {
   sendPasswordResetEmail,
   sendResetSuccessEmail,
   sendVerificationEmail,
   sendWelcomeEmail,
-} from '../services/emailService';
+} from "../services/emailService";
 import validator from "validator";
-import { deleteImageFromCloudinary, extractPublicIdFromUrl } from "../services/cloudinary";
+import {
+  deleteImageFromCloudinary,
+  extractPublicIdFromUrl,
+} from "../services/cloudinary";
 import { releasePendingReferralCredits } from "../utils/referralWallet";
-
 
 interface UpdateProfileRequest {
   firstName?: string;
@@ -73,7 +75,8 @@ export const signup = async (req: Request, res: Response) => {
         return res.status(200).json({
           success: false,
           requiresVerification: true,
-          message: "Account already exists but is not verified. We have resent the verification code.",
+          message:
+            "Account already exists but is not verified. We have resent the verification code.",
           user: {
             id: userAlreadyExists._id,
             firstName: userAlreadyExists.firstName,
@@ -83,15 +86,17 @@ export const signup = async (req: Request, res: Response) => {
         });
       }
 
-      return res.status(400).json({ success: false, message: "User already exists" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists" });
     }
 
     const { otp, otpExpires } = generateOtpPayload();
 
     // Split name into firstName and lastName
-    const nameParts = name.trim().split(' ');
+    const nameParts = name.trim().split(" ");
     const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(' ') || '';
+    const lastName = nameParts.slice(1).join(" ") || "";
 
     // Create user with unverified status
     const userData: any = {
@@ -129,7 +134,8 @@ export const signup = async (req: Request, res: Response) => {
     res.status(201).json({
       success: true,
       requiresVerification: true,
-      message: "Registration successful. Please check your email for OTP verification.",
+      message:
+        "Registration successful. Please check your email for OTP verification.",
       user: buildUserResponse(user),
     });
   } catch (error) {
@@ -142,7 +148,9 @@ export const verifyEmail = async (req: Request, res: Response) => {
   const { email, otp } = req.body;
   try {
     if (!email || !otp) {
-      return res.status(400).json({ success: false, message: "Email and OTP are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and OTP are required" });
     }
 
     const user = await User.findOne({
@@ -152,7 +160,9 @@ export const verifyEmail = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired OTP" });
     }
 
     // Verify the user
@@ -186,9 +196,11 @@ export const login = async (req: Request, res: Response) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid credentials" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
     }
-    
+
     if (!user.isVerified) {
       const { otp, otpExpires } = generateOtpPayload();
       user.otp = otp;
@@ -196,24 +208,27 @@ export const login = async (req: Request, res: Response) => {
       await user.save();
       await sendVerificationEmail(user.email, otp);
 
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
         requiresVerification: true,
-        message: "Please verify your email. We've sent a fresh verification code to your inbox.",
+        message:
+          "Please verify your email. We've sent a fresh verification code to your inbox.",
         user: {
           id: user._id,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-        }
+        },
       });
     }
-    
+
     // Check password
     const isPasswordValid = await user.comparePassword(password);
-      
+
     if (!isPasswordValid) {
-      return res.status(400).json({ success: false, message: "Invalid credentials" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
     }
 
     // Generate JWT and set cookie
@@ -240,16 +255,22 @@ export const resendOtp = async (req: Request, res: Response) => {
   const { email } = req.body;
   try {
     if (!email) {
-      return res.status(400).json({ success: false, message: "Email is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required" });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
     }
 
     if (user.isVerified) {
-      return res.status(400).json({ success: false, message: "Email already verified" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already verified" });
     }
 
     // Generate new OTP
@@ -286,7 +307,9 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
     }
 
     // Generate reset token
@@ -300,9 +323,17 @@ export const forgotPassword = async (req: Request, res: Response) => {
     await user.save();
 
     // Send reset email
-    await sendPasswordResetEmail(user.email, `${process.env.CLIENT_URL}/reset-password/${resetToken}`);
+    await sendPasswordResetEmail(
+      user.email,
+      `${process.env.CLIENT_URL}/reset-password/${resetToken}`
+    );
 
-    res.status(200).json({ success: true, message: "Password reset link sent to your email" });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Password reset link sent to your email",
+      });
   } catch (error) {
     console.log("Error in forgotPassword ", error);
     res.status(400).json({ success: false, message: (error as Error).message });
@@ -321,7 +352,9 @@ export const resetPassword = async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(400).json({ success: false, message: "Invalid or expired reset token" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid or expired reset token" });
     }
 
     // Update password - schema hook handles hashing
@@ -337,11 +370,11 @@ export const resetPassword = async (req: Request, res: Response) => {
     // Generate JWT and set cookie for user after password reset
     const jwtToken = generateTokenAndSetCookie(res, user._id);
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       message: "Password reset successful",
       token: jwtToken,
-      user: buildUserResponse(user)
+      user: buildUserResponse(user),
     });
   } catch (error) {
     console.log("Error in resetPassword ", error);
@@ -354,7 +387,9 @@ export const checkAuth = async (req: Request, res: Response) => {
   try {
     const user = await User.findById((req as any).userId);
     if (!user) {
-      return res.status(400).json({ success: false, message: "User not found" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User not found" });
     }
 
     const releaseDelta = releasePendingReferralCredits(user);
@@ -377,7 +412,9 @@ export const getCurrentUser = async (req: Request, res: Response) => {
   try {
     const user = await User.findById((req as any).userId);
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     const releaseDelta = releasePendingReferralCredits(user);
@@ -408,8 +445,9 @@ export const getProfile = async (
     }
 
     // Get user from database
-    const user = await User.findById(userId)
-      .select("-password -otp -otpExpires -resetPasswordToken -resetPasswordExpires");
+    const user = await User.findById(userId).select(
+      "-password -otp -otpExpires -resetPasswordToken -resetPasswordExpires"
+    );
 
     if (!user) {
       res.status(404).json({ message: "User not found." });
@@ -470,12 +508,17 @@ export const updateProfile = async (
 
     // Get the uploaded file (if any) from multer
     const profileImageFile = (req as any).file;
-    console.log("🖼 Uploaded file info:", profileImageFile ? {
-      originalname: profileImageFile.originalname,
-      mimetype: profileImageFile.mimetype,
-      size: profileImageFile.size,
-      path: profileImageFile.path // Cloudinary URL
-    } : "No file uploaded");
+    console.log(
+      "🖼 Uploaded file info:",
+      profileImageFile
+        ? {
+            originalname: profileImageFile.originalname,
+            mimetype: profileImageFile.mimetype,
+            size: profileImageFile.size,
+            path: profileImageFile.path, // Cloudinary URL
+          }
+        : "No file uploaded"
+    );
 
     // Validate secondary email if provided
     if (secondaryEmail && !validator.isEmail(secondaryEmail)) {
@@ -486,7 +529,10 @@ export const updateProfile = async (
 
     // Get current user to handle profile image updates
     const currentUser = await User.findById(userId);
-    console.log("👤 Current user fetched:", currentUser ? "found" : "not found");
+    console.log(
+      "👤 Current user fetched:",
+      currentUser ? "found" : "not found"
+    );
 
     if (!currentUser) {
       res.status(404).json({ message: "User not found." });
@@ -494,12 +540,21 @@ export const updateProfile = async (
     }
 
     // Build update object with only provided fields
-    const updateData: Partial<UpdateProfileRequest & { profileImage?: string }> = {};
+    const updateData: Partial<
+      UpdateProfileRequest & { profileImage?: string }
+    > = {};
     if (firstName !== undefined) updateData.firstName = firstName;
     if (lastName !== undefined) updateData.lastName = lastName;
     if (displayName !== undefined) updateData.displayName = displayName;
     if (secondaryEmail !== undefined) {
-      updateData.secondaryEmail = validator.normalizeEmail(secondaryEmail) || secondaryEmail;
+      // Only normalize and set if there's an actual email value
+      if (secondaryEmail && secondaryEmail.trim() && secondaryEmail !== "") {
+        updateData.secondaryEmail =
+          validator.normalizeEmail(secondaryEmail) || secondaryEmail;
+      } else {
+        // Explicitly set to empty string or undefined to clear the field
+        updateData.secondaryEmail = "";
+      }
     }
     if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
     if (phone !== undefined) updateData.phone = phone;
@@ -535,17 +590,20 @@ export const updateProfile = async (
       }
     } catch (imageError) {
       console.error("❌ Image upload/delete error:", imageError);
-      res.status(500).json({ message: "Error processing profile image. Please try again." });
+      res
+        .status(500)
+        .json({ message: "Error processing profile image. Please try again." });
       return;
     }
 
     // Update user in database
     console.log("💾 Saving user update to database...");
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      updateData,
-      { new: true, runValidators: true }
-    ).select("-password -otp -otpExpires -resetPasswordToken -resetPasswordExpires");
+    const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
+      new: true,
+      runValidators: true,
+    }).select(
+      "-password -otp -otpExpires -resetPasswordToken -resetPasswordExpires"
+    );
 
     console.log("📡 Updated user:", updatedUser ? "success" : "not found");
 
