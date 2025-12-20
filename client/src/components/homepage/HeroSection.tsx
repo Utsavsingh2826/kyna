@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Link } from "react-router-dom";
 import vid1 from "/heropage/Bracelet.mov";
 import vid2 from "/heropage/Ring-and-Braclelet.mov";
 
@@ -68,12 +69,18 @@ const HeroSection: React.FC = () => {
             </h2>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <button className="bg-white text-gray-800 px-8 py-3 text-sm font-medium hover:bg-gray-100 transition-colors shadow-lg min-w-[200px] hover:scale-105 transform duration-200">
+              <Link
+                to="/rings?ring_category=Engagement+Rings"
+                className="bg-white text-gray-800 px-8 py-3 text-sm font-medium hover:bg-gray-100 transition-colors shadow-lg min-w-[200px] hover:scale-105 transform duration-200 inline-block text-center"
+              >
                 Shop All Engagement Rings
-              </button>
-              <button className="bg-white text-gray-800 px-8 py-3 text-sm font-medium hover:bg-gray-100 transition-colors shadow-lg min-w-[200px] hover:scale-105 transform duration-200">
-                Shop All Jewellery
-              </button>
+              </Link>
+              <Link
+                to="/engravings"
+                className="bg-white text-gray-800 px-8 py-3 text-sm font-medium hover:bg-gray-100 transition-colors shadow-lg min-w-[200px] hover:scale-105 transform duration-200 inline-block text-center"
+              >
+                Shop All Engrable Jewellery
+              </Link>
             </div>
           </div>
         </div>
