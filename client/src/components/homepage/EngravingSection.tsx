@@ -29,7 +29,7 @@ const EngravingSection: React.FC = () => {
               engraving and explore the full range of our creations with
               engraving options here.
             </p>
-            <Link to="/engrave-your-ring">
+            <Link to="/engravings">
               <button className="border-2 border-[#68C5C0] text-[#68C5C0] px-8 py-3 rounded hover:bg-[#68C5C0] hover:text-white transition-all duration-300 font-medium">
                 Start Engraving
               </button>
