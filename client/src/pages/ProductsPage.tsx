@@ -249,6 +249,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }
             if (
               activeFilters.ring_category.includes("Men's Rings") ||
+              activeFilters.ring_category.includes("Mens Rings") ||
               activeFilters.mens_diamond_shape.length > 0
             ) {
               ringTypes.add("men");

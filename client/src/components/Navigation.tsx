@@ -442,7 +442,7 @@ const Navigation: React.FC = () => {
                           <span className="mt-2 text-sm">Tennis Necklaces</span>
                         </a> */}
                         <a
-                          href="/build-your-jewellery/Gents-Ring"
+                          href="/build-your-jewellery/Gents-Rings"
                           className="flex flex-col items-center"
                         >
                           <img

@@ -1555,19 +1555,21 @@ const ProductDetail = () => {
   }, []);
 
   const ringSizes = [
-    "4",
-    "4.5",
-    "5",
-    "5.5",
-    "6",
-    "6.5",
-    "7",
-    "7.5",
-    "8",
-    "8.5",
-    "9",
-    "9.5",
-    "10",
+    "11 (16.3MM)",
+    "12 (16.5MM)",
+    "13 (16.9MM)",
+    "14 (17.3MM)",
+    "15 (17.5MM)",
+    "16 (17.9MM)",
+    "17 (18.1MM)",
+    "18 (18.5MM)",
+    "19 (18.7MM)",
+    "20 (19.2MM)",
+    "21 (19.4MM)",
+    "22 (19.8MM)",
+    "23 (20MM)",
+    "24 (20.4MM)",
+    "25 (20.6MM)",
   ];
 
   const braceletSizes = ["6", "7", "8"];
@@ -2220,13 +2222,20 @@ const ProductDetail = () => {
                           </SelectTrigger>
 
                           <SelectContent className="bg-white">
-                            {productData.diamondColorClarity.map(
-                              (cc, index) => (
+                            {productData.diamondColorClarity
+                              .filter((cc) => {
+                                // For Lab Grown Diamond, exclude GHVS and GHSI
+                                if (selectedDiamondOrigin === "Lab Grown Diamond") {
+                                  return cc !== "GHVS" && cc !== "GHSI";
+                                }
+                                // For Natural Diamond, show all options
+                                return true;
+                              })
+                              .map((cc, index) => (
                                 <SelectItem key={index} value={cc}>
                                   {cc}
                                 </SelectItem>
-                              )
-                            )}
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -2363,7 +2372,12 @@ const ProductDetail = () => {
                     {/* Ring Size */}
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm mb-2">Ring Size</label>
+                        <label className="block text-sm mb-2">
+                          Ring Size
+                          <span className="text-xs text-gray-500 font-normal ml-1">
+                            Indian size (dimensions in mm)
+                          </span>
+                        </label>
                         <Select
                           value={selectedSize}
                           onValueChange={setSelectedSize}
@@ -2788,7 +2802,10 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs.{" "}
-                            {productData.priceBreakdown.labourCost.toLocaleString()}
+                            {(
+                              productData.priceBreakdown.labourCost *
+                              (productData.netWeightGrams || 1)
+                            ).toLocaleString()}
                             /-
                           </span>
                         </div>
