@@ -881,7 +881,7 @@ const parseNumeric = (v: any): number => {
 //     // Ring type filters
 //     const ringRaw = String(req.query.ringType || req.query.ring || "").trim();
 //     const ringTokens = ringRaw ? ringRaw.split(",").map(s => s.trim()) : [];
-    
+
 //     const mapRingTypeToPrefixes = (token: string): string[] => {
 //       const t = token.trim().toLowerCase().replace(/[-_\s]+/g, "");
 //       if (["engagement", "eng", "engring", "engagementring", "engagement-ring"].includes(t))
@@ -895,7 +895,7 @@ const parseNumeric = (v: any): number => {
 //       if (/^(eng|sr|fr|gr)$/i.test(t)) return [t.toUpperCase()];
 //       return [];
 //     };
-    
+
 //     const ringPrefixes = Array.from(
 //       new Set(ringTokens.flatMap(mapRingTypeToPrefixes))
 //     );
@@ -905,7 +905,7 @@ const parseNumeric = (v: any): number => {
 //       v
 //         ? String(v).split(",").map((s: string) => s.trim()).filter(Boolean).map((x: string) => x.toUpperCase())
 //         : [];
-    
+
 //     const cat1Filters = parseCatParam(req.query.category1);
 //     const cat2Filters = parseCatParam(req.query.category2);
 //     const cat3Filters = parseCatParam(req.query.category3);
@@ -1371,7 +1371,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     // Ring type filters
     const ringRaw = String(req.query.ringType || req.query.ring || "").trim();
     const ringTokens = ringRaw ? ringRaw.split(",").map(s => s.trim()) : [];
-    
+
     const mapRingTypeToPrefixes = (token: string): string[] => {
       const t = token.trim().toLowerCase().replace(/[-_\s]+/g, "");
       if (["engagement", "eng", "engring", "engagementring", "engagement-ring"].includes(t))
@@ -1385,7 +1385,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       if (/^(eng|sr|fr|gr)$/i.test(t)) return [t.toUpperCase()];
       return [];
     };
-    
+
     const ringPrefixes = Array.from(
       new Set(ringTokens.flatMap(mapRingTypeToPrefixes))
     );
@@ -1395,7 +1395,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       v
         ? String(v).split(",").map((s: string) => s.trim()).filter(Boolean).map((x: string) => x.toUpperCase())
         : [];
-    
+
     const cat1Filters = parseCatParam(req.query.category1);
     const cat2Filters = parseCatParam(req.query.category2);
     const cat3Filters = parseCatParam(req.query.category3);
@@ -1483,7 +1483,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       if (variantMatch.modelSku && variantMatch.modelSku.$in) {
         // Need to combine: modelSku must be in eligibleModelSkus AND match prefix
         // This requires filtering eligibleModelSkus by prefix
-        const filteredSkus = eligibleModelSkus!.filter(sku => 
+        const filteredSkus = eligibleModelSkus!.filter(sku =>
           prefixRegexes.some(regex => regex.test(sku))
         );
         variantMatch.modelSku = { $in: filteredSkus };
@@ -1702,8 +1702,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       const productMetalTypes = Array.isArray(product.attributes?.metalTypes)
         ? product.attributes.metalTypes
         : product.attributes?.metalTypes
-        ? [product.attributes.metalTypes]
-        : [];
+          ? [product.attributes.metalTypes]
+          : [];
 
       const baseOut: any = {
         _id: product._id,
@@ -1727,8 +1727,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
         const stonesArr: any[] = Array.isArray(variant.meta?.stones) && variant.meta.stones.length
           ? variant.meta.stones
           : Array.isArray(variant.stones)
-          ? variant.stones
-          : [];
+            ? variant.stones
+            : [];
 
         const includedStones: {
           sequence: string;
@@ -1748,8 +1748,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
             typeof st?.cts === "number"
               ? st.cts
               : Array.isArray(st?.sequences) && typeof st.sequences[0]?.cts === "number"
-              ? st.sequences[0].cts
-              : null;
+                ? st.sequences[0].cts
+                : null;
           if (cts == null) continue;
 
           const net = st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
@@ -1792,8 +1792,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           variant?.meta?.metalWeightGrams != null
             ? n(variant.meta.metalWeightGrams)
             : variant?.netWeightGrams != null
-            ? n(variant.netWeightGrams)
-            : null;
+              ? n(variant.netWeightGrams)
+              : null;
 
         if (
           (metalWeightGrams == null || Number.isNaN(metalWeightGrams)) &&
@@ -2609,7 +2609,8 @@ export const getProductByModelSku = async (
         .filter(Boolean)
         .map(String);
 
-      const PRIMARY_METALS = ["WG", "YG", "RG", "BR"];
+      const PRIMARY_METALS = ["WG", "YG", "RG", "BR", "3T"];
+
       const OTHER_ALLOWED = [
         "NBV",
         "BV",
@@ -2656,13 +2657,43 @@ export const getProductByModelSku = async (
           x.toUpperCase()
         );
 
+      const extractOrderedMetalsFromFilename = (url: string): string[] => {
+        const name = url.split("/").pop()?.toUpperCase() || "";
+        const parts = name.split(/[-_.]/).filter(Boolean);
+
+        return parts.filter((p) =>
+          ["WG", "YG", "RG", "BR", "3T"].includes(p)
+        );
+      };
+
       // NEW: compute availableColors from all images of this variant
       const availableColorsSet = new Set<string>();
+
       for (const url of allImgs) {
-        const primaries = detectPrimariesInFilename(url);
-        primaries.forEach((p) => availableColorsSet.add(p));
+        const metals = extractOrderedMetalsFromFilename(url);
+
+        // 3-tone (explicit)
+        if (metals.includes("3T")) {
+          availableColorsSet.add("3T");
+          continue;
+        }
+
+        // single metal
+        if (metals.length === 1) {
+          availableColorsSet.add(metals[0]);
+        }
+
+        // multi-tone (order preserved)
+        if (metals.length >= 2) {
+          for (let i = 0; i < metals.length - 1; i++) {
+            availableColorsSet.add(`${metals[i]}-${metals[i + 1]}`);
+          }
+        }
       }
+
       availableColors = Array.from(availableColorsSet);
+
+
 
       const strictPrimaryOnlyMatches = (token: string) => {
         if (!token) return [];
@@ -2727,6 +2758,12 @@ export const getProductByModelSku = async (
         .trim()
         .toUpperCase();
       const requestedToken = normalizeQueryToken(metalQueryRaw);
+
+      if (requestedToken === "3T") {
+        variantImages = allImgs.filter((u) =>
+          /(?:^|[-_.\/])3T(?:$|[-_.\/])/i.test(u)
+        );
+      }
 
       if (requestedToken) {
         const rt = requestedToken.toUpperCase();

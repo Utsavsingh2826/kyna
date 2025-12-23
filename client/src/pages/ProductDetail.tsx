@@ -90,6 +90,64 @@ const METAL_COLOR_CODE_MAP: Record<string, string> = {
   Silver: "SV",
 };
 
+// Map color codes to display info (handles both single and combination colors)
+const getColorDisplayInfo = (
+  code: string
+): { name: string; colors: string[]; img: string } | null => {
+  // Single colors
+  const singleColorMap: Record<string, { name: string; img: string }> = {
+    WG: { name: "White Gold", img: "/colors/white.png" },
+    YG: { name: "Yellow Gold", img: "/colors/gold.png" },
+    RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
+    "3T": { name: "Three Tone", img: "/colors/threetone.png" },
+  };
+
+  // Check if it's a single color
+  if (singleColorMap[code]) {
+    return {
+      name: singleColorMap[code].name,
+      colors: [code],
+      img: singleColorMap[code].img,
+    };
+  }
+
+  // Handle combination colors (e.g., "WG-YG", "WG-RG")
+  const parts = code.split("-");
+  if (parts.length === 2) {
+    const color1 = parts[0];
+    const color2 = parts[1];
+
+    // Build combination name
+    const getColorName = (c: string) => {
+      switch (c) {
+        case "WG":
+          return "White Gold";
+        case "YG":
+          return "Yellow Gold";
+        case "RG":
+          return "Rose Gold";
+        case "BR":
+          return "Brown";
+        default:
+          return c;
+      }
+    };
+
+    // For combinations, use the image from metal_colors folder
+    // Check for both the original code and lowercase version
+    const combinationImageUrl = `/metal_colors/${code}.png`;
+
+    return {
+      name: `${getColorName(color1)} - ${getColorName(color2)}`,
+      colors: [color1, color2],
+      img: combinationImageUrl, // Use combination image from metal_colors folder
+    };
+  }
+
+  return null;
+};
+
+// Helper function to get hex color codes for fallback display
 // Sample product data - in a real app this would come from API/database
 const sampleProduct = {
   id: 1,
@@ -168,6 +226,7 @@ const ProductDetail = () => {
     useState("Natural Diamond");
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
+  const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code (e.g., "WG", "WG-RG")
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedBraceletSize, setSelectedBraceletSize] = useState("6");
   const [selectedDiamondSize, setSelectedDiamondSize] = useState("");
@@ -193,8 +252,7 @@ const ProductDetail = () => {
     productData?.firstVariantSku,
   ]);
 
-  const currentMetalColorCode =
-    METAL_COLOR_CODE_MAP[selectedMetalColor] || null;
+  const currentMetalColorCode = selectedColorCode || "WG";
 
   const wishlistInitialized = useSelector(selectWishlistInitialized);
   const wishlistLoading = useSelector(selectWishlistLoading);
@@ -491,13 +549,6 @@ const ProductDetail = () => {
         const variantId = params.get("variantId");
         const metalColorParam = params.get("metalColor");
 
-        // Map metal color codes to full names
-        const metalColorMap: { [key: string]: string } = {
-          WG: "White Gold",
-          YG: "Yellow Gold",
-          RG: "Rose Gold",
-        };
-
         if (variantId) {
           parseVariantSku(variantId, data);
           // If parsed variant did not yield a clarity selection, default to first available
@@ -517,17 +568,40 @@ const ProductDetail = () => {
         }
 
         // Set metal color based on URL parameter AFTER variant parsing
-        // This ensures URL parameter takes precedence over any defaults
-        if (metalColorParam && metalColorMap[metalColorParam]) {
-          console.log(
-            `Setting metal color from URL: ${metalColorParam} -> ${metalColorMap[metalColorParam]}`
-          );
-          setSelectedMetalColor(metalColorMap[metalColorParam]);
+        // This supports both single colors (WG, YG, RG) and combinations (WG-YG, WG-RG)
+        if (metalColorParam) {
+          const colorInfo = getColorDisplayInfo(metalColorParam);
+          if (colorInfo) {
+            console.log(
+              `Setting metal color from URL: ${metalColorParam} -> ${colorInfo.name}`
+            );
+            setSelectedMetalColor(colorInfo.name);
+            setSelectedColorCode(metalColorParam);
+          } else {
+            console.log("Invalid metal color in URL:", metalColorParam);
+            // Fallback to first available color if available
+            if (data.availableColors && data.availableColors.length > 0) {
+              const firstColorInfo = getColorDisplayInfo(
+                data.availableColors[0]
+              );
+              if (firstColorInfo) {
+                setSelectedMetalColor(firstColorInfo.name);
+                setSelectedColorCode(data.availableColors[0]);
+              }
+            }
+          }
         } else {
-          console.log(
-            "No metal color in URL or invalid value:",
-            metalColorParam
-          );
+          // No metalColor in URL, use first available color
+          if (data.availableColors && data.availableColors.length > 0) {
+            const firstColorInfo = getColorDisplayInfo(data.availableColors[0]);
+            if (firstColorInfo) {
+              console.log(
+                `Setting default metal color: ${firstColorInfo.name}`
+              );
+              setSelectedMetalColor(firstColorInfo.name);
+              setSelectedColorCode(data.availableColors[0]);
+            }
+          }
         }
       } catch (err) {
         console.error("Error fetching product:", err);
@@ -798,13 +872,8 @@ const ProductDetail = () => {
     const currentVariantId = generateVariantId();
     if (!currentVariantId) return;
 
-    const colorCodeMap: Record<string, string> = {
-      "White Gold": "WG",
-      "Yellow Gold": "YG",
-      "Rose Gold": "RG",
-    };
-
-    const metalCode = colorCodeMap[selectedMetalColor] || "WG";
+    // Use the selectedColorCode directly since it can be single or combination
+    const metalCode = selectedColorCode || "WG";
 
     const response = await fetch(
       `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
@@ -823,7 +892,7 @@ const ProductDetail = () => {
     }
   }, [
     id,
-    selectedMetalColor,
+    selectedColorCode,
     generateVariantId,
     productData?.sellingPrice,
     productData?.variantImages,
@@ -922,16 +991,22 @@ const ProductDetail = () => {
 
   // Update metal color and URL parameter
   const updateMetalColor = useCallback(
-    (colorName: string) => {
-      setSelectedMetalColor(colorName);
+    (colorCode: string) => {
+      // Get display info from color code
+      const colorInfo = getColorDisplayInfo(colorCode);
 
-      const colorCode = METAL_COLOR_CODE_MAP[colorName] || "WG";
+      if (colorInfo) {
+        setSelectedMetalColor(colorInfo.name);
+        setSelectedColorCode(colorCode); // Store the code for API requests
 
-      // Update URL with new metal color parameter
-      const currentUrl = new URL(window.location.href);
-      currentUrl.searchParams.set("metalColor", colorCode);
+        // Update URL with new metal color parameter
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set("metalColor", colorCode); // Use the actual code
 
-      navigate(`${currentUrl.pathname}${currentUrl.search}`, { replace: true });
+        navigate(`${currentUrl.pathname}${currentUrl.search}`, {
+          replace: true,
+        });
+      }
     },
     [navigate]
   );
@@ -1148,6 +1223,7 @@ const ProductDetail = () => {
         variantSku: currentVariantSku,
         variantConfig: {
           metalColor: selectedMetalColor,
+          metalColorCode: selectedColorCode, // Add the color code for API requests
           metalType: selectedMetalType,
           goldKarat: selectedGoldKarat,
           diamondShape: selectedDiamondShape,
@@ -1187,6 +1263,7 @@ const ProductDetail = () => {
     navigate,
     productData,
     selectedMetalColor,
+    selectedColorCode,
     selectedMetalType,
     selectedGoldKarat,
     selectedDiamondShape,
@@ -1350,6 +1427,7 @@ const ProductDetail = () => {
       },
       customization: {
         metalColor: selectedMetalColor,
+        metalColorCode: selectedColorCode, // Add color code for API requests
         metalType: selectedMetalType,
         goldKarat: selectedGoldKarat,
         diamondShape: selectedDiamondShape,
@@ -1404,6 +1482,7 @@ const ProductDetail = () => {
             price: productData.sellingPrice,
             customization: {
               metalColor: selectedMetalColor,
+              metalColorCode: selectedColorCode, // Add color code for API requests
               metalType: selectedMetalType,
               goldKarat: selectedGoldKarat,
               diamondShape: selectedDiamondShape,
@@ -1441,6 +1520,7 @@ const ProductDetail = () => {
     category,
     generateVariantId,
     selectedColorClarity,
+    selectedColorCode,
   ]);
 
   // Handle engraving save callback
@@ -2042,7 +2122,7 @@ const ProductDetail = () => {
                             selectedDiamondShape.slice(1).toLowerCase()}
                         </span>
                       </h3>
-                      <div className="flex gap-2 overflow-x-auto no-scrollbar py-2">
+                      <div className="flex flex-wrap gap-2 overflow-x-auto no-scrollbar py-2">
                         {sampleProduct.diamondShapes
                           .filter((shape) =>
                             productData.diamondShape.includes(
@@ -2104,11 +2184,22 @@ const ProductDetail = () => {
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
-                            {productData.diamondSize.map((size, index) => (
-                              <SelectItem key={index} value={size}>
-                                {parseFloat(size).toFixed(2)} Carat
-                              </SelectItem>
-                            ))}
+                            {productData.diamondSize
+                              .filter((size) => {
+                                // For Natural Diamond, only show sizes <= 1 carat
+                                if (
+                                  selectedDiamondOrigin === "Natural Diamond"
+                                ) {
+                                  return parseFloat(size) <= 1;
+                                }
+                                // For Lab Grown Diamond, show all sizes
+                                return true;
+                              })
+                              .map((size, index) => (
+                                <SelectItem key={index} value={size}>
+                                  {parseFloat(size).toFixed(2)} Carat
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -2225,40 +2316,41 @@ const ProductDetail = () => {
                     Metal Color: {selectedMetalColor}
                   </h3>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 flex-wrap">
                     {productData?.availableColors?.map((code) => {
-                      // Map backend code → frontend UI name + image
-                      const COLOR_MAP: Record<
-                        string,
-                        { name: string; img: string }
-                      > = {
-                        WG: {
-                          name: "White Gold",
-                          img: "/colors/white.png",
-                        },
-                        YG: { name: "Yellow Gold", img: "/colors/gold.png" },
-                        RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
-                      };
+                      // Use the centralized color display info function
+                      const colorInfo = getColorDisplayInfo(code);
+                      if (!colorInfo) return null;
 
-                      const ui = COLOR_MAP[code];
-                      if (!ui) return null;
+                      // Determine if this is a combination
+                      const isCombination = colorInfo.colors.length > 1;
 
                       return (
                         <button
                           key={code}
-                          onClick={() => updateMetalColor(ui.name)} // updates URL with WG/YG/RG
-                          className={`w-8 h-8 rounded-full border-2 ${
-                            selectedMetalColor === ui.name
-                              ? "border-[#328F94]"
-                              : "border-neutral-300"
-                          }`}
-                          title={ui.name}
+                          onClick={() => updateMetalColor(code)}
+                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${
+                            selectedColorCode === code
+                              ? "border-[#328F94] ring-2 ring-[#328F94]/30"
+                              : "border-neutral-300 hover:border-[#328F94]"
+                          } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
+                          title={colorInfo.name}
                         >
-                          <img
-                            src={ui.img}
-                            alt={ui.name}
-                            className="w-full h-full object-cover"
-                          />
+                          {isCombination ? (
+                            // For combination colors, show the combination image from metal_colors folder
+                            <img
+                              src={colorInfo.img}
+                              alt={colorInfo.name}
+                              className="w-6 h-6 object-cover rounded-full"
+                            />
+                          ) : (
+                            // For single colors, show the standard image
+                            <img
+                              src={colorInfo.img}
+                              alt={colorInfo.name}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          )}
                         </button>
                       );
                     })}

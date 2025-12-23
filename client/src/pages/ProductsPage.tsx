@@ -2080,9 +2080,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         </nav>
 
         <div className="eng-header">
-          <h2 id="products-heading" className="eng-title">
+          {/* <h2 id="products-heading" className="eng-title">
             {pageTitle} ({loading ? "..." : pagination.total})
-          </h2>
+          </h2> */}
           {/* <div className="eng-actions">
             <label>
               Sort by:{" "}
