@@ -314,7 +314,6 @@ function MobileMenu() {
                     "Earrings",
                     "Pendants",
                     "Bracelets",
-                    "Necklaces",
                     "Gents Rings",
                   ]}
                   isOpen={!!openSections["Build Your Jewellery"]}
@@ -457,8 +456,6 @@ function getLinkForItem(sectionTitle: string, itemLabel: string): string {
           return "/build-your-jewellery/Bracelets";
         case "Pendants":
           return "/build-your-jewellery/Pendants";
-        case "Necklaces":
-          return "/build-your-jewellery/Necklaces";
         case "Gents Rings":
           return "/build-your-jewellery/Gents-Rings";
         default:

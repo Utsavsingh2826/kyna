@@ -34,6 +34,65 @@ import {
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
+// Map color codes to display info (handles both single and combination colors)
+const getColorDisplayInfo = (
+  code: string
+): { name: string; colors: string[]; img: string } | null => {
+  // Single colors
+  const singleColorMap: Record<string, { name: string; img: string }> = {
+    WG: { name: "White Gold", img: "/colors/white.png" },
+    YG: { name: "Yellow Gold", img: "/colors/gold.png" },
+    RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
+    "3T": { name: "Three Tone", img: "/colors/threetone.png" },
+    BR: { name: "Black Rhodium", img: "/colors/BR.png" },
+    SLV: { name: "Silver", img: "/colors/white.png" },
+    PT: { name: "Platinum", img: "/colors/white.png" },
+  };
+
+  // Check if it's a single color
+  if (singleColorMap[code]) {
+    return {
+      name: singleColorMap[code].name,
+      colors: [code],
+      img: singleColorMap[code].img,
+    };
+  }
+
+  // Handle combination colors (e.g., "WG-YG", "WG-RG")
+  const parts = code.split("-");
+  if (parts.length === 2) {
+    const color1 = parts[0];
+    const color2 = parts[1];
+
+    // Build combination name
+    const getColorName = (c: string) => {
+      switch (c) {
+        case "WG":
+          return "White Gold";
+        case "YG":
+          return "Yellow Gold";
+        case "RG":
+          return "Rose Gold";
+        case "BR":
+          return "Brown";
+        default:
+          return c;
+      }
+    };
+
+    // For combinations, use the image from metal_colors folder
+    const combinationImageUrl = `/metal_colors/${code}.png`;
+
+    return {
+      name: `${getColorName(color1)} - ${getColorName(color2)}`,
+      colors: [color1, color2],
+      img: combinationImageUrl,
+    };
+  }
+
+  return null;
+};
+
 // Types for API response
 interface ApiVariant {
   sku: string;
@@ -250,19 +309,21 @@ const diamondShapes = {
 };
 
 const ringSizes = [
-  "4",
-  "4.5",
-  "5",
-  "5.5",
-  "6",
-  "6.5",
-  "7",
-  "7.5",
-  "8",
-  "8.5",
-  "9",
-  "9.5",
-  "10",
+  "11 (16.3MM)",
+  "12 (16.5MM)",
+  "13 (16.9MM)",
+  "14 (17.3MM)",
+  "15 (17.5MM)",
+  "16 (17.9MM)",
+  "17 (18.1MM)",
+  "18 (18.5MM)",
+  "19 (18.7MM)",
+  "20 (19.2MM)",
+  "21 (19.4MM)",
+  "22 (19.8MM)",
+  "23 (20MM)",
+  "24 (20.4MM)",
+  "25 (20.6MM)",
 ];
 
 const GLBViewer = ({
@@ -606,6 +667,7 @@ const ProductDetail = () => {
     useState("Natural Diamond");
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
+  const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code
   const [selectedMetalType, setSelectedMetalType] = useState<string>("GOLD");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
@@ -671,17 +733,10 @@ const ProductDetail = () => {
 
   // Helper to re-fetch product model for a specific substyle and metal color
   const updateSubstyleProductDetails = useCallback(
-    async (parentSku: string, variantSku: string, metalColorName: string) => {
+    async (parentSku: string, variantSku: string, metalColorCode: string) => {
       try {
-        const colorCodeMap: { [key: string]: string } = {
-          "White Gold": "WG",
-          "Yellow Gold": "YG",
-          "Rose Gold": "RG",
-          "Black Rhodium": "BR",
-          Silver: "SLV",
-          Platinum: "PT",
-        };
-        const metalCode = colorCodeMap[metalColorName] || "WG";
+        // Use the color code directly
+        const metalCode = metalColorCode;
         const res = await fetch(
           `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`
         );
@@ -721,15 +776,15 @@ const ProductDetail = () => {
     currentSubstyles.find((style) => style.name === selectedRingStyle) ||
     currentSubstyles[0];
 
-  // When selectedMetalColor changes for the currently selected style, re-fetch its product details
+  // When selectedColorCode changes for the currently selected style, re-fetch its product details
   useEffect(() => {
     const parent = selectedStyleData?.parentSku;
     const variantSku = selectedStyleData?.variants?.[0]?.sku;
     if (parent && variantSku) {
-      updateSubstyleProductDetails(parent, variantSku, selectedMetalColor);
+      updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
     }
   }, [
-    selectedMetalColor,
+    selectedColorCode,
     selectedStyleData?.parentSku,
     selectedStyleData?.variants,
     updateSubstyleProductDetails,
@@ -853,33 +908,10 @@ const ProductDetail = () => {
     }
   }, [isLabGrownVariant]);
 
-  // Build metal color swatches from API `availableColors` when present.
-  const CODE_TO_UI: Record<string, { name: string; img: string }> = {
-    WG: { name: "White Gold", img: "/colors/white.png" },
-    YG: { name: "Yellow Gold", img: "/colors/gold.png" },
-    RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
-    BR: { name: "Black Rhodium", img: "/colors/BR.png" },
-    SLV: { name: "Silver", img: "/colors/white.png" },
-    PT: { name: "Platinum", img: "/colors/white.png" },
-  };
-
-  const metalColors = (
-    selectedStyleData?.productDetails?.availableColors ||
-    selectedStyleData?.availableColors ||
-    []
-  ).map(
-    (code: string) =>
-      CODE_TO_UI[code] || { name: code, img: "/colors/white.png" }
-  );
-
-  // Fallback static list if API didn't provide availableColors
-  if (metalColors.length === 0) {
-    metalColors.push(
-      { name: "White Gold", img: "/colors/white.png" },
-      { name: "Yellow Gold", img: "/colors/gold.png" },
-      { name: "Rose Gold", img: "/colors/rosegold.png" }
-    );
-  }
+  // Get available metal color codes from API
+  const availableColorCodes = selectedStyleData?.productDetails
+    ?.availableColors ||
+    selectedStyleData?.availableColors || ["WG", "YG", "RG"]; // Fallback to basic colors if not provided
 
   // Add state for showing more colors on mobile
   const [showAllColors, setShowAllColors] = useState(false);
@@ -937,15 +969,8 @@ const ProductDetail = () => {
     const variantId = generateVariantId(substyle);
     if (!variantId) return;
 
-    const colorCodeMap: Record<string, string> = {
-      "White Gold": "WG",
-      "Yellow Gold": "YG",
-      "Rose Gold": "RG",
-      "Black Rhodium": "BR",
-      Silver: "SLV",
-      Platinum: "PT",
-    };
-    const metalColor = colorCodeMap[selectedMetalColor] || "WG";
+    // Use selectedColorCode directly
+    const metalColor = selectedColorCode;
 
     const res = await fetch(
       `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`
@@ -970,7 +995,6 @@ const ProductDetail = () => {
           ),
         }))
       );
-      console.log("Thumnbnail images after refetch:", data.variantImages);
     }
   };
 
@@ -1048,7 +1072,7 @@ const ProductDetail = () => {
         formData.append("text", text);
         formData.append("motifPath", motifPath);
 
-        const uploadResponse = await fetch("/api/upload/engraving", {
+        const uploadResponse = await fetch("/api/upload/engravingOnly", {
           method: "POST",
           body: formData,
         });
@@ -1126,6 +1150,7 @@ const ProductDetail = () => {
       variantSku,
       variantConfig: {
         metalColor: selectedMetalColor,
+        metalColorCode: selectedColorCode,
         metalType: selectedMetalType,
         goldKarat: selectedGoldKarat,
         diamondShape: selectedDiamondShape,
@@ -1243,6 +1268,7 @@ const ProductDetail = () => {
       },
       customization: {
         metalColor: selectedMetalColor,
+        metalColorCode: selectedColorCode,
         metalType: selectedMetalType,
         goldKarat: selectedGoldKarat,
         diamondShape: selectedDiamondShape,
@@ -1496,8 +1522,8 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Main Image */}
-                <div className="flex-1">
-                  <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4">
+                <div className="flex-1 w-full min-w-0">
+                  <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {is3DModel(
                       thumbnailImages[selectedImage],
                       selectedImage
@@ -1526,7 +1552,7 @@ const ProductDetail = () => {
                     </Button>
                   </div>
                   {/* Thumbnails for mobile (horizontal) */}
-                  <div className="flex justify-between md:hidden items-center gap-2 mt-4">
+                  <div className="flex justify-between md:hidden items-center gap-2 mt-4 w-full">
                     <button
                       onClick={scrollThumbnailsLeft}
                       aria-label="Scroll thumbnails left"
@@ -1536,7 +1562,7 @@ const ProductDetail = () => {
                     </button>
                     <div
                       ref={thumbnailsRef}
-                      className="flex gap-2 overflow-x-auto scrollbar-hide max-w-[260px] py-1"
+                      className="flex gap-2 overflow-x-auto scrollbar-hide flex-1  max-w-[270px] py-1"
                       style={{
                         scrollbarWidth: "none",
                         msOverflowStyle: "none",
@@ -1584,8 +1610,8 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Name and Price Display - Responsive like ProductDetail */}
-                  <div className="flex flex-col gap-4 md:gap-0">
-                    <div className="flex flex-row gap-3">
+                  <div className="flex flex-col gap-4 md:gap-0 w-full">
+                    <div className="flex flex-row  gap-3 w-full">
                       <div className="flex flex-col min-w-0 flex-1">
                         <p className="text-sm text-[#328F94] mb-1">
                           Ring Style & Design
@@ -1608,8 +1634,8 @@ const ProductDetail = () => {
               </div>
             }
             rightColumn={
-              <div className="space-y-6">
-                <div>
+              <div className="space-y-6 w-full overflow-x-hidden">
+                <div className="w-full">
                   <h3 className="text-base md:text-lg font-medium mb-4 truncate">
                     Ring Style & Design:{" "}
                     <span className="text-[#328F94]">
@@ -1618,8 +1644,8 @@ const ProductDetail = () => {
                   </h3>
 
                   {/* Style Category Selection - Enhanced Mobile Responsiveness */}
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 md:gap-3">
+                  <div className="mb-6 w-full">
+                    <div className="flex items-center gap-2 md:gap-3 w-full">
                       <button
                         onClick={scrollStyleCategoryLeft}
                         aria-label="Scroll style categories left"
@@ -1629,7 +1655,7 @@ const ProductDetail = () => {
                       </button>
                       <div
                         ref={styleCategoryRef}
-                        className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1"
+                        className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
                       >
                         {styleAndDesign.map((category, index) => (
                           <button
@@ -1670,8 +1696,8 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Ring Design Selection - Enhanced Mobile Layout */}
-                  <div className="mb-6">
-                    <div className="flex items-center gap-2 md:gap-3">
+                  <div className="mb-6 w-full">
+                    <div className="flex items-center gap-2 md:gap-3 w-full">
                       <button
                         onClick={scrollRingStylesLeft}
                         aria-label="Scroll ring styles left"
@@ -1681,7 +1707,7 @@ const ProductDetail = () => {
                       </button>
                       <div
                         ref={ringStylesRef}
-                        className="flex gap-2 md:gap-4 overflow-x-hidden scroll-smooth flex-1"
+                        className="flex gap-2 md:gap-4 overflow-x-hidden scroll-smooth flex-1 w-[200px]"
                       >
                         {loading && currentSubstyles.length === 0 ? (
                           // Loading state
@@ -1914,11 +1940,20 @@ const ProductDetail = () => {
                         </SelectTrigger>
 
                         <SelectContent className="bg-white">
-                          {getAvailableDiamondSizes().map((size) => (
-                            <SelectItem key={size} value={size}>
-                              {size} ct
-                            </SelectItem>
-                          ))}
+                          {getAvailableDiamondSizes()
+                            .filter((size) => {
+                              // For Natural Diamond, only show sizes <= 1 carat
+                              if (selectedDiamondOrigin === "Natural Diamond") {
+                                return parseFloat(size) <= 1;
+                              }
+                              // For Lab Grown Diamond, show all sizes
+                              return true;
+                            })
+                            .map((size) => (
+                              <SelectItem key={size} value={size}>
+                                {size} ct
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1948,13 +1983,22 @@ const ProductDetail = () => {
                         </SelectTrigger>
 
                         <SelectContent className="bg-white">
-                          {selectedStyleData.productDetails.diamondColorClarity.map(
-                            (clarity) => (
+                          {selectedStyleData.productDetails.diamondColorClarity
+                            .filter((cc) => {
+                              // For Lab Grown Diamond, exclude GHVS and GHSI
+                              if (
+                                selectedDiamondOrigin === "Lab Grown Diamond"
+                              ) {
+                                return cc !== "GHVS" && cc !== "GHSI";
+                              }
+                              // For Natural Diamond, show all options
+                              return true;
+                            })
+                            .map((clarity) => (
                               <SelectItem key={clarity} value={clarity}>
                                 {clarity}
                               </SelectItem>
-                            )
-                          )}
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -2096,62 +2140,94 @@ const ProductDetail = () => {
                   </h3>
 
                   {/* Desktop View - 7 columns, 2 rows */}
-                  <div className="hidden md:grid grid-cols-7 gap-3">
-                    {metalColors.map((colorOption, index) => (
-                      <button
-                        key={`${colorOption.name}-${index}`}
-                        onClick={() => setSelectedMetalColor(colorOption.name)}
-                        className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
-                          selectedMetalColor === colorOption.name
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-300 hover:border-neutral-400"
-                        }`}
-                        title={colorOption.name}
-                      >
-                        <img
-                          className="w-full h-full object-cover rounded-full"
-                          src={colorOption.img}
-                          alt={colorOption.name}
-                        />
-                      </button>
-                    ))}
+                  <div className="hidden md:flex md:flex-wrap gap-3">
+                    {availableColorCodes.map((code) => {
+                      const colorInfo = getColorDisplayInfo(code);
+                      if (!colorInfo) return null;
+                      const isCombination = colorInfo.colors.length > 1;
+
+                      return (
+                        <button
+                          key={code}
+                          onClick={() => {
+                            setSelectedMetalColor(colorInfo.name);
+                            setSelectedColorCode(code);
+                          }}
+                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                            selectedColorCode === code
+                              ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                              : "border-neutral-300 hover:border-neutral-400"
+                          }`}
+                          title={colorInfo.name}
+                        >
+                          {isCombination ? (
+                            <img
+                              src={colorInfo.img}
+                              alt={colorInfo.name}
+                              className="w-8 h-8 object-cover rounded-full"
+                            />
+                          ) : (
+                            <img
+                              className="w-full h-full object-cover rounded-full"
+                              src={colorInfo.img}
+                              alt={colorInfo.name}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Mobile View - 5 columns with show more */}
                   <div className="md:hidden w-full">
                     <div className="grid grid-cols-5 gap-2 sm:gap-3">
                       {(showAllColors
-                        ? metalColors
-                        : metalColors.slice(0, 10)
-                      ).map((colorOption, index) => (
-                        <button
-                          key={`${colorOption.name}-${index}`}
-                          onClick={() =>
-                            setSelectedMetalColor(colorOption.name)
-                          }
-                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
-                            selectedMetalColor === colorOption.name
-                              ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                              : "border-neutral-300 hover:border-neutral-400"
-                          }`}
-                          title={colorOption.name}
-                        >
-                          <img
-                            className="w-full h-full object-cover rounded-full"
-                            src={colorOption.img}
-                            alt={colorOption.name}
-                          />
-                        </button>
-                      ))}
+                        ? availableColorCodes
+                        : availableColorCodes.slice(0, 10)
+                      ).map((code) => {
+                        const colorInfo = getColorDisplayInfo(code);
+                        if (!colorInfo) return null;
+                        const isCombination = colorInfo.colors.length > 1;
+
+                        return (
+                          <button
+                            key={code}
+                            onClick={() => {
+                              setSelectedMetalColor(colorInfo.name);
+                              setSelectedColorCode(code);
+                            }}
+                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                              selectedColorCode === code
+                                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                                : "border-neutral-300 hover:border-neutral-400"
+                            }`}
+                            title={colorInfo.name}
+                          >
+                            {isCombination ? (
+                              <img
+                                src={colorInfo.img}
+                                alt={colorInfo.name}
+                                className="w-6 h-6 sm:w-8 sm:h-8 object-cover rounded-full"
+                              />
+                            ) : (
+                              <img
+                                className="w-full h-full object-cover rounded-full"
+                                src={colorInfo.img}
+                                alt={colorInfo.name}
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
 
                     {/* Show More/Less buttons */}
-                    {!showAllColors && metalColors.length > 10 && (
+                    {!showAllColors && availableColorCodes.length > 10 && (
                       <button
                         onClick={() => setShowAllColors(true)}
                         className="mt-3 text-sm text-[#328F94] font-medium hover:underline"
                       >
-                        Show More ({metalColors.length - 10} more)
+                        Show More ({availableColorCodes.length - 10} more)
                       </button>
                     )}
 
@@ -2309,11 +2385,6 @@ const ProductDetail = () => {
                               evImage || undefined
                             }
                             jewelryType={selectedRingStyle}
-                            userId={user?.id}
-                            fontSize={
-                              selectedStyleData?.productDetails?.engravingInfo
-                                ?.fontSize
-                            }
                           />
                         );
                       })()}
