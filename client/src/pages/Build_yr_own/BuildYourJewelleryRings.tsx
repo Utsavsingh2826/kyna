@@ -2309,6 +2309,11 @@ const ProductDetail = () => {
                               evImage || undefined
                             }
                             jewelryType={selectedRingStyle}
+                            userId={user?.id}
+                            fontSize={
+                              selectedStyleData?.productDetails?.engravingInfo
+                                ?.fontSize
+                            }
                           />
                         );
                       })()}

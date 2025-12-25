@@ -58,9 +58,11 @@ const EngravingPage: React.FC<EngraveProps> = ({
   const [selectedMotif, setSelectedMotif] = useState<string | null>(
     initialMotif || null
   );
+  const [motifPosition, setMotifPosition] = useState<number>(-1); // position in text where motif is inserted (-1 = not inserted)
   const [motifScale, setMotifScale] = useState<number>(1); // multiplier of fontSize (1 = same height as text)
   const maxCount = 12; // maximum total units (characters + motif cost)
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Load fonts from fonts folder
   useEffect(() => {
@@ -141,7 +143,6 @@ const EngravingPage: React.FC<EngraveProps> = ({
 
   // Get data from navigation state or props
   useEffect(() => {
-
     // Simplified logic to handle image source
     let imageSource = selectedImage;
     if (selectedImage.startsWith("blob:")) {
@@ -165,6 +166,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
 
   const handleClear = () => {
     setEngravingText("");
+    setSelectedMotif(null);
+    setMotifPosition(-1);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -233,39 +236,90 @@ const EngravingPage: React.FC<EngraveProps> = ({
         // Draw the base image
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-        // Compute text coordinates regardless of whether text exists (used also for motif placement)
+        // Compute text coordinates
         const textX = (textPosition.x / 100) * canvas.width;
         const textY = (textPosition.y / 100) * canvas.height;
 
-        // Draw the engraving text if present
-        if (engravingText) {
-          ctx.font = `${fontSize}px ${selectedFont}`;
-          ctx.fillStyle = "#333";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
+        // Split text by motif position
+        let textBefore = engravingText;
+        let textAfter = "";
 
-          ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
-          ctx.shadowBlur = 2;
-          ctx.shadowOffsetX = 1;
-          ctx.shadowOffsetY = 1;
-
-          ctx.save();
-          ctx.translate(textX, textY);
-          ctx.rotate((textRotation.horizontal * Math.PI) / 180);
-
-          if (textRotation.vertical !== 0) {
-            const skewFactor =
-              Math.tan((textRotation.vertical * Math.PI) / 180) * 0.5;
-            ctx.transform(1, skewFactor, 0, 1, 0, 0);
-          }
-          ctx.fillText(engravingText, 0, 0);
-          ctx.restore();
+        if (
+          selectedMotif &&
+          motifPosition >= 0 &&
+          motifPosition <= engravingText.length
+        ) {
+          textBefore = engravingText.slice(0, motifPosition);
+          textAfter = engravingText.slice(motifPosition);
         }
+
+        // Setup text rendering properties
+        ctx.font = `${fontSize}px ${selectedFont}`;
+        ctx.fillStyle = "#333";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
+        ctx.shadowBlur = 2;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+
+        // Measure text parts
+        const textBeforeWidth = textBefore
+          ? ctx.measureText(textBefore).width
+          : 0;
+        const textAfterWidth = textAfter ? ctx.measureText(textAfter).width : 0;
+
+        // Calculate motif dimensions
+        const motifHeight = fontSize * (motifScale || 1);
+        const motifWidth =
+          selectedMotif && motifPosition >= 0 ? motifHeight : 0; // will be adjusted when image loads
+
+        // Calculate total width for centering
+        const totalWidth =
+          textBeforeWidth +
+          (selectedMotif && motifPosition >= 0 ? motifHeight + 4 : 0) +
+          textAfterWidth;
+
+        // Starting X position (centered)
+        let currentX = textX - totalWidth / 2;
+
+        ctx.save();
+        ctx.translate(textX, textY);
+        ctx.rotate((textRotation.horizontal * Math.PI) / 180);
+        if (textRotation.vertical !== 0) {
+          const skewFactor =
+            Math.tan((textRotation.vertical * Math.PI) / 180) * 0.5;
+          ctx.transform(1, skewFactor, 0, 1, 0, 0);
+        }
+
+        // Reset to local coords
+        let localX = -totalWidth / 2;
+
+        // Draw text before motif
+        if (textBefore) {
+          ctx.fillText(textBefore, localX, 0);
+          localX += textBeforeWidth + 2;
+        }
+
+        ctx.restore();
 
         // Draw motif if selected (inline with text)
         const drawMotifThenFinalize = () => {
-          if (!selectedMotif) {
-            // no motif - finalize
+          if (!selectedMotif || motifPosition < 0) {
+            // Draw text after motif if no motif
+            if (textAfter) {
+              ctx.save();
+              ctx.translate(textX, textY);
+              ctx.rotate((textRotation.horizontal * Math.PI) / 180);
+              if (textRotation.vertical !== 0) {
+                const skewFactor =
+                  Math.tan((textRotation.vertical * Math.PI) / 180) * 0.5;
+                ctx.transform(1, skewFactor, 0, 1, 0, 0);
+              }
+              const afterX = -totalWidth / 2 + textBeforeWidth + 2;
+              ctx.fillText(textAfter, afterX, 0);
+              ctx.restore();
+            }
             finalizeCanvasToBlob();
             return;
           }
@@ -273,28 +327,34 @@ const EngravingPage: React.FC<EngraveProps> = ({
           const motifImg = new Image();
           motifImg.crossOrigin = "anonymous";
           motifImg.onload = () => {
-            // draw motif inline with the text (to the right, vertically centered)
-            // ensure ctx.font is set so we can measure text width
-            ctx.font = `${fontSize}px ${selectedFont}`;
-            const textWidth = engravingText
-              ? ctx.measureText(engravingText).width
-              : 0;
-
-            // motif size derived from text size: base height = fontSize * motifScale
             const motifHeight = fontSize * (motifScale || 1);
             const motifWidth = (motifImg.width / motifImg.height) * motifHeight;
 
-            let motifX: number;
-            if (engravingText) {
-              // place to the right of the text (textX is center of text)
-              motifX = textX + textWidth / 2 + 4; // small gap
-            } else {
-              // center motif at textX if no text
-              motifX = textX - motifWidth / 2;
+            // Recalculate total width with actual motif width
+            const actualTotalWidth =
+              textBeforeWidth + motifWidth + 4 + textAfterWidth;
+
+            ctx.save();
+            ctx.translate(textX, textY);
+            ctx.rotate((textRotation.horizontal * Math.PI) / 180);
+            if (textRotation.vertical !== 0) {
+              const skewFactor =
+                Math.tan((textRotation.vertical * Math.PI) / 180) * 0.5;
+              ctx.transform(1, skewFactor, 0, 1, 0, 0);
             }
-            const motifY = textY - motifHeight / 2; // center vertically with text
+
+            const motifX = -actualTotalWidth / 2 + textBeforeWidth + 2;
+            const motifY = -motifHeight / 2;
 
             ctx.drawImage(motifImg, motifX, motifY, motifWidth, motifHeight);
+
+            // Draw text after motif
+            if (textAfter) {
+              const afterX = motifX + motifWidth + 2;
+              ctx.fillText(textAfter, afterX, 0);
+            }
+
+            ctx.restore();
             finalizeCanvasToBlob();
           };
           motifImg.onerror = () => {
@@ -469,57 +529,79 @@ const EngravingPage: React.FC<EngraveProps> = ({
                     </div>
                   )}
 
-                  {/* Text Overlay */}
-                  {engravingText && (
-                    <div
-                      className="absolute pointer-events-none transition-all duration-200"
-                      style={{
-                        left: `${textPosition.x}%`,
-                        top: `${textPosition.y}%`,
-                        transform: `translate(-50%, -50%) rotateX(${textRotation.vertical}deg) rotateZ(${textRotation.horizontal}deg)`,
-                        transformStyle: "preserve-3d",
-                      }}
-                    >
-                      <span
-                        className="text-gray-800 font-medium text-center px-2 py-1"
-                        style={{
-                          fontFamily: selectedFont,
-                          fontSize: `${fontSize}px`,
-                          textShadow: "1px 1px 3px rgba(0,0,0,0.3)",
-                          maxWidth: "200px",
-                          wordWrap: "break-word",
-                        }}
-                      >
-                        {engravingText}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Motif Preview Overlay (shows while editing) */}
-                  {selectedMotif &&
+                  {/* Text and Motif Overlay (inline rendering) */}
+                  {(engravingText || selectedMotif) &&
                     (() => {
-                      // approximate inline placement: place motif to the right of text
-                      const approxCharWidth = fontSize * 0.6; // px per character estimate
-                      const textPx = engravingText
-                        ? engravingText.length * approxCharWidth
-                        : 0;
-                      const halfTextPx = textPx / 2;
-                      const transformX = `calc(-50% + ${halfTextPx}px)`;
-                      const motifHeightPx = fontSize * (motifScale || 1);
+                      const displayFontSize = fontSize;
+
+                      // Split text by motif position
+                      let textBefore = engravingText;
+                      let textAfter = "";
+
+                      if (
+                        selectedMotif &&
+                        motifPosition >= 0 &&
+                        motifPosition <= engravingText.length
+                      ) {
+                        textBefore = engravingText.slice(0, motifPosition);
+                        textAfter = engravingText.slice(motifPosition);
+                      }
 
                       return (
-                        <img
-                          src={`/motif/${selectedMotif}`}
-                          alt="Selected motif preview"
-                          className="absolute pointer-events-none transition-all duration-200"
+                        <div
+                          className="absolute pointer-events-none transition-all duration-200 flex items-center justify-center gap-1"
                           style={{
                             left: `${textPosition.x}%`,
                             top: `${textPosition.y}%`,
-                            transform: `translate(${transformX}, -50%)`,
-                            height: `${motifHeightPx}px`,
-                            opacity: 0.95,
+                            transform: `translate(-50%, -50%) rotateX(${textRotation.vertical}deg) rotateZ(${textRotation.horizontal}deg)`,
+                            transformStyle: "preserve-3d",
                           }}
-                        />
+                        >
+                          {/* Text before motif */}
+                          {textBefore && (
+                            <span
+                              className="text-gray-800 font-medium"
+                              style={{
+                                fontFamily: selectedFont,
+                                fontSize: `${displayFontSize}px`,
+                                textShadow: "1px 1px 3px rgba(0,0,0,0.3)",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {textBefore}
+                            </span>
+                          )}
+
+                          {/* Motif inline */}
+                          {selectedMotif && motifPosition >= 0 && (
+                            <img
+                              src={`/motif/${selectedMotif}`}
+                              alt="motif"
+                              style={{
+                                height: `${
+                                  displayFontSize * (motifScale || 1)
+                                }px`,
+                                opacity: 0.95,
+                                verticalAlign: "middle",
+                              }}
+                            />
+                          )}
+
+                          {/* Text after motif */}
+                          {textAfter && (
+                            <span
+                              className="text-gray-800 font-medium"
+                              style={{
+                                fontFamily: selectedFont,
+                                fontSize: `${displayFontSize}px`,
+                                textShadow: "1px 1px 3px rgba(0,0,0,0.3)",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {textAfter}
+                            </span>
+                          )}
+                        </div>
                       );
                     })()}
 
@@ -712,14 +794,21 @@ const EngravingPage: React.FC<EngraveProps> = ({
                         </button>
                       </div>
                       <textarea
+                        ref={textInputRef}
                         value={engravingText}
                         onChange={(e) => {
                           // enforce maxCount with motif cost (motif consumes 2)
-                          const motifCost = selectedMotif ? 2 : 0;
+                          const motifCost =
+                            selectedMotif && motifPosition >= 0 ? 2 : 0;
                           const allowed = Math.max(0, maxCount - motifCost);
                           let v = e.target.value || "";
                           if (v.length > allowed) v = v.slice(0, allowed);
                           setEngravingText(v);
+
+                          // Update motif position if text changes
+                          if (motifPosition > v.length) {
+                            setMotifPosition(v.length);
+                          }
                         }}
                         placeholder="Enter your text here..."
                         className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-400 focus:border-transparent resize-none bg-white"
@@ -733,8 +822,9 @@ const EngravingPage: React.FC<EngraveProps> = ({
                       <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
                         <div>
                           Characters: {engravingText.length} /{" "}
-                          {maxCount - (selectedMotif ? 2 : 0)}
-                          {selectedMotif && (
+                          {maxCount -
+                            (selectedMotif && motifPosition >= 0 ? 2 : 0)}
+                          {selectedMotif && motifPosition >= 0 && (
                             <span className="ml-2">(Motif uses 2)</span>
                           )}
                         </div>
@@ -744,7 +834,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                             0,
                             maxCount -
                               engravingText.length -
-                              (selectedMotif ? 2 : 0)
+                              (selectedMotif && motifPosition >= 0 ? 2 : 0)
                           )}
                         </div>
                       </div>
@@ -864,7 +954,14 @@ const EngravingPage: React.FC<EngraveProps> = ({
                                 {files.map((file: string) => (
                                   <button
                                     key={file}
-                                    onClick={() => setSelectedMotif(file)}
+                                    onClick={() => {
+                                      setSelectedMotif(file);
+                                      // Insert motif at current cursor position
+                                      const cursorPos =
+                                        textInputRef.current?.selectionStart ??
+                                        engravingText.length;
+                                      setMotifPosition(cursorPos);
+                                    }}
                                     className={`p-1 rounded-lg border overflow-hidden bg-white transition-shadow ${
                                       selectedMotif === file
                                         ? "ring-2 ring-teal-400 border-transparent"
