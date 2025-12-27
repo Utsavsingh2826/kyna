@@ -931,9 +931,19 @@ const ProductDetail = () => {
     refetchProductData,
   ]);
 
-  // Auto-select appropriate karat when metal type changes
+  // Auto-select appropriate karat and default metal color when metal type changes
   useEffect(() => {
     if (!selectedMetalType || !productData) return;
+
+    // When metal type changes, reset to the first available color for the product.
+    if (productData.availableColors && productData.availableColors.length > 0) {
+      const firstAvailableColor = productData.availableColors[0];
+      const colorInfo = getColorDisplayInfo(firstAvailableColor);
+      if (colorInfo) {
+        setSelectedColorCode(firstAvailableColor);
+        setSelectedMetalColor(colorInfo.name);
+      }
+    }
 
     // Get available karats for the selected metal type
     let availableKarats: (string | number)[] = [];
@@ -975,7 +985,7 @@ const ProductDetail = () => {
         setSelectedGoldKarat("925");
         break;
     }
-  }, [selectedMetalType, productData, selectedGoldKarat]);
+  }, [selectedMetalType, productData]);
 
   // Reset engraving when diamond shape or metal color changes
   useEffect(() => {
@@ -1611,7 +1621,7 @@ const ProductDetail = () => {
         productData?.title || "Product"
       }\n\nView it here: ${url}`
     );
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=ranju.prpk@gmail.com&su=${subject}&body=${body}`;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=enquires@kynajewels.com&su=${subject}&body=${body}`;
     window.open(gmailUrl, "_blank");
   };
 
@@ -2225,7 +2235,9 @@ const ProductDetail = () => {
                             {productData.diamondColorClarity
                               .filter((cc) => {
                                 // For Lab Grown Diamond, exclude GHVS and GHSI
-                                if (selectedDiamondOrigin === "Lab Grown Diamond") {
+                                if (
+                                  selectedDiamondOrigin === "Lab Grown Diamond"
+                                ) {
                                   return cc !== "GHVS" && cc !== "GHSI";
                                 }
                                 // For Natural Diamond, show all options
