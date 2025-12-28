@@ -654,42 +654,6 @@ const ProductDetail = () => {
   const [isUploadingEngraving, setIsUploadingEngraving] = useState(false);
   const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
 
-  const handleShare = (platform: "email" | "whatsapp" | "copy") => {
-    const productDetails = selectedStyleData?.productDetails;
-    const parentSku = selectedStyleData?.parentSku;
-    const variantId = productDetails?.chosenVariantSku;
-    const metalColor = selectedColorCode;
-    const style = selectedStyleCategory;
-
-    if (!parentSku || !variantId) {
-      alert("Please select a style and options to share.");
-      return;
-    }
-
-    const baseUrl = window.location.origin;
-    const shareUrl = `${baseUrl}/products/model/${parentSku}?variantId=${variantId}&metalColor=${metalColor}&style=${style}`;
-
-    const shareMessage = `Checking out this custom ring I designed at Kyna Jewels: ${shareUrl}`;
-
-    if (platform === "copy") {
-      navigator.clipboard.writeText(shareUrl).then(() => {
-        alert("Link copied to clipboard!");
-      });
-    } else if (platform === "whatsapp") {
-      window.open(
-        `https://wa.me/918928610682?text=${encodeURIComponent(shareMessage)}`,
-        "_blank"
-      );
-    } else if (platform === "email") {
-      window.open(
-        `https://mail.google.com/mail/?view=cm&to=enquires@kynajewels.com&su=Checking out this custom ring I designed at Kyna Jewels&body=${encodeURIComponent(
-          shareMessage
-        )}`,
-        "_blank"
-      );
-    }
-  };
-
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useSelector(
@@ -2043,132 +2007,129 @@ const ProductDetail = () => {
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
 
                 {/* Metal Type */}
-                <div>
-                  <label className="block text-xs mb-2">Metal Type</label>
-                  <Select
-                    value={selectedMetalType}
-                    onValueChange={(value) => {
-                      setSelectedMetalType(value);
-                      // When metal type changes, reset karat
-                      setSelectedGoldKarat("");
-
-                      // If switching to Silver, set color to Silver
-                      if (value === "SILVER") {
-                        setSelectedColorCode("WG");
-                        setSelectedMetalColor("Silver");
-                      } else if (value === "PLATINUM") {
-                        setSelectedColorCode("WG");
-                        setSelectedMetalColor("Platinum");
-                      } else if (value === "GOLD") {
-                        // Default to White Gold when switching to GOLD
-                        setSelectedColorCode("WG");
-                        setSelectedMetalColor("White Gold");
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="text-sm border-neutral-300">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {getAvailableMetalTypes().map((type, index) => (
-                        <SelectItem key={index} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-full">
-                  <h3 className="mb-3 text-sm md:text-base">
-                    {selectedMetalType === "GOLD"
-                      ? "Select Gold Karat"
-                      : selectedMetalType === "SILVER"
-                      ? "Silver Purity"
-                      : selectedMetalType === "PLATINUM"
-                      ? "Platinum Purity"
-                      : "Metal Purity"}
-                    :{" "}
-                    <span className="text-[#8D8A91]">
-                      {selectedMetalType === "GOLD"
-                        ? `${selectedGoldKarat || getAvailableKarats()[0]}`
-                        : selectedMetalType === "SILVER"
-                        ? "925"
-                        : selectedMetalType === "PLATINUM"
-                        ? "950"
-                        : ""}
-                    </span>
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        if (metalTypesRef.current) {
-                          metalTypesRef.current.scrollBy({
-                            left: -120,
-                            behavior: "smooth",
-                          });
-                        }
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs mb-2">Metal Type</label>
+                    <Select
+                      value={selectedMetalType}
+                      onValueChange={(value) => {
+                        setSelectedMetalType(value);
+                        // Reset karat selection when metal type changes
+                        const newKarats =
+                          value === "SILVER"
+                            ? ["SLV"]
+                            : value === "PLATINUM"
+                            ? ["PT"]
+                            : selectedStyleData?.productDetails?.goldKarats?.filter(
+                                (k) => !["925", "950"].includes(k)
+                              ) || ["18kt", "14kt", "9kt"];
+                        setSelectedGoldKarat(newKarats[0] || "");
                       }}
-                      aria-label="Scroll karats left"
-                      className="p-1 hover:bg-gray-100 rounded"
                     >
-                      <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
-                    </button>
-                    <div
-                      ref={metalTypesRef}
-                      className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
-                    >
-                      {selectedMetalType === "GOLD" ? (
-                        getAvailableKarats().map((karat, index) => (
+                      <SelectTrigger className="text-sm border-neutral-300">
+                        <SelectValue placeholder="Select Metal Type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        {getAvailableMetalTypes().map((type, index) => (
+                          <SelectItem key={index} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full">
+                    <h3 className="mb-3 text-sm md:text-base">
+                      {selectedMetalType === "GOLD"
+                        ? "Select Gold Karat"
+                        : selectedMetalType === "SILVER"
+                        ? "Silver Purity"
+                        : selectedMetalType === "PLATINUM"
+                        ? "Platinum Purity"
+                        : "Metal Purity"}
+                      :{" "}
+                      <span className="text-[#8D8A91]">
+                        {selectedMetalType === "GOLD"
+                          ? `${selectedGoldKarat || getAvailableKarats()[0]}`
+                          : selectedMetalType === "SILVER"
+                          ? "925"
+                          : selectedMetalType === "PLATINUM"
+                          ? "950"
+                          : ""}
+                      </span>
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          if (metalTypesRef.current) {
+                            metalTypesRef.current.scrollBy({
+                              left: -120,
+                              behavior: "smooth",
+                            });
+                          }
+                        }}
+                        aria-label="Scroll karats left"
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
+                      </button>
+                      <div
+                        ref={metalTypesRef}
+                        className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
+                      >
+                        {selectedMetalType === "GOLD" ? (
+                          getAvailableKarats().map((karat, index) => (
+                            <button
+                              key={`${karat}-${index}`}
+                              onClick={() => setSelectedGoldKarat(karat)}
+                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
+                                selectedGoldKarat === karat
+                                  ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                                  : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
+                              }`}
+                            >
+                              {karat}
+                            </button>
+                          ))
+                        ) : selectedMetalType === "SILVER" ? (
                           <button
-                            key={`${karat}-${index}`}
-                            onClick={() => setSelectedGoldKarat(karat)}
+                            onClick={() => setSelectedGoldKarat("SLV")}
                             className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                              selectedGoldKarat === karat
+                              selectedGoldKarat === "SLV"
                                 ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
                                 : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
                             }`}
                           >
-                            {karat}
+                            925
                           </button>
-                        ))
-                      ) : selectedMetalType === "SILVER" ? (
-                        <button
-                          onClick={() => setSelectedGoldKarat("SLV")}
-                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                            selectedGoldKarat === "SLV"
-                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                              : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
-                          }`}
-                        >
-                          925
-                        </button>
-                      ) : selectedMetalType === "PLATINUM" ? (
-                        <button
-                          onClick={() => setSelectedGoldKarat("PLT")}
-                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                            selectedGoldKarat === "PLT"
-                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                              : "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                          }`}
-                        >
-                          950
-                        </button>
-                      ) : null}
+                        ) : selectedMetalType === "PLATINUM" ? (
+                          <button
+                            onClick={() => setSelectedGoldKarat("PLT")}
+                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
+                              selectedGoldKarat === "PLT"
+                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                                : "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                            }`}
+                          >
+                            950
+                          </button>
+                        ) : null}
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (metalTypesRef.current) {
+                            metalTypesRef.current.scrollBy({
+                              left: 120,
+                              behavior: "smooth",
+                            });
+                          }
+                        }}
+                        aria-label="Scroll karats right"
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        if (metalTypesRef.current) {
-                          metalTypesRef.current.scrollBy({
-                            left: 120,
-                            behavior: "smooth",
-                          });
-                        }
-                      }}
-                      aria-label="Scroll karats right"
-                      className="p-1 hover:bg-gray-100 rounded"
-                    >
-                      <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
-                    </button>
                   </div>
                 </div>
 
@@ -2479,10 +2440,9 @@ const ProductDetail = () => {
                 {/* Share Options - Stack on mobile */}
                 <div>
                   <h3 className="font-medium mb-3 text-sm">Share</h3>
-                  <div className="flex justify-center text-[#328F94] gap-2 ">
+                  <div className="grid grid-cols-3 text-[#328F94] gap-2 md:gap-3">
                     <Button
                       size="sm"
-                      onClick={() => handleShare("email")}
                       className="flex items-center justify-center gap-2 text-xs"
                     >
                       <Mail size={14} />
@@ -2490,7 +2450,6 @@ const ProductDetail = () => {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => handleShare("whatsapp")}
                       className="flex items-center justify-center gap-2 text-xs"
                     >
                       <MessageCircle size={14} />
@@ -2498,7 +2457,6 @@ const ProductDetail = () => {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => handleShare("copy")}
                       className="flex items-center justify-center gap-2 text-xs"
                     >
                       <Share2 size={14} />
@@ -2573,7 +2531,7 @@ const ProductDetail = () => {
                           </div>
                         )}
 
-                        <div className="hidden py-2 border-b border-t border-[#328F94]">
+                        <div className="hidden py-2 border-b border-[#328F94]">
                           <div className="text-muted-foreground mb-2">
                             Product Dimensions (In mm)
                           </div>
