@@ -943,9 +943,21 @@ const ProductDetail = () => {
     refetchProductData,
   ]);
 
-  // Auto-select appropriate karat when metal type changes
+  // Auto-select appropriate karat and default metal color when metal type changes
   useEffect(() => {
     if (!selectedMetalType || !productData) return;
+
+    // When metal type changes, reset to the first available color for the product.
+    if (productData.availableColors && productData.availableColors.length > 0) {
+      const firstAvailableColor = productData.availableColors[0];
+      const colorInfo = getColorDisplayInfo(firstAvailableColor);
+      if (colorInfo) {
+        // Only update if the current selection is not valid for the new type
+        if (!productData.availableColors.includes(selectedColorCode)) {
+          updateMetalColor(firstAvailableColor);
+        }
+      }
+    }
 
     // Get available karats for the selected metal type
     let availableKarats: (string | number)[] = [];
@@ -987,7 +999,7 @@ const ProductDetail = () => {
         setSelectedGoldKarat("925");
         break;
     }
-  }, [selectedMetalType, productData, selectedGoldKarat]);
+  }, [selectedMetalType, productData]);
 
   // Reset engraving when diamond shape or metal color changes
   useEffect(() => {
@@ -1018,10 +1030,23 @@ const ProductDetail = () => {
         navigate(`${currentUrl.pathname}${currentUrl.search}`, {
           replace: true,
         });
+
+        // Trigger refetch after updating the URL
+        refetchProductData();
       }
     },
-    [navigate]
+    [navigate, refetchProductData]
   );
+
+  // Ensure refetchProductData is triggered when metalColor changes in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const metalColorParam = params.get("metalColor");
+
+    if (metalColorParam && metalColorParam !== selectedColorCode) {
+      refetchProductData();
+    }
+  }, [location.search, selectedColorCode, refetchProductData]);
 
   const handleWishlistToggle = useCallback(
     (event?: React.MouseEvent) => {
@@ -1483,7 +1508,7 @@ const ProductDetail = () => {
         items: [
           {
             product: {
-              _id: productData.modelSku,
+              _id: productData.title,
               title: productData.title,
               price: productData.sellingPrice,
               priceBreakdown: productData.priceBreakdown,
@@ -1623,7 +1648,7 @@ const ProductDetail = () => {
         productData?.title || "Product"
       }\n\nView it here: ${url}`
     );
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=ranju.prpk@gmail.com&su=${subject}&body=${body}`;
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=enquires@kynajewels.com&su=${subject}&body=${body}`;
     window.open(gmailUrl, "_blank");
   };
 
@@ -2241,7 +2266,9 @@ const ProductDetail = () => {
                             {productData.diamondColorClarity
                               .filter((cc) => {
                                 // For Lab Grown Diamond, exclude GHVS and GHSI
-                                if (selectedDiamondOrigin === "Lab Grown Diamond") {
+                                if (
+                                  selectedDiamondOrigin === "Lab Grown Diamond"
+                                ) {
                                   return cc !== "GHVS" && cc !== "GHSI";
                                 }
                                 // For Natural Diamond, show all options
@@ -2794,7 +2821,11 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Gold/Silver/Platinum Value
+                            {`Metal Value (${selectedMetalType} - ${selectedMetalColor}${
+                              selectedGoldKarat
+                                ? ` ${getKaratDisplayLabel(selectedGoldKarat)}`
+                                : ""
+                            })`}
                           </span>
                           <span className="font-medium">
                             Rs.{" "}
