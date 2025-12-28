@@ -237,6 +237,7 @@ const ProductDetail = () => {
   const [selectedColorClarity, setSelectedColorClarity] = useState("");
   const [is3DModelLoaded, setIs3DModelLoaded] = useState(false);
   const [is3DViewerVisible, setIs3DViewerVisible] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const activeVariantSku = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -487,12 +488,15 @@ const ProductDetail = () => {
   // Fetch product data from API
   useEffect(() => {
     const fetchProductData = async () => {
-      if (!id) return;
+      if (!id || productData) return; // Do not refetch if productData already exists
 
       console.log("Product Detail params - id:", id, "category:", category);
 
       try {
-        setLoading(true);
+        // Only show full-page skeleton on initial load
+        if (!productData) {
+          setLoading(true);
+        }
         setError(null);
 
         // First try to fetch by slug, if that fails try by modelSku
@@ -505,7 +509,7 @@ const ProductDetail = () => {
           const modelUrl = variantId
             ? `/api/products/model/${id}?variantId=${encodeURIComponent(
                 variantId
-              )}/&metalColor=${params.get("metalColor") || "WG"}`
+              )}&metalColor=${params.get("metalColor") || "WG"}`
             : `/api/products/model/${id}`;
 
           response = await fetch(modelUrl);
@@ -612,7 +616,7 @@ const ProductDetail = () => {
     };
 
     fetchProductData();
-  }, [id, category, location.search, parseVariantSku]);
+  }, [id, category, parseVariantSku]);
 
   // ---------- iJewel Preload (Silent) ----------
   useEffect(() => {
@@ -872,23 +876,31 @@ const ProductDetail = () => {
     const currentVariantId = generateVariantId();
     if (!currentVariantId) return;
 
+    setIsUpdating(true); // Start subtle loading state
+
     // Use the selectedColorCode directly since it can be single or combination
     const metalCode = selectedColorCode || "WG";
 
-    const response = await fetch(
-      `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
-    );
+    try {
+      const response = await fetch(
+        `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
+      );
 
-    if (!response.ok) return;
+      if (!response.ok) return;
 
-    const newData = await response.json();
+      const newData = await response.json();
 
-    // Only update if price and image actually changed
-    if (
-      newData.sellingPrice !== productData?.sellingPrice ||
-      newData.variantImages?.[0] !== productData?.variantImages?.[0]
-    ) {
-      setProductData(newData);
+      // Only update if price and image actually changed
+      if (
+        newData.sellingPrice !== productData?.sellingPrice ||
+        newData.variantImages?.[0] !== productData?.variantImages?.[0]
+      ) {
+        setProductData(newData);
+      }
+    } catch (error) {
+      console.error("Error refetching product data:", error);
+    } finally {
+      setIsUpdating(false); // End subtle loading state
     }
   }, [
     id,
@@ -1857,7 +1869,11 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Main Image */}
-                <div className="flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden">
+                <div
+                  className={`flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden transition-opacity duration-300 ${
+                    isUpdating ? "opacity-50" : "opacity-100"
+                  }`}
+                >
                   {/* use the fetched images only */}
                   {(() => {
                     // const currentImage = thumbnailImages[selectedImage];
