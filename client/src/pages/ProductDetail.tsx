@@ -952,10 +952,8 @@ const ProductDetail = () => {
       const firstAvailableColor = productData.availableColors[0];
       const colorInfo = getColorDisplayInfo(firstAvailableColor);
       if (colorInfo) {
-        // Only update if the current selection is not valid for the new type
-        if (!productData.availableColors.includes(selectedColorCode)) {
-          updateMetalColor(firstAvailableColor);
-        }
+        setSelectedColorCode(firstAvailableColor);
+        setSelectedMetalColor(colorInfo.name);
       }
     }
 
@@ -2808,11 +2806,7 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            {`Metal Value (${selectedMetalType} - ${selectedMetalColor}${
-                              selectedGoldKarat
-                                ? ` ${getKaratDisplayLabel(selectedGoldKarat)}`
-                                : ""
-                            })`}
+                            Gold/Silver/Platinum Value
                           </span>
                           <span className="font-medium">
                             Rs.{" "}
