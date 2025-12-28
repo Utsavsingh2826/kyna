@@ -2821,11 +2821,7 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            {`Metal Value (${selectedMetalType} - ${selectedMetalColor}${
-                              selectedGoldKarat
-                                ? ` ${getKaratDisplayLabel(selectedGoldKarat)}`
-                                : ""
-                            })`}
+                            {`${selectedMetalType} Value`}
                           </span>
                           <span className="font-medium">
                             Rs.{" "}
