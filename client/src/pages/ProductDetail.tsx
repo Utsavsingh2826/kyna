@@ -127,7 +127,7 @@ const getColorDisplayInfo = (
         case "RG":
           return "Rose Gold";
         case "BR":
-          return "Brown";
+          return "Black Rhodium";
         default:
           return c;
       }
@@ -890,25 +890,17 @@ const ProductDetail = () => {
 
       const newData = await response.json();
 
-      // Only update if price and image actually changed
-      if (
-        newData.sellingPrice !== productData?.sellingPrice ||
-        newData.variantImages?.[0] !== productData?.variantImages?.[0]
-      ) {
-        setProductData(newData);
-      }
+      // Always update product data to ensure fresh data is displayed
+      setProductData(newData);
+
+      // Reset to first image to avoid showing wrong cached images
+      setSelectedImage(0);
     } catch (error) {
       console.error("Error refetching product data:", error);
     } finally {
       setIsUpdating(false); // End subtle loading state
     }
-  }, [
-    id,
-    selectedColorCode,
-    generateVariantId,
-    productData?.sellingPrice,
-    productData?.variantImages,
-  ]);
+  }, [id, selectedColorCode, generateVariantId]);
 
   useEffect(() => {
     if (!productData) return;
