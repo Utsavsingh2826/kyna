@@ -1,0 +1,32 @@
+/* Styles for image loading state */
+
+.image-container.loading img {
+  filter: blur(10px) grayscale(100%);
+  transition: filter 0.3s ease-in-out;
+}
+
+.image-container img {
+  filter: none;
+}
+
+/* Placeholder for loading images */
+.image-placeholder {
+  width: 100%;
+  height: 300px; /* Adjust height as needed */
+  background: #e0e0e0; /* Neutral gray background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #888;
+  border-radius: 8px; /* Optional: rounded corners */
+}
+
+/* Ensure placeholder visibility until image loads */
+.hidden {
+  display: none;
+}
+
+.visible {
+  display: block;
+}

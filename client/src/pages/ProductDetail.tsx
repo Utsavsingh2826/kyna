@@ -43,6 +43,7 @@ import {
 // import { Checkbox } from "@/components/ui/checkbox";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
+import "@/styles/image-loading.css"; // Ensure CSS for blur/skeleton is included
 
 // Product interface for API data
 interface ProductData {
@@ -81,14 +82,6 @@ interface ProductData {
   netWeightGrams?: number;
   availableColors?: string[];
 }
-
-const METAL_COLOR_CODE_MAP: Record<string, string> = {
-  "White Gold": "WG",
-  "Yellow Gold": "YG",
-  "Rose Gold": "RG",
-  Platinum: "PL",
-  Silver: "SV",
-};
 
 // Map color codes to display info (handles both single and combination colors)
 const getColorDisplayInfo = (
@@ -232,12 +225,9 @@ const ProductDetail = () => {
   const [selectedDiamondSize, setSelectedDiamondSize] = useState("");
   const [selectedGoldKarat, setSelectedGoldKarat] = useState("");
   const [selectedMetalType, setSelectedMetalType] = useState("");
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
   const [selectedColorClarity, setSelectedColorClarity] = useState("");
-  const [is3DModelLoaded, setIs3DModelLoaded] = useState(false);
-  const [is3DViewerVisible, setIs3DViewerVisible] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
 
   const activeVariantSku = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -672,7 +662,6 @@ const ProductDetail = () => {
         );
         (window as any).__ijewelPreloadViewer = pre;
         (window as any).__ijewelPreloadLoaded = true;
-        setIs3DModelLoaded(true);
       } catch (err) {
         console.warn("iJewel preload failed:", err);
       }
@@ -902,19 +891,37 @@ const ProductDetail = () => {
     }
   }, [id, selectedColorCode, generateVariantId]);
 
+  // Track previous variant and color to prevent unnecessary refetches
+  const prevVariantRef = useRef<string | null>(null);
+  const prevColorCodeRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!productData) return;
 
     const newVariantId = generateVariantId();
     if (!newVariantId) return;
 
-    // If the generated variantId is same as API one => do NOT refetch
-    if (productData.chosenVariantSku === newVariantId) {
+    // Check if color actually changed
+    const colorChanged =
+      prevColorCodeRef.current !== null &&
+      prevColorCodeRef.current !== selectedColorCode;
+
+    // If the generated variantId is same as API one and color hasn't changed => do NOT refetch
+    if (productData.chosenVariantSku === newVariantId && !colorChanged) {
+      prevVariantRef.current = newVariantId;
+      prevColorCodeRef.current = selectedColorCode;
+      return;
+    }
+
+    // Check if nothing changed
+    if (prevVariantRef.current === newVariantId && !colorChanged) {
       return;
     }
 
     // Debounce to prevent spam
     const debounce = setTimeout(() => {
+      prevVariantRef.current = newVariantId;
+      prevColorCodeRef.current = selectedColorCode;
       updateVariantSelection(); // updates URL
       refetchProductData(); // fetch new data
     }, 600);
@@ -927,27 +934,50 @@ const ProductDetail = () => {
     selectedGoldKarat,
     selectedMetalType,
     selectedMetalColor,
+    selectedColorCode,
     selectedColorClarity,
     selectedBraceletSize,
-    productData,
-    generateVariantId,
-    updateVariantSelection,
-    refetchProductData,
   ]);
 
   // Auto-select appropriate karat and default metal color when metal type changes
+  const prevMetalTypeRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!selectedMetalType || !productData) return;
 
-    // When metal type changes, reset to the first available color for the product.
+    // Only run this logic when metal type actually changes
+    if (prevMetalTypeRef.current === null) {
+      // First render, just track the metal type
+      prevMetalTypeRef.current = selectedMetalType;
+      return;
+    }
+
+    if (prevMetalTypeRef.current === selectedMetalType) return;
+    prevMetalTypeRef.current = selectedMetalType;
+
+    // When metal type changes, reset to WG (White Gold) or first available color
+    // This ensures we don't keep combination colors like RG-WG when switching to Silver/Platinum
+    let defaultColorCode = "WG"; // Default to White Gold
+
     if (productData.availableColors && productData.availableColors.length > 0) {
-      const firstAvailableColor = productData.availableColors[0];
-      const colorInfo = getColorDisplayInfo(firstAvailableColor);
+      // Check if WG is available, otherwise use first available
+      if (productData.availableColors.includes("WG")) {
+        defaultColorCode = "WG";
+      } else {
+        defaultColorCode = productData.availableColors[0];
+      }
+
+      const colorInfo = getColorDisplayInfo(defaultColorCode);
       if (colorInfo) {
-        // Only update if the current selection is not valid for the new type
-        if (!productData.availableColors.includes(selectedColorCode)) {
-          updateMetalColor(firstAvailableColor);
-        }
+        setSelectedMetalColor(colorInfo.name);
+        setSelectedColorCode(defaultColorCode);
+
+        // Update URL with new metal color parameter
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set("metalColor", defaultColorCode);
+        navigate(`${currentUrl.pathname}${currentUrl.search}`, {
+          replace: true,
+        });
       }
     }
 
@@ -985,13 +1015,17 @@ const ProductDetail = () => {
         }
         break;
       case "PLATINUM":
-        setSelectedGoldKarat("950");
+        if (selectedGoldKarat !== "950") {
+          setSelectedGoldKarat("950");
+        }
         break;
       case "SILVER":
-        setSelectedGoldKarat("925");
+        if (selectedGoldKarat !== "925") {
+          setSelectedGoldKarat("925");
+        }
         break;
     }
-  }, [selectedMetalType, productData]);
+  }, [selectedMetalType, productData?.modelSku, navigate]);
 
   // Reset engraving when diamond shape or metal color changes
   useEffect(() => {
@@ -1023,22 +1057,13 @@ const ProductDetail = () => {
           replace: true,
         });
 
-        // Trigger refetch after updating the URL
-        refetchProductData();
+        // Don't call refetchProductData here - let the main useEffect handle it
       }
     },
-    [navigate, refetchProductData]
+    [navigate]
   );
 
-  // Ensure refetchProductData is triggered when metalColor changes in the URL
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const metalColorParam = params.get("metalColor");
-
-    if (metalColorParam && metalColorParam !== selectedColorCode) {
-      refetchProductData();
-    }
-  }, [location.search, selectedColorCode, refetchProductData]);
+  // Removed: Refetch is now handled by the main variant update useEffect
 
   const handleWishlistToggle = useCallback(
     (event?: React.MouseEvent) => {
@@ -1112,34 +1137,8 @@ const ProductDetail = () => {
     ]
   );
 
-  // Update variant when selections change (with debounce)
-  useEffect(() => {
-    if (
-      !productData ||
-      !selectedDiamondShape ||
-      !selectedDiamondSize ||
-      !selectedGoldKarat ||
-      !selectedMetalType
-    ) {
-      return; // Don't update if not all selections are made
-    }
-
-    // Debounce the variant update to avoid excessive API calls
-    const timeoutId = setTimeout(() => {
-      updateVariantSelection();
-    }, 1000); // 1 second debounce
-
-    return () => clearTimeout(timeoutId);
-  }, [
-    selectedDiamondShape,
-    selectedDiamondSize,
-    selectedGoldKarat,
-    selectedMetalType,
-    selectedDiamondOrigin,
-    productData,
-    updateVariantSelection,
-    selectedColorClarity,
-  ]);
+  // REMOVED: Duplicate useEffect that was causing infinite loop
+  // The variant update is now handled by the main useEffect above
 
   // Get available karat values based on selected metal type
   const getAvailableKarats = () => {
@@ -1696,7 +1695,6 @@ const ProductDetail = () => {
           // Move canvas from hidden preload container into the visible container
           main.innerHTML = "";
           main.appendChild(pre.canvas);
-          setIs3DViewerVisible(true);
           return;
         } catch (err) {
           console.warn("Error moving preloaded canvas:", err);
@@ -1717,7 +1715,6 @@ const ProductDetail = () => {
               showConfigurator: false,
             }
           );
-          setIs3DViewerVisible(true);
         } catch (err) {
           console.warn("Failed to init ijewel viewer fallback:", err);
         }
@@ -1904,16 +1901,12 @@ const ProductDetail = () => {
                       return (
                         <div className="relative w-full h-full">
                           <video
-                            ref={(el) => setVideoRef(el)}
                             src={currentImage}
                             className="w-full h-full object-cover"
                             controls
                             muted
                             autoPlay
                             playsInline
-                            onPlay={() => setIsVideoPlaying(true)}
-                            onPause={() => setIsVideoPlaying(false)}
-                            onEnded={() => setIsVideoPlaying(false)}
                           />
                         </div>
                       );
@@ -1922,20 +1915,21 @@ const ProductDetail = () => {
                     // Static image (non-3D) or no image available
                     if (currentImage) {
                       return (
-                        <img
-                          src={currentImage}
-                          alt={productData?.title || sampleProduct.name}
-                          className="w-full h-full object-cover transition-opacity duration-300"
-                          onError={() => {
-                            console.error(
-                              `Failed to load main image:`,
-                              currentImage
-                            );
-                          }}
-                          // onLoad={() => {
-                          //   console.log(`Loaded main image:`, currentImage);
-                          // }}
-                        />
+                        <div className="image-container">
+                          {isImageLoading && (
+                            <div className="image-placeholder" /> // Placeholder remains visible until the image loads
+                          )}
+                          <img
+                            src={
+                              productData?.variantImages?.[selectedImage] || ""
+                            }
+                            alt="Product Image"
+                            className={isImageLoading ? "hidden" : "visible"} // Hide image until fully loaded
+                            onLoad={() => setIsImageLoading(false)}
+                            onError={() => setIsImageLoading(false)}
+                            onLoadStart={() => setIsImageLoading(true)}
+                          />
+                        </div>
                       );
                     }
 
@@ -2069,6 +2063,7 @@ const ProductDetail = () => {
                     </div>
                     {/* <div className=" text-sm mb-2 text-[#328F94] ">
                       Starting at ₹
+                     
                       {Math.round(
                         productData.sellingPrice / 12
                       ).toLocaleString()}
