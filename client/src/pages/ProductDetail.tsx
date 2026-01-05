@@ -426,6 +426,38 @@ const ProductDetail = () => {
         });
 
         console.log("Set diamond origin:", diamondOrigin);
+      } else if (parts.length === 4) {
+        // 4-part format for bracelets: modelSku-karat-specs-size (no diamond shape/size)
+        setOriginalVariantFormat("3-part");
+        const [, goldKarat, specifications, braceletSize] = parts;
+
+        // Apply bracelet size
+        if (braceletSize && ["6", "7", "8"].includes(braceletSize)) {
+          setSelectedBraceletSize(braceletSize);
+        }
+
+        // DO NOT auto-select diamond shape or size - keep them empty
+        setSelectedDiamondShape("");
+        setSelectedDiamondSize("");
+
+        // Parse karat and set metal type
+        parseKaratAndSetMetalType(goldKarat, productData);
+
+        // Parse diamond origin
+        const diamondOrigin = specifications.startsWith("LG")
+          ? "Lab Grown Diamond"
+          : "Natural Diamond";
+        setSelectedDiamondOrigin(diamondOrigin);
+
+        const clarity = specifications.replace(/^LG|^ND/, "");
+        setSelectedColorClarity((prev) => {
+          if (prev) return prev;
+          if (productData.diamondColorClarity.includes(clarity)) return clarity;
+          return prev;
+        });
+
+        console.log("Set diamond origin:", diamondOrigin);
+        console.log("4-part bracelet format detected - no diamond shape/size");
       } else if (parts.length === 3) {
         // 3-part format: modelSku-karat-specs
         setOriginalVariantFormat("3-part");
@@ -501,8 +533,12 @@ const ProductDetail = () => {
                 variantId
               )}&metalColor=${params.get("metalColor") || "WG"}`
             : `/api/products/model/${id}`;
-
           response = await fetch(modelUrl);
+          if (!response.ok) {
+            throw new Error(
+              `Failed to fetch product by modelSku: ${response.status}`
+            );
+          }
         }
 
         if (!response.ok) {
@@ -722,13 +758,14 @@ const ProductDetail = () => {
         HEART: "HRT",
       };
 
-      const shapeCode = shapeCodeMap[selectedDiamondShape] || "CUS";
+      // Preserve original values if not explicitly set
+      const shapeCode = selectedDiamondShape
+        ? shapeCodeMap[selectedDiamondShape] || ""
+        : ""; // Keep empty if not explicitly set
+
       const caratCode = selectedDiamondSize
-        ? String(Math.round(parseFloat(selectedDiamondSize) * 100)).padStart(
-            2,
-            "0"
-          )
-        : "30";
+        ? String(Math.round(parseFloat(selectedDiamondSize) * 100))
+        : ""; // Keep empty if not explicitly set
 
       const metalCodeMap: { [key: string]: string } = {
         GOLD: "",
@@ -745,48 +782,38 @@ const ProductDetail = () => {
         karatCode = metalCodeMap[selectedMetalType];
       }
 
-      return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}-${selectedBraceletSize}`;
+      // If both shape and carat are empty, use 4-part format: modelSku-karat-specs-size
+      // Otherwise use 6-part format: modelSku-shape-carat-karat-specs-size
+      if (!shapeCode && !caratCode) {
+        return `${modelSku}-${karatCode}-${specifications}-${selectedBraceletSize}`;
+      } else {
+        return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}-${selectedBraceletSize}`;
+      }
     }
 
     const modelSku = productData.modelSku;
 
-    // Get karat/purity code
-    // let karatCode = "18";
-    // if (selectedGoldKarat) {
-    //   if (selectedGoldKarat.includes("kt")) {
-    //     karatCode = selectedGoldKarat.replace("kt", "");
-    //   } else {
-    //     karatCode = selectedGoldKarat; // For 950, 925
-    //   }
-    // }
-
     let karatCode = "18";
 
-    // Prefix mapping for metal types
     const metalCodeMap: { [key: string]: string } = {
-      GOLD: "", // Gold → no prefix, numbers only
-      PLATINUM: "PT", // Platinum → PT
-      SILVER: "SLV", // Silver → SLV
+      GOLD: "",
+      PLATINUM: "PT",
+      SILVER: "SLV",
     };
 
     if (selectedMetalType === "GOLD") {
-      // For gold use numeric karat 18kt → 18
       karatCode = selectedGoldKarat.includes("kt")
         ? selectedGoldKarat.replace("kt", "")
-        : selectedGoldKarat; // fallback
+        : selectedGoldKarat;
     } else {
-      // PLATINUM or SILVER → return PT or SLV only
       karatCode = metalCodeMap[selectedMetalType];
     }
 
-    // Determine diamond origin and specifications
     const originCode =
       selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
     const specifications = `${originCode}${selectedColorClarity}`;
 
-    // Use the original format from the URL instead of auto-determining
     if (originalVariantFormat === "5-part") {
-      // Use 5-part format: modelSku-shape-carat-karat-specs
       const shapeCodeMap: { [key: string]: string } = {
         CUSHION: "CUS",
         EMERALD: "EM",
@@ -794,13 +821,12 @@ const ProductDetail = () => {
         PRINCESS: "PRN",
         PEAR: "PRS",
         ROUND: "RD",
-        MARQUISE: "MQ", // Changed to MQ for consistency
+        MARQUISE: "MQ",
         HEART: "HRT",
       };
 
       const shapeCode = shapeCodeMap[selectedDiamondShape] || "CUS";
 
-      // Convert carat size to integer (0.30 -> 30)
       const caratCode = selectedDiamondSize
         ? String(Math.round(parseFloat(selectedDiamondSize) * 100)).padStart(
             2,
@@ -810,7 +836,6 @@ const ProductDetail = () => {
 
       return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}`;
     } else {
-      // Use 3-part format: modelSku-karat-specs (default for new products or 3-part format)
       return `${modelSku}-${karatCode}-${specifications}`;
     }
   }, [
@@ -875,7 +900,11 @@ const ProductDetail = () => {
         `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
       );
 
-      if (!response.ok) return;
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch product by modelSku: ${response.status}`
+        );
+      }
 
       const newData = await response.json();
 
@@ -1747,7 +1776,10 @@ const ProductDetail = () => {
         <main className="min-h-screen max-w-6xl bg-background flex items-center justify-center">
           <div className="text-center">
             <p className="text-red-600 mb-4">{error || "Product not found"}</p>
-            <Link to="/products" className="text-[#328F94] hover:underline">
+            <Link
+              to={`/${category || ""}`}
+              className="text-[#328F94] hover:underline"
+            >
               ← Back to Products
             </Link>
           </div>
@@ -2063,7 +2095,6 @@ const ProductDetail = () => {
                     </div>
                     {/* <div className=" text-sm mb-2 text-[#328F94] ">
                       Starting at ₹
-                     
                       {Math.round(
                         productData.sellingPrice / 12
                       ).toLocaleString()}

@@ -34,8 +34,8 @@ const n = (v: any): number =>
   typeof v === "number"
     ? v
     : typeof v === "string" && v.trim() !== ""
-      ? Number(v)
-      : NaN;
+    ? Number(v)
+    : NaN;
 
 const parseNumeric = (v: any): number => {
   if (v == null) return NaN;
@@ -847,8 +847,6 @@ const parseNumeric = (v: any): number => {
 //   }
 // };
 
-
-
 // export const getProductsByCategory = async (req: Request, res: Response) => {
 //   try {
 //     const rawCategory = String(req.params.category || "").trim();
@@ -1338,17 +1336,21 @@ const parseNumeric = (v: any): number => {
 //   }
 // };
 
-
 export const getProductsByCategory = async (req: Request, res: Response) => {
   try {
     const rawCategory = String(req.params.category || "").trim();
     if (!rawCategory)
-      return res.status(400).json({ success: false, message: "Category required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Category required" });
 
     const category = rawCategory.toUpperCase();
 
     const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
-    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "20"), 10)));
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(String(req.query.limit || "20"), 10))
+    );
     const skip = (page - 1) * limit;
 
     const minPrice = n(req.query.minPrice);
@@ -1357,26 +1359,50 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     // Parse filters
     const shapesRaw = String(req.query.centerStoneShape || "").trim();
     const shapes = shapesRaw
-      ? shapesRaw.split(",").map(s => s.trim().toUpperCase()).filter(Boolean)
+      ? shapesRaw
+          .split(",")
+          .map((s) => s.trim().toUpperCase())
+          .filter(Boolean)
       : [];
 
     const metalTypesRaw = String(req.query.metalTypes || "").trim();
     const metalTypes = metalTypesRaw
-      ? metalTypesRaw.split(",").map(s => s.trim().toUpperCase()).filter(Boolean)
+      ? metalTypesRaw
+          .split(",")
+          .map((s) => s.trim().toUpperCase())
+          .filter(Boolean)
       : [];
 
-    const isEngravingRaw = String(req.query.isEngraving || "").trim().toLowerCase();
-    const isEngraving = category === "RINGS" && ["true", "1", "yes"].includes(isEngravingRaw);
+    const isEngravingRaw = String(req.query.isEngraving || "")
+      .trim()
+      .toLowerCase();
+    const isEngraving =
+      category === "RINGS" && ["true", "1", "yes"].includes(isEngravingRaw);
 
     // Ring type filters
     const ringRaw = String(req.query.ringType || req.query.ring || "").trim();
-    const ringTokens = ringRaw ? ringRaw.split(",").map(s => s.trim()) : [];
+    const ringTokens = ringRaw ? ringRaw.split(",").map((s) => s.trim()) : [];
 
     const mapRingTypeToPrefixes = (token: string): string[] => {
-      const t = token.trim().toLowerCase().replace(/[-_\s]+/g, "");
-      if (["engagement", "eng", "engring", "engagementring", "engagement-ring"].includes(t))
+      const t = token
+        .trim()
+        .toLowerCase()
+        .replace(/[-_\s]+/g, "");
+      if (
+        [
+          "engagement",
+          "eng",
+          "engring",
+          "engagementring",
+          "engagement-ring",
+        ].includes(t)
+      )
         return ["ENG"];
-      if (["solitaire", "sol", "sr", "solitairering", "solitaire-ring"].includes(t))
+      if (
+        ["solitaire", "sol", "sr", "solitairering", "solitaire-ring"].includes(
+          t
+        )
+      )
         return ["SR"];
       if (["fashion", "fash", "fr", "fashionring", "fashion-ring"].includes(t))
         return ["FR"];
@@ -1393,7 +1419,11 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     // Category filters
     const parseCatParam = (v: any) =>
       v
-        ? String(v).split(",").map((s: string) => s.trim()).filter(Boolean).map((x: string) => x.toUpperCase())
+        ? String(v)
+            .split(",")
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+            .map((x: string) => x.toUpperCase())
         : [];
 
     const cat1Filters = parseCatParam(req.query.category1);
@@ -1412,8 +1442,14 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       const productMatch: any = { category };
       productMatch["engraving"] = { $type: "object", $ne: null };
 
-      const engravingProducts = await ProductModel.find(productMatch, { modelSku: 1 }).lean().exec();
-      eligibleModelSkus = engravingProducts.map((p: any) => p.modelSku).filter(Boolean);
+      const engravingProducts = await ProductModel.find(productMatch, {
+        modelSku: 1,
+      })
+        .lean()
+        .exec();
+      eligibleModelSkus = engravingProducts
+        .map((p: any) => p.modelSku)
+        .filter(Boolean);
 
       if (eligibleModelSkus.length === 0) {
         // No products with engraving found
@@ -1479,12 +1515,14 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
 
     // Ring type (SKU prefix) filter
     if (ringPrefixes.length > 0) {
-      const prefixRegexes = ringPrefixes.map(prefix => new RegExp(`^${prefix}`, "i"));
+      const prefixRegexes = ringPrefixes.map(
+        (prefix) => new RegExp(`^${prefix}`, "i")
+      );
       if (variantMatch.modelSku && variantMatch.modelSku.$in) {
         // Need to combine: modelSku must be in eligibleModelSkus AND match prefix
         // This requires filtering eligibleModelSkus by prefix
-        const filteredSkus = eligibleModelSkus!.filter(sku =>
-          prefixRegexes.some(regex => regex.test(sku))
+        const filteredSkus = eligibleModelSkus!.filter((sku) =>
+          prefixRegexes.some((regex) => regex.test(sku))
         );
         variantMatch.modelSku = { $in: filteredSkus };
       } else {
@@ -1522,7 +1560,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     if (cat1Filters.length > 0) {
       pipeline.push({
         $match: {
-          $or: cat1Filters.map(v => ({
+          $or: cat1Filters.map((v) => ({
             "product.attributes.category1": { $regex: v, $options: "i" },
           })),
         },
@@ -1532,7 +1570,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     if (cat2Filters.length > 0) {
       pipeline.push({
         $match: {
-          $or: cat2Filters.map(v => ({
+          $or: cat2Filters.map((v) => ({
             "product.attributes.category2": { $regex: v, $options: "i" },
           })),
         },
@@ -1542,14 +1580,14 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     if (cat3Filters.length > 0) {
       pipeline.push({
         $match: {
-          $or: cat3Filters.map(v => ({
+          $or: cat3Filters.map((v) => ({
             "product.attributes.category3": { $regex: v, $options: "i" },
           })),
         },
       });
     }
 
-    pipeline.push({ $sort: { "_id": 1 } });
+    pipeline.push({ $sort: { _id: 1 } });
 
     const allResults = await VariantModel.aggregate(pipeline)
       .allowDiskUse(true)
@@ -1565,7 +1603,7 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     const defaultDocs = await defaultsColl.find({}).toArray();
     const mergedDefaults = Object.assign(
       {},
-      ...defaultDocs.map(d => {
+      ...defaultDocs.map((d) => {
         const c = { ...d };
         delete (c as any)._id;
         return c;
@@ -1596,7 +1634,11 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     };
 
     const normalizeKey = (k: string) =>
-      k.toString().trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+      k
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "");
 
     const findNumericDefault = (
       obj: Record<string, any>,
@@ -1696,21 +1738,29 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           ? engravingObj.maxCharacters
           : null;
       const engravingFontSize =
-        engravingObj && engravingObj.fontSize != null ? engravingObj.fontSize : null;
+        engravingObj && engravingObj.fontSize != null
+          ? engravingObj.fontSize
+          : null;
 
       // Get metal types from PRODUCT attributes
       const productMetalTypes = Array.isArray(product.attributes?.metalTypes)
         ? product.attributes.metalTypes
         : product.attributes?.metalTypes
-          ? [product.attributes.metalTypes]
-          : [];
+        ? [product.attributes.metalTypes]
+        : [];
 
       const baseOut: any = {
         _id: product._id,
         modelSku: product.modelSku,
         metalTypes: productMetalTypes,
-        title: variant.meta?.title || product.seo?.metaTitle || product.title || null,
-        variantCount: Array.isArray(product.variantIds) ? product.variantIds.length : 0,
+        title:
+          variant.meta?.title ||
+          product.seo?.metaTitle ||
+          product.title ||
+          null,
+        variantCount: Array.isArray(product.variantIds)
+          ? product.variantIds.length
+          : 0,
         firstVariantSku: variant.sku,
         firstVariantImageUrl: imageUrl,
         attributesCategory1: product.attributes?.category1 ?? null,
@@ -1724,9 +1774,10 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
 
       // Calculate price
       try {
-        const stonesArr: any[] = Array.isArray(variant.meta?.stones) && variant.meta.stones.length
-          ? variant.meta.stones
-          : Array.isArray(variant.stones)
+        const stonesArr: any[] =
+          Array.isArray(variant.meta?.stones) && variant.meta.stones.length
+            ? variant.meta.stones
+            : Array.isArray(variant.stones)
             ? variant.stones
             : [];
 
@@ -1747,9 +1798,10 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           const cts =
             typeof st?.cts === "number"
               ? st.cts
-              : Array.isArray(st?.sequences) && typeof st.sequences[0]?.cts === "number"
-                ? st.sequences[0].cts
-                : null;
+              : Array.isArray(st?.sequences) &&
+                typeof st.sequences[0]?.cts === "number"
+              ? st.sequences[0].cts
+              : null;
           if (cts == null) continue;
 
           const net = st?.netWeightGrams != null ? n(st.netWeightGrams) : null;
@@ -1765,7 +1817,9 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           const pricingDoc: any =
             (await finalPricingColl.findOne({ sequence: st.sequence })) || {};
           const pricePerCt = parseNumeric(
-            pricingDoc.selling_price ?? pricingDoc.sellingPrice ?? pricingDoc.price
+            pricingDoc.selling_price ??
+              pricingDoc.sellingPrice ??
+              pricingDoc.price
           );
           if (Number.isNaN(pricePerCt)) {
             diamondIncomplete = true;
@@ -1776,9 +1830,13 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
 
         const metalType = (
           variant?.meta?.metalType ||
-          (Array.isArray(productMetalTypes) ? productMetalTypes[0] : productMetalTypes) ||
+          (Array.isArray(productMetalTypes)
+            ? productMetalTypes[0]
+            : productMetalTypes) ||
           "GOLD"
-        ).toString().toUpperCase();
+        )
+          .toString()
+          .toUpperCase();
 
         let karatStr =
           variant?.meta?.metalKt ||
@@ -1792,8 +1850,8 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
           variant?.meta?.metalWeightGrams != null
             ? n(variant.meta.metalWeightGrams)
             : variant?.netWeightGrams != null
-              ? n(variant.netWeightGrams)
-              : null;
+            ? n(variant.netWeightGrams)
+            : null;
 
         if (
           (metalWeightGrams == null || Number.isNaN(metalWeightGrams)) &&
@@ -1810,9 +1868,12 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
         if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
           const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
           metalPricePerGram = goldValue24 * factor;
-        } else if (metalType === "SILVER") metalPricePerGram = silverPricePerGram;
-        else if (metalType === "PLATINUM") metalPricePerGram = platinumPricePerGram;
-        else if (metalType === "TITANIUM") metalPricePerGram = titaniumPricePerGram;
+        } else if (metalType === "SILVER")
+          metalPricePerGram = silverPricePerGram;
+        else if (metalType === "PLATINUM")
+          metalPricePerGram = platinumPricePerGram;
+        else if (metalType === "TITANIUM")
+          metalPricePerGram = titaniumPricePerGram;
 
         let metalCost = 0,
           labourCost = 0,
@@ -1835,9 +1896,15 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       }
 
       // Price filter
-      if (!Number.isNaN(minPrice) && (baseOut.sellingPrice === null || baseOut.sellingPrice < minPrice))
+      if (
+        !Number.isNaN(minPrice) &&
+        (baseOut.sellingPrice === null || baseOut.sellingPrice < minPrice)
+      )
         continue;
-      if (!Number.isNaN(maxPrice) && (baseOut.sellingPrice === null || baseOut.sellingPrice > maxPrice))
+      if (
+        !Number.isNaN(maxPrice) &&
+        (baseOut.sellingPrice === null || baseOut.sellingPrice > maxPrice)
+      )
         continue;
 
       products.push(baseOut);
@@ -1883,8 +1950,6 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
     });
   }
 };
-
-
 
 export const getProductByModelSku = async (
   req: Request,
@@ -2087,7 +2152,8 @@ export const getProductByModelSku = async (
         .json({ success: false, message: `Model ${modelSku} not found` });
     }
     console.debug(
-      `[getProductByModelSku] product loaded id=${(product as any)?._id ?? "unknown"
+      `[getProductByModelSku] product loaded id=${
+        (product as any)?._id ?? "unknown"
       }`
     );
 
@@ -2098,26 +2164,28 @@ export const getProductByModelSku = async (
     const metalTypes: string[] = Array.isArray(attributes?.metalTypes)
       ? attributes.metalTypes.map(String)
       : attributes?.metalTypes
-        ? [String(attributes.metalTypes)]
-        : [];
+      ? [String(attributes.metalTypes)]
+      : [];
 
     const goldKarats: string[] = Array.isArray(attributes?.goldKarats)
       ? attributes.goldKarats.map(String)
       : attributes?.goldKarats
-        ? [String(attributes.goldKarats)]
-        : [];
+      ? [String(attributes.goldKarats)]
+      : [];
 
     let diamondShape: string[] = Array.isArray(attributes?.centerStoneShape)
       ? attributes.centerStoneShape.map(String)
+      : attributes?.centerStoneShape
+      ? [String(attributes.centerStoneShape)]
       : Array.isArray(attributes?.diamondShapes)
-        ? attributes.diamondShapes.map(String)
-        : [];
+      ? attributes.diamondShapes.map(String)
+      : [];
 
     let diamondSize: string[] = Array.isArray(attributes?.centerStoneSize)
       ? attributes.centerStoneSize.map(String)
       : Array.isArray(attributes?.diamondSizes)
-        ? attributes.diamondSizes.map(String)
-        : [];
+      ? attributes.diamondSizes.map(String)
+      : [];
 
     const conn = getCatalogConnection();
 
@@ -2237,8 +2305,8 @@ export const getProductByModelSku = async (
     // New/actual model (from your screenshots): engraving object on product
     const productEngravingObj =
       product &&
-        typeof product.engraving === "object" &&
-        product.engraving !== null
+      typeof product.engraving === "object" &&
+      product.engraving !== null
         ? product.engraving
         : null;
 
@@ -2457,31 +2525,29 @@ export const getProductByModelSku = async (
     let firstVariantDoc: VariantDoc | null = null;
 
     if (variantIdParam) {
-      firstVariantDoc = (await conn
+      firstVariantDoc = await conn
         .collection("variants")
-        .findOne({ sku: variantIdParam })) as VariantDoc | null;
-
-      if (!firstVariantDoc && mongoose.Types.ObjectId.isValid(variantIdParam)) {
-        try {
-          firstVariantDoc = (await conn.collection("variants").findOne({
-            _id: new mongoose.Types.ObjectId(variantIdParam),
-          })) as VariantDoc | null;
-        } catch {
-          // ignore
-        }
-      }
+        .findOne({ sku: variantIdParam });
 
       if (firstVariantDoc) {
         chosenVariantSku =
           firstVariantDoc.sku ??
           (firstVariantDoc._id ? String(firstVariantDoc._id) : null);
+      } else {
+        // 👇 THIS is the fix
+        return res.status(404).json({
+          success: false,
+          data: "Variant not found for the provided variantId",
+        });
       }
     }
 
-    if (!firstVariantDoc && firstVariantSku) {
-      firstVariantDoc = (await conn
+    // Only fallback when variantId is NOT provided
+    if (!firstVariantDoc && !variantIdParam && firstVariantSku) {
+      firstVariantDoc = await conn
         .collection("variants")
-        .findOne({ sku: firstVariantSku })) as VariantDoc | null;
+        .findOne({ sku: firstVariantSku });
+
       chosenVariantSku = firstVariantDoc
         ? firstVariantDoc.sku ?? firstVariantSku
         : firstVariantSku;
@@ -2512,8 +2578,8 @@ export const getProductByModelSku = async (
         Array.isArray(variant?.meta?.stones) && variant.meta!.stones!.length
           ? variant.meta!.stones!
           : Array.isArray(variant?.stones) && variant.stones!.length
-            ? variant.stones!
-            : [];
+          ? variant.stones!
+          : [];
 
       for (const st of stonesArr) {
         if (!st) continue;
@@ -2661,9 +2727,7 @@ export const getProductByModelSku = async (
         const name = url.split("/").pop()?.toUpperCase() || "";
         const parts = name.split(/[-_.]/).filter(Boolean);
 
-        return parts.filter((p) =>
-          ["WG", "YG", "RG", "BR", "3T"].includes(p)
-        );
+        return parts.filter((p) => ["WG", "YG", "RG", "BR", "3T"].includes(p));
       };
 
       // NEW: compute availableColors from all images of this variant
@@ -2692,8 +2756,6 @@ export const getProductByModelSku = async (
       }
 
       availableColors = Array.from(availableColorsSet);
-
-
 
       const strictPrimaryOnlyMatches = (token: string) => {
         if (!token) return [];
@@ -2835,8 +2897,8 @@ export const getProductByModelSku = async (
           Array.isArray(variant?.meta?.stones) && variant.meta!.stones!.length
             ? variant.meta!.stones!
             : Array.isArray(variant?.stones) && variant.stones!.length
-              ? variant.stones!
-              : [];
+            ? variant.stones!
+            : [];
 
         const includedStones: {
           sequence: string;
@@ -3007,7 +3069,7 @@ export const getProductByModelSku = async (
 
         const karatNum = Number(
           String(karatStr).match(/\d+/)?.[0] ||
-          (metalType === "PLATINUM" ? 950 : 18)
+            (metalType === "PLATINUM" ? 950 : 18)
         );
 
         // Resolve net weight in grams (metal net weight for pricing and response)
@@ -3172,7 +3234,7 @@ export const getProductByModelSku = async (
     // Variant-level engraving override (if present)
     const variantEngravingObj =
       firstVariantDoc &&
-        typeof (firstVariantDoc.meta?.engraving ?? firstVariantDoc.engraving) ===
+      typeof (firstVariantDoc.meta?.engraving ?? firstVariantDoc.engraving) ===
         "object"
         ? firstVariantDoc.meta?.engraving ?? firstVariantDoc.engraving
         : null;
@@ -3185,17 +3247,17 @@ export const getProductByModelSku = async (
     const engravingFontSize =
       finalEngravingObj && finalEngravingObj.fontSize != null
         ? (() => {
-          const n = toNumberRobust(finalEngravingObj.fontSize);
-          return Number.isNaN(n) ? undefined : n;
-        })()
+            const n = toNumberRobust(finalEngravingObj.fontSize);
+            return Number.isNaN(n) ? undefined : n;
+          })()
         : undefined;
 
     const engravingMaxCharacters =
       finalEngravingObj && finalEngravingObj.maxCharacters != null
         ? (() => {
-          const n = toNumberRobust(finalEngravingObj.maxCharacters);
-          return Number.isNaN(n) ? undefined : n;
-        })()
+            const n = toNumberRobust(finalEngravingObj.maxCharacters);
+            return Number.isNaN(n) ? undefined : n;
+          })()
         : undefined;
 
     // isEngraving: true if legacy array exists OR the final engraving object has meaningful fields
@@ -3222,13 +3284,13 @@ export const getProductByModelSku = async (
       isEngraving,
       engravingInfo: finalEngravingObj
         ? {
-          fontSize:
-            engravingFontSize !== undefined ? engravingFontSize : null,
-          maxCharacters:
-            engravingMaxCharacters !== undefined
-              ? engravingMaxCharacters
-              : null,
-        }
+            fontSize:
+              engravingFontSize !== undefined ? engravingFontSize : null,
+            maxCharacters:
+              engravingMaxCharacters !== undefined
+                ? engravingMaxCharacters
+                : null,
+          }
         : null,
       variantCount,
       firstVariantSku,

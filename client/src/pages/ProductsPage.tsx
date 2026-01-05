@@ -2076,15 +2076,18 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   return (
     <main aria-labelledby="products-heading" className="eng-root">
       <div className="eng-wrap">
-        <nav aria-label="Breadcrumb" className="eng-breadcrumb">
+        <nav
+          aria-label="Breadcrumb"
+          className="eng-breadcrumb border-b border-solid pb-3"
+        >
           <Link to="/">Home</Link> <span> - </span> <span>{pageTitle}</span>
         </nav>
 
-        <div className="eng-header">
-          {/* <h2 id="products-heading" className="eng-title">
+        {/* <div className="eng-header">
+          <h2 id="products-heading" className="eng-title">
             {pageTitle} ({loading ? "..." : pagination.total})
-          </h2> */}
-          {/* <div className="eng-actions">
+          </h2>
+          <div className="eng-actions">
             <label>
               Sort by:{" "}
               <select className="eng-sort" aria-label="Sort products">
@@ -2094,8 +2097,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 <option>Newest</option>
               </select>
             </label>
-          </div> */}
-        </div>
+          </div>
+        </div> */}
 
         {/* API Applied Filters Display */}
         {appliedFilters && !loading && (
