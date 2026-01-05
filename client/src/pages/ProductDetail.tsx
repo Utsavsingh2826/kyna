@@ -229,6 +229,19 @@ const ProductDetail = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
 
+  // Track the last valid state for reverting when variant not found
+  const lastValidStateRef = useRef({
+    metalColor: "White Gold",
+    colorCode: "WG",
+    diamondShape: "Round",
+    diamondSize: "",
+    diamondOrigin: "Natural Diamond",
+    colorClarity: "",
+    goldKarat: "",
+    metalType: "",
+    braceletSize: "6",
+  });
+
   const activeVariantSku = useMemo(() => {
     const params = new URLSearchParams(location.search);
     return (
@@ -736,6 +749,48 @@ const ProductDetail = () => {
     }
   }, [location.search, selectedMetalColor]);
 
+  // Initialize lastValidStateRef with the first loaded variant state
+  // This runs once after product data is loaded and all selections are set
+  const initialStateSetRef = useRef(false);
+  useEffect(() => {
+    if (
+      productData &&
+      !initialStateSetRef.current &&
+      selectedMetalColor &&
+      selectedColorCode &&
+      selectedMetalType
+    ) {
+      // Set the initial valid state from the loaded variant
+      lastValidStateRef.current = {
+        metalColor: selectedMetalColor,
+        colorCode: selectedColorCode,
+        diamondShape: selectedDiamondShape,
+        diamondSize: selectedDiamondSize,
+        diamondOrigin: selectedDiamondOrigin,
+        colorClarity: selectedColorClarity,
+        goldKarat: selectedGoldKarat,
+        metalType: selectedMetalType,
+        braceletSize: selectedBraceletSize,
+      };
+      initialStateSetRef.current = true;
+      console.log(
+        "Initial lastValidStateRef set from loaded variant:",
+        lastValidStateRef.current
+      );
+    }
+  }, [
+    productData,
+    selectedMetalColor,
+    selectedColorCode,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedDiamondOrigin,
+    selectedColorClarity,
+    selectedGoldKarat,
+    selectedMetalType,
+    selectedBraceletSize,
+  ]);
+
   // Generate variant ID based on current selections
   const generateVariantId = useCallback(() => {
     if (!productData) return null;
@@ -900,25 +955,120 @@ const ProductDetail = () => {
         `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
       );
 
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch product by modelSku: ${response.status}`
-        );
-      }
-
       const newData = await response.json();
 
-      // Always update product data to ensure fresh data is displayed
+      // Check if the response indicates variant not found
+      // The API returns 404 with {"success": true, "data": "Variant not found for the provided variantId"}
+      if (
+        !response.ok ||
+        (newData.success &&
+          typeof newData.data === "string" &&
+          newData.data.includes("Variant not found"))
+      ) {
+        console.log(
+          "Variant not found for:",
+          currentVariantId,
+          "with metal color:",
+          metalCode
+        );
+
+        // Revert to last valid state
+        setSelectedMetalColor(lastValidStateRef.current.metalColor);
+        setSelectedColorCode(lastValidStateRef.current.colorCode);
+        setSelectedDiamondShape(lastValidStateRef.current.diamondShape);
+        setSelectedDiamondSize(lastValidStateRef.current.diamondSize);
+        setSelectedDiamondOrigin(lastValidStateRef.current.diamondOrigin);
+        setSelectedColorClarity(lastValidStateRef.current.colorClarity);
+        setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
+        setSelectedMetalType(lastValidStateRef.current.metalType);
+        setSelectedBraceletSize(lastValidStateRef.current.braceletSize);
+
+        // Also revert the URL to the last valid variant
+        // Use the last valid variant from productData if available
+        if (productData?.chosenVariantSku) {
+          const currentPath = category
+            ? `/product/${category}/${id}`
+            : `/product/${id}`;
+          navigate(
+            `${currentPath}?variantId=${encodeURIComponent(
+              productData.chosenVariantSku
+            )}&metalColor=${lastValidStateRef.current.colorCode}`,
+            {
+              replace: true,
+            }
+          );
+        }
+
+        alert(
+          "This combination is not available. Please select a different option."
+        );
+        return;
+      }
+
+      // Update product data with valid response
       setProductData(newData);
+
+      // Update last valid state since this variant exists
+      lastValidStateRef.current = {
+        metalColor: selectedMetalColor,
+        colorCode: selectedColorCode,
+        diamondShape: selectedDiamondShape,
+        diamondSize: selectedDiamondSize,
+        diamondOrigin: selectedDiamondOrigin,
+        colorClarity: selectedColorClarity,
+        goldKarat: selectedGoldKarat,
+        metalType: selectedMetalType,
+        braceletSize: selectedBraceletSize,
+      };
 
       // Reset to first image to avoid showing wrong cached images
       setSelectedImage(0);
     } catch (error) {
       console.error("Error refetching product data:", error);
+      // On error, also revert to last valid state
+      setSelectedMetalColor(lastValidStateRef.current.metalColor);
+      setSelectedColorCode(lastValidStateRef.current.colorCode);
+      setSelectedDiamondShape(lastValidStateRef.current.diamondShape);
+      setSelectedDiamondSize(lastValidStateRef.current.diamondSize);
+      setSelectedDiamondOrigin(lastValidStateRef.current.diamondOrigin);
+      setSelectedColorClarity(lastValidStateRef.current.colorClarity);
+      setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
+      setSelectedMetalType(lastValidStateRef.current.metalType);
+      setSelectedBraceletSize(lastValidStateRef.current.braceletSize);
+
+      // Also revert the URL on network error
+      if (productData?.chosenVariantSku) {
+        const currentPath = category
+          ? `/product/${category}/${id}`
+          : `/product/${id}`;
+        navigate(
+          `${currentPath}?variantId=${encodeURIComponent(
+            productData.chosenVariantSku
+          )}&metalColor=${lastValidStateRef.current.colorCode}`,
+          {
+            replace: true,
+          }
+        );
+      }
     } finally {
       setIsUpdating(false); // End subtle loading state
     }
-  }, [id, selectedColorCode, generateVariantId]);
+  }, [
+    id,
+    category,
+    navigate,
+    productData,
+    selectedColorCode,
+    generateVariantId,
+    selectedMetalColor,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedDiamondOrigin,
+    selectedColorClarity,
+    selectedGoldKarat,
+    selectedMetalType,
+    selectedBraceletSize,
+  ]);
 
   // Track previous variant and color to prevent unnecessary refetches
   const prevVariantRef = useRef<string | null>(null);
