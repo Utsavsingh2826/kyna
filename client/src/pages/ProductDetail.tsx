@@ -89,9 +89,9 @@ const getColorDisplayInfo = (
 ): { name: string; colors: string[]; img: string } | null => {
   // Single colors
   const singleColorMap: Record<string, { name: string; img: string }> = {
-    WG: { name: "White Gold", img: "/colors/white.png" },
-    YG: { name: "Yellow Gold", img: "/colors/gold.png" },
-    RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
+    WG: { name: "White", img: "/colors/white.png" },
+    YG: { name: "Yellow", img: "/colors/gold.png" },
+    RG: { name: "Rose", img: "/colors/rosegold.png" },
     "3T": { name: "Three Tone", img: "/colors/threetone.png" },
   };
 
@@ -114,11 +114,11 @@ const getColorDisplayInfo = (
     const getColorName = (c: string) => {
       switch (c) {
         case "WG":
-          return "White Gold";
+          return "White";
         case "YG":
-          return "Yellow Gold";
+          return "Yellow";
         case "RG":
-          return "Rose Gold";
+          return "Rose";
         case "BR":
           return "Black Rhodium";
         default:
@@ -175,9 +175,9 @@ const sampleProduct = {
   ],
   metalTypes: ["Gold", "Silver", "Platinum", "Palladium", "Titanium", "Cobalt"],
   metalColors: [
-    { name: "White Gold", img: "/metal_colors/Platinum.svg" },
-    { name: "Yellow Gold", img: "/colors/gold.png" },
-    { name: "Rose Gold", img: "/colors/rosegold.png" },
+    { name: "White", img: "/metal_colors/Platinum.svg" },
+    { name: "Yellow", img: "/colors/gold.png" },
+    { name: "Rose", img: "/colors/rosegold.png" },
     { name: "Silver", color: "#C0C0C0" },
     { name: "Platinum", color: "#E5E4E2" },
   ],
@@ -218,7 +218,7 @@ const ProductDetail = () => {
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
-  const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
+  const [selectedMetalColor, setSelectedMetalColor] = useState("White");
   const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code (e.g., "WG", "WG-RG")
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedBraceletSize, setSelectedBraceletSize] = useState("6");
@@ -231,7 +231,7 @@ const ProductDetail = () => {
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
-    metalColor: "White Gold",
+    metalColor: "White",
     colorCode: "WG",
     diamondShape: "Round",
     diamondSize: "",
@@ -731,23 +731,20 @@ const ProductDetail = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const metalColorParam = params.get("metalColor");
+    if (!metalColorParam) return;
 
-    const metalColorMap: { [key: string]: string } = {
-      WG: "White Gold",
-      YG: "Yellow Gold",
-      RG: "Rose Gold",
-    };
+    const colorInfo = getColorDisplayInfo(metalColorParam);
+    if (!colorInfo) return;
 
-    if (metalColorParam && metalColorMap[metalColorParam]) {
-      const targetColor = metalColorMap[metalColorParam];
-      if (selectedMetalColor !== targetColor) {
-        console.log(
-          `URL parameter override - Setting metal color: ${metalColorParam} -> ${targetColor}`
-        );
-        setSelectedMetalColor(targetColor);
-      }
+    // IMPORTANT: update BOTH name + code together
+    if (
+      selectedColorCode !== metalColorParam ||
+      selectedMetalColor !== colorInfo.name
+    ) {
+      setSelectedMetalColor(colorInfo.name);
+      setSelectedColorCode(metalColorParam);
     }
-  }, [location.search, selectedMetalColor]);
+  }, [location.search]);
 
   // Initialize lastValidStateRef with the first loaded variant state
   // This runs once after product data is loaded and all selections are set
