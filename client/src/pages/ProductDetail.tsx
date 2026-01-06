@@ -2321,7 +2321,7 @@ const ProductDetail = () => {
 
                 {/* Diamond Shape - Only show if diamond shapes are available */}
                 {productData.diamondShape &&
-                  productData.diamondShape.length > 1 && (
+                  productData.diamondShape.length > 0 && (
                     <div>
                       <h3 className="mb-3 text-sm">
                         Diamond Shape:{" "}
@@ -2374,10 +2374,9 @@ const ProductDetail = () => {
                   )}
 
                 {/* Diamond Size & Color/Clarity - Only show if data is available */}
-                {(productData.diamondSize.length > 0 ||
-                  productData.diamondColorClarity.length > 0) && (
+                {productData.diamondSize.length > 0 && (
                   <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
-                    {productData.diamondShape.length > 1 && (
+                    {productData.diamondShape.length > 0 && (
                       <div>
                         <label className="block text-xs mb-2">
                           Diamond Size
