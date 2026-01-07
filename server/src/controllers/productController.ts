@@ -3616,6 +3616,14 @@ export const getProductByModelSku = async (
     // ----------------- Basic metadata -----------------
     const attributes = product?.attributes ?? {};
 
+    // ----------------- CATEGORY DETECTION -----------------
+    const category =
+      (product as any)?.category ?? (product as any)?.meta?.category ?? null;
+
+    const isPendant =
+      typeof category === "string" &&
+      category.toUpperCase().startsWith("PENDANT");
+
     const metalTypes: string[] = Array.isArray(attributes?.metalTypes)
       ? attributes.metalTypes.map(String)
       : attributes?.metalTypes
@@ -3987,10 +3995,19 @@ export const getProductByModelSku = async (
       .collection("variants")
       .findOne({ sku: variantIdParam });
 
+    // ----------------- PENDANT CHAIN INFO -----------------
+    let chainOption: string | null = null;
+    let chainLengthInches: string | null = null;
+
+    if (isPendant && firstVariantDoc?.meta) {
+      chainOption = firstVariantDoc.meta.chainOption ?? null;
+      chainLengthInches = firstVariantDoc.meta.chainLengthInches ?? null;
+    }
+
     if (!firstVariantDoc) {
-      return res.status(404).json({
-        success: false,
-        message: "Variant not found for the provided variantId",
+      return res.status(200).json({
+        success: true,
+        data: "Variant not found for the provided variantId",
       });
     }
 
@@ -4755,6 +4772,15 @@ export const getProductByModelSku = async (
       modelSku,
       title,
       description,
+      category,
+
+      ...(isPendant
+        ? {
+            chainOption,
+            chainLengthInches,
+          }
+        : {}),
+
       metalTypes,
       metalOptions,
       goldKarats,

@@ -53,6 +53,8 @@ interface ProductData {
   title: string;
   description: string;
   category?: string;
+  chainOption?: string;
+  chainLengthInches?: string;
   metalTypes: string[];
   goldKarats: (string | number)[];
   diamondShape: string[];
@@ -92,6 +94,7 @@ const getColorDisplayInfo = (
     WG: { name: "White", img: "/colors/white.png" },
     YG: { name: "Yellow", img: "/colors/gold.png" },
     RG: { name: "Rose", img: "/colors/rosegold.png" },
+    BR: { name: "Black Rhodium", img: "/colors/br.png" },
     "3T": { name: "Three Tone", img: "/colors/threetone.png" },
   };
 
@@ -2236,7 +2239,7 @@ const ProductDetail = () => {
                   <p className="text-muted-foreground text-sm mb-4">
                     {productData.description}
                   </p>
-                  <div className="flex items-end mb-4 gap-4">
+                  <div className="flex items-end gap-4">
                     <div className="text-2xl mb-1">
                       ₹{productData.sellingPrice.toLocaleString()}
                     </div>
@@ -2248,6 +2251,30 @@ const ProductDetail = () => {
                       /mo
                     </div> */}
                   </div>
+
+                  {/* Chain Information for Pendants */}
+                  {productData.category === "PENDANTS" &&
+                    productData.chainOption &&
+                    productData.chainLengthInches && (
+                      <div
+                        style={{
+                          backgroundColor: "#EDF8F1",
+                          color: "#328F94",
+                          padding: "12px 16px",
+                          marginBottom: "16px",
+                          fontSize: "14px",
+                        }}
+                        className="w-fit pt-0 pb-0 pl-4 pr-4 rounded-full mb-4"
+                      >
+                        <p style={{ marginBottom: "4px" }}>
+                          Pricing {productData.chainOption}
+                        </p>
+                        {/* <p style={{ marginBottom: "0" }}>
+                          <strong>Chain Length:</strong>{" "}
+                          {productData.chainLengthInches} inches
+                        </p> */}
+                      </div>
+                    )}
                 </div>
 
                 {/* Diamond Origin */}
@@ -2999,7 +3026,10 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs.{" "}
-                            {productData.priceBreakdown.diamondCost.toLocaleString()}
+                            {(
+                              productData.priceBreakdown.diamondCost +
+                              productData.priceBreakdown.expense
+                            ).toLocaleString()}
                             /-
                           </span>
                         </div>
