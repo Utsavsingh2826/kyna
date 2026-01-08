@@ -448,6 +448,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         };
 
         const filterParams = buildApiFilters();
+        console.log("📡 API Request Params:", filterParams.toString());
+        console.log("📊 Active Filters State:", activeFilters);
         const response = await fetch(
           `/api/products/category/${apiCategory}?${filterParams.toString()}`,
           { signal }
@@ -848,15 +850,22 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     categoryParam: string,
     isOpen: boolean
   ) => {
+    console.log(
+      `🔧 Filter Group Toggle: ${groupName} - ${isOpen ? "OPENING" : "CLOSING"}`
+    );
+    const currentParams = new URLSearchParams(searchParams);
+    const existingParam = currentParams.get(categoryParam);
+    const existingValues = existingParam ? existingParam.split(",") : [];
+
     if (isOpen) {
       // When opening a group, add it to the category parameter
-      const currentParams = new URLSearchParams(searchParams);
-      const existingParam = currentParams.get(categoryParam);
-      const existingValues = existingParam ? existingParam.split(",") : [];
-
       if (!existingValues.includes(groupName)) {
         existingValues.push(groupName);
         currentParams.set(categoryParam, existingValues.join(","));
+        console.log(
+          `✅ Added ${groupName} to ${categoryParam}:`,
+          existingValues
+        );
         setSearchParams(currentParams);
 
         // Update local state
@@ -864,6 +873,109 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           ...prev,
           [categoryParam]: existingValues,
         }));
+      }
+    } else {
+      // When closing a group, remove it from the category parameter
+      const index = existingValues.indexOf(groupName);
+      if (index > -1) {
+        existingValues.splice(index, 1);
+        console.log(
+          `❌ Removed ${groupName} from ${categoryParam}:`,
+          existingValues
+        );
+
+        // Update or delete the category parameter
+        if (existingValues.length > 0) {
+          currentParams.set(categoryParam, existingValues.join(","));
+        } else {
+          currentParams.delete(categoryParam);
+          console.log(`🗑️ Deleted ${categoryParam} from URL params`);
+        }
+
+        // Clear associated shape filters based on the group being closed
+        if (category === "rings") {
+          if (groupName === "Solitaire Rings") {
+            currentParams.delete("solitaire_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              solitaire_diamond_shape: [],
+            }));
+          } else if (groupName === "Engagement Rings") {
+            currentParams.delete("engagement_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              engagement_diamond_shape: [],
+            }));
+          } else if (
+            groupName === "Mens Rings" ||
+            groupName === "Men's Rings"
+          ) {
+            currentParams.delete("mens_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              mens_diamond_shape: [],
+            }));
+          } else if (groupName === "Fashion Rings") {
+            currentParams.delete("fashion_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              fashion_diamond_shape: [],
+            }));
+          }
+        } else if (category === "pendants") {
+          if (groupName === "Solitaire Pendants") {
+            currentParams.delete("solitaire_pendant_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              solitaire_pendant_diamond_shape: [],
+            }));
+          } else if (groupName === "Fashion Pendants") {
+            currentParams.delete("fashion_pendant_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              fashion_pendant_diamond_shape: [],
+            }));
+          } else if (groupName === "Solitaire Halo") {
+            currentParams.delete("halo_pendant_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              halo_pendant_diamond_shape: [],
+            }));
+          }
+        } else if (category === "bracelets") {
+          if (groupName === "Tennis Bracelets") {
+            currentParams.delete("tennis_bracelet_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              tennis_bracelet_diamond_shape: [],
+            }));
+          } else if (groupName === "Fashion Bracelets") {
+            currentParams.delete("fashion_bracelet_diamond_shape");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              fashion_bracelet_diamond_shape: [],
+            }));
+          }
+        }
+
+        setSearchParams(currentParams);
+
+        // Update local state for simple cases (when not handled above)
+        if (!currentParams.toString().includes("diamond_shape")) {
+          setActiveFilters((prev) => ({
+            ...prev,
+            [categoryParam]: existingValues,
+          }));
+        }
       }
     }
   };
@@ -893,15 +1005,22 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
     // Helper to handle earring group toggle
     const handleEarringGroupToggle = (groupTitle: string, isOpen: boolean) => {
-      if (isOpen) {
-        const mappedValue = mapEarringGroupToCategory1(groupTitle);
-        const currentParams = new URLSearchParams(searchParams);
-        const existingCategory1 = currentParams.get("category1");
-        const values = existingCategory1 ? existingCategory1.split(",") : [];
+      console.log(
+        `🎵 Earring Group Toggle: ${groupTitle} - ${
+          isOpen ? "OPENING" : "CLOSING"
+        }`
+      );
+      const mappedValue = mapEarringGroupToCategory1(groupTitle);
+      const currentParams = new URLSearchParams(searchParams);
+      const existingCategory1 = currentParams.get("category1");
+      const values = existingCategory1 ? existingCategory1.split(",") : [];
 
+      if (isOpen) {
+        // When opening a group, add it to category1
         if (!values.includes(mappedValue)) {
           values.push(mappedValue);
           currentParams.set("category1", values.join(","));
+          console.log(`✅ Added ${mappedValue} to category1:`, values);
           if (!currentParams.has("category2"))
             currentParams.set("category2", "");
           if (!currentParams.has("category3"))
@@ -912,6 +1031,88 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             ...prev,
             category1: values.join(","),
           }));
+        }
+      } else {
+        // When closing a group, remove it from category1 and clear associated filters
+        const index = values.indexOf(mappedValue);
+        if (index > -1) {
+          values.splice(index, 1);
+          console.log(`❌ Removed ${mappedValue} from category1:`, values);
+
+          // Update or delete category1
+          if (values.length > 0) {
+            currentParams.set("category1", values.join(","));
+          } else {
+            currentParams.delete("category1");
+            console.log(`🗑️ Deleted category1 from URL params`);
+          }
+
+          // Clear the associated shape filter for this earring subcategory
+          let shapeFilterKey = "";
+          if (groupTitle === "Studs") {
+            shapeFilterKey = "studs_diamond_shape";
+          } else if (groupTitle === "Hoops / Huggies") {
+            shapeFilterKey = "hoops_diamond_shape";
+          } else if (groupTitle === "Drop Earrings") {
+            shapeFilterKey = "drop_diamond_shape";
+          } else if (groupTitle === "Fashion Earrings") {
+            shapeFilterKey = "fashion_earring_diamond_shape";
+          } else if (groupTitle === "Halo Earrings") {
+            shapeFilterKey = "halo_earring_diamond_shape";
+          }
+
+          if (shapeFilterKey) {
+            currentParams.delete(shapeFilterKey);
+            console.log(`🗑️ Deleted ${shapeFilterKey} from URL params`);
+
+            // Also update centerStoneShape by removing shapes from this subcategory
+            const shapesToRemove = activeFilters[
+              shapeFilterKey as keyof typeof activeFilters
+            ] as string[];
+            if (shapesToRemove && shapesToRemove.length > 0) {
+              console.log(
+                `🔍 Removing shapes from centerStoneShape:`,
+                shapesToRemove
+              );
+              const existingShapes =
+                currentParams.get("centerStoneShape") || "";
+              const shapeArray = existingShapes
+                ? existingShapes.split(",")
+                : [];
+
+              // Remove all shapes that belong to this subcategory
+              shapesToRemove.forEach((shape) => {
+                const shapeLower = shape.toLowerCase();
+                const idx = shapeArray.indexOf(shapeLower);
+                if (idx > -1) {
+                  shapeArray.splice(idx, 1);
+                }
+              });
+
+              // Update or delete centerStoneShape
+              if (shapeArray.length > 0) {
+                currentParams.set("centerStoneShape", shapeArray.join(","));
+              } else {
+                currentParams.delete("centerStoneShape");
+                console.log(`🗑️ Deleted centerStoneShape from URL params`);
+              }
+            }
+
+            // Clear the shape filter in state
+            setActiveFilters((prev) => ({
+              ...prev,
+              category1: values.join(","),
+              [shapeFilterKey]: [],
+            }));
+          } else {
+            // Update category1 in state
+            setActiveFilters((prev) => ({
+              ...prev,
+              category1: values.join(","),
+            }));
+          }
+
+          setSearchParams(currentParams);
         }
       }
     };
