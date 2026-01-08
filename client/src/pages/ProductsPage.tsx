@@ -18,6 +18,10 @@ import {
   selectWishlistKeyMap,
   selectWishlistLoading,
 } from "@/store/slices/wishlistSlice";
+import {
+  saveCategoryProducts,
+  clearCategoryCache,
+} from "@/store/slices/productsCacheSlice";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 
 type MainCategory = "rings" | "earrings" | "pendants" | "bracelets";
@@ -71,6 +75,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [usingCache, setUsingCache] = useState(false);
   const [pagination, setPagination] = useState({
     totalPages: 1,
     currentPage: 1,
@@ -86,6 +91,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const wishlistInitialized = useSelector(selectWishlistInitialized);
   const wishlistLoading = useSelector(selectWishlistLoading);
   const wishlistKeyMap = useSelector(selectWishlistKeyMap);
+  const cachedData = useSelector(
+    (state: RootState) => state.productsCache.byCategory[category]
+  );
 
   useEffect(() => {
     if (isAuthenticated && !wishlistInitialized && !wishlistLoading) {
@@ -134,10 +142,66 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     centerStoneShape: "" as string,
   });
 
+  // Generate cache key from current filters (without page number - cache all pages together)
+  const generateCacheKey = useCallback(() => {
+    const filterParams = new URLSearchParams();
+    filterParams.set("minPrice", minPrice.toString());
+    filterParams.set("maxPrice", maxPrice.toString());
+
+    // Add all active filters to cache key
+    Object.entries(activeFilters).forEach(([key, value]) => {
+      if (Array.isArray(value) && value.length > 0) {
+        filterParams.set(key, value.join(","));
+      } else if (typeof value === "string" && value) {
+        filterParams.set(key, value);
+      }
+    });
+
+    return filterParams.toString();
+  }, [activeFilters, minPrice, maxPrice]);
+
   // API function to fetch products
   const fetchProducts = useCallback(
-    async (page: number = 1, limit: number = 20) => {
+    async (
+      page: number = 1,
+      limit: number = 20,
+      forceRefresh: boolean = false
+    ) => {
       try {
+        // Generate cache key for current filters
+        const cacheKey = generateCacheKey();
+
+        // Check if we have cached data with same filters and it's less than 5 minutes old
+        // Only use cache for page 1 to show instant results when returning to the page
+        if (
+          !forceRefresh &&
+          page === 1 &&
+          cachedData &&
+          cachedData.queryKey === cacheKey
+        ) {
+          const cacheAge = Date.now() - cachedData.timestamp;
+          const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+          if (cacheAge < CACHE_DURATION) {
+            console.log(
+              "✨ Using cached products (age: " +
+                Math.round(cacheAge / 1000) +
+                "s)"
+            );
+            setProducts(cachedData.products);
+            if (cachedData.pagination) {
+              setPagination(cachedData.pagination);
+            }
+            setAppliedFilters(cachedData.appliedFilters || null);
+            setLoading(false);
+            setUsingCache(true);
+            return;
+          }
+        }
+
+        console.log("🌐 Fetching fresh products from API");
+        setUsingCache(false);
+
         // Cancel any previous request
         if (abortControllerRef.current) {
           abortControllerRef.current.abort();
@@ -175,13 +239,30 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           const data: ApiResponse = await response.json();
           if (data.success) {
             setProducts(data.products);
-            setPagination({
+            const paginationData = {
               totalPages: data.pagination.totalPages,
               currentPage: data.pagination.currentPage,
               limit: data.pagination.limit,
               total: data.total,
-            });
+            };
+            setPagination(paginationData);
             setAppliedFilters(data.appliedFilters || null);
+
+            // Save earrings to Redux cache
+            const cacheKey = generateCacheKey();
+            dispatch(
+              saveCategoryProducts({
+                category,
+                data: {
+                  products: data.products,
+                  pagination: paginationData,
+                  appliedFilters: data.appliedFilters || null,
+                  queryKey: cacheKey,
+                  timestamp: Date.now(),
+                },
+              })
+            );
+            console.log("💾 Saved earrings to cache with key:", cacheKey);
           } else {
             throw new Error("API returned success: false");
           }
@@ -467,19 +548,34 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         if (data.success) {
           setProducts(data.products);
-          setPagination({
+          const paginationData = {
             totalPages: data.pagination.totalPages,
             currentPage: data.pagination.currentPage,
             limit: data.pagination.limit,
             total: data.total,
-          });
-          console.log("Pagination state set to:", {
-            totalPages: data.pagination.totalPages,
-            currentPage: data.pagination.currentPage,
-            limit: data.pagination.limit,
-            total: data.total,
-          });
+          };
+          setPagination(paginationData);
+          console.log("Pagination state set to:", paginationData);
           setAppliedFilters(data.appliedFilters || null);
+
+          // Save to Redux cache
+          const cacheKey = generateCacheKey();
+          dispatch(
+            saveCategoryProducts({
+              category,
+              data: {
+                products: data.products,
+                pagination: paginationData,
+                appliedFilters: data.appliedFilters || null,
+                queryKey: cacheKey,
+                timestamp: Date.now(),
+              },
+            })
+          );
+          console.log(
+            `💾 Saved ${category} products to cache (${data.products.length} items)`,
+            { category, cacheKey }
+          );
         } else {
           throw new Error("API returned success: false");
         }
@@ -499,7 +595,15 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         setLoading(false);
       }
     },
-    [category, activeFilters, minPrice, maxPrice]
+    [
+      category,
+      activeFilters,
+      minPrice,
+      maxPrice,
+      generateCacheKey,
+      cachedData,
+      dispatch,
+    ]
   );
 
   const handleWishlistToggle = useCallback(
@@ -2279,9 +2383,36 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       <div className="eng-wrap">
         <nav
           aria-label="Breadcrumb"
-          className="eng-breadcrumb border-b border-solid pb-3"
+          className="eng-breadcrumb flex justify-between border-b border-solid pb-3"
         >
-          <Link to="/">Home</Link> <span> - </span> <span>{pageTitle}</span>
+          <div className="pt-2">
+            <Link to="/">Home</Link> <span> - </span> <span>{pageTitle}</span>
+            {/* {usingCache && (
+              <span className="ml-3 text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                ✨ Cached
+              </span>
+            )} */}
+          </div>
+          <div className="flex items-center gap-3">
+            {usingCache && (
+              <button
+                onClick={() => fetchProducts(1, 20, true)}
+                className="text-sm text-teal-600 hover:text-teal-800 font-medium"
+                title="Refresh data"
+              >
+                Refresh
+              </button>
+            )}
+            <div className="hidden">
+              <label>
+                Sort by:{" "}
+                <select className="eng-sort" aria-label="Sort products">
+                  <option>Price: Low to High</option>
+                  <option>Price: High to Low</option>
+                </select>
+              </label>
+            </div>
+          </div>
         </nav>
 
         {/* <div className="eng-header">
@@ -2532,7 +2663,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             <button
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: "smooth" });
-                fetchProducts(pagination.currentPage - 1);
+                fetchProducts(pagination.currentPage - 1, 20);
               }}
               disabled={pagination.currentPage === 1}
               className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
@@ -2547,7 +2678,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             <button
               onClick={() => {
                 window.scrollTo({ top: 0, behavior: "smooth" });
-                fetchProducts(pagination.currentPage + 1);
+                fetchProducts(pagination.currentPage + 1, 20);
               }}
               disabled={pagination.currentPage === pagination.totalPages}
               className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
