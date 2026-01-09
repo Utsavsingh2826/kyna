@@ -2378,6 +2378,17 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     return null;
   };
 
+  // Add a function to handle sorting
+  const handleSortChange = (sortOrder: string) => {
+    const sortedProducts = [...products];
+    if (sortOrder === "Price: Low to High") {
+      sortedProducts.sort((a, b) => a.sellingPrice - b.sellingPrice);
+    } else if (sortOrder === "Price: High to Low") {
+      sortedProducts.sort((a, b) => b.sellingPrice - a.sellingPrice);
+    }
+    setProducts(sortedProducts);
+  };
+
   return (
     <main aria-labelledby="products-heading" className="eng-root">
       <div className="eng-wrap">
@@ -2403,12 +2414,20 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 Refresh
               </button>
             )}
-            <div className="hidden">
+            <div className="">
               <label>
                 Sort by:{" "}
-                <select className="eng-sort" aria-label="Sort products">
-                  <option>Price: Low to High</option>
-                  <option>Price: High to Low</option>
+                <select
+                  className="eng-sort"
+                  aria-label="Sort products"
+                  onChange={(e) => handleSortChange(e.target.value)}
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Select
+                  </option>
+                  <option value="Price: Low to High">Price: Low to High</option>
+                  <option value="Price: High to Low">Price: High to Low</option>
                 </select>
               </label>
             </div>
