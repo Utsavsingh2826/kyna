@@ -10,8 +10,8 @@ const HomePage: React.FC = () => {
     <main>
       <HeroSection />
       <SalesSection />
-      <EngravingSection />
       <DesignBanner />
+      <EngravingSection />
       <CollectionsSection />
     </main>
   );

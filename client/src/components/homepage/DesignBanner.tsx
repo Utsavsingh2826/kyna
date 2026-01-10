@@ -4,32 +4,32 @@ export default function DesignBanner() {
   return (
     <section
       aria-label="Design your own jewelry"
-      className="relative mt-10 md:mt-14"
+      className="relative pb-8 px-0 sm:pb-12 md:px-8 lg:px-16 mt-10 md:mt-14"
     >
       {/* Full-width background image */}
       <img
         src="/rings.jpg"
         alt="Ring background"
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full"
       />
 
       {/* Spacer to control how much background is visible */}
       <div className="min-h-[600px] md:min-h-[720px]" />
 
       {/* Teal overlay panel - full width */}
-      <div className="absolute inset-x-0 bottom-0 flex items-end z-10">
+      <div className="absolute py-8 sm:py-12 md:px-8 lg:px-16 inset-x-0 bottom-0 flex items-end z-10">
         <article
           className="bg-[#68C5C0;] text-white shadow-lg w-full"
           role="region"
           aria-label="Custom jewelry design call-to-action"
         >
-          <div className="p-8 md:p-12 flex flex-col md:flex-row justify-between items-center gap-8 max-w-[1600px] mx-auto">
+          <div className="p-8 md:p-8 flex flex-col md:flex-row justify-between items-center gap-8 max-w-[1600px] mx-auto">
             {/* Left text section */}
             <div className="max-w-xl">
-              <h2 className="font-[Poppins] font-light text-[40px] md:text-[64px] leading-[148%]">
+              <h2 className="font-[Poppins] font-light text-[40px] md:text-[40px] leading-[148%]">
                 Design Your Own
               </h2>
-              <p className="mt-4 font-[Poppins] font-normal text-[16px] md:text-[20px] leading-[148%]">
+              <p className="mt-4 font-[Poppins] font-normal text-[16px] md:text-[16px] leading-[148%]">
                 Looking to find something truly unique? Our online jewelry
                 design tool lets you create your perfect piece. It’s simple –
                 you design it and we carefully hand craft it for you. Give a

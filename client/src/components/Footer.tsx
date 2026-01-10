@@ -17,7 +17,6 @@ const columns = [
     title: "EDUCATION",
     links: [
       { label: "Blog", href: "/blog" },
-      { label: "Lab Grown Diamonds", href: "/lab-grown-diamonds" },
       { label: "Ring Size Guide", href: "/RingSize-Education" },
       { label: "Bracelet Size Guide", href: "/Bracelet-education" },
     ],
@@ -26,10 +25,6 @@ const columns = [
     title: "CUSTOMER SERVICE",
     links: [
       { label: "FAQs", href: "/customer-service" },
-      {
-        label: "Jewellery Financing",
-        href: "/customer-service?section=promos",
-      },
       {
         label: "Promo Codes & Offers",
         href: "/customer-service?section=promos",

@@ -406,7 +406,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
       )}
 
       {/* Sort Dropdown */}
-      <div className="flex bg-white items-center gap-2">
+      {/* <div className="flex bg-white items-center gap-2">
         <Select defaultValue="newest">
           <SelectTrigger className="w-48 bg-white text-sm">
             <SelectValue />
@@ -418,7 +418,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
             <SelectItem value="lowest">Sort by lowest rating</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
 
       {/* Reviews List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

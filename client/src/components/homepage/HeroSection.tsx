@@ -38,14 +38,22 @@ const HeroSection: React.FC = () => {
     <section className="relative">
       <div className="relative h-[70vh] md:h-[80vh] lg:h-[85vh] overflow-hidden group">
         {/* Hero video */}
-        <video
-          className="absolute inset-0 w-full h-full object-cover transition-all duration-1000 ease-in-out"
-          src={slides[currentSlide].video}
-          autoPlay
-          loop
-          muted
-          playsInline
-        />
+        <div className="absolute inset-0">
+          {slides.map((slide, index) => (
+            <video
+              key={index}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+                currentSlide === index ? "opacity-100" : "opacity-0"
+              }`}
+              src={slide.video}
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+            />
+          ))}
+        </div>
 
         {/* Navigation Arrows */}
         <button
@@ -76,10 +84,10 @@ const HeroSection: React.FC = () => {
                 Shop All Engagement Rings
               </Link>
               <Link
-                to="/engravings"
+                to="/rings?ring_category=Mens+Rings"
                 className="bg-white text-gray-800 px-8 py-3 text-sm font-medium hover:bg-gray-100 transition-colors shadow-lg min-w-[200px] hover:scale-105 transform duration-200 inline-block text-center"
               >
-                Shop All Engrable Jewellery
+                Shop All Men's Rings
               </Link>
             </div>
           </div>

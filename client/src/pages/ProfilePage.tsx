@@ -10,6 +10,8 @@ import {
   LogOut,
   Edit3,
   ChevronDown,
+  Truck,
+  Heart,
 } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -17,6 +19,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateUser } from "@/store/slices/authSlice";
 import type { RootState } from "@/store";
 import apiService from "@/services/api";
+import TrackOrderPage from "./TrackOrderPage";
+import WidhlistPage from "./WishlistPage";
 
 interface UserData {
   firstName: string;
@@ -58,8 +62,8 @@ const ProfilePage: React.FC = () => {
     // { icon: Wallet, label: "Wallet" },
     // { icon: CreditCard, label: "Cards & Address" },
     // { icon: Package, label: "Order History" },
-    // { icon: Clock, label: "Track Order" },
-    // { icon: Heart, label: "Wishlist" },
+    { icon: Truck, label: "Track Order" },
+    { icon: Heart, label: "Wishlist" },
     { icon: LogOut, label: "Signout" },
   ];
 
@@ -315,7 +319,13 @@ const ProfilePage: React.FC = () => {
               {sidebarItems.map((item, index) => (
                 <button
                   key={index}
-                  onClick={() => setActiveSection(item.label)}
+                  onClick={() => {
+                    if (item.label === "Track Order") {
+                      window.location.href = "/track-order";
+                      return;
+                    }
+                    setActiveSection(item.label);
+                  }}
                   className={`w-full flex items-center px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-b-0 ${
                     activeSection === item.label
                       ? "bg-[#328F94] text-white "
@@ -403,29 +413,31 @@ const ProfilePage: React.FC = () => {
                   {/* Action Buttons Section */}
                   <div className="lg:w-2/3 flex flex-col justify-center">
                     <div className="space-y-4">
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                        <h4 className="text-lg font-semibold text-red-800 mb-4">
-                          Account Actions
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <h4 className="text-center">
+                          Are You Sure You want to signout ?
                         </h4>
-                        <div className="space-y-3">
+                        <div className="mt-4">
                           <Button
                             onClick={handleLogout}
-                            className="w-full bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-md font-medium transition-colors"
+                            className="w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-md font-medium transition-colors"
                           >
                             Log Out
-                          </Button>
-                          <Button
-                            onClick={handleDeleteAccount}
-                            variant="outline"
-                            className="w-full border-red-600 text-red-600 hover:bg-red-50 px-6 py-3 rounded-md font-medium transition-colors"
-                          >
-                            Delete Account
                           </Button>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+              ) : activeSection === "Track Order" ? (
+                // <iframe
+                //   src="/track-order"
+                //   className="w-full h-[80vh] border-0 rounded-lg"
+                //   title="Track your order"
+                // ></iframe>
+                <TrackOrderPage />
+              ) : activeSection === "Wishlist" ? (
+                <WidhlistPage />
               ) : (
                 /* Regular Account Settings Section */
                 <div className="flex flex-col lg:flex-row gap-8">

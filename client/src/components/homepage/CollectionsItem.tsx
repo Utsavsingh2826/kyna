@@ -140,7 +140,7 @@ const collections: CollectionItem[] = [
 
 export default function CollectionsSection() {
   return (
-    <section aria-label="Collections" className="py-12 md:py-16">
+    <section aria-label="Collections" className="">
       <div className="max-w-6xl mx-auto px-6 md:px-10">
         {/* Header */}
         <header className="bg-[#68C5C0;] rounded-lg shadow-lg">

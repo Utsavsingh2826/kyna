@@ -81,7 +81,7 @@ const CartPage = () => {
     metalColor?: string
   ) => {
     // Safety check to ensure product and required properties exist
-    if (!product || !product.sku) {
+    if (!product || !product.modelSku) {
       console.error("Product or SKU is missing:", product);
       return;
     }
@@ -95,9 +95,20 @@ const CartPage = () => {
 
     // Map metal color to code for URL
     const metalColorMap: { [key: string]: string } = {
-      "White Gold": "WG",
-      "Yellow Gold": "YG",
-      "Rose Gold": "RG",
+      White: "WG",
+      Yellow: "YG",
+      Rose: "RG",
+      "Black Rhodium": "BR",
+      "White - Black Rhodium": "WG-BR",
+      "White - Yellow": "WG-YG",
+      "White - Rose": "WG-RG",
+      "Yellow - White": "YG-WG",
+      "Yellow - Rose": "YG-RG",
+      "Yellow - Black Rhodium": "YG-BR",
+      "Rose - White": "RG-WG",
+      "Rose - Yellow": "RG-YG",
+      "Rose - Black Rhodium": "RG-BR",
+      "3T": "3T",
     };
 
     let url = `/product/${category}/${productSku}?variantId=${variantSku}`;
@@ -186,8 +197,13 @@ const CartPage = () => {
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Assistance Header */}
-        <div className="text-right text-sm text-gray-600 mb-6">
-          Need Assistance? Chat now or call 8235567890
+        <div className="flex justify-end">
+          <a
+            href="tel:+918235567890"
+            className="text-right text-sm text-gray-600 mb-6 hover:underline"
+          >
+            Need Assistance? Chat now or call +91 8235567890
+          </a>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -350,7 +366,7 @@ const CartPage = () => {
                               )}
 
                               {/* Price Breakdown */}
-                              {variantConfig?.priceBreakdown && (
+                              {/* {variantConfig?.priceBreakdown && (
                                 <div className="mb-3 p-2 bg-blue-50 rounded border border-blue-200">
                                   <p className="text-xs font-medium text-blue-800 mb-1">
                                     Price Breakdown:
@@ -391,7 +407,7 @@ const CartPage = () => {
                                     )}
                                   </div>
                                 </div>
-                              )}
+                              )} */}
 
                               {variantConfig && (
                                 <div className="space-y-2">
@@ -455,7 +471,7 @@ const CartPage = () => {
                                   {/* Ring Size Dropdown - Only for Rings */}
                                   {productCategory === "RINGS" && (
                                     <div className="flex items-center space-x-2 pt-2 border-t border-gray-200">
-                                      <span className="text-sm text-gray-600">
+                                      <span className="text-sm text-gray-600 font-medium">
                                         Ring Size:
                                       </span>
                                       <select
@@ -466,28 +482,63 @@ const CartPage = () => {
                                             e.target.value
                                           )
                                         }
-                                        className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-[#2a8a85] bg-white min-w-[80px]"
+                                        className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-[#2a8a85] bg-white min-w-[120px]"
                                       >
                                         <option value="">Select Size</option>
-                                        <option value="5">5</option>
-                                        <option value="5.5">5.5</option>
-                                        <option value="6">6</option>
-                                        <option value="6.5">6.5</option>
-                                        <option value="7">7</option>
-                                        <option value="7.5">7.5</option>
-                                        <option value="8">8</option>
-                                        <option value="8.5">8.5</option>
-                                        <option value="9">9</option>
-                                        <option value="9.5">9.5</option>
-                                        <option value="10">10</option>
-                                        <option value="10.5">10.5</option>
-                                        <option value="11">11</option>
-                                        <option value="11.5">11.5</option>
-                                        <option value="12">12</option>
+                                        <option value="11 (16.3MM)">
+                                          11 (16.3MM)
+                                        </option>
+                                        <option value="12 (16.5MM)">
+                                          12 (16.5MM)
+                                        </option>
+                                        <option value="13 (16.9MM)">
+                                          13 (16.9MM)
+                                        </option>
+                                        <option value="14 (17.3MM)">
+                                          14 (17.3MM)
+                                        </option>
+                                        <option value="15 (17.5MM)">
+                                          15 (17.5MM)
+                                        </option>
+                                        <option value="16 (17.9MM)">
+                                          16 (17.9MM)
+                                        </option>
+                                        <option value="17 (18.1MM)">
+                                          17 (18.1MM)
+                                        </option>
+                                        <option value="18 (18.5MM)">
+                                          18 (18.5MM)
+                                        </option>
+                                        <option value="19 (18.7MM)">
+                                          19 (18.7MM)
+                                        </option>
+                                        <option value="20 (19.2MM)">
+                                          20 (19.2MM)
+                                        </option>
+                                        <option value="21 (19.4MM)">
+                                          21 (19.4MM)
+                                        </option>
+                                        <option value="22 (19.8MM)">
+                                          22 (19.8MM)
+                                        </option>
+                                        <option value="23 (20MM)">
+                                          23 (20MM)
+                                        </option>
+                                        <option value="24 (20.4MM)">
+                                          24 (20.4MM)
+                                        </option>
+                                        <option value="25 (20.6MM)">
+                                          25 (20.6MM)
+                                        </option>
                                       </select>
+                                      {variantConfig.ringSize && (
+                                        <span className="text-xs text-green-600 font-medium">
+                                          ✓ Selected
+                                        </span>
+                                      )}
                                       {!variantConfig.ringSize && (
-                                        <span className="text-xs text-orange-600">
-                                          Please select ring size
+                                        <span className="text-xs text-orange-600 font-medium">
+                                          ⚠ Please select ring size
                                         </span>
                                       )}
                                     </div>
@@ -526,7 +577,18 @@ const CartPage = () => {
                                 className="text-gray-500 hover:text-blue-500 flex items-center space-x-1 transition-colors"
                               >
                                 <Edit className="w-4 h-4" />
-                                <span className="text-sm">Edit</span>
+                                <span
+                                  onClick={() =>
+                                    handleEditProduct(
+                                      item.product,
+                                      item.variantSku,
+                                      variantConfig?.metalColor
+                                    )
+                                  }
+                                  className="text-sm"
+                                >
+                                  Edit
+                                </span>
                               </button>
                             </div>
 
@@ -730,14 +792,22 @@ const CartPage = () => {
                 <p>Free Shipping | Free Returns</p>
 
                 <div className="flex items-center space-x-4 mt-4">
-                  <div className="w-8 h-8 bg-yellow-400 rounded flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">G</span>
-                  </div>
-                  <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">D</span>
-                  </div>
-                  <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center">
-                    <span className="text-xs font-bold text-white">SGL</span>
+                  <div className="flex items-center gap-4">
+                    <img
+                      className="w-8 h-8"
+                      src="/Hallmarks/BIS.png"
+                      alt="Hallmark"
+                    />
+                    <img
+                      className="w-8 h-8"
+                      src="/Hallmarks/IGI.png"
+                      alt="IGI"
+                    />
+                    <img
+                      className="w-8 h-8"
+                      src="/Hallmarks/SGL.png"
+                      alt="SGA"
+                    />
                   </div>
                 </div>
               </div>

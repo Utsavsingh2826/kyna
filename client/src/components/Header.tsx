@@ -15,6 +15,7 @@ import {
   Menu,
   User,
   Heart,
+  Calendar,
   ShoppingCart,
   Phone,
   ChevronDown,
@@ -89,20 +90,24 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Brand and quick actions */}
       <div className="border-b bg-[#68C5C0] text-cta-foreground">
-        <div className="mx-auto max-w-7xl px-4 md:px-6">
+        <div className="mx-auto max-w-10xl px-4 md:px-6">
           <div>
             <div className="flex items-start justify-between md:grid md:grid-cols-3">
               {/* Left side */}
-              <div className="flex mt-1 text-white ">
-                <div className="flex items-start space-x-2">
-                  <Phone className="w-6 h-6" />
-                  <span>+91 8920610062</span>
-                </div>
+              <div className="flex mt-2 md:gap-4 text-white ">
+                <a href="tel:+918920610062" className="flex ">
+                  <Phone className="w-5 h-5" />
+                  <span className="hover:underline hidden md:inline">
+                    +91 8920610062
+                  </span>
+                </a>
+
                 <button
                   onClick={openCalendly}
-                  className="hidden md:inline underline ml-2 text-white hover:text-gray-100"
+                  className="inline ld:px-4 hover:underline ml-2 text-white hover:text-gray-100"
                 >
-                  Book Virtual Appointment
+                  <Calendar className="w-5 h-5 inline-block mr-1" />
+                  <p className="hidden md:inline"> Book Virtual Appointment</p>
                 </button>
               </div>
               {/* Brand */}
@@ -486,6 +491,75 @@ function getLinkForItem(sectionTitle: string, itemLabel: string): string {
   }
 }
 
+// Image data for Upload Your Design
+const uploadDesignImages: Record<
+  string,
+  { src: string; label: string; path: string }
+> = {
+  Rings: {
+    src: "/navigation/upload-your-design/ring.jpg",
+    label: "Rings",
+    path: "/upload-your-design/rings",
+  },
+  Earrings: {
+    src: "/navigation/upload-your-design/earrings.png",
+    label: "Earrings",
+    path: "/upload-your-design/earrings",
+  },
+  Pendants: {
+    src: "/navigation/upload-your-design/pendants.png",
+    label: "Pendants",
+    path: "/upload-your-design/pendants",
+  },
+  Bracelets: {
+    src: "/navigation/upload-your-design/bracelets.png",
+    label: "Bracelets",
+    path: "/upload-your-design/bracelets",
+  },
+  Necklaces: {
+    src: "/navigation/upload-your-design/necklace.jpg",
+    label: "Necklaces",
+    path: "/upload-your-design/necklaces",
+  },
+  Bangles: {
+    src: "/navigation/upload-your-design/bangeldisplay.png",
+    label: "Bangles",
+    path: "/upload-your-design/bangles",
+  },
+};
+
+// Image data for Build Your Jewellery
+const buildJewelleryImages: Record<
+  string,
+  { src: string; label: string; path: string }
+> = {
+  Rings: {
+    src: "/navigation/build-your-jewellery/rings.jpg",
+    label: "Engagement / Solitaire Rings",
+    path: "/build-your-jewellery/Rings",
+  },
+  Earrings: {
+    src: "/navigation/build-your-jewellery/earrings.png",
+    label: "Earring Studs",
+    path: "/build-your-jewellery/Earrings",
+  },
+  Bracelets: {
+    src: "/navigation/build-your-jewellery/bracelate.png",
+    label: "Tennis Bracelets",
+    path: "/build-your-jewellery/Bracelets",
+  },
+  Pendants: {
+    src: "/navigation/build-your-jewellery/pendants.png",
+    label: "Solitaire Pendants",
+    path: "/build-your-jewellery/Pendants",
+  },
+  "Gents Rings": {
+    src: "/navigation/build-your-jewellery/band.png",
+    label: "Wedding Bands",
+    path: "/build-your-jewellery/Gents-Rings",
+  },
+};
+
 function CollapsibleSection({
   title,
   items,
@@ -500,6 +574,12 @@ function CollapsibleSection({
   hasSubItems?: boolean;
 }) {
   const hasItems = hasSubItems && items.length > 0;
+
+  // Check if this section should display images
+  const shouldShowImages =
+    title === "Upload Your Design" || title === "Build Your Jewellery";
+  const imageData =
+    title === "Upload Your Design" ? uploadDesignImages : buildJewelleryImages;
 
   return (
     <div className="border-b border-gray-100 last:border-b-0">
@@ -567,30 +647,55 @@ function CollapsibleSection({
       </div>
 
       {/* Sub-items - only render if expanded and has items and NOT for "Design Your Own" */}
-      {hasItems && isOpen && title !== "Design Your Own" && (
-        <ul className="space-y-1 pb-2 ml-3">
-          {items.map((item) => (
-            <li key={item}>
-              <SheetClose asChild>
-                <NavLink
-                  to={
-                    title === "Upload Your Design"
-                      ? `/upload-your-design/${slugify(item)}`
-                      : getLinkForItem(title, item)
-                  }
-                  className={({ isActive }) =>
-                    `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${
-                      isActive ? "bg-[#68C5C0]/20" : ""
-                    }`
-                  }
-                >
-                  {item}
-                </NavLink>
-              </SheetClose>
-            </li>
-          ))}
-        </ul>
-      )}
+      {hasItems &&
+        isOpen &&
+        title !== "Design Your Own" &&
+        (shouldShowImages ? (
+          // Image grid for Upload Your Design and Build Your Jewellery
+          <div className="grid grid-cols-2 gap-3 pb-4 px-3 mt-2">
+            {items.map((item) => {
+              const itemData = imageData[item];
+              if (!itemData) return null;
+              return (
+                <SheetClose key={item} asChild>
+                  <Link
+                    to={itemData.path}
+                    className="flex flex-col items-center p-2 rounded-md hover:bg-[#68C5C0]/15 transition-colors"
+                  >
+                    <img
+                      src={itemData.src}
+                      alt={itemData.label}
+                      className="w-full h-24 object-cover rounded mb-2"
+                    />
+                    <span className="text-xs text-center font-medium text-gray-700">
+                      {itemData.label}
+                    </span>
+                  </Link>
+                </SheetClose>
+              );
+            })}
+          </div>
+        ) : (
+          // Text list for other sections
+          <ul className="space-y-1 pb-2 ml-3">
+            {items.map((item) => (
+              <li key={item}>
+                <SheetClose asChild>
+                  <NavLink
+                    to={getLinkForItem(title, item)}
+                    className={({ isActive }) =>
+                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${
+                        isActive ? "bg-[#68C5C0]/20" : ""
+                      }`
+                    }
+                  >
+                    {item}
+                  </NavLink>
+                </SheetClose>
+              </li>
+            ))}
+          </ul>
+        ))}
     </div>
   );
 }
