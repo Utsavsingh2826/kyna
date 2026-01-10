@@ -1420,6 +1420,12 @@ const ProductDetail = () => {
       return;
     }
 
+    // Validate ring size for rings
+    if (category === "rings" && !selectedSize) {
+      alert("Please select a ring size before adding to cart");
+      return;
+    }
+
     try {
       const currentVariantSku =
         generateVariantId() ||
@@ -1436,7 +1442,7 @@ const ProductDetail = () => {
           diamondShape: selectedDiamondShape,
           diamondSize: selectedDiamondSize,
           diamondOrigin: selectedDiamondOrigin,
-          ringSize: selectedSize,
+          ringSize: category === "rings" ? selectedSize : undefined,
           variantImages: productData.variantImages || [], // Include variant images
           sellingPrice: productData.sellingPrice || 0, // Include variant price
           priceBreakdown: productData.priceBreakdown || null, // Include price breakdown
