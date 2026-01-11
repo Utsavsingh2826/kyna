@@ -185,8 +185,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           if (cacheAge < CACHE_DURATION) {
             console.log(
               "✨ Using cached products (age: " +
-                Math.round(cacheAge / 1000) +
-                "s)"
+              Math.round(cacheAge / 1000) +
+              "s)"
             );
             setProducts(cachedData.products);
             if (cachedData.pagination) {
@@ -637,6 +637,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         addWishlistItem({
           productId: product._id,
           modelSku: product.modelSku,
+          title: product.title,
           categorySlug: category,
           categoryLabel: category,
           variantSku: product.firstVariantSku,
@@ -1110,8 +1111,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     // Helper to handle earring group toggle
     const handleEarringGroupToggle = (groupTitle: string, isOpen: boolean) => {
       console.log(
-        `🎵 Earring Group Toggle: ${groupTitle} - ${
-          isOpen ? "OPENING" : "CLOSING"
+        `🎵 Earring Group Toggle: ${groupTitle} - ${isOpen ? "OPENING" : "CLOSING"
         }`
       );
       const mappedValue = mapEarringGroupToCategory1(groupTitle);
@@ -1294,12 +1294,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         groupTitle === "Studs"
           ? "studs_diamond_shape"
           : groupTitle === "Hoops / Huggies"
-          ? "hoops_diamond_shape"
-          : groupTitle === "Drop Earrings"
-          ? "drop_diamond_shape"
-          : groupTitle === "Halo Earrings"
-          ? "halo_earring_diamond_shape"
-          : "fashion_earring_diamond_shape";
+            ? "hoops_diamond_shape"
+            : groupTitle === "Drop Earrings"
+              ? "drop_diamond_shape"
+              : groupTitle === "Halo Earrings"
+                ? "halo_earring_diamond_shape"
+                : "fashion_earring_diamond_shape";
 
       const currentShapes = activeFilters[currentFilterKey] as string[];
       if (!checked && currentShapes.filter((s) => s !== shape).length === 0) {
@@ -2591,11 +2591,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
                 return (
                   <Link
-                    to={`/product/${category}/${
-                      p.modelSku
-                    }?variantId=${encodeURIComponent(
-                      p.firstVariantSku
-                    )}&metalColor=WG`}
+                    to={`/product/${category}/${p.modelSku
+                      }?variantId=${encodeURIComponent(
+                        p.firstVariantSku
+                      )}&metalColor=WG`}
                     key={`${category}-${p.modelSku}`}
                     className="block"
                   >
@@ -2604,9 +2603,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       aria-label={p.title}
                     >
                       <button
-                        className={`eng-wishlist ${
-                          isWishlisted ? "text-red-500" : ""
-                        } ${wishlistLoading ? "opacity-70" : ""}`}
+                        className={`eng-wishlist ${isWishlisted ? "text-red-500" : ""
+                          } ${wishlistLoading ? "opacity-70" : ""}`}
                         aria-label="Add to wishlist"
                         aria-pressed={Boolean(isWishlisted)}
                         onClick={(e) => handleWishlistToggle(e, p)}
@@ -2638,14 +2636,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                                   metal === "GOLD"
                                     ? "/colors/gold.png"
                                     : metal === "SILVER"
-                                    ? "/colors/white.png"
-                                    : metal === "PLATINUM"
-                                    ? "/colors/platinum.png"
-                                    : metal === "ROSE GOLD"
-                                    ? "/colors/rose-gold.png"
-                                    : metal === "WHITE GOLD"
-                                    ? "/colors/white-gold.png"
-                                    : "/colors/default.png"
+                                      ? "/colors/white.png"
+                                      : metal === "PLATINUM"
+                                        ? "/colors/platinum.png"
+                                        : metal === "ROSE GOLD"
+                                          ? "/colors/rose-gold.png"
+                                          : metal === "WHITE GOLD"
+                                            ? "/colors/white-gold.png"
+                                            : "/colors/default.png"
                                 }
                                 className="h-6 w-6"
                                 alt=""

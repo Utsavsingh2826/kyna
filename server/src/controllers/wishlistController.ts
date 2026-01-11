@@ -118,17 +118,17 @@ const buildWishlistItemResponse = (
   const resolvedRating =
     product?.rating || item.ratingSnapshot
       ? {
-          score:
-            product?.rating?.score ??
-            item.ratingSnapshot?.score ??
-            product?.rating?.value ??
-            null,
-          reviews:
-            product?.rating?.reviews ??
-            item.ratingSnapshot?.reviews ??
-            product?.rating?.count ??
-            null,
-        }
+        score:
+          product?.rating?.score ??
+          item.ratingSnapshot?.score ??
+          product?.rating?.value ??
+          null,
+        reviews:
+          product?.rating?.reviews ??
+          item.ratingSnapshot?.reviews ??
+          product?.rating?.count ??
+          null,
+      }
       : null;
 
   return {
@@ -237,6 +237,7 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
     const {
       productId,
       modelSku,
+      title,
       categorySlug,
       categoryLabel,
       variantSku,
@@ -248,6 +249,7 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
     }: {
       productId?: string;
       modelSku?: string;
+      title?: string;
       categorySlug?: string;
       categoryLabel?: string;
       variantSku?: string;
@@ -336,7 +338,7 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
       categorySlug: normalizeCategorySlug(
         categorySlug || productSnapshot?.category
       ),
-      titleSnapshot: productSnapshot?.title,
+      titleSnapshot: title || productSnapshot?.title,
       priceSnapshot:
         normalizedPrice ??
         productSnapshot?.sellingPriceWithGST ??
@@ -353,9 +355,9 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
         null,
       ratingSnapshot: productSnapshot?.rating
         ? {
-            score: productSnapshot.rating.score,
-            reviews: productSnapshot.rating.reviews,
-          }
+          score: productSnapshot.rating.score,
+          reviews: productSnapshot.rating.reviews,
+        }
         : undefined,
       variantSku: normalizedVariant,
       metalColorName,

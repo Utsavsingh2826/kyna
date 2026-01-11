@@ -140,6 +140,7 @@ export default function EngravingsPage() {
         addWishlistItem({
           productId: product._id,
           modelSku: product.modelSku,
+          title: product.title,
           categorySlug: category,
           categoryLabel: category,
           variantSku: product.firstVariantSku,
@@ -958,11 +959,10 @@ export default function EngravingsPage() {
 
                 return (
                   <Link
-                    to={`/product/rings/${
-                      p.modelSku
-                    }?variantId=${encodeURIComponent(
-                      p.firstVariantSku
-                    )}&metalColor=WG&view=EV`}
+                    to={`/product/rings/${p.modelSku
+                      }?variantId=${encodeURIComponent(
+                        p.firstVariantSku
+                      )}&metalColor=WG&view=EV`}
                     key={`rings-${p.modelSku}`}
                     className="block"
                   >
@@ -971,9 +971,8 @@ export default function EngravingsPage() {
                       aria-label={p.title}
                     >
                       <button
-                        className={`eng-wishlist ${
-                          isWishlisted ? "text-red-500" : ""
-                        } ${wishlistLoading ? "opacity-70" : ""}`}
+                        className={`eng-wishlist ${isWishlisted ? "text-red-500" : ""
+                          } ${wishlistLoading ? "opacity-70" : ""}`}
                         aria-label="Add to wishlist"
                         aria-pressed={Boolean(isWishlisted)}
                         onClick={(e) =>
@@ -1031,14 +1030,14 @@ export default function EngravingsPage() {
                                   metal === "GOLD"
                                     ? "/colors/gold.png"
                                     : metal === "SILVER"
-                                    ? "/colors/white.png"
-                                    : metal === "PLATINUM"
-                                    ? "/colors/platinum.png"
-                                    : metal === "ROSE GOLD"
-                                    ? "/colors/rose-gold.png"
-                                    : metal === "WHITE GOLD"
-                                    ? "/colors/white-gold.png"
-                                    : "/colors/default.png"
+                                      ? "/colors/white.png"
+                                      : metal === "PLATINUM"
+                                        ? "/colors/platinum.png"
+                                        : metal === "ROSE GOLD"
+                                          ? "/colors/rose-gold.png"
+                                          : metal === "WHITE GOLD"
+                                            ? "/colors/white-gold.png"
+                                            : "/colors/default.png"
                                 }
                                 className="h-6 w-6"
                                 alt=""

@@ -322,6 +322,7 @@ class ApiService {
   async addToWishlist(payload: {
     productId: string;
     modelSku: string;
+    title?: string;
     categorySlug: string;
     categoryLabel?: string;
     variantSku?: string | null;
