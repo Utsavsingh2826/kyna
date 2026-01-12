@@ -237,10 +237,43 @@ class ApiService {
     });
   }
 
-  async updateCartItem(productId: string, quantity: number) {
+  async updateCartItem(
+    productId: string,
+    quantity: number,
+    variantData?: {
+      variantSku?: string;
+      variantConfig?: {
+        metalColor?: string;
+        metalType?: string;
+        goldKarat?: string;
+        diamondShape?: string;
+        diamondSize?: string;
+        diamondOrigin?: string;
+        diamondColor?: string;
+        diamondClarity?: string;
+        ringSize?: string;
+        centerStoneShape?: string;
+        centerStoneSize?: string;
+      };
+    }
+  ) {
+    const requestBody: any = { quantity };
+
+    if (variantData?.variantSku) {
+      requestBody.variantSku = variantData.variantSku;
+    }
+    if (variantData?.variantConfig) {
+      requestBody.variantConfig = variantData.variantConfig;
+    }
+
+    console.log("📡 API updateCartItem - Request body:", {
+      url: `/cart/update/${productId}`,
+      requestBody,
+    });
+
     return this.makeRequest(`/cart/update/${productId}`, {
       method: "PUT",
-      body: JSON.stringify({ quantity }),
+      body: JSON.stringify(requestBody),
     });
   }
 
@@ -251,9 +284,37 @@ class ApiService {
     });
   }
 
-  async removeFromCart(productId: string) {
+  async removeFromCart(
+    productId: string,
+    variantData?: {
+      variantSku?: string;
+      variantConfig?: {
+        metalColor?: string;
+        metalType?: string;
+        goldKarat?: string;
+        diamondShape?: string;
+        diamondSize?: string;
+        diamondOrigin?: string;
+        diamondColor?: string;
+        diamondClarity?: string;
+        ringSize?: string;
+        centerStoneShape?: string;
+        centerStoneSize?: string;
+      };
+    }
+  ) {
+    const requestBody: any = {};
+
+    if (variantData?.variantSku) {
+      requestBody.variantSku = variantData.variantSku;
+    }
+    if (variantData?.variantConfig) {
+      requestBody.variantConfig = variantData.variantConfig;
+    }
+
     return this.makeRequest(`/cart/remove/${productId}`, {
       method: "DELETE",
+      body: JSON.stringify(requestBody),
     });
   }
 

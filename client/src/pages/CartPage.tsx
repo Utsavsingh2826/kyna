@@ -14,6 +14,7 @@ import {
 // import { updateUser } from "@/store/slices/authSlice";
 import apiService from "@/services/api";
 import ReferralPromoSection from "@/components/ReferralPromoSection";
+import { toast } from "sonner";
 // import { Item } from "@radix-ui/react-accordion";
 
 const CartPage = () => {
@@ -30,6 +31,8 @@ const CartPage = () => {
   // Promo and referral code states
   const [appliedPromo, setAppliedPromo] = useState<any>(null);
   const [appliedReferral, setAppliedReferral] = useState<any>(null);
+
+  const [showTermsError, setShowTermsError] = useState(false);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -62,17 +65,47 @@ const CartPage = () => {
 
   const handleQuantityChange = async (
     productId: string,
-    newQuantity: number
+    newQuantity: number,
+    variantSku?: string,
+    variantConfig?: any
   ) => {
+    console.log("🔍 handleQuantityChange called with:", {
+      productId,
+      newQuantity,
+      variantSku,
+      variantConfig,
+    });
+
     if (newQuantity < 1) {
-      dispatch(removeFromCart(productId));
+      console.log("➖ Removing item (quantity < 1)");
+      dispatch(
+        removeFromCart(productId, {
+          variantSku,
+          variantConfig,
+        })
+      );
     } else {
-      dispatch(updateCartItem(productId, newQuantity));
+      console.log("➕ Updating quantity to:", newQuantity);
+      dispatch(
+        updateCartItem(productId, newQuantity, {
+          variantSku,
+          variantConfig,
+        })
+      );
     }
   };
 
-  const handleRemoveItem = async (productId: string) => {
-    dispatch(removeFromCart(productId));
+  const handleRemoveItem = async (
+    productId: string,
+    variantSku?: string,
+    variantConfig?: any
+  ) => {
+    dispatch(
+      removeFromCart(productId, {
+        variantSku,
+        variantConfig,
+      })
+    );
   };
 
   const handleEditProduct = (
@@ -197,12 +230,18 @@ const CartPage = () => {
     <div className="min-h-screen bg-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Assistance Header */}
-        <div className="flex justify-end">
+        <div className="text-right text-sm text-gray-600 mb-6">
           <a
-            href="tel:+918235567890"
-            className="text-right text-sm text-gray-600 mb-6 hover:underline"
+            href="https://wa.me/918235567890"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#3AAFA9] hover:underline"
           >
-            Need Assistance? Chat now or call +91 8235567890
+            Need Assistance? Chat Now
+          </a>{" "}
+          &nbsp;or&nbsp;
+          <a href="tel:+918235567890" className="hover:underline">
+            call +91 8235567890
           </a>
         </div>
 
@@ -232,7 +271,13 @@ const CartPage = () => {
                             Product information unavailable
                           </p>
                           <button
-                            onClick={() => handleRemoveItem(item._id)}
+                            onClick={() =>
+                              handleRemoveItem(
+                                item.product?._id || item._id,
+                                item.variantSku,
+                                item.variantConfig
+                              )
+                            }
                             className="mt-2 text-red-500 hover:text-red-700 text-sm"
                           >
                             Remove Item
@@ -304,15 +349,50 @@ const CartPage = () => {
                               }
                               className="bg-[#2a8a85] hover:bg-[#1f6b66] text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center space-x-1"
                             >
-                              <Edit className="w-4 h-4" />
-                              <span className="text-sm font-medium">
-                                Edit Details
-                              </span>
+                              <span className="text-sm ">Edit Details</span>
                             </button>
                           </div>
-                          <p className="text-sm text-gray-600 mb-2">
+                          {/* <p className="text-sm text-gray-600 mb-2">
                             SKU: {item.product.modelSku}
-                          </p>
+                          </p> */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <button
+                                onClick={() =>
+                                  handleEditProduct(
+                                    item.product,
+                                    item.variantSku,
+                                    variantConfig?.metalColor
+                                  )
+                                }
+                                className="text-gray-500 hover:text-blue-500 flex items-center space-x-1 transition-colors"
+                              >
+                                <Edit className="w-4 h-4" />
+                                <span
+                                  onClick={() =>
+                                    handleEditProduct(
+                                      item.product,
+                                      item.variantSku,
+                                      variantConfig?.metalColor
+                                    )
+                                  }
+                                  className="text-sm"
+                                >
+                                  Edit
+                                </span>
+                              </button>
+                            </div>
+
+                            <div className="text-right">
+                              <p className="text-lg font-semibold text-gray-900">
+                                ₹
+                                {(item.price * item.quantity).toLocaleString(
+                                  "en-IN"
+                                )}
+                                .00
+                              </p>
+                            </div>
+                          </div>
 
                           {/* Enhanced Variant Information Display */}
                           {item.variantSku && (
@@ -321,7 +401,7 @@ const CartPage = () => {
                                 <p className="text-sm font-semibold text-gray-800">
                                   Variant: {item.variantSku}
                                 </p>
-                                <p className="text-lg font-bold text-green-600">
+                                <p className="text-lg font-bold text-[#2a8a85]">
                                   ₹
                                   {(
                                     variantConfig?.sellingPrice ||
@@ -417,7 +497,7 @@ const CartPage = () => {
                                         <span className="text-gray-600 mr-1">
                                           Metal:
                                         </span>
-                                        <span className="font-medium">
+                                        <span className="">
                                           {variantConfig.metalType}{" "}
                                           {variantConfig.goldKarat}
                                           {variantConfig.metalColor && (
@@ -433,7 +513,7 @@ const CartPage = () => {
                                         <span className="text-gray-600 mr-1">
                                           Diamond:
                                         </span>
-                                        <span className="font-medium">
+                                        <span className="">
                                           {variantConfig.diamondShape}{" "}
                                           {variantConfig.diamondSize}ct
                                         </span>
@@ -444,7 +524,7 @@ const CartPage = () => {
                                         <span className="text-gray-600 mr-1">
                                           Origin:
                                         </span>
-                                        <span className="font-medium">
+                                        <span className="">
                                           {variantConfig.diamondOrigin}
                                         </span>
                                       </div>
@@ -564,45 +644,6 @@ const CartPage = () => {
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <button
-                                onClick={() =>
-                                  handleEditProduct(
-                                    item.product,
-                                    item.variantSku,
-                                    variantConfig?.metalColor
-                                  )
-                                }
-                                className="text-gray-500 hover:text-blue-500 flex items-center space-x-1 transition-colors"
-                              >
-                                <Edit className="w-4 h-4" />
-                                <span
-                                  onClick={() =>
-                                    handleEditProduct(
-                                      item.product,
-                                      item.variantSku,
-                                      variantConfig?.metalColor
-                                    )
-                                  }
-                                  className="text-sm"
-                                >
-                                  Edit
-                                </span>
-                              </button>
-                            </div>
-
-                            <div className="text-right">
-                              <p className="text-lg font-semibold text-gray-900">
-                                ₹
-                                {(item.price * item.quantity).toLocaleString(
-                                  "en-IN"
-                                )}
-                                .00
-                              </p>
-                            </div>
-                          </div>
-
                           <div className="flex items-center justify-between mt-4">
                             <div className="flex items-center space-x-2">
                               <span className="text-sm text-gray-600">
@@ -612,7 +653,9 @@ const CartPage = () => {
                                 onClick={() =>
                                   handleQuantityChange(
                                     item.product._id,
-                                    item.quantity - 1
+                                    item.quantity - 1,
+                                    item.variantSku,
+                                    item.variantConfig
                                   )
                                 }
                                 className="w-8 h-8 flex items-center justify-center border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
@@ -626,10 +669,12 @@ const CartPage = () => {
                                 onClick={() =>
                                   handleQuantityChange(
                                     item.product._id,
-                                    item.quantity + 1
+                                    item.quantity + 1,
+                                    item.variantSku,
+                                    item.variantConfig
                                   )
                                 }
-                                className="w-8 h-8 flex items-center justify-center border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
+                                className="w-8 h-8 flex items-center justify-center border-2 border-[#182625] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
                               >
                                 <Plus className="w-4 h-4" />
                               </button>
@@ -639,7 +684,11 @@ const CartPage = () => {
                               <button
                                 className="border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white bg-white px-4 py-2 rounded-md transition-colors duration-200 font-medium"
                                 onClick={() =>
-                                  handleRemoveItem(item.product._id)
+                                  handleRemoveItem(
+                                    item.product._id,
+                                    item.variantSku,
+                                    item.variantConfig
+                                  )
                                 }
                               >
                                 Remove
@@ -774,15 +823,24 @@ const CartPage = () => {
                   </label>
                 </div>
 
-                <Link to="/payment">
-                  <Button
-                    className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 text-lg"
-                    disabled={!termsAccepted}
-                  >
-                    Proceed To Checkout
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </Link>
+                <Button
+                  className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 text-lg"
+                  onClick={() => {
+                    if (!termsAccepted) {
+                      setShowTermsError(true);
+                      return;
+                    }
+                    navigate("/payment");
+                  }}
+                >
+                  Proceed To Checkout
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+                {showTermsError && !termsAccepted && (
+                  <p className="text-red-500 text-sm mt-1 text-center">
+                    You must accept Terms & Conditions before proceeding.
+                  </p>
+                )}
               </div>
             </div>
 

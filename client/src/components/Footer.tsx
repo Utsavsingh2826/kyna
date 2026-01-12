@@ -9,7 +9,7 @@ const columns = [
     title: "ABOUT",
     links: [
       { label: "Our Story", href: "/about" },
-      { label: "Customer Reviews", href: "/customer-service" },
+      // { label: "Customer Reviews", href: "/customer-service" },
       { label: "Quality & Certification", href: "/quality-certification" },
     ],
   },
@@ -200,7 +200,7 @@ const Footer: React.FC = () => {
                     Our Story
                   </a>
                 </li>
-                <li>
+                <li className="hidden">
                   <a
                     href="/customer-service"
                     className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
@@ -210,7 +210,9 @@ const Footer: React.FC = () => {
                 </li>
                 <li>
                   <a
-                    href="/quality-certification"
+                    href="/Stone_Guide.pdf"
+                    target="_blank"
+                    rel="noopener"
                     className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
                   >
                     Quality & Certification
@@ -231,14 +233,6 @@ const Footer: React.FC = () => {
                     className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
                   >
                     FAQs
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/customer-service?section=promos"
-                    className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
-                  >
-                    Jewellery Financing
                   </a>
                 </li>
                 <li>
@@ -315,14 +309,6 @@ const Footer: React.FC = () => {
                     className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
                   >
                     Blog
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/lab-grown-diamonds"
-                    className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
-                  >
-                    Lab Grown Diamonds
                   </a>
                 </li>
                 <li>

@@ -469,7 +469,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       {/* Order Summary */}
-      <div className="mb-8 p-4 bg-gray-50 rounded-lg">
+      <div className=" hidden mb-8 p-4 bg-gray-50 rounded-lg">
         <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
           <CreditCard className="w-5 h-5" />
           Order Summary

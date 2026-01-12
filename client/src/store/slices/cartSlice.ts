@@ -90,11 +90,21 @@ export const fetchCart = () => async (dispatch: any) => {
     dispatch(setLoading(true));
     dispatch(setError(null));
 
-    const response = await apiService.getCart();
+    const response = (await apiService.getCart()) as {
+      success: boolean;
+      data: Cart;
+    };
 
     if (response.success && response.data) {
       // The response.data contains the cart object directly
-      const cartData = response.data;
+      const cartData: Cart = {
+        _id: response.data._id,
+        user: response.data.user,
+        items: response.data.items || [],
+        totalAmount: response.data.totalAmount,
+        createdAt: response.data.createdAt,
+        updatedAt: response.data.updatedAt,
+      };
       dispatch(setCart(cartData));
     } else {
       dispatch(setCart(null));
@@ -158,12 +168,42 @@ export const addToCart =
   };
 
 export const updateCartItem =
-  (productId: string, quantity: number) => async (dispatch: any) => {
+  (
+    productId: string,
+    quantity: number,
+    variantData?: {
+      variantSku?: string;
+      variantConfig?: {
+        metalColor?: string;
+        metalType?: string;
+        goldKarat?: string;
+        diamondShape?: string;
+        diamondSize?: string;
+        diamondOrigin?: string;
+        diamondColor?: string;
+        diamondClarity?: string;
+        ringSize?: string;
+        centerStoneShape?: string;
+        centerStoneSize?: string;
+      };
+    }
+  ) =>
+  async (dispatch: any) => {
     try {
       dispatch(setLoading(true));
       dispatch(setError(null));
 
-      const response = await apiService.updateCartItem(productId, quantity);
+      console.log("🚀 Redux updateCartItem - Sending to API:", {
+        productId,
+        quantity,
+        variantData,
+      });
+
+      const response = await apiService.updateCartItem(
+        productId,
+        quantity,
+        variantData
+      );
 
       if (response.success) {
         dispatch(fetchCart()); // Refresh cart
@@ -181,30 +221,50 @@ export const updateCartItem =
     }
   };
 
-export const removeFromCart = (productId: string) => async (dispatch: any) => {
-  try {
-    dispatch(setLoading(true));
-    dispatch(setError(null));
-
-    const response = await apiService.removeFromCart(productId);
-
-    if (response.success) {
-      dispatch(fetchCart()); // Refresh cart
-    } else {
-      dispatch(setError(response.error || "Failed to remove item from cart"));
+export const removeFromCart =
+  (
+    productId: string,
+    variantData?: {
+      variantSku?: string;
+      variantConfig?: {
+        metalColor?: string;
+        metalType?: string;
+        goldKarat?: string;
+        diamondShape?: string;
+        diamondSize?: string;
+        diamondOrigin?: string;
+        diamondColor?: string;
+        diamondClarity?: string;
+        ringSize?: string;
+        centerStoneShape?: string;
+        centerStoneSize?: string;
+      };
     }
-  } catch (error) {
-    dispatch(
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to remove item from cart"
-      )
-    );
-  } finally {
-    dispatch(setLoading(false));
-  }
-};
+  ) =>
+  async (dispatch: any) => {
+    try {
+      dispatch(setLoading(true));
+      dispatch(setError(null));
+
+      const response = await apiService.removeFromCart(productId, variantData);
+
+      if (response.success) {
+        dispatch(fetchCart()); // Refresh cart
+      } else {
+        dispatch(setError(response.error || "Failed to remove item from cart"));
+      }
+    } catch (error) {
+      dispatch(
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Failed to remove item from cart"
+        )
+      );
+    } finally {
+      dispatch(setLoading(false));
+    }
+  };
 
 export const clearCartItems = () => async (dispatch: any) => {
   try {

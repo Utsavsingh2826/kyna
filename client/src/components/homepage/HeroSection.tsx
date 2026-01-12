@@ -10,12 +10,12 @@ const HeroSection: React.FC = () => {
   const slides = [
     {
       video: vid1,
-      title: "Cultivate With Love",
+      title: "LOVE IN EVERY MILESTONE",
       subtitle: "Discover our exquisite collection of handcrafted jewelry",
     },
     {
       video: vid2,
-      title: "Cultivate With Love",
+      title: "LOVE IN EVERY MILESTONE",
       subtitle: "Discover our exquisite collection of handcrafted jewelry",
     },
   ];
