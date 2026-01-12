@@ -606,6 +606,32 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     ]
   );
 
+  // Helper function to extract metal color code from image URL
+  const getMetalColorFromImage = useCallback((imageUrl: string): string => {
+    if (!imageUrl) return 'WG'; // Default fallback
+
+    const filename = imageUrl.split('/').pop() || '';
+    const upperFilename = filename.toUpperCase();
+
+    // Check for color codes in the filename
+    // Priority: YG (Yellow Gold) > RG (Rose Gold) > WG (White Gold) > BR (Black Rhodium)
+    if (upperFilename.includes('YG') || upperFilename.includes('_YG_') || upperFilename.includes('-YG-')) {
+      return 'YG';
+    }
+    if (upperFilename.includes('RG') || upperFilename.includes('_RG_') || upperFilename.includes('-RG-')) {
+      return 'RG';
+    }
+    if (upperFilename.includes('WG') || upperFilename.includes('_WG_') || upperFilename.includes('-WG-')) {
+      return 'WG';
+    }
+    if (upperFilename.includes('BR') || upperFilename.includes('_BR_') || upperFilename.includes('-BR-')) {
+      return 'BR';
+    }
+
+    // Default to WG if no color code found
+    return 'WG';
+  }, []);
+
   const handleWishlistToggle = useCallback(
     (event: React.MouseEvent, product: Product) => {
       event.preventDefault();
@@ -2589,12 +2615,15 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 const isWishlisted =
                   wishlistKey && Boolean(wishlistKeyMap[wishlistKey]);
 
+                // Detect metal color from product image
+                const detectedMetalColor = getMetalColorFromImage(p.firstVariantImageUrl);
+
                 return (
                   <Link
                     to={`/product/${category}/${p.modelSku
                       }?variantId=${encodeURIComponent(
                         p.firstVariantSku
-                      )}&metalColor=WG`}
+                      )}&metalColor=${detectedMetalColor}`}
                     key={`${category}-${p.modelSku}`}
                     className="block"
                   >
