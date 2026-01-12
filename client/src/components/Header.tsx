@@ -33,7 +33,7 @@ declare global {
   }
 }
 
-export {};
+export { };
 
 export default function Navbar() {
   const isAuthenticated = useSelector(
@@ -42,10 +42,25 @@ export default function Navbar() {
   const displayName = useSelector(
     (state: RootState) => state.auth.user?.firstName
   );
+  const cart = useSelector((state: RootState) => state.cart.cart);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const userMenuRef = React.useRef<HTMLDivElement | null>(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+
+  // Calculate unique product count from cart
+  const cartItemCount = cart?.items?.length || 0;
+
+  // Fetch cart data when user is authenticated
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      // Import fetchCart from cart slice
+      import("@/store/slices/cartSlice").then(({ fetchCart }) => {
+        dispatch(fetchCart() as any);
+      });
+    }
+  }, [isAuthenticated, dispatch]);
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -193,9 +208,14 @@ export default function Navbar() {
                 <Link
                   to="/cart"
                   aria-label="Cart"
-                  className="p-2 hover:text-foreground"
+                  className="p-2 hover:text-foreground relative"
                 >
                   <ShoppingCart className="h-5 w-5 text-white" />
+                  {cartItemCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-md border-2 border-[#68C5C0]">
+                      {cartItemCount}
+                    </span>
+                  )}
                 </Link>
               </div>
             </div>
@@ -603,10 +623,9 @@ function CollapsibleSection({
               <NavLink
                 to={getBasePath(title)}
                 className={({ isActive }) =>
-                  `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${
-                    isActive
-                      ? "bg-[#68C5C0]/20 text-foreground"
-                      : "text-muted-foreground"
+                  `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${isActive
+                    ? "bg-[#68C5C0]/20 text-foreground"
+                    : "text-muted-foreground"
                   }`
                 }
               >
@@ -684,8 +703,7 @@ function CollapsibleSection({
                   <NavLink
                     to={getLinkForItem(title, item)}
                     className={({ isActive }) =>
-                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${
-                        isActive ? "bg-[#68C5C0]/20" : ""
+                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${isActive ? "bg-[#68C5C0]/20" : ""
                       }`
                     }
                   >
