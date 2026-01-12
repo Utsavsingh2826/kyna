@@ -72,20 +72,28 @@ const userSchema = new Schema<IUserInternal>(
     // Address information
     address: {
       billingAddress: {
+        firstName: { type: String, trim: true },
+        lastName: { type: String, trim: true },
         companyName: { type: String, trim: true },
         street: { type: String, trim: true },
         city: { type: String, trim: true },
         state: { type: String, trim: true },
         country: { type: String, trim: true },
         zipCode: { type: String, trim: true },
+        email: { type: String, trim: true, lowercase: true },
+        phoneNumber: { type: String, trim: true },
       },
       shippingAddress: {
+        firstName: { type: String, trim: true },
+        lastName: { type: String, trim: true },
         companyName: { type: String, trim: true },
         street: { type: String, trim: true },
         city: { type: String, trim: true },
         state: { type: String, trim: true },
         country: { type: String, trim: true },
         zipCode: { type: String, trim: true },
+        email: { type: String, trim: true, lowercase: true },
+        phoneNumber: { type: String, trim: true },
         sameAsBilling: { type: Boolean, default: true },
       },
     },

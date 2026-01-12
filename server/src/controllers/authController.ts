@@ -28,6 +28,33 @@ interface UpdateProfileRequest {
   state?: string;
   city?: string;
   zipCode?: string;
+  address?: {
+    billingAddress?: {
+      firstName?: string;
+      lastName?: string;
+      companyName?: string;
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      zipCode?: string;
+      email?: string;
+      phoneNumber?: string;
+    };
+    shippingAddress?: {
+      firstName?: string;
+      lastName?: string;
+      companyName?: string;
+      street?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+      zipCode?: string;
+      email?: string;
+      phoneNumber?: string;
+      sameAsBilling?: boolean;
+    };
+  };
 }
 const generateOtpPayload = () => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -41,6 +68,14 @@ const buildUserResponse = (user: IUser) => ({
   lastName: user.lastName,
   email: user.email,
   phone: user.phone,
+  phoneNumber: user.phoneNumber,
+  secondaryEmail: user.secondaryEmail,
+  country: user.country,
+  state: user.state,
+  city: user.city,
+  zipCode: user.zipCode,
+  profileImage: user.profileImage,
+  displayName: user.displayName,
   isVerified: user.isVerified,
   role: user.role,
   lastLogin: user.lastLogin,
@@ -49,6 +84,7 @@ const buildUserResponse = (user: IUser) => ({
   totalReferralEarnings: user.totalReferralEarnings,
   referralAvailableBalance: user.referralAvailableBalance,
   referralPendingBalance: user.referralPendingBalance,
+  address: user.address,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -328,12 +364,10 @@ export const forgotPassword = async (req: Request, res: Response) => {
       `${process.env.CLIENT_URL}/reset-password/${resetToken}`
     );
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Password reset link sent to your email",
-      });
+    res.status(200).json({
+      success: true,
+      message: "Password reset link sent to your email",
+    });
   } catch (error) {
     console.log("Error in forgotPassword ", error);
     res.status(400).json({ success: false, message: (error as Error).message });
@@ -491,6 +525,7 @@ export const updateProfile = async (
       state,
       city,
       zipCode,
+      address,
     } = req.body as UpdateProfileRequest;
 
     console.log("📦 Request body:", {
@@ -504,6 +539,7 @@ export const updateProfile = async (
       state,
       city,
       zipCode,
+      address: address ? "provided" : "not provided",
     });
 
     // Get the uploaded file (if any) from multer
@@ -562,6 +598,7 @@ export const updateProfile = async (
     if (state !== undefined) updateData.state = state;
     if (city !== undefined) updateData.city = city;
     if (zipCode !== undefined) updateData.zipCode = zipCode;
+    if (address !== undefined) (updateData as any).address = address;
 
     console.log("📝 Data to update:", updateData);
 
