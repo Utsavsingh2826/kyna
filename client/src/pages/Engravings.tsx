@@ -127,7 +127,7 @@ export default function EngravingsPage() {
       const entryKey = buildWishlistKey(
         product._id,
         product.firstVariantSku || null,
-        null
+        "WG"
       );
       const existingEntryId = wishlistKeyMap[entryKey];
 
@@ -144,6 +144,8 @@ export default function EngravingsPage() {
           categorySlug: category,
           categoryLabel: category,
           variantSku: product.firstVariantSku,
+          metalColorCode: "WG",
+          metalColorName: "White",
           primaryImage,
           price:
             typeof product.sellingPrice === "number"
@@ -951,7 +953,7 @@ export default function EngravingsPage() {
 
                 const wishlistKey =
                   p._id &&
-                  buildWishlistKey(p._id, p.firstVariantSku || null, null);
+                  buildWishlistKey(p._id, p.firstVariantSku || null, "WG");
                 const isWishlisted = wishlistKey
                   ? Boolean(wishlistKeyMap[wishlistKey])
                   : false;

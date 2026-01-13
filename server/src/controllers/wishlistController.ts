@@ -308,8 +308,9 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
     const productSnapshot = toPlainObject(catalogProduct || legacyProduct);
     const normalizedPrice =
       typeof price === 'number' && Number.isFinite(price) ? price : null;
-    const normalizedProductId =
-      productSnapshot?._id?.toString?.() || productId;
+    
+    // Use the productId sent by the client directly - it's already the correct ID
+    const normalizedProductId = productId;
 
     const existingItem = await findExistingWishlistItem({
       userId,

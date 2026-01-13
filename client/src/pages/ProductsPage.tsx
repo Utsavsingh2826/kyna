@@ -647,12 +647,25 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         return;
       }
 
+      const detectedMetalColor = getMetalColorFromImage(product.firstVariantImageUrl) || "WG";
+
       const entryKey = buildWishlistKey(
         product._id,
         product.firstVariantSku || null,
-        null
+        detectedMetalColor
       );
       const existingEntryId = wishlistKeyMap[entryKey];
+
+      console.log("🔴 Toggle Wishlist:", {
+        modelSku: product.modelSku,
+        productId: product._id,
+        variantSku: product.firstVariantSku,
+        detectedMetalColor,
+        entryKey,
+        existingEntryId,
+        willAdd: !existingEntryId,
+        wishlistKeyMapSize: Object.keys(wishlistKeyMap).length,
+      });
 
       if (existingEntryId) {
         dispatch(removeWishlistItemThunk(existingEntryId));
@@ -667,6 +680,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           categorySlug: category,
           categoryLabel: category,
           variantSku: product.firstVariantSku,
+          metalColorCode: detectedMetalColor,
+          metalColorName: detectedMetalColor === "YG" ? "Yellow" : detectedMetalColor === "RG" ? "Rose" : detectedMetalColor === "BR" ? "Black Rhodium" : "White",
           primaryImage: product.firstVariantImageUrl || null,
           price:
             typeof product.sellingPrice === "number"
@@ -675,7 +690,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         })
       );
     },
-    [category, dispatch, isAuthenticated, navigate, wishlistKeyMap]
+    [category, dispatch, isAuthenticated, navigate, wishlistKeyMap, getMetalColorFromImage]
   );
 
   // Update URL when filters change - use comma-separated values
@@ -2609,14 +2624,28 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             {!loading &&
               !error &&
               products.map((p) => {
+                // Detect metal color from product image
+                const detectedMetalColor = getMetalColorFromImage(p.firstVariantImageUrl) || "WG";
+
                 const wishlistKey =
                   p._id &&
-                  buildWishlistKey(p._id, p.firstVariantSku || null, null);
+                  buildWishlistKey(p._id, p.firstVariantSku || null, detectedMetalColor);
                 const isWishlisted =
                   wishlistKey && Boolean(wishlistKeyMap[wishlistKey]);
 
-                // Detect metal color from product image
-                const detectedMetalColor = getMetalColorFromImage(p.firstVariantImageUrl);
+                // Debug logging
+                if (p.modelSku === products[0]?.modelSku) {
+                  console.log("🔍 Product Debug:", {
+                    modelSku: p.modelSku,
+                    productId: p._id,
+                    variantSku: p.firstVariantSku,
+                    detectedMetalColor,
+                    wishlistKey,
+                    isWishlisted,
+                    wishlistKeyMapSize: Object.keys(wishlistKeyMap).length,
+                    wishlistKeyMapEntries: Object.entries(wishlistKeyMap).slice(0, 5),
+                  });
+                }
 
                 return (
                   <Link

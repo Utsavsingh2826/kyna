@@ -67,16 +67,23 @@ const wishlistSlice = createSlice({
       state.keyMap = action.payload.reduce<Record<string, string>>(
         (acc, item) => {
           if (item.productId) {
-            acc[
-              buildKey(item.productId, item.variantSku, item.metalColorCode)
-            ] = item._id;
+            const key = buildKey(item.productId, item.variantSku, item.metalColorCode);
+            acc[key] = item._id;
+            console.log("📝 Building keyMap entry:", { productId: item.productId, variantSku: item.variantSku, metalColorCode: item.metalColorCode, key });
           }
           return acc;
         },
         {}
       );
+      console.log("🔑 Final keyMap from setItems:", state.keyMap);
     },
     addItem(state, action: PayloadAction<WishlistEntry>) {
+      console.log("✅ Adding to wishlist:", {
+        productId: action.payload.productId,
+        variantSku: action.payload.variantSku,
+        metalColorCode: action.payload.metalColorCode,
+        key: buildKey(action.payload.productId, action.payload.variantSku, action.payload.metalColorCode),
+      });
       state.items.unshift(action.payload);
       state.keyMap[
         buildKey(
@@ -85,6 +92,7 @@ const wishlistSlice = createSlice({
           action.payload.metalColorCode
         )
       ] = action.payload._id;
+      console.log("📊 Updated keyMap:", state.keyMap);
     },
     removeItem(state, action: PayloadAction<string>) {
       state.items = state.items.filter((item) => item._id !== action.payload);
@@ -158,9 +166,12 @@ export const addWishlistItem =
     try {
       dispatch(setLoading(true));
       dispatch(setError(null));
+      console.log("📤 Sending to API:", payload);
       const response = await apiService.addToWishlist(payload);
+      console.log("📥 API Response:", response);
       if (response.success && response.data && typeof response.data === 'object' && 'item' in response.data) {
         const itemData = response.data as { item: WishlistEntry };
+        console.log("🎯 Item from API:", itemData.item);
         dispatch(addItem(itemData.item));
         return { success: true };
       } else {
