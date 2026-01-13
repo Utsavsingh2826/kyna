@@ -2696,7 +2696,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                                     : metal === "SILVER"
                                       ? "/colors/white.png"
                                       : metal === "PLATINUM"
-                                        ? "/colors/platinum.png"
+                                        ? "/colors/white.png"
                                         : metal === "ROSE GOLD"
                                           ? "/colors/rose-gold.png"
                                           : metal === "WHITE GOLD"

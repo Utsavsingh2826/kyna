@@ -9,7 +9,7 @@ const columns = [
     title: "ABOUT",
     links: [
       { label: "Our Story", href: "/about" },
-      // { label: "Customer Reviews", href: "/customer-service" },
+      { label: "Customer Reviews", href: "/customer-service" },
       { label: "Quality & Certification", href: "/quality-certification" },
     ],
   },
@@ -178,7 +178,7 @@ const Footer: React.FC = () => {
           {/* Copyright */}
           <div className="pt-6 border-t mt-6">
             <p className="text-xs text-gray-500 text-center">
-              © 2025 Kyna Jewellery. All Rights Reserved
+              © 2026 Kyna Jewellery. All Rights Reserved
             </p>
           </div>
         </div>
@@ -200,7 +200,7 @@ const Footer: React.FC = () => {
                     Our Story
                   </a>
                 </li>
-                <li className="hidden">
+                <li>
                   <a
                     href="/customer-service"
                     className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
@@ -430,7 +430,7 @@ const Footer: React.FC = () => {
           {/* Copyright */}
           <div className="mt-12 pt-8 border-t">
             <p className="text-xs text-gray-500">
-              © 2025 Kyna Jewellery. All Rights Reserved
+              © 2026 Kyna Jewellery. All Rights Reserved
             </p>
           </div>
         </div>

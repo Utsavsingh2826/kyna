@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { CreditCard, Lock, Shield } from "lucide-react";
@@ -6,6 +6,7 @@ import {
   paymentService,
   PaymentInitiateRequest,
 } from "../services/paymentService";
+import { Country, State, City } from "country-state-city";
 
 interface PaymentFormProps {
   orderData: {
@@ -79,6 +80,32 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [serviceabilityStatus, setServiceabilityStatus] =
     useState<ServiceabilityStatus>("idle");
+
+  // Get all countries
+  const countries = Country.getAllCountries();
+
+  // Find default country
+  const defaultCountry =
+    countries.find((c) => c.name === "India") || countries[0];
+
+  const [selectedCountry, setSelectedCountry] = useState(
+    defaultCountry.isoCode
+  );
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+
+  // Get states for selected country (excluding Kerala)
+  const states = State.getStatesOfCountry(selectedCountry).filter(
+    (state) => state.name.toLowerCase() !== "kerala"
+  );
+
+  // Get cities for selected state (excluding Borivli)
+  const cities = selectedState
+    ? City.getCitiesOfState(selectedCountry, selectedState).filter(
+        (city) => city.name.toLowerCase() !== "borivli"
+      )
+    : [];
+
   const [billingInfo, setBillingInfo] = useState({
     name: `${userInfo.firstName} ${userInfo.lastName}`.trim(),
     email: userInfo.email,
@@ -89,6 +116,27 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     zip: userInfo.zipCode || "",
     country: userInfo.country || "India",
   });
+
+  // Update billing info when selections change
+  useEffect(() => {
+    const country = countries.find((c) => c.isoCode === selectedCountry);
+    if (country) {
+      setBillingInfo((prev) => ({ ...prev, country: country.name }));
+    }
+  }, [selectedCountry]);
+
+  useEffect(() => {
+    const state = states.find((s) => s.isoCode === selectedState);
+    if (state) {
+      setBillingInfo((prev) => ({ ...prev, state: state.name }));
+    }
+  }, [selectedState, states]);
+
+  useEffect(() => {
+    if (selectedCity) {
+      setBillingInfo((prev) => ({ ...prev, city: selectedCity }));
+    }
+  }, [selectedCity]);
 
   const pricingSummary = orderData.orderDetails?.pricingSummary as
     | {
@@ -115,9 +163,62 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     }));
     // Check serviceability when user enters a valid 6-digit pincode
     if (value.length === 6 && /^\d{6}$/.test(value)) {
+      const matches = await validatePinMatchesLocation(value);
+
+      // ⛔ If pin/state/city mismatch — stop here
+      if (!matches) {
+        setServiceabilityStatus("idle");
+        return;
+      }
+
+      // ✔ PIN is valid for city/state → now check serviceability
       await checkServiceability(value);
     } else if (value.length < 6) {
       setServiceabilityStatus("idle");
+    }
+  };
+
+  const validatePinMatchesLocation = async (pinCode: string) => {
+    if (!selectedState || !selectedCity) return;
+
+    try {
+      const res = await fetch(
+        `https://api.postalpincode.in/pincode/${pinCode}`
+      );
+      const data = await res.json();
+
+      if (!Array.isArray(data) || !data[0]?.PostOffice) return;
+
+      const postOffices = data[0].PostOffice;
+
+      // Extract unique state + district names
+      const apiStates = new Set(postOffices.map((p: any) => p.State.trim()));
+      const apiDistricts = new Set(
+        postOffices.map((p: any) => p.District.trim())
+      );
+
+      const selectedStateName =
+        states.find((s) => s.isoCode === selectedState)?.name || "";
+      const selectedCityName = selectedCity.trim();
+
+      // Validate state + district match
+      if (
+        apiStates.has(selectedStateName) &&
+        apiDistricts.has(selectedCityName)
+      ) {
+        console.log("🎉 PIN matches selected State + City");
+        return true;
+      }
+
+      console.warn("⛔ Pincode does NOT belong to selected city/state");
+      alert(
+        `Pincode ${pinCode} does not match ${selectedCityName}, ${selectedStateName}`
+      );
+      setServiceabilityStatus("idle");
+      return false;
+    } catch (error) {
+      console.error("PIN validation API error:", error);
+      return false;
     }
   };
 
@@ -590,15 +691,20 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               Country *
             </label>
             <select
-              value={billingInfo.country}
-              onChange={(e) => handleInputChange("country", e.target.value)}
+              value={selectedCountry}
+              onChange={(e) => {
+                setSelectedCountry(e.target.value);
+                setSelectedState(""); // Reset state when country changes
+                setSelectedCity(""); // Reset city when country changes
+              }}
               className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-400 focus:border-transparent"
               required
             >
-              <option value="India">India</option>
-              <option value="USA">USA</option>
-              <option value="UK">UK</option>
-              <option value="Canada">Canada</option>
+              {countries.map((country) => (
+                <option key={country.isoCode} value={country.isoCode}>
+                  {country.name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -615,28 +721,63 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              City *
-            </label>
-            <Input
-              type="text"
-              value={billingInfo.city}
-              onChange={(e) => handleInputChange("city", e.target.value)}
-              placeholder="Mumbai"
-              required
-            />
-          </div>
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               State *
             </label>
-            <Input
-              type="text"
-              value={billingInfo.state}
-              onChange={(e) => handleInputChange("state", e.target.value)}
-              placeholder="State"
-              required
-            />
+            {states.length > 0 ? (
+              <select
+                value={selectedState}
+                onChange={(e) => {
+                  setSelectedState(e.target.value);
+                  setSelectedCity(""); // Reset city when state changes
+                }}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                required
+              >
+                <option value="">Select State</option>
+                {states.map((state) => (
+                  <option key={state.isoCode} value={state.isoCode}>
+                    {state.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                type="text"
+                value={billingInfo.state}
+                onChange={(e) => handleInputChange("state", e.target.value)}
+                placeholder="Enter State"
+                required
+              />
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              City *
+            </label>
+            {cities.length > 0 ? (
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-400 focus:border-transparent"
+                required
+              >
+                <option value="">Select City</option>
+                {cities.map((city) => (
+                  <option key={city.name} value={city.name}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                type="text"
+                value={billingInfo.city}
+                onChange={(e) => handleInputChange("city", e.target.value)}
+                placeholder="Enter City"
+                required
+              />
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
