@@ -21,7 +21,8 @@ export default function CustomerService() {
 
   useEffect(() => {
     // Prefer route params (pretty URLs) over search params
-    const routeSection = params.categorySlug || params.questionSlug ? "faqs" : null;
+    const routeSection =
+      params.categorySlug || params.questionSlug ? "faqs" : null;
     const sectionFromQuery = searchParams.get("section");
 
     if (routeSection) {
@@ -29,7 +30,8 @@ export default function CustomerService() {
       // map path parameters to search params so FAQSection keeps working
       const newParams = new URLSearchParams(Array.from(searchParams.entries()));
       if (params.categorySlug) newParams.set("category", params.categorySlug);
-      if (params.questionSlug) newParams.set("question", decodeURIComponent(params.questionSlug));
+      if (params.questionSlug)
+        newParams.set("question", decodeURIComponent(params.questionSlug));
       newParams.set("section", "faqs");
       setSearchParams(newParams, { replace: true });
       return;
@@ -83,6 +85,7 @@ export default function CustomerService() {
       contact: "+91 8928610682",
       contactHref: "tel:+918928610682",
       buttonText: "Call Now →",
+      buttonColor: "bg-[#2DA5F3] hover:bg-blue-700 text-white",
     },
     {
       icon: MessageCircle,
@@ -93,7 +96,7 @@ export default function CustomerService() {
       contact: "enquiries@kynajewels.com",
       contactHref: "https://wa.me/918928610682",
       buttonText: "Contact Us →",
-      buttonColor: "bg-green-600 hover:bg-green-700",
+      buttonColor: "bg-[#2DB224] hover:bg-green-700 text-white",
     },
   ];
 
@@ -105,10 +108,10 @@ export default function CustomerService() {
         canonical="/customer-service"
       />
       <main className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-12 max-w-4xl">
+        <div className="container mx-auto px-4 pt-12 max-w-4xl">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-3xl font-bold mb-4">
+            <h1 className="text-3xl font-normal mb-4">
               What can we assist you with today?
             </h1>
           </div>
@@ -131,29 +134,31 @@ export default function CustomerService() {
             <PromoSection isOpen={activeSection === "promos"} />
             <ReferralSection isOpen={activeSection === "referral"} />
           </div>
+        </div>
+        {/* Contact Section */}
+        <div className="pb-16 bg-[#68C5C01A]/10  flex flex-col items-center text-center">
+          <div className="bg-[#328F94] border rounded my-4 px-3 py-2 text-white w-fit">
+            CONTACT US
+          </div>
+          <h2 className="text-xl font-semibold mb-4">
+            Don't find your answer?
+          </h2>
+          <p className="text-muted-foreground mb-8">Contact with us</p>
 
-          {/* Contact Section */}
-          <div className="mt-16 text-center">
-            <h2 className="text-xl font-semibold mb-4">
-              Don't find your answer?
-            </h2>
-            <p className="text-muted-foreground mb-8">Contact with us</p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-              {contactOptions.map((option, index) => (
-                <ContactCard
-                  key={index}
-                  icon={option.icon}
-                  iconColor={option.iconColor}
-                  title={option.title}
-                  description={option.description}
-                  contact={option.contact}
-                  contactHref={option.contactHref}
-                  buttonText={option.buttonText}
-                  buttonColor={option.buttonColor}
-                />
-              ))}
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            {contactOptions.map((option, index) => (
+              <ContactCard
+                key={index}
+                icon={option.icon}
+                iconColor={option.iconColor}
+                title={option.title}
+                description={option.description}
+                contact={option.contact}
+                contactHref={option.contactHref}
+                buttonText={option.buttonText}
+                buttonColor={option.buttonColor}
+              />
+            ))}
           </div>
         </div>
       </main>

@@ -15,11 +15,11 @@ export default function ServiceCard({
 }: ServiceCardProps) {
   return (
     <Card
-      className="cursor-pointer hover:shadow-md transition-shadow"
+      className="cursor-pointer hover:shadow-md transition-shadow border-2 border-[#328F94]"
       onClick={onClick}
     >
-      <CardContent className="p-6 text-center">
-        <Icon className="h-8 w-8 mx-auto mb-3 text-primary" />
+      <CardContent className="p-6 flex justify-center items-center gap-4 text-center">
+        <Icon className="h-6 w-6 text-[#328F94]" />
         <h3 className="font-medium">{title}</h3>
       </CardContent>
     </Card>

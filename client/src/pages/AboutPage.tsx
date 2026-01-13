@@ -1,34 +1,35 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import logo from "/logo.png";
-import { Link } from "react-router-dom";
+import { Link, redirect } from "react-router-dom";
 
 const benefits = [
   {
     title: "Free Shipping Both",
     subtitle: "Ways",
+    redirectTo: "/shipping-policy",
   },
   {
-    title: "Free 30-Day Returns",
+    title: "Free 15-Day Returns",
     subtitle: "& Exchanges",
+    redirectTo: "/cancellation-refund",
   },
   {
-    title: "24/7 Customer",
+    title: "Dedicated Customer",
     subtitle: "Support",
-  },
-  {
-    title: "Free 60-Day",
-    subtitle: "Resizes",
-  },
-  {
-    title: "Free Diamond",
-    subtitle: "Upgrades",
+    redirectTo: "/customer-service",
   },
 ];
 
+const openCalendly = () => {
+  window.Calendly.initPopupWidget({
+    url: "https://calendly.com/pranaytiwariprpk",
+  });
+};
+
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b text-[#1A141F] from-purple-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b text-[#1A141F] from-purple-50 to-white font-poppins">
       {/* Hero Section */}
 
       <div className="bg-white border-b">
@@ -93,7 +94,7 @@ export default function AboutPage() {
           <div className="grid lg:grid-cols-2 gap-16 items-top">
             {/* Text Content */}
             <div className="space-y-8">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight">
+              <h2 className="text-4xl md:text-5xl text-foreground leading-tight">
                 Celebrating Meaningful Moments
               </h2>
               <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -117,7 +118,7 @@ export default function AboutPage() {
                 celebrate individuality and tell unique stories.”
               </p>
               <p className="text-center text-muted-foreground text-sm">
-                — Example, CEO & Co-Founder
+                — Founders
               </p>
             </div>
           </div>
@@ -126,7 +127,7 @@ export default function AboutPage() {
 
       <div className="bg-[#328F94] flex justify-center">
         <div className="">
-          <img src={logo} className="h-40" alt="Company Logo" />
+          <img src={logo} className="h-16 md:h-20 py-4" alt="Company Logo" />
         </div>
       </div>
       <section className="bg-background">
@@ -163,7 +164,7 @@ export default function AboutPage() {
           <div className="max-w-7xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Image + Quote */}
-              <div className="flex flex-col items-center">
+              <div className="hidden sm:flex flex-col items-center">
                 {/* Replace with your uploaded image */}
                 <img
                   src="/about/3.png"
@@ -181,6 +182,14 @@ export default function AboutPage() {
                   share their stories and connect with our community to foster
                   deeper engagement.
                 </p>
+              </div>
+              <div className="sm:hidden flex flex-col items-center">
+                {/* Replace with your uploaded image */}
+                <img
+                  src="/about/3.png"
+                  alt="Jewellery Moment"
+                  className="rounded-3xl w-full max-w-3xl object-cover mb-6"
+                />
               </div>
             </div>
           </div>
@@ -220,7 +229,7 @@ export default function AboutPage() {
           <div className="max-w-7xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Image + Quote */}
-              <div className="flex flex-col items-center">
+              <div className="hidden sm:flex flex-col items-center">
                 {/* Replace with your uploaded image */}
                 <img
                   src="/about/5.jpg"
@@ -251,9 +260,20 @@ export default function AboutPage() {
                   </p>
                 </div>
 
-                <Button className="bg-[#328F94] text-white hover:text-[#328F94] hover:bg-white hover:border-[#328F94] hover:border-2 w-64">
-                  Book Appointment
+                <Button
+                  onClick={openCalendly}
+                  className="bg-[#328F94] text-white hover:text-[#328F94] hover:bg-white hover:border-[#328F94] hover:border-2 w-64"
+                >
+                  Book Virtual Appointment
                 </Button>
+              </div>
+              <div className="sm:hidden flex flex-col items-center">
+                {/* Replace with your uploaded image */}
+                <img
+                  src="/about/5.jpg"
+                  alt="Jewellery Moment"
+                  className="rounded-3xl w-full max-w-3xl object-cover mb-6"
+                />
               </div>
             </div>
           </div>
@@ -261,7 +281,7 @@ export default function AboutPage() {
 
         <div className="bg-[#328F94] py-16 px-4 md:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto text-white">
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
               {benefits.map((benefit, index) => (
                 <div key={index} className="space-y-4 group">
                   <div className="text-cta-foreground">
@@ -278,9 +298,11 @@ export default function AboutPage() {
                     </div>
                   </div>
 
-                  <button className="text-cta-foreground/80 hover:text-cta-foreground underline text-sm transition-colors group-hover:scale-105 transform duration-200">
-                    Learn More
-                  </button>
+                  <Link to={benefit.redirectTo}>
+                    <button className="text-cta-foreground/80 hover:text-cta-foreground underline text-sm transition-colors group-hover:scale-105 transform duration-200">
+                      Learn More
+                    </button>
+                  </Link>
                 </div>
               ))}
             </div>

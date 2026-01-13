@@ -21,7 +21,7 @@ const EducationPage: React.FC = () => {
 
         {/* Round Bangle Size Guide */}
         <div className="md:ml-40 bg-white rounded-lg shadow-sm p-8 mb-8">
-          <h1 className="text-4xl font-bold mb-12 text-gray-800">
+          <h1 className="text-4xl font-semibold mb-12 text-gray-800">
             Round Bangle Size Guide
           </h1>
 
@@ -177,7 +177,7 @@ const EducationPage: React.FC = () => {
 
         {/* Bracelet Size Guide */}
         <div className="bg-white md:ml-40 rounded-lg shadow-sm p-8">
-          <h1 className="text-3xl font-bold mb-12 text-gray-800">
+          <h1 className="text-3xl font-semibold mb-12 text-gray-800">
             Bracelet Size Guide
           </h1>
 

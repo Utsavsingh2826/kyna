@@ -55,7 +55,8 @@ export default {
   			sans: [
   				'Poppins',
   				'sans-serif'
-  			]
+  			],
+  			poppins: ['Poppins', 'sans-serif'],
   		},
   		keyframes: {
   			'accordion-down': {

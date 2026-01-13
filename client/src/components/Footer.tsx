@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="mt-12 md:mt-16 border-t bg-white overflow-hidden">
+    <footer className="border-t bg-white overflow-hidden">
       <div className="w-full max-w-7xl mx-auto px-4 py-10 md:py-14">
         {/* Mobile Accordion */}
         <div className="block md:hidden w-full">

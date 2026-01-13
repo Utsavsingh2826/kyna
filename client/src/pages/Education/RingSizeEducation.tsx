@@ -189,13 +189,15 @@ const RingSizeGuidePage: React.FC = () => {
           Need Help Finding a Diamond?
         </h2>
         <p className="text-lg mb-6 opacity-90 max-w-2xl mx-auto">
-          At HYUN we're passionate about diamonds, and every piece of diamond
+          At KYNA we're passionate about diamonds, and every piece of diamond
           jewellery we offer has been selected with love and care. Let our
           experts guide you through your diamond journey.
         </p>
-        <button className="bg-white text-teal-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">
-          Contact Our Experts
-        </button>
+        <Link to="/about">
+          <button className="bg-white text-teal-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+            Contact Our Experts
+          </button>
+        </Link>
       </div>
     </>
   );
