@@ -72,11 +72,10 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
       <Star
         key={i}
         size={20}
-        className={`cursor-pointer transition-colors ${
-          i < rating
+        className={`cursor-pointer transition-colors ${i < rating
             ? "fill-yellow-400 text-yellow-400"
             : "text-gray-300 hover:text-yellow-400"
-        }`}
+          }`}
         onClick={interactive ? () => setReviewRating(i + 1) : undefined}
       />
     ));
@@ -125,12 +124,37 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
     const selected = e.target.files;
     if (!selected) return;
 
+    // Filter out files larger than 10MB
+    const validFiles: File[] = [];
+    const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+    Array.from(selected).forEach((file) => {
+      if (file.size > MAX_SIZE) {
+        alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+      } else {
+        validFiles.push(file);
+      }
+    });
+
+    if (validFiles.length === 0) {
+      // Clear input so user can try again selecting valid files
+      e.target.value = "";
+      return;
+    }
+
     // Get current files count and remaining slots
     const remainingSlots = 4 - files.length;
-    const newFiles = Array.from(selected).slice(0, remainingSlots);
+    const newFiles = validFiles.slice(0, remainingSlots);
+
+    if (validFiles.length > remainingSlots) {
+      alert(`You can only upload up to 4 images. Only the first ${remainingSlots} valid images were added.`);
+    }
 
     // Add new files to existing files (up to 4 total)
     setFiles((prev) => [...prev, ...newFiles].slice(0, 4));
+
+    // Reset input value to allow selecting same file again if needed (though controlled usually via state, file inputs are tricky)
+    e.target.value = "";
   };
 
   const removeFile = (index: number) => {
@@ -484,9 +508,8 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
                         className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-90"
                         onClick={() => openImage(reviewIdx, idx, imgSrc)}
                         role="button"
-                        aria-label={`Open image ${idx + 1} of review by ${
-                          review.author
-                        }`}
+                        aria-label={`Open image ${idx + 1} of review by ${review.author
+                          }`}
                       />
                     ))}
                   </div>

@@ -2,11 +2,11 @@ import express from 'express';
 import multer from 'multer';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import { v2 as cloudinary } from 'cloudinary';
-import { 
-  addReview, 
-  getProductReviews, 
-  toggleLike, 
-  addReply 
+import {
+  addReview,
+  getProductReviews,
+  toggleLike,
+  addReply
 } from '../controllers/reviewController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -32,16 +32,16 @@ const storage = new CloudinaryStorage({
   } as any
 });
 
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(file.originalname.toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
-    
+
     if (mimetype && extname) {
       return cb(null, true);
     } else {
