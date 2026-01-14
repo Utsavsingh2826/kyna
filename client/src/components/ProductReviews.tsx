@@ -6,6 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,8 +74,8 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
         key={i}
         size={20}
         className={`cursor-pointer transition-colors ${i < rating
-            ? "fill-yellow-400 text-yellow-400"
-            : "text-gray-300 hover:text-yellow-400"
+          ? "fill-yellow-400 text-yellow-400"
+          : "text-gray-300 hover:text-yellow-400"
           }`}
         onClick={interactive ? () => setReviewRating(i + 1) : undefined}
       />
@@ -130,7 +131,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
 
     Array.from(selected).forEach((file) => {
       if (file.size > MAX_SIZE) {
-        alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+        toast.error(`File "${file.name}" is too large. Maximum size is 10MB.`);
       } else {
         validFiles.push(file);
       }
@@ -147,7 +148,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
     const newFiles = validFiles.slice(0, remainingSlots);
 
     if (validFiles.length > remainingSlots) {
-      alert(`You can only upload up to 4 images. Only the first ${remainingSlots} valid images were added.`);
+      toast.error(`You can only upload up to 4 images. Only the first ${remainingSlots} valid images were added.`);
     }
 
     // Add new files to existing files (up to 4 total)
@@ -163,11 +164,11 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
 
   const handleSubmitReview = async () => {
     if (!productId) {
-      alert("Product not specified");
+      toast.error("Product not specified");
       return;
     }
     if (!auth?.isAuthenticated || !auth.token) {
-      alert("Please log in to submit a review");
+      toast.error("Please log in to submit a review");
       return;
     }
     setSubmitting(true);
@@ -191,6 +192,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
       const json = await res.json();
 
       if (json.success) {
+        toast.success("Review submitted successfully");
         await fetchReviews();
         setShowReviewForm(false);
         setReviewRating(0);
@@ -199,11 +201,11 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
         setFiles([]);
       } else {
         console.error("Failed to submit review", json);
-        alert(json.message || "Failed to submit review");
+        toast.error(json.message || "Failed to submit review");
       }
     } catch (err) {
       console.error("Error submitting review", err);
-      alert("Error submitting review");
+      toast.error("Error submitting review");
     } finally {
       setSubmitting(false);
     }

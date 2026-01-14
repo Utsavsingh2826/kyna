@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { X, Heart } from "lucide-react";
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import {
   FilterGroup,
   // DiamondShapeSelector,
@@ -643,7 +644,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       }
 
       if (!product._id) {
-        alert("Product information is unavailable. Please try again.");
+        toast.error("Product information is unavailable. Please try again.");
         return;
       }
 

@@ -12,6 +12,7 @@ import {
   Play,
 } from "lucide-react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useSelector, useDispatch } from "react-redux";
 import { addToCart } from "@/store/slices/cartSlice";
 import type { RootState, AppDispatch } from "@/store";
@@ -726,7 +727,7 @@ const ProductDetail = () => {
     document.body.appendChild(script);
 
     // Do not remove script/container on cleanup — keep preload alive
-    return () => {};
+    return () => { };
   }, [productData]);
 
   // Separate useEffect to handle URL parameter changes for metal color
@@ -884,9 +885,9 @@ const ProductDetail = () => {
 
       const caratCode = selectedDiamondSize
         ? String(Math.round(parseFloat(selectedDiamondSize) * 100)).padStart(
-            2,
-            "0"
-          )
+          2,
+          "0"
+        )
         : "30";
 
       return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}`;
@@ -999,7 +1000,7 @@ const ProductDetail = () => {
           );
         }
 
-        alert(
+        toast.error(
           "This combination is not available. Please select a different option."
         );
         return;
@@ -1255,7 +1256,7 @@ const ProductDetail = () => {
       }
 
       if (!productData?._id) {
-        alert("Product information is missing. Please try again.");
+        toast.error("Product information is missing. Please try again.");
         return;
       }
 
@@ -1284,16 +1285,16 @@ const ProductDetail = () => {
             typeof productData.sellingPrice === "number"
               ? productData.sellingPrice
               : typeof productData.priceBreakdown?.totalWithGst === "number"
-              ? productData.priceBreakdown.totalWithGst
-              : null,
+                ? productData.priceBreakdown.totalWithGst
+                : null,
           engraving:
             hasEngraving &&
-            (engravingText || engravingMotifPath || engravingImageUrl)
+              (engravingText || engravingMotifPath || engravingImageUrl)
               ? {
-                  text: engravingText || undefined,
-                  motif: engravingMotifPath || undefined,
-                  imageUrl: engravingImageUrl || undefined,
-                }
+                text: engravingText || undefined,
+                motif: engravingMotifPath || undefined,
+                imageUrl: engravingImageUrl || undefined,
+              }
               : undefined,
         })
       );
@@ -1411,19 +1412,19 @@ const ProductDetail = () => {
   // Handle Add to Cart
   const handleAddToCart = useCallback(async () => {
     if (!isAuthenticated) {
-      alert("Please log in to add items to cart");
+      toast.error("Please log in to add items to cart");
       navigate("/login");
       return;
     }
 
     if (!productData || !productData.chosenVariantSku) {
-      alert("Please select all product options");
+      toast.error("Please select all product options");
       return;
     }
 
     // Validate ring size for rings
     if (category === "rings" && !selectedSize) {
-      alert("Please select a ring size before adding to cart");
+      toast.error("Please select a ring size before adding to cart");
       return;
     }
 
@@ -1467,10 +1468,10 @@ const ProductDetail = () => {
 
       // Use the product's MongoDB _id for cart operations with variant data
       await dispatch(addToCart(productData._id, 1, variantData));
-      alert("Product added to cart successfully!");
+      toast.success("Product added to cart successfully!");
     } catch (error) {
       console.error("Error adding to cart:", error);
-      alert("Failed to add product to cart");
+      toast.error("Failed to add product to cart");
     }
   }, [
     isAuthenticated,
@@ -1571,20 +1572,20 @@ const ProductDetail = () => {
   // Handle Buy Now
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
-      alert("Please log in to purchase");
+      toast.error("Please log in to purchase");
       navigate("/login");
       return;
     }
 
     if (category === "rings") {
       if (!selectedSize) {
-        alert("Please select a ring size");
+        toast.error("Please select a ring size");
         return;
       }
     }
 
     if (!productData || !productData.chosenVariantSku) {
-      alert("Please select all product options");
+      toast.error("Please select all product options");
       return;
     }
 
@@ -1597,7 +1598,7 @@ const ProductDetail = () => {
       try {
         cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
         if (!cloudinaryEngravingUrl) {
-          alert("Failed to upload engraving image. Please try again.");
+          toast.error("Failed to upload engraving image. Please try again.");
           return;
         }
         console.log(
@@ -1606,7 +1607,7 @@ const ProductDetail = () => {
         );
       } catch (error) {
         console.error("❌ Engraving upload error:", error);
-        alert("Failed to upload engraving image. Please try again.");
+        toast.error("Failed to upload engraving image. Please try again.");
         return;
       } finally {
         setIsUploadingEngraving(false);
@@ -1821,8 +1822,7 @@ const ProductDetail = () => {
       `Check out this jewelry: ${productData?.title || "Product"}`
     );
     const body = encodeURIComponent(
-      `I thought you might be interested in this jewelry piece:\n\n${
-        productData?.title || "Product"
+      `I thought you might be interested in this jewelry piece:\n\n${productData?.title || "Product"
       }\n\nView it here: ${url}`
     );
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=enquires@kynajewels.com&su=${subject}&body=${body}`;
@@ -1841,7 +1841,7 @@ const ProductDetail = () => {
     try {
       await navigator.clipboard.writeText(url);
       // You could add a toast notification here if you have one
-      alert("Link copied to clipboard");
+      toast.success("Link copied to clipboard");
     } catch (err) {
       // Fallback for older browsers
       const textArea = document.createElement("textarea");
@@ -1858,7 +1858,7 @@ const ProductDetail = () => {
   const handleDiamondOriginSelect = (origin: string) => {
     // Check if trying to select natural diamond with silver metal
     if (origin === "Natural Diamond" && selectedMetalType === "SILVER") {
-      alert(
+      toast.error(
         "Natural diamonds are not available for silver metals. Please select Lab Grown Diamond or change the metal type."
       );
       return;
@@ -1998,11 +1998,10 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
+                          ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                          : "border-neutral-200 hover:border-neutral-300"
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2039,8 +2038,7 @@ const ProductDetail = () => {
                             className="w-full h-full object-cover"
                             onError={() => {
                               console.error(
-                                `Failed to load desktop thumbnail ${
-                                  index + 1
+                                `Failed to load desktop thumbnail ${index + 1
                                 }:`,
                                 image
                               );
@@ -2066,9 +2064,8 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div
-                  className={`flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden transition-opacity duration-300 ${
-                    isUpdating ? "opacity-50" : "opacity-100"
-                  }`}
+                  className={`flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden transition-opacity duration-300 ${isUpdating ? "opacity-50" : "opacity-100"
+                    }`}
                 >
                   {/* use the fetched images only */}
                   {(() => {
@@ -2141,11 +2138,9 @@ const ProductDetail = () => {
                     onClick={handleWishlistToggle}
                     disabled={wishlistLoading}
                     aria-pressed={isInWishlist}
-                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${
-                      isInWishlist ? "text-red-500" : "text-gray-600"
-                    } ${
-                      wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
-                    }`}
+                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${isInWishlist ? "text-red-500" : "text-gray-600"
+                      } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
+                      }`}
                   >
                     <Heart
                       size={20}
@@ -2175,11 +2170,10 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
+                          ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                          : "border-neutral-200 hover:border-neutral-300"
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full flex justify-center items-center bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2220,11 +2214,11 @@ const ProductDetail = () => {
                                 image
                               );
                             }}
-                            // onLoad={() => {
-                            //   console.log(
-                            //     `Loaded mobile thumbnail ${index + 1}`
-                            //   );
-                            // }}
+                          // onLoad={() => {
+                          //   console.log(
+                          //     `Loaded mobile thumbnail ${index + 1}`
+                          //   );
+                          // }}
                           />
                         )}
                       </button>
@@ -2300,9 +2294,8 @@ const ProductDetail = () => {
                     Diamond Origin{" "}
                     <button
                       type="button"
-                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${
-                        showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
-                      }`}
+                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
+                        }`}
                       onClick={() => setShowTooltip((prev) => !prev)}
                     >
                       i{/* Tooltip: appears on click */}
@@ -2338,13 +2331,12 @@ const ProductDetail = () => {
                           key={origin}
                           onClick={() => handleDiamondOriginSelect(origin)}
                           disabled={isDisabled}
-                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${
-                            isDisabled
-                              ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
-                              : selectedDiamondOrigin === origin
+                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${isDisabled
+                            ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
+                            : selectedDiamondOrigin === origin
                               ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
                               : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
-                          }`}
+                            }`}
                         >
                           {origin}
                           {isDisabled && (
@@ -2389,11 +2381,10 @@ const ProductDetail = () => {
                                 setSelectedDiamondShape(newShape);
                               }}
                               className={`group relative w-[50px] h-[50px] border rounded-lg p-1 
-          ${
-            selectedDiamondShape === shape.name.toUpperCase()
-              ? "border-primary bg-primary/5"
-              : "border-neutral-300"
-          }`}
+          ${selectedDiamondShape === shape.name.toUpperCase()
+                                  ? "border-primary bg-primary/5"
+                                  : "border-neutral-300"
+                                }`}
                             >
                               {/* FIXED: remove full flex-center, add controlled padding */}
                               <div className="w-full h-full flex items-end justify-center">
@@ -2548,11 +2539,10 @@ const ProductDetail = () => {
                                 const newKarat = karat.toString();
                                 setSelectedGoldKarat(newKarat);
                               }}
-                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
-                                selectedGoldKarat === karat.toString()
-                                  ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                                  : "border-neutral-600 text-neutral-600"
-                              }`}
+                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${selectedGoldKarat === karat.toString()
+                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                                : "border-neutral-600 text-neutral-600"
+                                }`}
                             >
                               {getKaratDisplayLabel(karat)}
                             </button>
@@ -2589,11 +2579,10 @@ const ProductDetail = () => {
                         <button
                           key={code}
                           onClick={() => updateMetalColor(code)}
-                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${
-                            selectedColorCode === code
-                              ? "border-[#328F94] ring-2 ring-[#328F94]/30"
-                              : "border-neutral-300 hover:border-[#328F94]"
-                          } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
+                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${selectedColorCode === code
+                            ? "border-[#328F94] ring-2 ring-[#328F94]/30"
+                            : "border-neutral-300 hover:border-[#328F94]"
+                            } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
                           title={colorInfo.name}
                         >
                           {isCombination ? (
@@ -2777,8 +2766,8 @@ const ProductDetail = () => {
                     {isUploadingEngraving
                       ? "Uploading Engraving..."
                       : cartLoading
-                      ? "Processing..."
-                      : "Buy Now"}
+                        ? "Processing..."
+                        : "Buy Now"}
                   </Button>
                   <Button
                     onClick={handleAddToCart}

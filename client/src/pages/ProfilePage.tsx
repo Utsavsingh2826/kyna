@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
+import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { updateUser } from "@/store/slices/authSlice";
 import type { RootState } from "@/store";
@@ -204,27 +205,27 @@ const ProfilePage: React.FC = () => {
       const response = await apiService.updateProfile({ address: addressData });
 
       if (response.success) {
-        alert("Addresses saved successfully!");
+        toast.success("Addresses saved successfully!");
       } else {
-        alert(
+        toast.error(
           "Error saving addresses: " + (response.message || "Unknown error")
         );
       }
     } catch (err) {
       console.error("Address save error:", err);
-      alert("Something went wrong while saving addresses.");
+      toast.error("Something went wrong while saving addresses.");
     }
   };
 
   const handleSaveChanges = async () => {
     // Validate required fields before saving
     if (!profileData.firstName.trim()) {
-      alert("First name is required");
+      toast.error("First name is required");
       return;
     }
 
     if (!profileData.email.trim()) {
-      alert("Email is required");
+      toast.error("Email is required");
       return;
     }
 
@@ -296,15 +297,15 @@ const ProfilePage: React.FC = () => {
           setProfileImageUrl(userData.profileImage || "");
         }
 
-        alert("Profile updated successfully!");
+        toast.success("Profile updated successfully!");
       } else {
-        alert(
+        toast.error(
           "Error updating profile: " + (response.message || "Unknown error")
         );
       }
     } catch (err) {
       console.error("Profile update error:", err);
-      alert("Something went wrong while updating profile.");
+      toast.error("Something went wrong while updating profile.");
     }
   };
 
@@ -552,11 +553,10 @@ const ProfilePage: React.FC = () => {
                     }
                     setActiveSection(item.label);
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-b-0 ${
-                    activeSection === item.label
+                  className={`w-full flex items-center px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-b-0 ${activeSection === item.label
                       ? "bg-[#328F94] text-white "
                       : "text-gray-700"
-                  }`}
+                    }`}
                 >
                   <item.icon className="w-5 h-5 mr-3" />
                   <span className="text-sm font-medium">{item.label}</span>

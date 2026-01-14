@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Heart } from 'lucide-react';
+import { toast } from 'sonner';
 import type { AppDispatch, RootState } from '@/store';
 import {
   fetchWishlist,
@@ -56,7 +57,7 @@ const WishlistPage = () => {
 
   const handleRemoveFromWishlist = (itemId: string, productTitle: string) => {
     dispatch(removeWishlistItemThunk(itemId));
-    alert(`${productTitle} removed from wishlist`);
+    toast.success(`${productTitle} removed from wishlist`);
   };
 
   const getFilteredWishlist = () => {
@@ -74,12 +75,12 @@ const WishlistPage = () => {
 
   const getCategoryCounts = () => {
     const counts: { [key: string]: number } = { all: wishlist.length };
-    
+
     wishlist.forEach(item => {
       const category = item.category || item.categorySlug || 'Other';
       counts[category] = (counts[category] || 0) + 1;
     });
-    
+
     return counts;
   };
 
@@ -154,11 +155,10 @@ const WishlistPage = () => {
               <button
                 key={category}
                 onClick={() => setActiveTab(category)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === category
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === category
                     ? 'border-teal-500 text-teal-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                  }`}
               >
                 {formatCategoryLabel(category)} ({count})
               </button>
@@ -176,7 +176,7 @@ const WishlistPage = () => {
                 : `No ${formatCategoryLabel(activeTab)} items in your wishlist`}
             </h3>
             <p className="text-gray-500 mb-6">
-              {activeTab === 'all' 
+              {activeTab === 'all'
                 ? 'Start adding items you love to your wishlist'
                 : `Try browsing other categories or add some ${activeTab.toLowerCase()} items`
               }
@@ -204,12 +204,12 @@ const WishlistPage = () => {
                     <Heart className="w-5 h-5 text-red-500 fill-current" />
                   </button>
                 </div>
-                
+
                 <div className="p-4 flex flex-col flex-grow">
                   <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 min-h-[3rem]">
                     {item.title}
                   </h3>
-                  
+
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900">
@@ -228,7 +228,7 @@ const WishlistPage = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="mt-auto">
                     <div className="flex gap-2 mb-2">
                       <Link to={buildProductUrl(item)} className="flex-1">
@@ -237,7 +237,7 @@ const WishlistPage = () => {
                         </Button>
                       </Link>
                     </div>
-                    
+
                     <button
                       onClick={() => handleRemoveFromWishlist(item._id, item.title)}
                       className="w-full text-sm text-gray-500 hover:text-red-600 transition-colors"

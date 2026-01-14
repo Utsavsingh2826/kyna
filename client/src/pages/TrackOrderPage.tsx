@@ -9,7 +9,8 @@ import {
   XCircle,
   FileText,
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import TrackingProgress from "@/components/tracking/TrackingProgress";
 import TrackingTimeline from "@/components/tracking/TrackingTimeline";
 import TrackingCard from "@/components/tracking/TrackingCard";
@@ -303,7 +304,7 @@ export default function TrackOrderPage() {
         await fetchTrackingData(false);
         setShowCancelDialog(false);
         setCancelReason("");
-        alert(
+        toast.success(
           trackingData.docketNumber
             ? "Shipment cancelled successfully!"
             : "Order cancelled successfully!"
@@ -372,7 +373,7 @@ export default function TrackOrderPage() {
 
   const handleDownloadPOD = async () => {
     if (!trackingData?.docketNumber) {
-      alert("Docket number not available");
+      toast.error("Docket number not available");
       return;
     }
 
@@ -389,14 +390,14 @@ export default function TrackOrderPage() {
         // Open PDF in new tab
         window.open(response.data.link, "_blank");
       } else {
-        alert(
+        toast.info(
           response.error ||
-            "Proof of Delivery is being processed. Please try again in 1-2 hours."
+          "Proof of Delivery is being processed. Please try again in 1-2 hours."
         );
       }
     } catch (err) {
       console.error("Failed to download POD:", err);
-      alert("Failed to download Proof of Delivery. Please try again later.");
+      toast.error("Failed to download Proof of Delivery. Please try again later.");
     } finally {
       setIsDownloadingPOD(false);
     }
@@ -430,11 +431,12 @@ export default function TrackOrderPage() {
         setShowReturnDialog(false);
         setReturnReason("");
         setHasManufacturerFault(false);
-        alert(
-          hasManufacturerFault
-            ? "Return request submitted successfully! ✅\n\nNo charges will be applied as this is a manufacturer fault.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
-            : "Return request submitted successfully! ✅\n\n₹1,800 return charges will be deducted from your refund.\n\nWe have sent you a confirmation email. Our team will contact you soon to arrange pickup."
-        );
+        toast.success("Return request submitted successfully!", {
+          description: hasManufacturerFault
+            ? "No charges will be applied as this is a manufacturer fault. We have sent you a confirmation email."
+            : "₹1,800 return charges will be deducted from your refund. We have sent you a confirmation email.",
+          duration: 5000,
+        });
 
         // Refresh tracking data to show the return request notice
         await fetchTrackingData(false);
@@ -512,11 +514,10 @@ export default function TrackOrderPage() {
                           </p>
                         </div>
                         <span
-                          className={`px-2 py-1 ${
-                            order.orderType === "normal"
+                          className={`px-2 py-1 ${order.orderType === "normal"
                               ? "bg-green-100 text-green-800"
                               : "bg-purple-100 text-purple-800"
-                          } text-xs font-medium rounded`}
+                            } text-xs font-medium rounded`}
                         >
                           {order.orderType === "normal"
                             ? "Normal"
@@ -672,9 +673,8 @@ export default function TrackOrderPage() {
                       className="flex items-center text-[#126180] hover:text-[#0f4f6b] font-medium disabled:opacity-50"
                     >
                       <RefreshCw
-                        className={`w-4 h-4 mr-1 ${
-                          isRefreshing ? "animate-spin" : ""
-                        }`}
+                        className={`w-4 h-4 mr-1 ${isRefreshing ? "animate-spin" : ""
+                          }`}
                       />
                       Refresh
                     </button>

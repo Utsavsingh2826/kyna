@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 import { fetchCart } from "@/store/slices/cartSlice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -156,7 +157,7 @@ const CheckoutPage = () => {
           billingData
         );
         if (!billingResponse.success) {
-          alert("Failed to save billing address");
+          toast.error("Failed to save billing address");
           return;
         }
 
@@ -175,7 +176,7 @@ const CheckoutPage = () => {
           shippingData
         );
         if (shippingResponse.success) {
-          alert("Both billing and shipping addresses saved successfully!");
+          toast.success("Both billing and shipping addresses saved successfully!");
           setHasExistingAddresses(true);
           // Refresh addresses
           const refreshResponse = await apiService.getUserAddresses();
@@ -183,11 +184,11 @@ const CheckoutPage = () => {
             setUserAddresses(refreshResponse.data);
           }
         } else {
-          alert("Failed to save shipping address");
+          toast.error("Failed to save shipping address");
         }
       } catch (error) {
         console.error("Error saving addresses:", error);
-        alert("Error saving addresses");
+        toast.error("Error saving addresses");
       } finally {
         setIsSavingBilling(false);
         setIsSavingShipping(false);
@@ -688,7 +689,7 @@ const CheckoutPage = () => {
 
       const response = await apiService.updateBillingAddress(billingData);
       if (response.success) {
-        alert("Billing address saved successfully!");
+        toast.success("Billing address saved successfully!");
         setHasExistingAddresses(true);
         // Refresh addresses
         const refreshResponse = await apiService.getUserAddresses();
@@ -696,11 +697,11 @@ const CheckoutPage = () => {
           setUserAddresses(refreshResponse.data);
         }
       } else {
-        alert("Failed to save billing address");
+        toast.error("Failed to save billing address");
       }
     } catch (error) {
       console.error("Error saving billing address:", error);
-      alert("Error saving billing address");
+      toast.error("Error saving billing address");
     } finally {
       setIsSavingBilling(false);
     }
@@ -721,7 +722,7 @@ const CheckoutPage = () => {
 
       const response = await apiService.updateShippingAddress(shippingData);
       if (response.success) {
-        alert("Shipping address saved successfully!");
+        toast.success("Shipping address saved successfully!");
         setHasExistingAddresses(true);
         // Refresh addresses
         const refreshResponse = await apiService.getUserAddresses();
@@ -729,11 +730,11 @@ const CheckoutPage = () => {
           setUserAddresses(refreshResponse.data);
         }
       } else {
-        alert("Failed to save shipping address");
+        toast.error("Failed to save shipping address");
       }
     } catch (error) {
       console.error("Error saving shipping address:", error);
-      alert("Error saving shipping address");
+      toast.error("Error saving shipping address");
     } finally {
       setIsSavingShipping(false);
     }
@@ -1528,8 +1529,8 @@ const CheckoutPage = () => {
                   {isSavingBilling
                     ? "Saving..."
                     : userAddresses?.address?.billingAddress
-                    ? "Update Billing Address"
-                    : "Save Billing Address"}
+                      ? "Update Billing Address"
+                      : "Save Billing Address"}
                 </Button>
               </div>
             </div>
@@ -1680,8 +1681,8 @@ const CheckoutPage = () => {
                   {isSavingShipping
                     ? "Saving..."
                     : userAddresses?.address?.shippingAddress
-                    ? "Update Shipping Address"
-                    : "Save Shipping Address"}
+                      ? "Update Shipping Address"
+                      : "Save Shipping Address"}
                 </Button>
               </div>
             </div>
@@ -1699,20 +1700,18 @@ const CheckoutPage = () => {
                 {paymentMethods.map((method) => (
                   <div
                     key={method.id}
-                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                      selectedPaymentMethod === method.id
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${selectedPaymentMethod === method.id
                         ? "border-[#3AAFA9] bg-[#3AAFA9]/5"
                         : "border-gray-200 hover:border-gray-300"
-                    }`}
+                      }`}
                     onClick={() => handlePaymentMethodChange(method.id)}
                   >
                     <div className="flex items-center space-x-3">
                       <div
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                          selectedPaymentMethod === method.id
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === method.id
                             ? "border-[#3AAFA9] bg-[#3AAFA9]"
                             : "border-gray-300"
-                        }`}
+                          }`}
                       >
                         {selectedPaymentMethod === method.id && (
                           <div className="w-2 h-2 bg-white rounded-full"></div>
