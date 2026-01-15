@@ -26,11 +26,7 @@ export function StickyTwoColumnLayout({
   return (
     <div className={cn("grid md:grid-cols-2", gap, className)}>
       <div className={cn(leftColumnClassName)}>
-        <div
-          className={cn(
-            "md:sticky md:top-16 md:self-start md:max-h-[calc(100vh-4rem)] md:overflow-auto"
-          )}
-        >
+        <div className={cn("md:sticky md:top-16 md:self-start")}>
           {leftColumn}
         </div>
       </div>

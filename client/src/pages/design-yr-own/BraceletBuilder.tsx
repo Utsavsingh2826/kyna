@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Country, State, City } from "country-state-city";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -11,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Progress } from "@/components/ui/progress";
-import { X, Edit, Upload } from "lucide-react";
+import { X, Edit, Upload, ChevronRight, ChevronLeft } from "lucide-react";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -25,34 +27,106 @@ const steps = [
 ];
 
 const diamondShapes = [
-  { name: "Round", icon: <img src="/DIAMOND_SHAPES_WEBP/round.webp" alt="" /> },
+  {
+    name: "Round",
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/round.png"
+        alt="Round"
+        className="h-8 w-8 object-contain"
+      />
+    ),
+  },
   {
     name: "Princess",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/princess.webp" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/princess.png"
+        alt="Princess"
+        className="h-8 w-8 object-contain"
+      />
+    ),
   },
   {
     name: "Cushion",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/cushion.webp" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/cushion.png"
+        alt="Cushion"
+        className="h-8 w-8 object-contain"
+      />
+    ),
   },
-  { name: "Oval", icon: <img src="/DIAMOND_SHAPES_WEBP/oval.webp" alt="" /> },
+  {
+    name: "Oval",
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/oval.png"
+        alt="Oval"
+        className="h-7 w-8 object-contain"
+      />
+    ),
+  },
   {
     name: "Emerald",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/emerald.webp" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/emerald.png"
+        alt="Emerald"
+        className="h-9 w-7 object-contain"
+      />
+    ),
   },
   {
     name: "Asscher",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/asscher.jpg" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/asscher.png"
+        alt="Asscher"
+        className="h-8 w-8 object-contain"
+      />
+    ),
   },
   {
     name: "Radiant",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/radient.jpg" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/radient.jpg"
+        alt="Radiant"
+        className="h-10 w-10 object-contain"
+      />
+    ),
   },
-  { name: "Pear", icon: <img src="/DIAMOND_SHAPES_WEBP/pear.webp" alt="" /> },
+  {
+    name: "Pear",
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/pear.png"
+        alt="Pear"
+        className="h-9 w-7 object-contain"
+      />
+    ),
+  },
   {
     name: "Marquise",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/marquise.webp" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/marquise.png"
+        alt="Marquise"
+        className="h-9 w-6 object-contain"
+      />
+    ),
   },
-  { name: "Heart", icon: <img src="/DIAMOND_SHAPES_WEBP/heart.jpg" alt="" /> },
+  {
+    name: "Heart",
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/heart.png"
+        alt="Heart"
+        className="h-8 w-8 object-contain"
+      />
+    ),
+  },
 ];
 
 const goldKarat = ["22KT", "18KT", "14KT", "10KT"];
@@ -97,6 +171,7 @@ export default function RingBuilder() {
   const authUser = useSelector((state: RootState) => state.auth.user);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const metalTypesRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [selectedEngravingImage, setSelectedEngravingImage] =
     useState<string>("");
@@ -118,6 +193,29 @@ export default function RingBuilder() {
   >("idle");
   const [serviceabilityMessage, setServiceabilityMessage] =
     useState<string>("");
+
+  // Country/State/City management
+  const countries = Country.getAllCountries();
+  const defaultCountry =
+    countries.find((c) => c.name === "India") || countries[0];
+  const [selectedCountry, setSelectedCountry] = useState(
+    defaultCountry.isoCode
+  );
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+
+  // Get states for selected country (excluding Kerala)
+  const states = State.getStatesOfCountry(selectedCountry).filter(
+    (state) => state.name.toLowerCase() !== "kerala"
+  );
+
+  // Get cities for selected state (excluding Borivli)
+  const cities = selectedState
+    ? City.getCitiesOfState(selectedCountry, selectedState).filter(
+        (city) => city.name.toLowerCase() !== "borivli"
+      )
+    : [];
+
   const [formData, setFormData] = useState({
     // API matching fields - Use getUserId for consistent userId
     userId: "",
@@ -133,11 +231,11 @@ export default function RingBuilder() {
     modificationRequest: "",
     description: "",
     diamondShape: "Round",
-    diamondSize: "Center Stone",
-    diamondColor: "Center Stone",
-    diamondClarity: "Center Stone",
+    diamondSize: "0.5 Carat",
+    diamondColor: "D-FL",
+    diamondClarity: "",
     metal: "Gold",
-    metalColor: "Same as Image",
+    metalColor: "Yellow Gold",
     goldKarat: "22KT",
     // Unified size field (backend normalization prefers `size`)
     size: "",
@@ -199,6 +297,30 @@ export default function RingBuilder() {
       console.log("🔄 Updated userId in formData:", currentUserId);
     }
   }, [authUser, getUserId, formData.userId]);
+
+  // Sync country selection with formData
+  useEffect(() => {
+    const country = countries.find((c) => c.isoCode === selectedCountry);
+    if (country) {
+      setFormData((prev) => ({ ...prev, country: country.name }));
+    }
+  }, [selectedCountry]);
+
+  // Sync state selection with formData
+  useEffect(() => {
+    const state = states.find((s) => s.isoCode === selectedState);
+    if (state) {
+      setFormData((prev) => ({ ...prev, region: state.name }));
+    }
+  }, [selectedState, states]);
+
+  // Sync city selection with formData
+  useEffect(() => {
+    const city = cities.find((c) => c.name === selectedCity);
+    if (city) {
+      setFormData((prev) => ({ ...prev, city: city.name }));
+    }
+  }, [selectedCity, cities]);
 
   // Cleanup blob URLs when component unmounts to prevent memory leaks
   useEffect(() => {
@@ -375,9 +497,16 @@ export default function RingBuilder() {
     if (targetStep === 2) {
       const hasAnyImage =
         uploadedFiles.length > 0 || uploadedImages.length > 0 || !!formData.url;
+      const totalImages =
+        uploadedFiles.length + uploadedImages.length + (formData.url ? 1 : 0);
 
       if (!hasAnyImage) {
-        alert("Please upload at least 1 image before proceeding.");
+        toast.error("Please upload at least 1 image before proceeding.");
+        return false;
+      }
+
+      if (totalImages < 3) {
+        toast.error("Please upload at least 2 images before proceeding.");
         return false;
       }
 
@@ -385,12 +514,14 @@ export default function RingBuilder() {
         !formData.modificationRequest ||
         formData.modificationRequest.trim().length < 15
       ) {
-        alert("Please provide a modification description (min 15 characters).");
+        toast.error(
+          "Please provide a modification description (min 15 characters)."
+        );
         return false;
       }
 
       if (!formData.description || formData.description.trim() === "") {
-        alert("Please provide a description (max 100 words).");
+        toast.error("Please provide a description (max 100 words).");
         return false;
       }
 
@@ -399,7 +530,7 @@ export default function RingBuilder() {
         .split(/\s+/)
         .filter(Boolean).length;
       if (descWords > 100) {
-        alert("The description field must not exceed 100 words.");
+        toast.error("The description field must not exceed 100 words.");
         return false;
       }
 
@@ -427,7 +558,7 @@ export default function RingBuilder() {
         ];
         const value = typeof valueRaw === "string" ? valueRaw : "";
         if (!value || value.trim() === "") {
-          alert(`Please fill out the ${field} field.`);
+          toast.error(`Please fill out the ${field} field.`);
           return false;
         }
       }
@@ -569,7 +700,11 @@ export default function RingBuilder() {
             {/* Modification Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Tell us what to modify * (Min. 15 characters)
+                <span>Tell us what to modify </span>
+                <span className="text-red-500">*</span>
+                <span className="font-light text-gray-400 text-xs ml-1">
+                  (Min. 15 characters)
+                </span>
               </label>
               <Input
                 placeholder="Enter Input"
@@ -588,34 +723,42 @@ export default function RingBuilder() {
                   });
                 }}
               />
+              <p className="text-xs text-gray-500 ">
+                {formData.modificationRequest.length} / 15 characters
+              </p>
             </div>
 
             {/* Description */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Add Description * (Max. 100 Words)
+                <span>Add Description </span>
+                <span className="text-red-500">*</span>
+                <span className="font-light text-gray-400 text-xs ml-1">
+                  (Max. 100 characters)
+                </span>
               </label>
               <Textarea
                 placeholder="Enter Description..."
                 value={formData.description}
                 onChange={(e) => {
-                  const newDescription = e.target.value;
-                  const wordCount = newDescription.trim().split(/\s+/).length;
-                  setFormData({ ...formData, description: newDescription });
+                  const newText = e.target.value;
 
-                  console.log("📝 Description Updated:", {
-                    description: newDescription,
-                    characterCount: newDescription.length,
-                    wordCount: wordCount,
-                    withinLimit: wordCount <= 100,
-                  });
+                  if (newText.length <= 100) {
+                    setFormData({ ...formData, description: newText });
+                  }
                 }}
+                maxLength={100}
                 className="min-h-24"
               />
-              <p className="text-xs text-muted-foreground">
-                {formData.description.length} characters.
+              <p className="text-xs text-gray-500 ">
+                {formData.description.length}/100 characters
               </p>
+
+              {/* <p className="text-xs text-muted-foreground">
+                           {formData.description.length} characters.
+                         </p> */}
               <p className="text-xs text-muted-foreground">
+                <span className="text-red-500">*</span>
                 "We want to make sure your ring is exactly how you envision it.
                 Please share your thoughts on."
               </p>
@@ -686,6 +829,7 @@ export default function RingBuilder() {
                 <Button
                   variant="link"
                   size="sm"
+                  onClick={() => setCurrentStep(1)}
                   className={`text-[#328F94] ${
                     formData.sameAsImage
                       ? "text-gray-400 pointer-events-none"
@@ -696,7 +840,7 @@ export default function RingBuilder() {
                 </Button>
               </div>
               <div className="flex gap-4">
-                {uploadedImages.slice(0, 2).map((image, index) => (
+                {uploadedImages.map((image, index) => (
                   <div key={index} className="relative">
                     <img
                       src={image}
@@ -708,7 +852,10 @@ export default function RingBuilder() {
                         formData.sameAsImage ? "pointer-events-none" : ""
                       }`}
                     >
-                      <Edit className="w-3 h-3" />
+                      <Edit
+                        onClick={() => setCurrentStep(1)}
+                        className="w-3 h-3"
+                      />
                     </button>
                   </div>
                 ))}
@@ -722,7 +869,8 @@ export default function RingBuilder() {
                   formData.sameAsImage ? "text-gray-400" : ""
                 }`}
               >
-                Select Diamond Shape * : {formData.diamondShape}
+                Select Diamond Shape <span className="text-red-500">*</span> :{" "}
+                {formData.diamondShape}
                 {formData.sameAsImage && (
                   <span className="text-xs text-gray-500 ml-2">
                     (Same as Image)
@@ -773,7 +921,7 @@ export default function RingBuilder() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/50 rounded-lg ">
                   <label className="text-sm text-muted-foreground">
-                    Diamond Size *
+                    Diamond Size <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.diamondSize}
@@ -794,7 +942,8 @@ export default function RingBuilder() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">
-                    Diamond Color & Clarity *
+                    Diamond Color & Clarity{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.diamondColor}
@@ -819,13 +968,33 @@ export default function RingBuilder() {
             {/* Metal Type */}
             <div>
               <label className="text-sm text-muted-foreground">
-                Metal Type *
+                Metal Type <span className="text-red-500">*</span>
               </label>
               <Select
                 value={formData.metal}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, metal: value })
-                }
+                onValueChange={(value) => {
+                  setFormData({ ...formData, metal: value });
+                  // Auto-set appropriate karat based on metal type
+                  if (value === "Gold") {
+                    setFormData({
+                      ...formData,
+                      metal: value,
+                      goldKarat: "18KT",
+                    });
+                  } else if (value === "Platinum") {
+                    setFormData({
+                      ...formData,
+                      metal: value,
+                      goldKarat: "950",
+                    });
+                  } else if (value === "Silver") {
+                    setFormData({
+                      ...formData,
+                      metal: value,
+                      goldKarat: "925",
+                    });
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -838,34 +1007,154 @@ export default function RingBuilder() {
               </Select>
             </div>
 
-            {/* Gold Karat with logging */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Select Gold Karat
-              </label>
-              <div className="flex gap-2">
-                {goldKarat.map((karat) => (
-                  <button
-                    key={karat}
-                    onClick={() => {
-                      setFormData({ ...formData, goldKarat: karat });
-
-                      console.log("🥇 Gold Karat Selected:", {
-                        goldKarat: karat,
-                        metal: formData.metal,
-                        metalColor: formData.metalColor,
-                        sameAsImage: formData.sameAsImage,
+            {/* Metal Type and Karat - 2 Column Layout */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Metal Type */}
+              <div>
+                <label className="text-sm text-muted-foreground">
+                  Metal Type <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  value={formData.metal}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, metal: value });
+                    // Auto-set appropriate karat based on metal type
+                    if (value === "Gold") {
+                      setFormData({
+                        ...formData,
+                        metal: value,
+                        goldKarat: "18KT",
                       });
+                    } else if (value === "Platinum") {
+                      setFormData({
+                        ...formData,
+                        metal: value,
+                        goldKarat: "950",
+                      });
+                    } else if (value === "Silver") {
+                      setFormData({
+                        ...formData,
+                        metal: value,
+                        goldKarat: "925",
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="Gold">Gold</SelectItem>
+                    <SelectItem value="Platinum">Platinum</SelectItem>
+                    <SelectItem value="Silver">Silver</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Karat Section with Scrollable UI */}
+              <div>
+                <h3 className="my-1 text-sm">
+                  {formData.metal === "Gold"
+                    ? "Gold Karat"
+                    : formData.metal === "Platinum"
+                    ? "Platinum Purity"
+                    : "Silver Purity"}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (metalTypesRef.current) {
+                        metalTypesRef.current.scrollBy({
+                          left: -100,
+                          behavior: "smooth",
+                        });
+                      }
                     }}
-                    className={`px-4 py-2 rounded-md text-sm ${
-                      formData.goldKarat === karat
-                        ? "bg-[#328F94] text-white"
-                        : "bg-muted hover:bg-muted/80"
-                    }`}
+                    aria-label="Scroll left"
+                    className="p-1 hover:bg-gray-100 rounded"
                   >
-                    {karat}
+                    <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
                   </button>
-                ))}
+                  <div
+                    ref={metalTypesRef}
+                    className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
+                  >
+                    {formData.metal === "Gold" &&
+                      ["18KT", "14KT", "9KT"].map((karat) => (
+                        <button
+                          key={karat}
+                          onClick={() => {
+                            setFormData({ ...formData, goldKarat: karat });
+                            console.log("🥇 Karat Selected:", {
+                              goldKarat: karat,
+                              metal: formData.metal,
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === karat
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
+                        >
+                          {karat}
+                        </button>
+                      ))}
+                    {formData.metal === "Platinum" &&
+                      ["950"].map((purity) => (
+                        <button
+                          key={purity}
+                          onClick={() => {
+                            setFormData({ ...formData, goldKarat: purity });
+                            console.log("🥈 Platinum Purity Selected:", {
+                              goldKarat: purity,
+                              metal: formData.metal,
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === purity
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
+                        >
+                          {purity}
+                        </button>
+                      ))}
+                    {formData.metal === "Silver" &&
+                      ["925", "920"].map((purity) => (
+                        <button
+                          key={purity}
+                          onClick={() => {
+                            setFormData({ ...formData, goldKarat: purity });
+                            console.log("🥉 Silver Purity Selected:", {
+                              goldKarat: purity,
+                              metal: formData.metal,
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === purity
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
+                        >
+                          {purity}
+                        </button>
+                      ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (metalTypesRef.current) {
+                        metalTypesRef.current.scrollBy({
+                          left: 100,
+                          behavior: "smooth",
+                        });
+                      }
+                    }}
+                    aria-label="Scroll right"
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -879,7 +1168,9 @@ export default function RingBuilder() {
                   formData.sameAsImage ? "text-gray-400" : ""
                 }`}
               >
-                Metal Color: Same as Image
+                Metal Color:{" "}
+                {metalTypesRef.current ? ` ${formData.metalColor}` : ""}{" "}
+                <span className="text-red-500">*</span>
                 {formData.sameAsImage && (
                   <span className="text-xs text-gray-500 ml-2">
                     (Same as Image)
@@ -899,10 +1190,30 @@ export default function RingBuilder() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="Same as Image">Same as Image</SelectItem>
-                  <SelectItem value="Yellow Gold">Yellow Gold</SelectItem>
-                  <SelectItem value="White Gold">White Gold</SelectItem>
-                  <SelectItem value="Rose Gold">Rose Gold</SelectItem>
+                  <SelectItem value="Yellow Gold" className="gap-">
+                    <img
+                      src="/colors/gold.png"
+                      alt="Yellow Gold"
+                      className="inline-block h-6 w-6 mr-2 mb-1"
+                    />
+                    Yellow Gold
+                  </SelectItem>
+                  <SelectItem value="White Gold">
+                    <img
+                      src="/colors/white.png"
+                      alt="White Gold"
+                      className="inline-block h-6 w-6 mr-2 mb-1"
+                    />
+                    White Gold
+                  </SelectItem>
+                  <SelectItem value="Rose Gold">
+                    <img
+                      src="/colors/rosegold.png"
+                      alt="Rose Gold"
+                      className="inline-block h-6 w-6 mr-2 mb-1"
+                    />
+                    Rose Gold
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -912,13 +1223,21 @@ export default function RingBuilder() {
               <label className="text-sm text-muted-foreground">
                 Bracelet Size (Indian)
               </label>
-              <Input
-                placeholder="Write Your Size"
+              <Select
                 value={formData.braceletSize}
-                onChange={(e) =>
-                  setFormData({ ...formData, braceletSize: e.target.value })
+                onValueChange={(value) =>
+                  setFormData({ ...formData, braceletSize: value })
                 }
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Size" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="5">Size 5</SelectItem>
+                  <SelectItem value="6">Size 6</SelectItem>
+                  <SelectItem value="7">Size 7</SelectItem>
+                </SelectContent>
+              </Select>
               <Link to="/Bracelet-education">
                 <Button
                   variant="link"
@@ -1024,7 +1343,9 @@ export default function RingBuilder() {
                 <Button
                   onClick={() => {
                     if (!selectedEngravingImage) {
-                      alert("Please select an image for engraving first.");
+                      toast.error(
+                        "Please select an image for engraving first."
+                      );
                       return;
                     }
 
@@ -1130,12 +1451,17 @@ export default function RingBuilder() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">Selected Images</h3>
-                  <Button variant="link" size="sm" className="text-[#328F94]">
+                  <Button
+                    onClick={() => setCurrentStep(1)}
+                    variant="link"
+                    size="sm"
+                    className="text-[#328F94]"
+                  >
                     Change Image
                   </Button>
                 </div>
                 <div className="flex gap-4">
-                  {uploadedImages.slice(0, 3).map((image, index) => (
+                  {uploadedImages.map((image, index) => (
                     <div key={index} className="relative">
                       <img
                         src={image}
@@ -1143,7 +1469,10 @@ export default function RingBuilder() {
                         className="w-20 h-20 object-cover rounded-lg border"
                       />
                       <button className="absolute top-1 right-1 w-5 h-5 bg-white/80 rounded-full flex items-center justify-center">
-                        <Edit className="w-3 h-3" />
+                        <Edit
+                          onClick={() => setCurrentStep(1)}
+                          className="w-3 h-3"
+                        />
                       </button>
                     </div>
                   ))}
@@ -1154,7 +1483,12 @@ export default function RingBuilder() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">Selected Properties</h3>
-                  <Button variant="link" size="sm" className="text-[#328F94]">
+                  <Button
+                    onClick={() => setCurrentStep(2)}
+                    variant="link"
+                    size="sm"
+                    className="text-[#328F94]"
+                  >
                     Change Properties
                   </Button>
                 </div>
@@ -1256,38 +1590,43 @@ export default function RingBuilder() {
                     <div>
                       <label className="text-sm">Country *</label>
                       <Select
-                        value={formData.country}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, country: value })
-                        }
+                        value={selectedCountry}
+                        onValueChange={setSelectedCountry}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select..." />
+                          <SelectValue placeholder="Select country..." />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          <SelectItem value="india">India</SelectItem>
-                          <SelectItem value="usa">USA</SelectItem>
-                          <SelectItem value="uk">UK</SelectItem>
+                        <SelectContent className="bg-white max-h-60">
+                          {countries.map((country) => (
+                            <SelectItem
+                              key={country.isoCode}
+                              value={country.isoCode}
+                            >
+                              {country.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
                       <label className="text-sm">Region/State *</label>
                       <Select
-                        value={formData.region}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, region: value })
-                        }
+                        value={selectedState}
+                        onValueChange={setSelectedState}
+                        disabled={!selectedCountry}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select..." />
+                          <SelectValue placeholder="Select state..." />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          <SelectItem value="maharashtra">
-                            Maharashtra
-                          </SelectItem>
-                          <SelectItem value="delhi">Delhi</SelectItem>
-                          <SelectItem value="bengaluru">Bengaluru</SelectItem>
+                        <SelectContent className="bg-white max-h-60">
+                          {states.map((state) => (
+                            <SelectItem
+                              key={state.isoCode}
+                              value={state.isoCode}
+                            >
+                              {state.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1297,18 +1636,19 @@ export default function RingBuilder() {
                     <div>
                       <label className="text-sm">City *</label>
                       <Select
-                        value={formData.city}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, city: value })
-                        }
+                        value={selectedCity}
+                        onValueChange={setSelectedCity}
+                        disabled={!selectedState}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select..." />
+                          <SelectValue placeholder="Select city..." />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          <SelectItem value="mumbai">Mumbai</SelectItem>
-                          <SelectItem value="pune">Pune</SelectItem>
-                          <SelectItem value="delhi">Delhi</SelectItem>
+                        <SelectContent className="bg-white max-h-60">
+                          {cities.map((city) => (
+                            <SelectItem key={city.name} value={city.name}>
+                              {city.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1647,14 +1987,14 @@ export default function RingBuilder() {
       // Ensure we have the latest userId
       const currentUserId = getUserId();
       if (!currentUserId) {
-        alert("Please login to proceed with customization request.");
+        toast.error("Please login to proceed with customization request.");
         navigate("/login");
         return;
       }
 
       // Check if zip code is provided and valid
       if (!formData.zipCode) {
-        alert(
+        toast.error(
           "Please enter your zip code before creating the customization request."
         );
         setLoading(false);
@@ -1662,7 +2002,7 @@ export default function RingBuilder() {
       }
 
       if (formData.zipCode.length !== 6 || !/^\d{6}$/.test(formData.zipCode)) {
-        alert("Please enter a valid 6-digit pincode.");
+        toast.error("Please enter a valid 6-digit pincode.");
         setLoading(false);
         return;
       }
@@ -1670,13 +2010,15 @@ export default function RingBuilder() {
       // Check if serviceability has been verified
       if (serviceabilityStatus !== "serviceable") {
         if (serviceabilityStatus === "not-serviceable") {
-          alert(
+          toast.error(
             "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
           );
           setLoading(false);
           return;
         } else if (serviceabilityStatus === "checking") {
-          alert("Please wait while we check if your area is serviceable.");
+          toast.error(
+            "Please wait while we check if your area is serviceable."
+          );
           setLoading(false);
           return;
         } else {
@@ -1688,7 +2030,7 @@ export default function RingBuilder() {
           const isServiceable = await checkServiceability(formData.zipCode);
 
           if (!isServiceable) {
-            alert(
+            toast.error(
               "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
             );
             setLoading(false);
@@ -1895,7 +2237,7 @@ export default function RingBuilder() {
           console.log("✅ Images uploaded successfully:", uploadedImageUrls);
         } else {
           console.error("❌ Failed to upload images:", imageResult.message);
-          alert("Failed to upload images. Please try again.");
+          toast.error("Failed to upload images. Please try again.");
           setLoading(false);
           return;
         }
@@ -1939,7 +2281,7 @@ export default function RingBuilder() {
           subCategory: !!customizationRequestDataWithImages.subCategory,
           jewelryType: !!customizationRequestDataWithImages.jewelryType,
         });
-        alert(
+        toast.error(
           "Missing required information. Please fill in all required fields."
         );
         setLoading(false);
@@ -1961,7 +2303,7 @@ export default function RingBuilder() {
           "❌ Missing contact information:",
           customizationRequestDataWithImages.contactInfo
         );
-        alert(
+        toast.error(
           "Please fill in all contact information fields (name, email, phone, address, city, pincode)."
         );
         setLoading(false);
@@ -1985,7 +2327,7 @@ export default function RingBuilder() {
         console.log("🔗 Server connectivity test:", testResponse.status);
       } catch (error) {
         console.error("❌ Server connectivity error:", error);
-        alert(
+        toast.error(
           "Cannot connect to server. Please make sure the server is running."
         );
         setLoading(false);
@@ -2081,7 +2423,7 @@ export default function RingBuilder() {
             })`
           : "No EDD";
 
-        alert(
+        toast.success(
           `Customization request created successfully! ${eddInfo}\n\nProceeding to payment...`
         );
 
@@ -2091,12 +2433,14 @@ export default function RingBuilder() {
           "❌ Failed to create customization request:",
           result.message
         );
-        alert(`❌ Failed to submit customization request: ${result.message}`);
+        toast.error(
+          `❌ Failed to submit customization request: ${result.message}`
+        );
         setLoading(false);
       }
     } catch (error) {
       console.error("❌ Error creating customization request:", error);
-      alert(
+      toast.error(
         "❌ An error occurred while submitting your customization request. Please try again."
       );
       setLoading(false);
@@ -2112,7 +2456,7 @@ export default function RingBuilder() {
         "🎉 Customization request saved successfully:",
         customizationResult
       );
-      alert(
+      toast.success(
         "🎉 Payment successful! Your customization request has been submitted successfully."
       );
 
@@ -2120,7 +2464,7 @@ export default function RingBuilder() {
       navigate("/dashboard?tab=customizations");
     } catch (error) {
       console.error("❌ Error handling payment success:", error);
-      alert(
+      toast.error(
         "Payment successful but there was an issue. Please contact support."
       );
     }
@@ -2134,7 +2478,7 @@ export default function RingBuilder() {
 
   const handlePaymentError = (error: string) => {
     console.error("❌ Payment error:", error);
-    alert(`Payment Error: ${error}`);
+    toast.error(`Payment Error: ${error}`);
     setShowPaymentForm(false);
   };
 
