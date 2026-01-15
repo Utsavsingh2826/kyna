@@ -1437,6 +1437,7 @@ const ProductDetail = () => {
       const variantData = {
         variantSku: currentVariantSku,
         variantConfig: {
+          title: productData.title, // Include product title for cart display
           metalColor: selectedMetalColor,
           metalColorCode: selectedColorCode, // Add the color code for API requests
           metalType: selectedMetalType,

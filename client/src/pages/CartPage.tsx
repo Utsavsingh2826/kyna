@@ -113,16 +113,24 @@ const CartPage = () => {
     variantSku: string,
     metalColor?: string
   ) => {
+    console.log("✏️ handleEditProduct called with:", {
+      product,
+      variantSku,
+      metalColor,
+    });
+
     // Safety check to ensure product and required properties exist
-    if (!product || !product.modelSku) {
+    // Added parentSku check as some products (like engagement rings) use that instead of modelSku
+    if (!product || (!product.modelSku && !product.sku && !product.parentSku)) {
       console.error("Product or SKU is missing:", product);
+      toast.error("Cannot edit details: Product information missing");
       return;
     }
 
     // Navigate to product page with variant parameter and metal color
-    const productSku = product.sku || product.modelSku;
-    let category = product.category.toLowerCase();
-    if (product.category == "ring") {
+    const productSku = product.sku || product.modelSku || product.parentSku;
+    let category = (product.category || "rings").toLowerCase(); // Default fallback
+    if (product.category?.toLowerCase() === "ring") {
       category = "rings";
     }
 
@@ -337,7 +345,7 @@ const CartPage = () => {
                         <div className="flex-1">
                           <div className="flex items-center justify-between mb-2">
                             <h3 className="font-medium text-gray-900">
-                              {item.product.title}
+                              {variantConfig?.title || item.product.title}
                             </h3>
                             <button
                               onClick={() =>
@@ -355,43 +363,13 @@ const CartPage = () => {
                           {/* <p className="text-sm text-gray-600 mb-2">
                             SKU: {item.product.modelSku}
                           </p> */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <button
-                                onClick={() =>
-                                  handleEditProduct(
-                                    item.product,
-                                    item.variantSku,
-                                    variantConfig?.metalColor
-                                  )
-                                }
-                                className="text-gray-500 hover:text-blue-500 flex items-center space-x-1 transition-colors"
-                              >
-                                <Edit className="w-4 h-4" />
-                                <span
-                                  onClick={() =>
-                                    handleEditProduct(
-                                      item.product,
-                                      item.variantSku,
-                                      variantConfig?.metalColor
-                                    )
-                                  }
-                                  className="text-sm"
-                                >
-                                  Edit
-                                </span>
-                              </button>
-                            </div>
 
-                            <div className="text-right">
-                              <p className="text-lg font-semibold text-gray-900">
-                                ₹
-                                {(item.price * item.quantity).toLocaleString(
-                                  "en-IN"
-                                )}
-                                .00
-                              </p>
-                            </div>
+                          <div className="flex justify-end mt-2">
+                            <p className="text-lg font-semibold text-gray-900">
+                              ₹
+                              {(item.price * item.quantity).toLocaleString("en-IN")}
+                              .00
+                            </p>
                           </div>
 
                           {/* Enhanced Variant Information Display */}
@@ -872,8 +850,8 @@ const CartPage = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

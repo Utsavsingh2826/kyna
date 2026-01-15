@@ -21,6 +21,7 @@ const cartSchema = new Schema<ICart>(
           required: true, // Specific variant SKU
         },
         variantConfig: {
+          title: { type: String }, // Product title for display
           metalColor: { type: String }, // e.g., 'WG', 'YG', 'RG'
           metalType: { type: String }, // e.g., 'GOLD', 'PLATINUM'
           goldKarat: { type: String }, // e.g., '18kt', '14kt'

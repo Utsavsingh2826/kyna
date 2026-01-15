@@ -16,6 +16,7 @@ interface CartItem {
   };
   variantSku: string; // Specific variant SKU
   variantConfig: {
+    title?: string; // Product title for display
     metalColor?: string;
     metalType?: string;
     goldKarat?: string;

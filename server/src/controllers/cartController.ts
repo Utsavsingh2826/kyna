@@ -225,7 +225,7 @@ export const getCart = async (req: AuthRequest, res: Response) => {
     }
 
     // Manually populate product data from the correct collection
-    const ProductModel = getCollectionModel("products");
+    const ProductModel = getCollectionModel("products2");
     const populatedItems = await Promise.all(
       cart.items.map(async (item: any) => {
         try {
@@ -256,7 +256,7 @@ export const getCart = async (req: AuthRequest, res: Response) => {
                 : item.variantConfig?.variantImages || [],
             metalColorCode: item.variantConfig?.metalColor
               ? METAL_COLOR_CODE_MAP[item.variantConfig.metalColor] ||
-                item.variantConfig.metalColor
+              item.variantConfig.metalColor
               : undefined,
           };
 
@@ -311,6 +311,15 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
       variantConfig = {},
     } = req.body;
 
+    console.log("🛒 ADD TO CART REQUEST:", {
+      userId,
+      productId,
+      quantity,
+      variantSku,
+      variantConfig,
+      requestBody: req.body,
+    });
+
     if (!userId) {
       return res.status(401).json({ message: "User not authenticated" });
     }
@@ -324,11 +333,19 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
     }
 
     // Verify product exists using the same approach as productController
-    const ProductModel = getCollectionModel("products");
+    const ProductModel = getCollectionModel("products2");
+    console.log(`🔍 Looking for product with ID: ${productId}`);
+    console.log(`📦 Using collection: products2, Model: ${ProductModel.modelName}`);
+
     const product = await ProductModel.findById(productId);
+    console.log(`✅ Product found:`, product ? `Yes (${product._id})` : 'No');
+
     if (!product) {
+      console.error(`❌ Product not found with ID: ${productId}`);
       return res.status(404).json({ message: "Product not found" });
     }
+
+    console.log(`✅ Product verified: ${product._id}`);
 
     // Note: Stock validation removed as this appears to be a made-to-order jewelry business
 
@@ -384,6 +401,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
     }
 
     await cart.save();
+    console.log(`✅ Cart saved successfully. Total items in cart: ${cart.items.length}`);
 
     // Manually populate product details for response
     const populatedItems = await Promise.all(
@@ -416,7 +434,7 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
                 : item.variantConfig?.variantImages || [],
             metalColorCode: item.variantConfig?.metalColor
               ? METAL_COLOR_CODE_MAP[item.variantConfig.metalColor] ||
-                item.variantConfig.metalColor
+              item.variantConfig.metalColor
               : undefined,
           };
 
@@ -511,7 +529,7 @@ export const removeFromCart = async (req: AuthRequest, res: Response) => {
     await cart.save();
 
     // Manually populate product details for response
-    const ProductModel = getCollectionModel("products");
+    const ProductModel = getCollectionModel("products2");
     const populatedItems = await Promise.all(
       cart.items.map(async (item: any) => {
         try {
@@ -542,7 +560,7 @@ export const removeFromCart = async (req: AuthRequest, res: Response) => {
                 : item.variantConfig?.variantImages || [],
             metalColorCode: item.variantConfig?.metalColor
               ? METAL_COLOR_CODE_MAP[item.variantConfig.metalColor] ||
-                item.variantConfig.metalColor
+              item.variantConfig.metalColor
               : undefined,
           };
 
@@ -605,7 +623,7 @@ export const updateCartItem = async (req: AuthRequest, res: Response) => {
     }
 
     // Verify product exists using the same approach as productController
-    const ProductModel = getCollectionModel("products");
+    const ProductModel = getCollectionModel("products2");
     const product = await ProductModel.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -686,7 +704,7 @@ export const updateCartItem = async (req: AuthRequest, res: Response) => {
                 : item.variantConfig?.variantImages || [],
             metalColorCode: item.variantConfig?.metalColor
               ? METAL_COLOR_CODE_MAP[item.variantConfig.metalColor] ||
-                item.variantConfig.metalColor
+              item.variantConfig.metalColor
               : undefined,
           };
 
@@ -763,7 +781,7 @@ export const removeCartItemById = async (req: AuthRequest, res: Response) => {
     await cart.save();
 
     // Manually populate product details for response
-    const ProductModel = getCollectionModel("products");
+    const ProductModel = getCollectionModel("products2");
     const populatedItems = await Promise.all(
       cart.items.map(async (item: any) => {
         try {
@@ -794,7 +812,7 @@ export const removeCartItemById = async (req: AuthRequest, res: Response) => {
                 : item.variantConfig?.variantImages || [],
             metalColorCode: item.variantConfig?.metalColor
               ? METAL_COLOR_CODE_MAP[item.variantConfig.metalColor] ||
-                item.variantConfig.metalColor
+              item.variantConfig.metalColor
               : undefined,
           };
 
@@ -913,7 +931,7 @@ export const updateCartItemRingSize = async (
     await cart.save();
 
     // Manually populate product details for response
-    const ProductModel = getCollectionModel("products");
+    const ProductModel = getCollectionModel("products2");
     const populatedItems = await Promise.all(
       cart.items.map(async (item: any) => {
         try {
@@ -944,7 +962,7 @@ export const updateCartItemRingSize = async (
                 : item.variantConfig?.variantImages || [],
             metalColorCode: item.variantConfig?.metalColor
               ? METAL_COLOR_CODE_MAP[item.variantConfig.metalColor] ||
-                item.variantConfig.metalColor
+              item.variantConfig.metalColor
               : undefined,
           };
 

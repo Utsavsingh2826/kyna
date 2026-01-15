@@ -169,6 +169,7 @@ export interface ICart extends Document {
     product: string | IProduct;
     variantSku: string; // Specific variant SKU (e.g., ENG1-CUS-30-18-LGEFVVS)
     variantConfig: {
+      title?: string; // Product title for display
       metalColor?: string; // e.g., 'WG' (White Gold)
       metalType?: string; // e.g., 'GOLD', 'PLATINUM'
       goldKarat?: string; // e.g., '18kt', '14kt'
