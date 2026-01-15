@@ -375,6 +375,13 @@ export default function RingBuilder() {
     }
   }, [selectedCity]);
 
+  // Auto-set metal color to White Gold for Platinum and Silver
+  useEffect(() => {
+    if (formData.metal === "Platinum" || formData.metal === "Silver") {
+      setFormData((prev) => ({ ...prev, metalColor: "White Gold" }));
+    }
+  }, [formData.metal]);
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
@@ -1082,7 +1089,7 @@ export default function RingBuilder() {
                         </button>
                       ))}
                     {formData.metal === "Silver" &&
-                      ["925", "920"].map((purity) => (
+                      ["925"].map((purity) => (
                         <button
                           key={purity}
                           onClick={() => {
@@ -1191,30 +1198,45 @@ export default function RingBuilder() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="Yellow Gold" className="gap-">
-                    <img
-                      src="/colors/gold.png"
-                      alt="Yellow Gold"
-                      className="inline-block h-6 w-6 mr-2 mb-1"
-                    />
-                    Yellow Gold{" "}
-                  </SelectItem>
-                  <SelectItem value="White Gold">
-                    <img
-                      src="/colors/white.png"
-                      alt="White Gold"
-                      className="inline-block h-6 w-6 mr-2 mb-1"
-                    />
-                    White Gold
-                  </SelectItem>
-                  <SelectItem value="Rose Gold">
-                    <img
-                      src="/colors/rosegold.png"
-                      alt="Rose Gold"
-                      className="inline-block h-6 w-6 mr-2 mb-1"
-                    />
-                    Rose Gold
-                  </SelectItem>
+                  {formData.metal === "Gold" && (
+                    <>
+                      <SelectItem value="Yellow Gold" className="gap-">
+                        <img
+                          src="/colors/gold.png"
+                          alt="Yellow Gold"
+                          className="inline-block h-6 w-6 mr-2 mb-1"
+                        />
+                        Yellow Gold{" "}
+                      </SelectItem>
+                      <SelectItem value="White Gold">
+                        <img
+                          src="/colors/white.png"
+                          alt="White Gold"
+                          className="inline-block h-6 w-6 mr-2 mb-1"
+                        />
+                        White Gold
+                      </SelectItem>
+                      <SelectItem value="Rose Gold">
+                        <img
+                          src="/colors/rosegold.png"
+                          alt="Rose Gold"
+                          className="inline-block h-6 w-6 mr-2 mb-1"
+                        />
+                        Rose Gold
+                      </SelectItem>
+                    </>
+                  )}
+                  {(formData.metal === "Platinum" ||
+                    formData.metal === "Silver") && (
+                    <SelectItem value="White Gold">
+                      <img
+                        src="/colors/white.png"
+                        alt="White Gold"
+                        className="inline-block h-6 w-6 mr-2 mb-1"
+                      />
+                      White Gold
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -1486,7 +1508,12 @@ export default function RingBuilder() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">Selected Properties</h3>
-                  <Button variant="link" size="sm" className="text-[#328F94]">
+                  <Button
+                    variant="link"
+                    onClick={() => setCurrentStep(2)}
+                    size="sm"
+                    className="text-[#328F94]"
+                  >
                     Change Properties
                   </Button>
                 </div>
@@ -1495,40 +1522,48 @@ export default function RingBuilder() {
                     <span className="text-sm text-muted-foreground">
                       Diamond Shape:
                     </span>
-                    <span className="text-sm">{formData.diamondShape}</span>
+                    <span className="text-sm text-[#328F94]">
+                      {formData.diamondShape}
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">
                         Diamond Size:
                       </span>
-                      <div>{formData.diamondSize}</div>
+                      <div className="text-[#328F94]">
+                        {formData.diamondSize}
+                      </div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">
                         Diamond Color & Clarity:
                       </span>
-                      <div>{formData.diamondColor}</div>
+                      <div className="text-[#328F94]">
+                        {formData.diamondColor}
+                      </div>
                     </div>
                     <div>
                       <span className="text-muted-foreground w-1/2">
                         Metal Type:
                       </span>
-                      <div>{formData.metal}</div>
+                      <div className="text-[#328F94]">{formData.metal}</div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Gold Karat:</span>
-                      <div>{formData.goldKarat}</div>
+                      <div className="text-[#328F94]">{formData.goldKarat}</div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">
                         Metal Color:
                       </span>
-                      <div>{formData.metalColor}</div>
+                      <div className="text-[#328F94]">
+                        {formData.metalColor}
+                      </div>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Ring Size:</span>
-                      <div>{formData.ringSize}</div>
+                      <div className="text-[#328F94]">{formData.ringSize}</div>
                     </div>
                   </div>
                   {formData.engraving && (
@@ -1536,7 +1571,9 @@ export default function RingBuilder() {
                       <span className="text-sm text-muted-foreground">
                         Engraving Added:
                       </span>
-                      <span className="text-sm">{formData.engraving}</span>
+                      <span className="text-sm text-[#328F94]">
+                        {formData.engraving}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -1550,7 +1587,9 @@ export default function RingBuilder() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm">Enter Your Name *</label>
+                      <label className="text-sm">
+                        Enter Your Name <span className="text-red-500">*</span>
+                      </label>
                       <Input
                         placeholder="First name"
                         value={formData.firstName}
@@ -1575,7 +1614,9 @@ export default function RingBuilder() {
                   </div>
 
                   <div>
-                    <label className="text-sm">Address *</label>
+                    <label className="text-sm">
+                      Address <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       value={formData.address}
                       onChange={(e) =>
@@ -1586,7 +1627,9 @@ export default function RingBuilder() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm">Country *</label>
+                      <label className="text-sm">
+                        Country <span className="text-red-500">*</span>
+                      </label>
                       <Select
                         value={selectedCountry}
                         onValueChange={setSelectedCountry}
@@ -1607,7 +1650,9 @@ export default function RingBuilder() {
                       </Select>
                     </div>
                     <div>
-                      <label className="text-sm">Region/State *</label>
+                      <label className="text-sm">
+                        Region/State <span className="text-red-500">*</span>
+                      </label>
                       <Select
                         value={selectedState}
                         onValueChange={setSelectedState}
@@ -1632,7 +1677,9 @@ export default function RingBuilder() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm">City *</label>
+                      <label className="text-sm">
+                        City <span className="text-red-500">*</span>
+                      </label>
                       <Select
                         value={selectedCity}
                         onValueChange={setSelectedCity}
@@ -1651,7 +1698,9 @@ export default function RingBuilder() {
                       </Select>
                     </div>
                     <div>
-                      <label className="text-sm">Zip Code *</label>
+                      <label className="text-sm">
+                        Zip Code <span className="text-red-500">*</span>
+                      </label>
                       <Input
                         value={formData.zipCode}
                         onChange={(e) => handleZipCodeChange(e.target.value)}
@@ -1689,7 +1738,9 @@ export default function RingBuilder() {
                   </div>
 
                   <div>
-                    <label className="text-sm">Phone Number *</label>
+                    <label className="text-sm">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       value={formData.phoneNumber}
                       onChange={(e) =>
@@ -1699,17 +1750,6 @@ export default function RingBuilder() {
                         })
                       }
                     />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="save-info"
-                      className="rounded border-border"
-                    />
-                    <label htmlFor="save-info" className="text-sm">
-                      Save This For Future Use
-                    </label>
                   </div>
                 </div>
               </div>
@@ -1773,10 +1813,24 @@ export default function RingBuilder() {
               </Button>
 
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>Need assistance? Call us at 080-61919123</p>
+                {/* Assistance Header */}
+                <div className="text-center text-sm text-gray-600 mb-6">
+                  <a
+                    href="https://wa.me/918235567890"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-500 hover:underline"
+                  >
+                    Need Assistance? <span className="underline">Chat Now</span>
+                  </a>{" "}
+                  &nbsp;or&nbsp;
+                  <a href="tel:+918235567890" className="hover:underline">
+                    call <span className="underline">+91 8235567890</span>
+                  </a>
+                </div>
                 <p className="font-medium text-red-500">
-                  * Your custom jewelry is in progress till proper and organised
-                  within 7 business days
+                  * Your custom jewelry is in progress! HD images and videos
+                  will be shared within 7 business days.
                 </p>
                 <p className="font-medium text-red-500">
                   * Upon order confirmation, this amount will be adjusted in
