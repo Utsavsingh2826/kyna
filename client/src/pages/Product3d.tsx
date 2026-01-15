@@ -7,7 +7,10 @@ import {
   ChevronRight,
   Star,
   Heart,
+  X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
@@ -404,6 +407,7 @@ const ProductDetail = () => {
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
   const [selectedSize, setSelectedSize] = useState("");
+  const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
 
   const thumbnailsRef = useRef<HTMLDivElement>(null);
 
@@ -741,12 +745,14 @@ const ProductDetail = () => {
                   </option>
                 ))}
               </select>
-              <a
-                href="/RingSize-Education"
-                className="text-sm text-teal-600 font-medium underline mt-2 inline-block hover:text-teal-700"
+              <Button
+                variant="link"
+                size="sm"
+                className="text-teal-600 font-medium underline mt-2 p-0 h-auto hover:text-teal-700 block"
+                onClick={() => setIsRingSizePopupOpen(true)}
               >
                 📏 Ring Size Guide
-              </a>
+              </Button>
             </div>
 
             {/* Action Buttons */}
@@ -783,6 +789,10 @@ const ProductDetail = () => {
           </div>
         </div>
       </main>
+      <RingSizeGuidePopup 
+        isOpen={isRingSizePopupOpen} 
+        onClose={() => setIsRingSizePopupOpen(false)} 
+      />
     </div>
   );
 };

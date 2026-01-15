@@ -3,6 +3,7 @@ import {
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
@@ -100,6 +101,32 @@ function PublicRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
+function MainLayout({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const hideLayout = new URLSearchParams(location.search).get("hideLayout") === "true";
+
+  return (
+    <div className="min-h-screen bg-white text-black">
+      {!hideLayout && (
+        <>
+          <PromotionalBanner />
+          <Header />
+          <Navigation />
+        </>
+      )}
+      
+      {children}
+
+      {!hideLayout && (
+        <>
+          <Footer />
+          <WhatsAppButton />
+        </>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const dispatch = useDispatch();
 
@@ -111,11 +138,7 @@ function App() {
   return (
     <Router>
       <ScrollToTop />
-      <div className="min-h-screen bg-white">
-        <PromotionalBanner />
-        <Header />
-        <Navigation />
-
+      <MainLayout>
         <Routes>
           <Route path="/product-3d" element={<Product3d />} />
           <Route path="/" element={<HomePage />} />
@@ -328,10 +351,7 @@ function App() {
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-failed" element={<PaymentFailed />} />
         </Routes>
-
-        <Footer />
-        <WhatsAppButton />
-      </div>
+      </MainLayout>
     </Router>
   );
 }

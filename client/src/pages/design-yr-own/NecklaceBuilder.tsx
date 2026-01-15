@@ -171,10 +171,11 @@ export default function RingBuilder() {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const navigate = useNavigate();
   const [selectedEngravingImage, setSelectedEngravingImage] =
-    useState<string>("");
+    useState<string>("/newring.jpg");
   const metalTypesRef = useRef<HTMLDivElement>(null);
   const [showEngravingPopup, setShowEngravingPopup] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [engravingDone, setEngravingDone] = useState(false);
 
   // Store engraved images as blobs for batch upload
   const [engravingBlobs, setEngravingBlobs] = useState<
@@ -1254,110 +1255,35 @@ export default function RingBuilder() {
                 appear on the side of the ring on the inside.
               </p>
 
-              {/* Image Selection for Engraving */}
+              {/* Engraving Button */}
               <div className="space-y-3">
-                <p className="text-xs font-medium text-gray-700">
-                  Select an image for engraving:
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {uploadedImages.map((image, index) => (
-                    <div
-                      key={index}
-                      className={`relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
-                        selectedEngravingImage === image
-                          ? "border-[#328F94] bg-[#328F94]/10"
-                          : "border-gray-200 hover:border-[#328F94]/50"
-                      }`}
-                      onClick={() => {
-                        setSelectedEngravingImage(image);
-                        console.log("🖼️ Engraving image selected:", {
-                          imageIndex: index,
-                          imageUrl: image,
-                          userId: formData.userId,
-                        });
-                      }}
-                    >
-                      <img
-                        src={image}
-                        alt={`Engraving option ${index + 1}`}
-                        className="w-full h-16 object-cover"
-                      />
-                      {selectedEngravingImage === image && (
-                        <div className="absolute inset-0 bg-[#328F94]/20 flex items-center justify-center">
-                          <div className="w-4 h-4 bg-[#328F94] text-white rounded-full flex items-center justify-center text-xs">
-                            ✓
-                          </div>
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-1 py-0.5">
-                        View {index + 1}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* URL Image option if provided */}
-                  {formData.url && (
-                    <div
-                      className={`relative cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
-                        selectedEngravingImage === formData.url
-                          ? "border-[#328F94] bg-[#328F94]/10"
-                          : "border-gray-200 hover:border-[#328F94]/50"
-                      }`}
-                      onClick={() => {
-                        setSelectedEngravingImage(formData.url);
-                        console.log("🖼️ URL engraving image selected:", {
-                          imageUrl: formData.url,
-                          userId: formData.userId,
-                        });
-                      }}
-                    >
-                      <img
-                        src={formData.url}
-                        alt="URL engraving option"
-                        className="w-full h-16 object-cover"
-                      />
-                      {selectedEngravingImage === formData.url && (
-                        <div className="absolute inset-0 bg-[#328F94]/20 flex items-center justify-center">
-                          <div className="w-4 h-4 bg-[#328F94] text-white rounded-full flex items-center justify-center text-xs">
-                            ✓
-                          </div>
-                        </div>
-                      )}
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-1 py-0.5">
-                        URL Image
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Proceed to Engraving Button */}
                 <Button
                   onClick={() => {
-                    if (!selectedEngravingImage) {
-                      toast.error(
-                        "Please select an image for engraving first."
-                      );
+                    if (engravingDone) {
+                      toast.error("Engraving can only be performed once.");
                       return;
                     }
 
-                    console.log("🎨 Opening engraving popup with image:", {
-                      selectedImage: selectedEngravingImage,
-                      jewelryType: formData.jewelryType,
-                      userId: formData.userId,
-                    });
+                    console.log(
+                      "🎨 Opening engraving popup with /newring.jpg:",
+                      {
+                        selectedImage: "/newring.jpg",
+                        jewelryType: formData.jewelryType,
+                        userId: formData.userId,
+                      }
+                    );
 
+                    setSelectedEngravingImage("/newring.jpg");
                     setShowEngravingPopup(true);
                   }}
                   className={`w-full text-sm py-2 transition-all ${
-                    selectedEngravingImage
-                      ? "bg-[#328F94] text-white hover:bg-[#328F94]/90"
-                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    engravingDone
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-[#328F94] text-white hover:bg-[#328F94]/90"
                   }`}
-                  disabled={!selectedEngravingImage}
+                  disabled={engravingDone}
                 >
-                  {selectedEngravingImage
-                    ? "Proceed to Engraving"
-                    : "Select Image First"}
+                  {engravingDone ? "Engraving Already Done" : "Add Engraving"}
                 </Button>
 
                 {/* Current Engraving Display */}
@@ -1892,6 +1818,9 @@ export default function RingBuilder() {
 
     // Update form data with engraving text
     setFormData((prev) => ({ ...prev, engraving: engravingText }));
+
+    // Mark engraving as done
+    setEngravingDone(true);
 
     // If we received an engraved image URL (blob URL), convert it to blob and store
     if (engravingImageUrl) {

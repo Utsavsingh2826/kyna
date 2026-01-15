@@ -34,6 +34,12 @@ const EngravingPage: React.FC<EngraveProps> = ({
   initialMotif = "",
   fontSize: propFontSize,
 }) => {
+  console.log("🎨 EngravingPage mounted with props:", {
+    selectedImage,
+    jewelryType,
+    userId,
+  });
+
   const location = useLocation();
   const navigate = useNavigate();
   const [currentSelectedImage, setCurrentSelectedImage] =
@@ -149,12 +155,22 @@ const EngravingPage: React.FC<EngraveProps> = ({
     if (selectedImage.startsWith("blob:")) {
       // Use blob directly
       imageSource = selectedImage;
+      console.log("🔍 Using blob URL:", imageSource);
+    } else if (
+      selectedImage.startsWith("/") ||
+      !selectedImage.startsWith("http")
+    ) {
+      // Use local paths directly (from design your own builders)
+      imageSource = selectedImage;
+      console.log("🔍 Using local path:", imageSource);
     } else {
-      // Apply proxy for other URLs
+      // Apply proxy only for external URLs
       imageSource = `/api/image-proxy?url=${encodeURIComponent(selectedImage)}`;
+      console.log("🔍 Using proxy for external URL:", imageSource);
     }
 
-    console.log("🔍 Determined image source:", imageSource);
+    console.log("🔍 Final determined image source:", imageSource);
+    console.log("🔍 Setting currentSelectedImage to:", imageSource);
 
     setCurrentSelectedImage(imageSource);
     setEngravingData({
@@ -514,6 +530,19 @@ const EngravingPage: React.FC<EngraveProps> = ({
                       alt="Selected jewelry for engraving"
                       draggable={false}
                       className="pointer-events-none select-none rounded-xl"
+                      onLoad={() =>
+                        console.log(
+                          "✅ Image loaded successfully:",
+                          currentSelectedImage
+                        )
+                      }
+                      onError={(e) => {
+                        console.error(
+                          "❌ Image failed to load:",
+                          currentSelectedImage
+                        );
+                        console.error("Error details:", e);
+                      }}
                     />
                   ) : (
                     <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">

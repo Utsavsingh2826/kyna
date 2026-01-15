@@ -41,7 +41,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Checkbox } from "@/components/ui/checkbox";
-import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+// import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
+import BraceletSizeGuidePopup from "@/components/BraceletSizeGuidePopup";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
 import "@/styles/image-loading.css"; // Ensure CSS for blur/skeleton is included
 
@@ -218,8 +220,10 @@ const ProductDetail = () => {
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
-  const [selectedMetalColor, setSelectedMetalColor] = useState("White");
-  const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code (e.g., "WG", "WG-RG")
+  const [selectedMetalColor, setSelectedMetalColor] = useState("");
+  const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
+  const [isBraceletSizePopupOpen, setIsBraceletSizePopupOpen] = useState(false);
+  const [selectedColorCode, setSelectedColorCode] = useState(""); // Store the color code (e.g., "WG", "WG-RG")
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedBraceletSize, setSelectedBraceletSize] = useState("6");
   const [selectedDiamondSize, setSelectedDiamondSize] = useState("");
@@ -2606,13 +2610,14 @@ const ProductDetail = () => {
                         </Select>
                       </div>
                     </div>
-                    {/* Ring Size Guide */}
-                    <Link
-                      to={"/RingSize-Education"}
-                      className="text-sm text-primary font-medium underline block"
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-[#328F94] p-0 mt-1"
+                      onClick={() => setIsRingSizePopupOpen(true)}
                     >
                       Ring Size Guide
-                    </Link>
+                    </Button>
                   </div>
                 )}
 
@@ -2641,6 +2646,14 @@ const ProductDetail = () => {
                         </Select>
                       </div>
                     </div>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-[#328F94] p-0 mt-1"
+                      onClick={() => setIsBraceletSizePopupOpen(true)}
+                    >
+                      Bracelet Size Guide
+                    </Button>
                   </div>
                 )}
 
@@ -3097,6 +3110,14 @@ const ProductDetail = () => {
             );
           })()}
       </main>
+      <RingSizeGuidePopup 
+        isOpen={isRingSizePopupOpen} 
+        onClose={() => setIsRingSizePopupOpen(false)} 
+      />
+      <BraceletSizeGuidePopup 
+        isOpen={isBraceletSizePopupOpen} 
+        onClose={() => setIsBraceletSizePopupOpen(false)} 
+      />
     </div>
   );
 };

@@ -33,6 +33,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+import BraceletSizeGuidePopup from "@/components/BraceletSizeGuidePopup";
+import { X } from "lucide-react";
 
 // Map color codes to display info (handles both single and combination colors)
 const getColorDisplayInfo = (
@@ -582,6 +584,7 @@ const ProductDetail = () => {
   const [engravingMotifPath, setEngravingMotifPath] = useState("");
   // Add states for diamond size and gold karat
   const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
+  const [isSizeGuidePopupOpen, setIsSizeGuidePopupOpen] = useState(false);
   const [savedEngravingData, setSavedEngravingData] = useState<{
     text: string;
     motif: string;
@@ -2205,13 +2208,14 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
-                {/* Ring Size Guide */}
-                <Link
-                  to={"/RingSize-Education"}
-                  className="text-sm text-primary font-medium underline block"
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-[#328F94] p-0 mt-1"
+                  onClick={() => setIsSizeGuidePopupOpen(true)}
                 >
-                  Ring Size Guide
-                </Link>
+                  Bracelet Size Guide
+                </Button>
 
                 {/* Free Engraving */}
                 <div className="flex items-center space-x-2">
@@ -2667,6 +2671,10 @@ const ProductDetail = () => {
 
         {/* Engrave Modal Overlay is handled inline where the checkbox opens the Engrave modal (EV-aware). */}
       </main>
+      <BraceletSizeGuidePopup 
+        isOpen={isSizeGuidePopupOpen} 
+        onClose={() => setIsSizeGuidePopupOpen(false)} 
+      />
     </div>
   );
 };

@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Share2,
   Play,
+  X,
 } from "lucide-react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ import {
 // import { Checkbox } from "@/components/ui/checkbox";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
+import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
 import "@/styles/image-loading.css"; // Ensure CSS for blur/skeleton is included
 
 // Product interface for API data
@@ -232,6 +234,7 @@ const ProductDetail = () => {
   const [selectedColorClarity, setSelectedColorClarity] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
+  const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
@@ -2670,12 +2673,14 @@ const ProductDetail = () => {
                       </div>
                     </div>
                     {/* Ring Size Guide */}
-                    <Link
-                      to={"/RingSize-Education"}
-                      className="text-sm text-primary font-medium underline block"
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-[#328F94] p-0 mt-1"
+                      onClick={() => setIsRingSizePopupOpen(true)}
                     >
                       Ring Size Guide
-                    </Link>
+                    </Button>
                   </div>
                 )}
 
@@ -3163,6 +3168,10 @@ const ProductDetail = () => {
             );
           })()}
       </main>
+      <RingSizeGuidePopup 
+        isOpen={isRingSizePopupOpen} 
+        onClose={() => setIsRingSizePopupOpen(false)} 
+      />
     </div>
   );
 };
