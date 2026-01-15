@@ -3,6 +3,8 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Facebook, Instagram, ArrowRight } from "lucide-react";
 import * as Accordion from "@radix-ui/react-accordion";
+import PdfPopup from "./PdfPopup";
+import { useState } from "react";
 
 const columns = [
   {
@@ -52,6 +54,8 @@ const columns = [
 ];
 
 const Footer: React.FC = () => {
+  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
+
   // Function to open Calendly popup
   const openCalendly = () => {
     // Replace 'your-calendly-url' with your actual Calendly scheduling URL
@@ -81,12 +85,21 @@ const Footer: React.FC = () => {
                   <ul className="space-y-2 mt-2 pl-2">
                     {col.links.map((item) => (
                       <li key={item.label}>
-                        <a
-                          href={item.href}
-                          className="text-sm text-gray-600 hover:text-teal-600 hover:underline transition-colors"
-                        >
-                          {item.label}
-                        </a>
+                        {item.label === "Quality & Certification" ? (
+                          <button
+                            onClick={() => setIsPdfPopupOpen(true)}
+                            className="text-sm text-gray-600 hover:text-teal-600 hover:underline transition-colors text-left"
+                          >
+                            {item.label}
+                          </button>
+                        ) : (
+                          <a
+                            href={item.href}
+                            className="text-sm text-gray-600 hover:text-teal-600 hover:underline transition-colors"
+                          >
+                            {item.label}
+                          </a>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -208,15 +221,13 @@ const Footer: React.FC = () => {
                     Customer Reviews
                   </a>
                 </li>
-                <li>
-                  <a
-                    href="/Stone_Guide.pdf"
-                    target="_blank"
-                    rel="noopener"
-                    className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
+                 <li>
+                  <button
+                    onClick={() => setIsPdfPopupOpen(true)}
+                    className="text-sm text-gray-700 hover:text-teal-600 hover:underline text-left"
                   >
                     Quality & Certification
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -435,6 +446,12 @@ const Footer: React.FC = () => {
           </div>
         </div>
       </div>
+      <PdfPopup 
+        isOpen={isPdfPopupOpen} 
+        onClose={() => setIsPdfPopupOpen(false)} 
+        pdfUrl="/Stone_Guide.pdf"
+        title="Quality & Certification"
+      />
     </footer>
   );
 };
