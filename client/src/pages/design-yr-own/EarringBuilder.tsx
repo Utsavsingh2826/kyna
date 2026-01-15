@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Link, useNavigate } from "react-router-dom";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import CustomizationPaymentForm from "@/components/CustomizationPaymentForm";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Progress } from "@/components/ui/progress";
-import { X, Edit, Upload } from "lucide-react";
+import { X, Edit, Upload, ChevronLeft, ChevronRight } from "lucide-react";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 const steps = [
   { number: 1, title: "Inspiration Upload", active: true },
@@ -23,36 +24,107 @@ const steps = [
 ];
 
 const diamondShapes = [
-  { name: "Round", icon: <img src="/DIAMOND_SHAPES_WEBP/round.webp" alt="" /> },
+  {
+    name: "Round",
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/round.png"
+        alt="Round"
+        className="h-8 w-8 object-contain"
+      />
+    ),
+  },
   {
     name: "Princess",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/princess.webp" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/princess.png"
+        alt="Princess"
+        className="h-8 w-8 object-contain"
+      />
+    ),
   },
   {
     name: "Cushion",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/cushion.webp" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/cushion.png"
+        alt="Cushion"
+        className="h-8 w-8 object-contain"
+      />
+    ),
   },
-  { name: "Oval", icon: <img src="/DIAMOND_SHAPES_WEBP/oval.webp" alt="" /> },
+  {
+    name: "Oval",
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/oval.png"
+        alt="Oval"
+        className="h-7 w-8 object-contain"
+      />
+    ),
+  },
   {
     name: "Emerald",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/emerald.webp" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/emerald.png"
+        alt="Emerald"
+        className="h-9 w-7 object-contain"
+      />
+    ),
   },
   {
     name: "Asscher",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/asscher.jpg" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/asscher.png"
+        alt="Asscher"
+        className="h-8 w-8 object-contain"
+      />
+    ),
   },
   {
     name: "Radiant",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/radient.jpg" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/radient.jpg"
+        alt="Radiant"
+        className="h-10 w-10 object-contain"
+      />
+    ),
   },
-  { name: "Pear", icon: <img src="/DIAMOND_SHAPES_WEBP/pear.webp" alt="" /> },
+  {
+    name: "Pear",
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/pear.png"
+        alt="Pear"
+        className="h-9 w-7 object-contain"
+      />
+    ),
+  },
   {
     name: "Marquise",
-    icon: <img src="/DIAMOND_SHAPES_WEBP/marquise.webp" alt="" />,
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/marquise.png"
+        alt="Marquise"
+        className="h-9 w-6 object-contain"
+      />
+    ),
   },
-  { name: "Heart", icon: <img src="/DIAMOND_SHAPES_WEBP/heart.jpg" alt="" /> },
+  {
+    name: "Heart",
+    icon: (
+      <img
+        src="/DIAMOND_SHAPES_WEBP/heart.png"
+        alt="Heart"
+        className="h-8 w-8 object-contain"
+      />
+    ),
+  },
 ];
-
 const goldKarat = ["22KT", "18KT", "14KT", "10KT"];
 
 export default function EarringBuilder() {
@@ -98,6 +170,7 @@ export default function EarringBuilder() {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const navigate = useNavigate();
   const authUser = useSelector((state: RootState) => state.auth.user);
+  const metalTypesRef = useRef<HTMLDivElement>(null);
   const [serviceabilityStatus, setServiceabilityStatus] = useState<
     "idle" | "checking" | "serviceable" | "not-serviceable"
   >("idle");
@@ -117,11 +190,11 @@ export default function EarringBuilder() {
     modification: "",
     description: "",
     diamondShape: "Round",
-    diamondSize: "Center Stone",
-    diamondColor: "Center Stone",
+    diamondSize: "0.5 Carat",
+    diamondColor: "D-FL",
     priority: "normal",
     metalType: "Gold",
-    metalColor: "Same as Image",
+    metalColor: "Yellow Gold",
     backingType: "",
     goldKarat: "22KT",
     engraving: "",
@@ -225,7 +298,7 @@ export default function EarringBuilder() {
         "🎉 Customization request saved successfully:",
         customizationResult
       );
-      alert(
+      toast.success(
         "🎉 Payment successful! Your customization request has been submitted successfully."
       );
 
@@ -233,7 +306,7 @@ export default function EarringBuilder() {
       navigate("/dashboard?tab=customizations");
     } catch (error) {
       console.error("❌ Error handling payment success:", error);
-      alert(
+      toast.error(
         "Payment successful but there was an issue. Please contact support."
       );
     }
@@ -241,7 +314,7 @@ export default function EarringBuilder() {
 
   const handlePaymentError = (error: string) => {
     console.error("❌ Payment error:", error);
-    alert(`Payment Error: ${error}`);
+    toast.error(`Payment Error: ${error}`);
     setShowPaymentForm(false);
   };
 
@@ -259,18 +332,20 @@ export default function EarringBuilder() {
   const validateForStep = (targetStep: number): boolean => {
     // Moving from step 1 -> 2: check uploads and basic inputs on right column
     if (targetStep === 2) {
-      if (uploadedImages.length < 1) {
-        alert("Please upload at least 1 image before proceeding.");
+      if (uploadedImages.length < 2) {
+        toast.error("Please upload at least 2 images before proceeding.");
         return false;
       }
 
       if (!formData.modification || formData.modification.trim().length < 15) {
-        alert("Please provide a modification description (min 15 characters).");
+        toast.error(
+          "Please provide a modification description (min 15 characters)."
+        );
         return false;
       }
 
       if (!formData.description || formData.description.trim() === "") {
-        alert("Please provide a description (max 100 words).");
+        toast.error("Please provide a description (max 100 words).");
         return false;
       }
 
@@ -279,7 +354,7 @@ export default function EarringBuilder() {
         .split(/\s+/)
         .filter(Boolean).length;
       if (descWords > 100) {
-        alert("The description field must not exceed 100 words.");
+        toast.error("The description field must not exceed 100 words.");
         return false;
       }
 
@@ -304,7 +379,7 @@ export default function EarringBuilder() {
         const value = formData[field];
         if (typeof value === "string") {
           if (!value || value.trim() === "") {
-            alert(`Please fill out the ${field} field.`);
+            toast.error(`Please fill out the ${field} field.`);
             return false;
           }
         }
@@ -470,7 +545,11 @@ export default function EarringBuilder() {
             {/* Modification Input */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Tell us what to modify * (Min. 15 characters)
+                <span>Tell us what to modify </span>
+                <span className="text-red-500">*</span>
+                <span className="font-light text-gray-400 text-xs ml-1">
+                  (Min. 15 characters)
+                </span>
               </label>
               <Input
                 placeholder="Enter Input"
@@ -479,25 +558,44 @@ export default function EarringBuilder() {
                   setFormData({ ...formData, modification: e.target.value })
                 }
               />
+              <p className="text-xs text-gray-500 ">
+                {formData.modification.length} / 15 characters
+              </p>
             </div>
 
             {/* Description */}
             <div className="space-y-2">
               <label className="text-sm font-medium">
-                Add Description * (Max. 100 Words)
+                <span>Add Description </span>
+                <span className="text-red-500">*</span>
+                <span className="font-light text-gray-400 text-xs ml-1">
+                  (Max. 100 characters)
+                </span>
               </label>
               <Textarea
                 placeholder="Enter Description..."
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => {
+                  const newText = e.target.value;
+
+                  if (newText.length <= 100) {
+                    setFormData({ ...formData, description: newText });
+                  }
+                }}
+                maxLength={100}
                 className="min-h-24"
               />
-              <p className="text-xs text-muted-foreground">0 characters.</p>
+              <p className="text-xs text-gray-500 ">
+                {formData.description.length}/100 characters
+              </p>
+
+              {/* <p className="text-xs text-muted-foreground">
+                {formData.description.length} characters.
+              </p> */}
               <p className="text-xs text-muted-foreground">
-                "We want to make sure your earrings are exactly how you envision
-                them. Please share your thoughts on."
+                <span className="text-red-500">*</span>
+                "We want to make sure your ring is exactly how you envision it.
+                Please share your thoughts on."
               </p>
               <div className="flex items-center gap-2">
                 <input
@@ -506,18 +604,14 @@ export default function EarringBuilder() {
                   className="rounded border-border"
                   checked={formData.sameAsImage}
                   onChange={(e) => {
-                    const checked = e.target.checked;
-                    setFormData((prev) => ({
-                      ...prev,
-                      sameAsImage: checked,
-                      // when same-as-image is enabled, set these fields to the 'Same as Image' marker
-                      diamondShape: checked
-                        ? "Same as Image"
-                        : prev.diamondShape || "Round",
-                      metalColor: checked
-                        ? "Same as Image"
-                        : prev.metalColor || "White Gold",
-                    }));
+                    const sameAsImage = e.target.checked;
+                    setFormData({ ...formData, sameAsImage });
+
+                    console.log("🎯 Same as Image Updated:", {
+                      sameAsImage,
+                      willDisableCustomization: sameAsImage,
+                      userId: formData.userId,
+                    });
                   }}
                 />
                 <label htmlFor="same-image" className="text-sm">
@@ -560,22 +654,40 @@ export default function EarringBuilder() {
           <div className="space-y-6">
             {/* Selected Images */}
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div
+                className={`flex items-center justify-between mb-4 ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
+              >
                 <h3 className="font-medium">Selected Images</h3>
-                <Button variant="link" size="sm" className="text-[#328F94]">
+                <Button
+                  variant="link"
+                  onClick={() => setCurrentStep(1)}
+                  size="sm"
+                  className={`text-[#328F94] ${
+                    formData.sameAsImage ? "text-[#328F94]" : ""
+                  }`}
+                >
                   Change Image
                 </Button>
               </div>
               <div className="flex gap-4">
-                {uploadedImages.slice(0, 2).map((image, index) => (
+                {uploadedImages.map((image, index) => (
                   <div key={index} className="relative">
                     <img
                       src={image}
                       alt={`Selected ${index + 1}`}
                       className="w-24 h-24 object-cover rounded-lg border"
                     />
-                    <button className="absolute top-1 right-1 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center">
-                      <Edit className="w-3 h-3" />
+                    <button
+                      className={`absolute top-1 right-1 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center ${
+                        formData.sameAsImage ? "pointer-events-none" : ""
+                      }`}
+                    >
+                      <Edit
+                        onClick={() => setCurrentStep(1)}
+                        className="w-3 h-3"
+                      />
                     </button>
                   </div>
                 ))}
@@ -584,10 +696,26 @@ export default function EarringBuilder() {
 
             {/* Diamond Shape Selection */}
             <div>
-              <h3 className="font-medium mb-4">
-                Select Diamond Shape * : {formData.diamondShape}
+              <h3
+                className={`font-medium mb-4 ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
+              >
+                Select Diamond Shape <span className="text-red-500">*</span> :{" "}
+                <span className="text-gray-400 font-light">
+                  {formData.diamondShape}
+                </span>
+                {formData.sameAsImage && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Same as Image)
+                  </span>
+                )}
               </h3>
-              <div className="grid grid-cols-5 gap-2">
+              <div
+                className={`grid grid-cols-5 gap-2 ${
+                  formData.sameAsImage ? "pointer-events-none opacity-50" : ""
+                }`}
+              >
                 {formData.sameAsImage ? (
                   <div className="col-span-5 p-4 rounded-lg bg-gray-50 border border-neutral-200 text-sm text-gray-600">
                     Same as Image
@@ -596,9 +724,21 @@ export default function EarringBuilder() {
                   diamondShapes.map((shape) => (
                     <button
                       key={shape.name}
-                      onClick={() =>
-                        setFormData({ ...formData, diamondShape: shape.name })
-                      }
+                      onClick={() => {
+                        if (!formData.sameAsImage) {
+                          setFormData({
+                            ...formData,
+                            diamondShape: shape.name,
+                          });
+
+                          console.log("💎 Diamond Shape Selected:", {
+                            diamondShape: shape.name,
+                            userId: formData.userId,
+                            sameAsImage: formData.sameAsImage,
+                            customizationDisabled: formData.sameAsImage,
+                          });
+                        }
+                      }}
                       className={`aspect-square  rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${
                         formData.diamondShape === shape.name
                           ? "bg-[#328F94]/20"
@@ -619,7 +759,7 @@ export default function EarringBuilder() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground">
-                    Diamond Size *
+                    Diamond Size <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.diamondSize}
@@ -631,7 +771,6 @@ export default function EarringBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Center Stone">Center Stone</SelectItem>
                       <SelectItem value="0.5 Carat">0.5 Carat</SelectItem>
                       <SelectItem value="1 Carat">1 Carat</SelectItem>
                       <SelectItem value="1.5 Carat">1.5 Carat</SelectItem>
@@ -640,7 +779,8 @@ export default function EarringBuilder() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">
-                    Diamond Color & Clarity *
+                    Diamond Color & Clarity{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.diamondColor}
@@ -652,7 +792,6 @@ export default function EarringBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Center Stone">Center Stone</SelectItem>
                       <SelectItem value="D-FL">D-FL</SelectItem>
                       <SelectItem value="E-VVS1">E-VVS1</SelectItem>
                       <SelectItem value="F-VVS2">F-VVS2</SelectItem>
@@ -662,49 +801,154 @@ export default function EarringBuilder() {
               </div>
             </div>
 
-            {/* Metal Type */}
-            <div>
-              <label className="text-sm text-muted-foreground">
-                Metal Type *
-              </label>
-              <Select
-                value={formData.metalType}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, metalType: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Gold">Gold</SelectItem>
-                  <SelectItem value="Platinum">Platinum</SelectItem>
-                  <SelectItem value="Silver">Silver</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Gold Karat */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">
-                Select Gold Karat
-              </label>
-              <div className="flex gap-2">
-                {goldKarat.map((karat) => (
-                  <button
-                    key={karat}
-                    onClick={() =>
-                      setFormData({ ...formData, goldKarat: karat })
+            {/* Metal Type and Karat - 2 Column Layout */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Metal Type */}
+              <div>
+                <label className="text-sm text-muted-foreground">
+                  Metal Type <span className="text-red-500">*</span>
+                </label>
+                <Select
+                  value={formData.metalType}
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, metalType: value });
+                    // Auto-set appropriate karat based on metal type
+                    if (value === "Gold") {
+                      setFormData({
+                        ...formData,
+                        metalType: value,
+                        goldKarat: "18KT",
+                      });
+                    } else if (value === "Platinum") {
+                      setFormData({
+                        ...formData,
+                        metalType: value,
+                        goldKarat: "950",
+                      });
+                    } else if (value === "Silver") {
+                      setFormData({
+                        ...formData,
+                        metalType: value,
+                        goldKarat: "925",
+                      });
                     }
-                    className={`px-4 py-2 rounded-md text-sm ${
-                      formData.goldKarat === karat
-                        ? "bg-[#328F94] text-white"
-                        : "bg-muted hover:bg-muted/80"
-                    }`}
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="Gold">Gold</SelectItem>
+                    <SelectItem value="Platinum">Platinum</SelectItem>
+                    <SelectItem value="Silver">Silver</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Karat Section with Scrollable UI */}
+              <div>
+                <h3 className="my-1 text-sm">
+                  {formData.metalType === "Gold"
+                    ? "Gold Karat"
+                    : formData.metalType === "Platinum"
+                    ? "Platinum Purity"
+                    : "Silver Purity"}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (metalTypesRef.current) {
+                        metalTypesRef.current.scrollBy({
+                          left: -100,
+                          behavior: "smooth",
+                        });
+                      }
+                    }}
+                    aria-label="Scroll left"
+                    className="p-1 hover:bg-gray-100 rounded"
                   >
-                    {karat}
+                    <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
                   </button>
-                ))}
+                  <div
+                    ref={metalTypesRef}
+                    className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
+                  >
+                    {formData.metalType === "Gold" &&
+                      ["18KT", "14KT", "9KT"].map((karat) => (
+                        <button
+                          key={karat}
+                          onClick={() => {
+                            setFormData({ ...formData, goldKarat: karat });
+                            console.log("🥇 Karat Selected:", {
+                              goldKarat: karat,
+                              metalType: formData.metalType,
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === karat
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
+                        >
+                          {karat}
+                        </button>
+                      ))}
+                    {formData.metalType === "Platinum" &&
+                      ["950"].map((purity) => (
+                        <button
+                          key={purity}
+                          onClick={() => {
+                            setFormData({ ...formData, goldKarat: purity });
+                            console.log("🥈 Platinum Purity Selected:", {
+                              goldKarat: purity,
+                              metalType: formData.metalType,
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === purity
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
+                        >
+                          {purity}
+                        </button>
+                      ))}
+                    {formData.metalType === "Silver" &&
+                      ["925", "920"].map((purity) => (
+                        <button
+                          key={purity}
+                          onClick={() => {
+                            setFormData({ ...formData, goldKarat: purity });
+                            console.log("🥉 Silver Purity Selected:", {
+                              goldKarat: purity,
+                              metalType: formData.metalType,
+                            });
+                          }}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === purity
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
+                        >
+                          {purity}
+                        </button>
+                      ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (metalTypesRef.current) {
+                        metalTypesRef.current.scrollBy({
+                          left: 100,
+                          behavior: "smooth",
+                        });
+                      }
+                    }}
+                    aria-label="Scroll right"
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -713,8 +957,19 @@ export default function EarringBuilder() {
           <div className="space-y-6">
             {/* Metal Color */}
             <div>
-              <label className="text-sm text-muted-foreground">
-                Metal Color: Same as Image
+              <label
+                className={`text-sm text-muted-foreground ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
+              >
+                Metal Color:{" "}
+                {metalTypesRef.current ? ` ${formData.metalColor}` : ""}{" "}
+                <span className="text-red-500">*</span>
+                {formData.sameAsImage && (
+                  <span className="text-xs text-gray-500 ml-2">
+                    (Same as Image)
+                  </span>
+                )}
               </label>
               <Select
                 value={formData.metalColor}
@@ -723,14 +978,36 @@ export default function EarringBuilder() {
                 }
                 disabled={formData.sameAsImage}
               >
-                <SelectTrigger>
+                <SelectTrigger
+                  className={formData.sameAsImage ? "opacity-50" : ""}
+                >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Same as Image">Same as Image</SelectItem>
-                  <SelectItem value="Yellow Gold">Yellow Gold</SelectItem>
-                  <SelectItem value="White Gold">White Gold</SelectItem>
-                  <SelectItem value="Rose Gold">Rose Gold</SelectItem>
+                <SelectContent className="bg-white">
+                  <SelectItem value="Yellow Gold" className="gap-">
+                    <img
+                      src="/colors/gold.png"
+                      alt="Yellow Gold"
+                      className="inline-block h-6 w-6 mr-2 mb-1"
+                    />
+                    Yellow Gold{" "}
+                  </SelectItem>
+                  <SelectItem value="White Gold">
+                    <img
+                      src="/colors/white.png"
+                      alt="White Gold"
+                      className="inline-block h-6 w-6 mr-2 mb-1"
+                    />
+                    White Gold
+                  </SelectItem>
+                  <SelectItem value="Rose Gold">
+                    <img
+                      src="/colors/rosegold.png"
+                      alt="Rose Gold"
+                      className="inline-block h-6 w-6 mr-2 mb-1"
+                    />
+                    Rose Gold
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -810,7 +1087,7 @@ export default function EarringBuilder() {
                   </Button>
                 </div>
                 <div className="flex gap-4">
-                  {uploadedImages.slice(0, 3).map((image, index) => (
+                  {uploadedImages.map((image, index) => (
                     <div key={index} className="relative">
                       <img
                         src={image}
@@ -829,7 +1106,7 @@ export default function EarringBuilder() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">Selected Properties</h3>
-                  <Button variant="link" size="sm" className="text-[#328F94]">
+                  <Button onClick={() => setCurrentStep(2)} variant="link" size="sm" className="text-[#328F94]">
                     Change Properties
                   </Button>
                 </div>
@@ -1188,14 +1465,14 @@ export default function EarringBuilder() {
       // Ensure we have the latest userId
       const currentUserId = getUserId();
       if (!currentUserId) {
-        alert("Please login to proceed with customization request.");
+        toast.error("Please login to proceed with customization request.");
         navigate("/login");
         return;
       }
 
       // Check if zip code is provided and valid
       if (!formData.zipCode) {
-        alert(
+        toast.error(
           "Please enter your zip code before creating the customization request."
         );
         setLoading(false);
@@ -1203,7 +1480,7 @@ export default function EarringBuilder() {
       }
 
       if (formData.zipCode.length !== 6 || !/^\d{6}$/.test(formData.zipCode)) {
-        alert("Please enter a valid 6-digit pincode.");
+        toast.error("Please enter a valid 6-digit pincode.");
         setLoading(false);
         return;
       }
@@ -1211,13 +1488,15 @@ export default function EarringBuilder() {
       // Check if serviceability has been verified
       if (serviceabilityStatus !== "serviceable") {
         if (serviceabilityStatus === "not-serviceable") {
-          alert(
+          toast.error(
             "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
           );
           setLoading(false);
           return;
         } else if (serviceabilityStatus === "checking") {
-          alert("Please wait while we check if your area is serviceable.");
+          toast.error(
+            "Please wait while we check if your area is serviceable."
+          );
           setLoading(false);
           return;
         } else {
@@ -1229,7 +1508,7 @@ export default function EarringBuilder() {
           const isServiceable = await checkServiceability(formData.zipCode);
 
           if (!isServiceable) {
-            alert(
+            toast.error(
               "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
             );
             setLoading(false);
@@ -1408,7 +1687,7 @@ export default function EarringBuilder() {
           console.log("✅ Images uploaded successfully:", uploadedImageUrls);
         } else {
           console.error("❌ Failed to upload images:", imageResult.message);
-          alert("Failed to upload images. Please try again.");
+          toast.error("Failed to upload images. Please try again.");
           setLoading(false);
           return;
         }
@@ -1452,7 +1731,7 @@ export default function EarringBuilder() {
           subCategory: !!customizationRequestDataWithImages.subCategory,
           jewelryType: !!customizationRequestDataWithImages.jewelryType,
         });
-        alert(
+        toast.error(
           "Missing required information. Please fill in all required fields."
         );
         setLoading(false);
@@ -1474,7 +1753,7 @@ export default function EarringBuilder() {
           "❌ Missing contact information:",
           customizationRequestDataWithImages.contactInfo
         );
-        alert(
+        toast.error(
           "Please fill in all contact information fields (name, email, phone, address, city, pincode)."
         );
         setLoading(false);
@@ -1498,7 +1777,7 @@ export default function EarringBuilder() {
         console.log("� Server connectivity test:", testResponse.status);
       } catch (error) {
         console.error("❌ Server connectivity error:", error);
-        alert(
+        toast.error(
           "Cannot connect to server. Please make sure the server is running."
         );
         setLoading(false);
@@ -1547,12 +1826,14 @@ export default function EarringBuilder() {
           "❌ Failed to create customization request:",
           result.message
         );
-        alert(`❌ Failed to submit customization request: ${result.message}`);
+        toast.error(
+          `❌ Failed to submit customization request: ${result.message}`
+        );
         setLoading(false);
       }
     } catch (error) {
       console.error("❌ Error creating customization request:", error);
-      alert(
+      toast.error(
         "❌ An error occurred while submitting your customization request. Please try again."
       );
       setLoading(false);
