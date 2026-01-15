@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { Link, useNavigate } from "react-router-dom";
+import { Country, State, City } from "country-state-city";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -180,6 +181,28 @@ export default function EarringBuilder() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
 
+  // Country/State/City management
+  const countries = Country.getAllCountries();
+  const defaultCountry =
+    countries.find((c) => c.name === "India") || countries[0];
+  const [selectedCountry, setSelectedCountry] = useState(
+    defaultCountry.isoCode
+  );
+  const [selectedState, setSelectedState] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+
+  // Get states for selected country (excluding Kerala)
+  const states = State.getStatesOfCountry(selectedCountry).filter(
+    (state) => state.name.toLowerCase() !== "kerala"
+  );
+
+  // Get cities for selected state (excluding Borivli)
+  const cities = selectedState
+    ? City.getCitiesOfState(selectedCountry, selectedState).filter(
+        (city) => city.name.toLowerCase() !== "borivli"
+      )
+    : [];
+
   const [formData, setFormData] = useState({
     userId: "",
     jewelryType: "earring",
@@ -244,6 +267,30 @@ export default function EarringBuilder() {
       console.log("🔄 Updated userId in formData:", currentUserId);
     }
   }, [authUser, getUserId, formData.userId]);
+
+  // Sync country selection with formData
+  useEffect(() => {
+    const country = countries.find((c) => c.isoCode === selectedCountry);
+    if (country) {
+      setFormData((prev) => ({ ...prev, country: country.name }));
+    }
+  }, [selectedCountry]);
+
+  // Sync state selection with formData
+  useEffect(() => {
+    const state = states.find((s) => s.isoCode === selectedState);
+    if (state) {
+      setFormData((prev) => ({ ...prev, region: state.name }));
+    }
+  }, [selectedState, states]);
+
+  // Sync city selection with formData
+  useEffect(() => {
+    const city = cities.find((c) => c.name === selectedCity);
+    if (city) {
+      setFormData((prev) => ({ ...prev, city: city.name }));
+    }
+  }, [selectedCity, cities]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -1106,7 +1153,12 @@ export default function EarringBuilder() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">Selected Properties</h3>
-                  <Button onClick={() => setCurrentStep(2)} variant="link" size="sm" className="text-[#328F94]">
+                  <Button
+                    onClick={() => setCurrentStep(2)}
+                    variant="link"
+                    size="sm"
+                    className="text-[#328F94]"
+                  >
                     Change Properties
                   </Button>
                 </div>
@@ -1202,38 +1254,43 @@ export default function EarringBuilder() {
                     <div>
                       <label className="text-sm">Country *</label>
                       <Select
-                        value={formData.country}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, country: value })
-                        }
+                        value={selectedCountry}
+                        onValueChange={setSelectedCountry}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select..." />
+                          <SelectValue placeholder="Select country..." />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          <SelectItem value="india">India</SelectItem>
-                          <SelectItem value="usa">USA</SelectItem>
-                          <SelectItem value="uk">UK</SelectItem>
+                        <SelectContent className="bg-white max-h-60">
+                          {countries.map((country) => (
+                            <SelectItem
+                              key={country.isoCode}
+                              value={country.isoCode}
+                            >
+                              {country.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
                       <label className="text-sm">Region/State *</label>
                       <Select
-                        value={formData.region}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, region: value })
-                        }
+                        value={selectedState}
+                        onValueChange={setSelectedState}
+                        disabled={!selectedCountry}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select..." />
+                          <SelectValue placeholder="Select state..." />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          <SelectItem value="maharashtra">
-                            Maharashtra
-                          </SelectItem>
-                          <SelectItem value="delhi">Delhi</SelectItem>
-                          <SelectItem value="bengaluru">Bengaluru</SelectItem>
+                        <SelectContent className="bg-white max-h-60">
+                          {states.map((state) => (
+                            <SelectItem
+                              key={state.isoCode}
+                              value={state.isoCode}
+                            >
+                              {state.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1243,18 +1300,19 @@ export default function EarringBuilder() {
                     <div>
                       <label className="text-sm">City *</label>
                       <Select
-                        value={formData.city}
-                        onValueChange={(value) =>
-                          setFormData({ ...formData, city: value })
-                        }
+                        value={selectedCity}
+                        onValueChange={setSelectedCity}
+                        disabled={!selectedState}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select..." />
+                          <SelectValue placeholder="Select city..." />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          <SelectItem value="mumbai">Mumbai</SelectItem>
-                          <SelectItem value="pune">Pune</SelectItem>
-                          <SelectItem value="delhi">Delhi</SelectItem>
+                        <SelectContent className="bg-white max-h-60">
+                          {cities.map((city) => (
+                            <SelectItem key={city.name} value={city.name}>
+                              {city.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
