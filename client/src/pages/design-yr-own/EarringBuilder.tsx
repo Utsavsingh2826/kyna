@@ -126,7 +126,6 @@ const diamondShapes = [
     ),
   },
 ];
-const goldKarat = ["22KT", "18KT", "14KT", "10KT"];
 
 export default function EarringBuilder() {
   type CustomizationDataType = {
@@ -212,6 +211,7 @@ export default function EarringBuilder() {
     imageUrls: [] as string[],
     modification: "",
     description: "",
+    diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
     diamondSize: "0.5 Carat",
     diamondColor: "D-FL",
@@ -219,7 +219,7 @@ export default function EarringBuilder() {
     metalType: "Gold",
     metalColor: "Yellow Gold",
     backingType: "",
-    goldKarat: "22KT",
+    goldKarat: "18KT",
     engraving: "",
     firstName: "",
     lastName: "",
@@ -350,7 +350,7 @@ export default function EarringBuilder() {
       );
 
       // Navigate to success page or dashboard
-      navigate("/dashboard?tab=customizations");
+      navigate("/");
     } catch (error) {
       console.error("❌ Error handling payment success:", error);
       toast.error(
@@ -414,6 +414,7 @@ export default function EarringBuilder() {
       if (!validateForStep(2)) return false;
 
       const customizationFields: Array<keyof typeof formData> = [
+        "diamondOrigin",
         "diamondShape",
         "diamondSize",
         "diamondColor",
@@ -1002,6 +1003,45 @@ export default function EarringBuilder() {
         }
         rightColumn={
           <div className="space-y-6">
+            {/* Diamond Origin */}
+            <div>
+              <label className="text-sm text-muted-foreground">
+                Diamond Origin <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Natural Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-2xl border-2 transition-all ${
+                    formData.diamondOrigin === "Natural Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Natural Diamond</span>
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Lab Grown Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-2xl border-2 transition-all ${
+                    formData.diamondOrigin === "Lab Grown Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Lab Grown Diamond</span>
+                </button>
+              </div>
+            </div>
+
             {/* Metal Color */}
             <div>
               <label
@@ -1641,6 +1681,7 @@ export default function EarringBuilder() {
         stylingName: "CUSTOM",
         referenceImages: uploadedImages,
         inspirationImages: uploadedImages,
+        diamondOrigin: formData.diamondOrigin,
         diamondShape: formData.diamondShape,
         diamondSize: formData.diamondSize,
         diamondColor: formData.diamondColor,
@@ -1680,6 +1721,7 @@ export default function EarringBuilder() {
               modificationRequest: formData.modification,
             },
             step2: {
+              diamondOrigin: formData.diamondOrigin,
               diamondShape: formData.diamondShape,
               diamondSize: formData.diamondSize,
               diamondColor: formData.diamondColor,

@@ -129,8 +129,6 @@ const diamondShapes = [
   },
 ];
 
-const goldKarat = ["22KT", "18KT", "14KT", "10KT"];
-
 const ringSizes = [
   "11 (16.3MM)",
   "12 (16.5MM)",
@@ -214,8 +212,11 @@ export default function RingBuilder() {
 
   // Country/State/City management
   const countries = Country.getAllCountries();
-  const defaultCountry = countries.find((c) => c.name === "India") || countries[0];
-  const [selectedCountry, setSelectedCountry] = useState(defaultCountry.isoCode);
+  const defaultCountry =
+    countries.find((c) => c.name === "India") || countries[0];
+  const [selectedCountry, setSelectedCountry] = useState(
+    defaultCountry.isoCode
+  );
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
 
@@ -244,13 +245,14 @@ export default function RingBuilder() {
     sameAsImage: false,
     modificationRequest: "",
     description: "",
+    diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
     diamondSize: "0.5 Carat",
     diamondColor: "D-FL",
     diamondClarity: "Center Stone",
     metal: "Gold",
     metalColor: "Yellow Gold",
-    goldKarat: "22KT",
+    goldKarat: "18KT",
     ringSize: "",
     engraving: "",
 
@@ -543,6 +545,7 @@ export default function RingBuilder() {
       if (!validateForStep(2)) return false;
 
       const customizationFields: Array<keyof typeof formData> = [
+        "diamondOrigin",
         "diamondShape",
         "diamondSize",
         "diamondColor",
@@ -1120,6 +1123,45 @@ export default function RingBuilder() {
         }
         rightColumn={
           <div className="space-y-6">
+            {/* Diamond Origin */}
+            <div>
+              <label className="text-sm text-muted-foreground">
+                Diamond Origin <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Natural Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-2xl border-2 transition-all ${
+                    formData.diamondOrigin === "Natural Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Natural Diamond</span>
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Lab Grown Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-2xl border-2 transition-all ${
+                    formData.diamondOrigin === "Lab Grown Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Lab Grown Diamond</span>
+                </button>
+              </div>
+            </div>
+
             {/* Metal Color */}
             <div>
               <label
@@ -1554,7 +1596,10 @@ export default function RingBuilder() {
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-60">
                           {countries.map((country) => (
-                            <SelectItem key={country.isoCode} value={country.isoCode}>
+                            <SelectItem
+                              key={country.isoCode}
+                              value={country.isoCode}
+                            >
                               {country.name}
                             </SelectItem>
                           ))}
@@ -1573,7 +1618,10 @@ export default function RingBuilder() {
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-60">
                           {states.map((state) => (
-                            <SelectItem key={state.isoCode} value={state.isoCode}>
+                            <SelectItem
+                              key={state.isoCode}
+                              value={state.isoCode}
+                            >
                               {state.name}
                             </SelectItem>
                           ))}
@@ -2054,6 +2102,7 @@ export default function RingBuilder() {
         stylingName: "CUSTOM",
         referenceImages: uploadedImages,
         inspirationImages: uploadedImages,
+        diamondOrigin: formData.diamondOrigin,
         diamondShape: formData.diamondShape,
         diamondSize: formData.diamondSize,
         diamondColor: formData.diamondColor,
@@ -2095,6 +2144,7 @@ export default function RingBuilder() {
               modificationRequest: formData.modificationRequest,
             },
             step2: {
+              diamondOrigin: formData.diamondOrigin,
               diamondShape: formData.diamondShape,
               diamondSize: formData.diamondSize,
               diamondColor: formData.diamondColor,
@@ -2317,6 +2367,7 @@ export default function RingBuilder() {
           stylingName: "CUSTOM",
           referenceImages: uploadedImageUrls,
           inspirationImages: uploadedImageUrls,
+          diamondOrigin: formData.diamondOrigin,
           diamondShape: formData.diamondShape,
           diamondSize: formData.diamondSize,
           diamondColor: formData.diamondColor,
@@ -2719,7 +2770,7 @@ export default function RingBuilder() {
   //           metal: {
   //             type: formData.metal || "Gold",
   //             color: formData.metalColor || "Same as Image",
-  //             karat: formData.goldKarat || "22KT",
+  //             karat: formData.goldKarat || "18KT",
   //           },
 
   //           // Ring specific details
