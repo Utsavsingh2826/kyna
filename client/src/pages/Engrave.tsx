@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ArrowLeft, X, Download, Move } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import {
   Accordion,
   AccordionContent,
@@ -476,9 +477,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
         </div>
 
         <div className="sm:p-6">
-          <div className="flex flex-col lg:flex-row sm:gap-8">
-            {/* Left Side - Selected Image Display */}
-            <div className="lg:w-1/2">
+          <StickyTwoColumnLayout
+            leftColumn={
               <div className="bg-gray-50 rounded-lg p-6">
                 {currentSelectedImage ? (
                   <div className="mb-4">
@@ -513,7 +513,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                       src={currentSelectedImage || "/newring.jpg"}
                       alt="Selected jewelry for engraving"
                       draggable={false}
-                      className="pointer-events-none select-none"
+                      className="pointer-events-none select-none rounded-xl"
                     />
                   ) : (
                     <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
@@ -614,6 +614,20 @@ const EngravingPage: React.FC<EngraveProps> = ({
                   )}
                 </div>
 
+                {/* disclamer */}
+                <ul className="list-disc pl-5 text-[10px] mt-1 text-gray-500">
+                  <li>
+                    Approximate Position: Any positioning shown in digital
+                    mock-ups or requested by the customer is considered
+                    approximate.
+                  </li>
+                  <li>
+                    Manufacturing Variance: The final engraved position may
+                    slightly shift due to technical requirements or constraints
+                    during manufacturing, setting, or polishing.
+                  </li>
+                </ul>
+
                 {/* Position Controls */}
                 {/* <div className="mt-4 p-4 bg-white rounded-lg shadow-sm">
                   <h4 className="text-sm font-medium text-gray-700 mb-3">
@@ -703,10 +717,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
                   </div>
                 </div>  */}
               </div>
-            </div>
-
-            {/* Right Side - Controls */}
-            <div className="lg:w-1/2">
+            }
+            rightColumn={
               <div className="bg-gray-50 rounded-lg py-0 sm:py-6 p-6">
                 {/* Tabs */}
                 <div className="flex mb-6">
@@ -789,9 +801,17 @@ const EngravingPage: React.FC<EngraveProps> = ({
                         <label className="block text-sm font-medium text-gray-700">
                           Add Your Message
                         </label>
-                        <button className="text-sm text-gray-500 hover:text-gray-700">
-                          ADD MOTIF ▼
-                        </button>
+                        {selectedMotif && (
+                          <button
+                            onClick={() => {
+                              setSelectedMotif(null);
+                              setMotifPosition(-1);
+                            }}
+                            className="text-sm text-red-500 hover:text-red-700 font-medium"
+                          >
+                            REMOVE MOTIF ✕
+                          </button>
+                        )}
                       </div>
                       <textarea
                         ref={textInputRef}
@@ -825,7 +845,9 @@ const EngravingPage: React.FC<EngraveProps> = ({
                           {maxCount -
                             (selectedMotif && motifPosition >= 0 ? 2 : 0)}
                           {selectedMotif && motifPosition >= 0 && (
-                            <span className="ml-2">(Motif uses 2)</span>
+                            <span className="ml-2">
+                              (Motif uses 2 character space)
+                            </span>
                           )}
                         </div>
                         <div>
@@ -951,30 +973,38 @@ const EngravingPage: React.FC<EngraveProps> = ({
 
                             <AccordionContent>
                               <div className="grid grid-cols-3 md:grid-cols-6 gap-3 mt-2">
-                                {files.map((file: string) => (
-                                  <button
-                                    key={file}
-                                    onClick={() => {
-                                      setSelectedMotif(file);
-                                      // Insert motif at current cursor position
-                                      const cursorPos =
-                                        textInputRef.current?.selectionStart ??
-                                        engravingText.length;
-                                      setMotifPosition(cursorPos);
-                                    }}
-                                    className={`p-1 rounded-lg border overflow-hidden bg-white transition-shadow ${
-                                      selectedMotif === file
-                                        ? "ring-2 ring-teal-400 border-transparent"
-                                        : "border-neutral-200 hover:shadow"
-                                    }`}
-                                  >
-                                    <img
-                                      src={`/motif/${file}`}
-                                      alt={file}
-                                      className="w-full h-16 object-contain"
-                                    />
-                                  </button>
-                                ))}
+                                {Array.isArray(files) &&
+                                  files.map((file: string) => (
+                                    <button
+                                      key={file}
+                                      onClick={() => {
+                                        // Toggle motif selection
+                                        if (selectedMotif === file) {
+                                          setSelectedMotif(null);
+                                          setMotifPosition(-1);
+                                        } else {
+                                          setSelectedMotif(file);
+                                          // Insert motif at current cursor position
+                                          const cursorPos =
+                                            textInputRef.current
+                                              ?.selectionStart ??
+                                            engravingText.length;
+                                          setMotifPosition(cursorPos);
+                                        }
+                                      }}
+                                      className={`p-1 rounded-lg border overflow-hidden bg-white transition-shadow ${
+                                        selectedMotif === file
+                                          ? "ring-2 ring-teal-400 border-transparent"
+                                          : "border-neutral-200 hover:shadow"
+                                      }`}
+                                    >
+                                      <img
+                                        src={`/motif/${file}`}
+                                        alt={file}
+                                        className="w-full h-16 object-contain"
+                                      />
+                                    </button>
+                                  ))}
                               </div>
                             </AccordionContent>
                           </AccordionItem>
@@ -984,8 +1014,8 @@ const EngravingPage: React.FC<EngraveProps> = ({
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+            }
+          />
         </div>
 
         {/* Hidden Canvas for Image Generation */}
