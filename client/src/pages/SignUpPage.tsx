@@ -53,7 +53,7 @@ const SignUpPage: React.FC = () => {
       }));
       setSuccess(
         location.state?.message ||
-          "Please verify your email. We've sent you another code."
+        "Please verify your email. We've sent you another code."
       );
       setStep("verifyOtp");
     }
@@ -81,8 +81,23 @@ const SignUpPage: React.FC = () => {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError("Password must be at least 8 characters long");
+    const password = formData.password;
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    if (
+      password.length < minLength ||
+      !hasUpperCase ||
+      !hasLowerCase ||
+      !hasNumber ||
+      !hasSpecialChar
+    ) {
+      setError(
+        "Password must contain at least 8 characters, including an uppercase letter, a lowercase letter, a number, and a special character."
+      );
       setIsLoading(false);
       return;
     }
@@ -100,13 +115,13 @@ const SignUpPage: React.FC = () => {
       if (resp.success) {
         setSuccess(
           resp.message ||
-            "Registered. Please verify your email with the OTP sent."
+          "Registered. Please verify your email with the OTP sent."
         );
         setStep("verifyOtp");
       } else if (resp.data?.requiresVerification) {
         setSuccess(
           resp.data.message ||
-            "Please verify your email. We've sent you another code."
+          "Please verify your email. We've sent you another code."
         );
         setStep("verifyOtp");
       } else {
@@ -147,7 +162,7 @@ const SignUpPage: React.FC = () => {
           /* ignore storage write failures */
         }
         setStep("completed");
-        
+
         // Navigate to login so the user can sign in
         setTimeout(() => navigate("/login"), 800);
       } else {
@@ -196,7 +211,7 @@ const SignUpPage: React.FC = () => {
               sign in to your existing account
             </Link>
           </p>
-          
+
           {/* Referral Code Indicator */}
           {referralCode && (
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">

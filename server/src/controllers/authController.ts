@@ -98,6 +98,14 @@ export const signup = async (req: Request, res: Response) => {
       throw new Error("All fields are required");
     }
 
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      throw new Error(
+        "Password must contain at least 8 characters, including a lowercase letter, an uppercase letter, a number, and a special character."
+      );
+    }
+
     const userAlreadyExists = await User.findOne({ email });
     console.log("userAlreadyExists", userAlreadyExists);
 
@@ -548,11 +556,11 @@ export const updateProfile = async (
       "🖼 Uploaded file info:",
       profileImageFile
         ? {
-            originalname: profileImageFile.originalname,
-            mimetype: profileImageFile.mimetype,
-            size: profileImageFile.size,
-            path: profileImageFile.path, // Cloudinary URL
-          }
+          originalname: profileImageFile.originalname,
+          mimetype: profileImageFile.mimetype,
+          size: profileImageFile.size,
+          path: profileImageFile.path, // Cloudinary URL
+        }
         : "No file uploaded"
     );
 
