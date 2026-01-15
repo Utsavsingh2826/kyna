@@ -748,13 +748,13 @@ const ProductDetail = () => {
               substyles: cat.substyles.map((s) =>
                 s.parentSku === parentSku
                   ? {
-                      ...s,
-                      productDetails: data,
-                      thumbnailImages: data.variantImages,
-                      price: new Intl.NumberFormat("en-IN").format(
-                        data.sellingPrice
-                      ),
-                    }
+                    ...s,
+                    productDetails: data,
+                    thumbnailImages: data.variantImages,
+                    price: new Intl.NumberFormat("en-IN").format(
+                      data.sellingPrice
+                    ),
+                  }
                   : s
               ),
             }))
@@ -984,13 +984,13 @@ const ProductDetail = () => {
           substyles: cat.substyles.map((s) =>
             s.parentSku === substyle.parentSku
               ? {
-                  ...s,
-                  productDetails: data,
-                  price: new Intl.NumberFormat("en-IN").format(
-                    data.sellingPrice
-                  ),
-                  thumbnailImages: data.variantImages,
-                }
+                ...s,
+                productDetails: data,
+                price: new Intl.NumberFormat("en-IN").format(
+                  data.sellingPrice
+                ),
+                thumbnailImages: data.variantImages,
+              }
               : s
           ),
         }))
@@ -1490,11 +1490,10 @@ const ProductDetail = () => {
                         onClick={() => {
                           setSelectedImage(index);
                         }}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
                             ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                             : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -1573,11 +1572,10 @@ const ProductDetail = () => {
                         <button
                           key={index}
                           onClick={() => setSelectedImage(index)}
-                          className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                            selectedImage === index
+                          className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
                               ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                               : "border-neutral-200 hover:border-neutral-300"
-                          }`}
+                            }`}
                         >
                           {is3DModel(image, index) ? (
                             <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -1675,11 +1673,10 @@ const ProductDetail = () => {
                                 }
                               }
                             }}
-                            className={`px-3 md:px-4 py-2 md:py-2.5 rounded-lg border text-xs md:text-sm font-medium min-w-max whitespace-nowrap transition-all capitalize flex-shrink-0 ${
-                              selectedStyleCategory === category.name
+                            className={`px-3 md:px-4 py-2 md:py-2.5 rounded-lg border text-xs md:text-sm font-medium min-w-max whitespace-nowrap transition-all capitalize flex-shrink-0 ${selectedStyleCategory === category.name
                                 ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94] shadow-sm"
                                 : "border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:bg-gray-50"
-                            }`}
+                              }`}
                           >
                             {category.name}
                           </button>
@@ -1738,11 +1735,10 @@ const ProductDetail = () => {
                                 setSelectedRingStyle(style.name);
                                 setSelectedImage(0); // Reset to first image when style changes
                               }}
-                              className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
-                                selectedRingStyle === style.name
+                              className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${selectedRingStyle === style.name
                                   ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
-                              }`}
+                                }`}
                             >
                               <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
                                 <img
@@ -1787,9 +1783,8 @@ const ProductDetail = () => {
                     Diamond Origin{" "}
                     <button
                       type="button"
-                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${
-                        showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
-                      }`}
+                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
+                        }`}
                       onClick={() => setShowTooltip((prev) => !prev)}
                     >
                       i
@@ -1826,15 +1821,13 @@ const ProductDetail = () => {
                           if (!isLabGrownVariant)
                             setSelectedDiamondOrigin(origin);
                         }}
-                        className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
-                          selectedDiamondOrigin === origin
+                        className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${selectedDiamondOrigin === origin
                             ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
                             : "border-neutral-600 text-neutral-600"
-                        } ${
-                          isLabGrownVariant && origin !== "Lab Grown Diamond"
+                          } ${isLabGrownVariant && origin !== "Lab Grown Diamond"
                             ? "opacity-50 pointer-events-none"
                             : ""
-                        }`}
+                          }`}
                       >
                         {origin}
                       </button>
@@ -1859,11 +1852,10 @@ const ProductDetail = () => {
                         <button
                           onClick={() => setSelectedDiamondShape(shape.name)}
                           className={`w-14 h-14 md:w-16 md:h-16 border rounded-lg overflow-hidden grid place-items-center p-1 transition-all
-            ${
-              selectedDiamondShape === shape.name
-                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                : "border-neutral-300 hover:border-neutral-400"
-            }`}
+            ${selectedDiamondShape === shape.name
+                              ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                              : "border-neutral-300 hover:border-neutral-400"
+                            }`}
                         >
                           <img
                             src={shape.img}
@@ -1963,7 +1955,7 @@ const ProductDetail = () => {
                 {/* Diamond Color & Clarity Section */}
                 {selectedStyleData?.productDetails?.diamondColorClarity &&
                   selectedStyleData.productDetails.diamondColorClarity.length >
-                    0 && (
+                  0 && (
                     <div className="w-1/2 mb-6">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Color & Clarity:{" "}
@@ -2019,8 +2011,8 @@ const ProductDetail = () => {
                           value === "SILVER"
                             ? ["SLV"]
                             : value === "PLATINUM"
-                            ? ["PT"]
-                            : selectedStyleData?.productDetails?.goldKarats?.filter(
+                              ? ["PT"]
+                              : selectedStyleData?.productDetails?.goldKarats?.filter(
                                 (k) => !["925", "950"].includes(k)
                               ) || ["18kt", "14kt", "9kt"];
                         setSelectedGoldKarat(newKarats[0] || "");
@@ -2043,19 +2035,19 @@ const ProductDetail = () => {
                       {selectedMetalType === "GOLD"
                         ? "Select Gold Karat"
                         : selectedMetalType === "SILVER"
-                        ? "Silver Purity"
-                        : selectedMetalType === "PLATINUM"
-                        ? "Platinum Purity"
-                        : "Metal Purity"}
+                          ? "Silver Purity"
+                          : selectedMetalType === "PLATINUM"
+                            ? "Platinum Purity"
+                            : "Metal Purity"}
                       :{" "}
                       <span className="text-[#8D8A91]">
                         {selectedMetalType === "GOLD"
                           ? `${selectedGoldKarat || getAvailableKarats()[0]}`
                           : selectedMetalType === "SILVER"
-                          ? "925"
-                          : selectedMetalType === "PLATINUM"
-                          ? "950"
-                          : ""}
+                            ? "925"
+                            : selectedMetalType === "PLATINUM"
+                              ? "950"
+                              : ""}
                       </span>
                     </h3>
                     <div className="flex items-center gap-2">
@@ -2082,11 +2074,10 @@ const ProductDetail = () => {
                             <button
                               key={`${karat}-${index}`}
                               onClick={() => setSelectedGoldKarat(karat)}
-                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                                selectedGoldKarat === karat
+                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${selectedGoldKarat === karat
                                   ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
                                   : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
-                              }`}
+                                }`}
                             >
                               {karat}
                             </button>
@@ -2094,22 +2085,20 @@ const ProductDetail = () => {
                         ) : selectedMetalType === "SILVER" ? (
                           <button
                             onClick={() => setSelectedGoldKarat("SLV")}
-                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                              selectedGoldKarat === "SLV"
+                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${selectedGoldKarat === "SLV"
                                 ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
                                 : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
-                            }`}
+                              }`}
                           >
                             925
                           </button>
                         ) : selectedMetalType === "PLATINUM" ? (
                           <button
                             onClick={() => setSelectedGoldKarat("PLT")}
-                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                              selectedGoldKarat === "PLT"
+                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${selectedGoldKarat === "PLT"
                                 ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
                                 : "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                            }`}
+                              }`}
                           >
                             950
                           </button>
@@ -2153,11 +2142,10 @@ const ProductDetail = () => {
                             setSelectedMetalColor(colorInfo.name);
                             setSelectedColorCode(code);
                           }}
-                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
-                            selectedColorCode === code
+                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${selectedColorCode === code
                               ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                               : "border-neutral-300 hover:border-neutral-400"
-                          }`}
+                            }`}
                           title={colorInfo.name}
                         >
                           {isCombination ? (
@@ -2196,11 +2184,10 @@ const ProductDetail = () => {
                               setSelectedMetalColor(colorInfo.name);
                               setSelectedColorCode(code);
                             }}
-                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
-                              selectedColorCode === code
+                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${selectedColorCode === code
                                 ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                                 : "border-neutral-300 hover:border-neutral-400"
-                            }`}
+                              }`}
                             title={colorInfo.name}
                           >
                             {isCombination ? (

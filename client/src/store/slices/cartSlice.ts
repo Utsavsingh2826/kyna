@@ -140,32 +140,32 @@ export const addToCart =
       };
     }
   ) =>
-  async (dispatch: any) => {
-    try {
-      dispatch(setLoading(true));
-      dispatch(setError(null));
+    async (dispatch: any) => {
+      try {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
 
-      const response = await apiService.addToCart(
-        productId,
-        quantity,
-        variantData
-      );
+        const response = await apiService.addToCart(
+          productId,
+          quantity,
+          variantData
+        );
 
-      if (response.success) {
-        dispatch(fetchCart()); // Refresh cart
-      } else {
-        dispatch(setError(response.error || "Failed to add item to cart"));
+        if (response.success) {
+          dispatch(fetchCart()); // Refresh cart
+        } else {
+          dispatch(setError(response.error || "Failed to add item to cart"));
+        }
+      } catch (error) {
+        dispatch(
+          setError(
+            error instanceof Error ? error.message : "Failed to add item to cart"
+          )
+        );
+      } finally {
+        dispatch(setLoading(false));
       }
-    } catch (error) {
-      dispatch(
-        setError(
-          error instanceof Error ? error.message : "Failed to add item to cart"
-        )
-      );
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
+    };
 
 export const updateCartItem =
   (
@@ -188,38 +188,38 @@ export const updateCartItem =
       };
     }
   ) =>
-  async (dispatch: any) => {
-    try {
-      dispatch(setLoading(true));
-      dispatch(setError(null));
+    async (dispatch: any) => {
+      try {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
 
-      console.log("🚀 Redux updateCartItem - Sending to API:", {
-        productId,
-        quantity,
-        variantData,
-      });
+        console.log("🚀 Redux updateCartItem - Sending to API:", {
+          productId,
+          quantity,
+          variantData,
+        });
 
-      const response = await apiService.updateCartItem(
-        productId,
-        quantity,
-        variantData
-      );
+        const response = await apiService.updateCartItem(
+          productId,
+          quantity,
+          variantData
+        );
 
-      if (response.success) {
-        dispatch(fetchCart()); // Refresh cart
-      } else {
-        dispatch(setError(response.error || "Failed to update cart item"));
+        if (response.success) {
+          dispatch(fetchCart()); // Refresh cart
+        } else {
+          dispatch(setError(response.error || "Failed to update cart item"));
+        }
+      } catch (error) {
+        dispatch(
+          setError(
+            error instanceof Error ? error.message : "Failed to update cart item"
+          )
+        );
+      } finally {
+        dispatch(setLoading(false));
       }
-    } catch (error) {
-      dispatch(
-        setError(
-          error instanceof Error ? error.message : "Failed to update cart item"
-        )
-      );
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
+    };
 
 export const removeFromCart =
   (
@@ -241,30 +241,30 @@ export const removeFromCart =
       };
     }
   ) =>
-  async (dispatch: any) => {
-    try {
-      dispatch(setLoading(true));
-      dispatch(setError(null));
+    async (dispatch: any) => {
+      try {
+        dispatch(setLoading(true));
+        dispatch(setError(null));
 
-      const response = await apiService.removeFromCart(productId, variantData);
+        const response = await apiService.removeFromCart(productId, variantData);
 
-      if (response.success) {
-        dispatch(fetchCart()); // Refresh cart
-      } else {
-        dispatch(setError(response.error || "Failed to remove item from cart"));
+        if (response.success) {
+          dispatch(fetchCart()); // Refresh cart
+        } else {
+          dispatch(setError(response.error || "Failed to remove item from cart"));
+        }
+      } catch (error) {
+        dispatch(
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Failed to remove item from cart"
+          )
+        );
+      } finally {
+        dispatch(setLoading(false));
       }
-    } catch (error) {
-      dispatch(
-        setError(
-          error instanceof Error
-            ? error.message
-            : "Failed to remove item from cart"
-        )
-      );
-    } finally {
-      dispatch(setLoading(false));
-    }
-  };
+    };
 
 export const clearCartItems = () => async (dispatch: any) => {
   try {
