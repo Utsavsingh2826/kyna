@@ -1,10 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Facebook, Instagram, ArrowRight } from "lucide-react";
 import * as Accordion from "@radix-ui/react-accordion";
 import PdfPopup from "./PdfPopup";
-import { useState } from "react";
+import { toast } from "sonner";
 
 const columns = [
   {
@@ -55,6 +55,48 @@ const columns = [
 
 const Footer: React.FC = () => {
   const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/marketing/subscribe`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message || "Subscribed successfully!");
+        setEmail("");
+      } else {
+        toast.error(data.message || "Failed to subscribe. Please try again.");
+      }
+    } catch (error) {
+      console.error("Subscription error:", error);
+      toast.error("Something went wrong. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Function to open Calendly popup
   const openCalendly = () => {
@@ -150,15 +192,26 @@ const Footer: React.FC = () => {
 
             <form
               className="mt-3 flex gap-2"
-              onSubmit={(e) => e.preventDefault()}
+              onSubmit={handleSubscribe}
             >
               <Input
                 type="email"
                 placeholder="Your Email Address"
                 className="flex-1 h-10"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
               />
-              <Button className="h-10 w-10 bg-[#68C5C0] hover:bg-[#5ab3ae] p-0 flex items-center justify-center">
-                <ArrowRight className="w-5 h-5 text-white" />
+              <Button
+                type="submit"
+                className="h-10 w-10 bg-[#68C5C0] hover:bg-[#5ab3ae] p-0 flex items-center justify-center"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <ArrowRight className="w-5 h-5 text-white" />
+                )}
               </Button>
             </form>
           </div>
@@ -221,7 +274,7 @@ const Footer: React.FC = () => {
                     Customer Reviews
                   </a>
                 </li>
-                 <li>
+                <li>
                   <button
                     onClick={() => setIsPdfPopupOpen(true)}
                     className="text-sm text-gray-700 hover:text-teal-600 hover:underline text-left"
@@ -400,15 +453,26 @@ const Footer: React.FC = () => {
               </p>
               <form
                 className="mt-4 flex gap-2 w-full max-w-sm"
-                onSubmit={(e) => e.preventDefault()}
+                onSubmit={handleSubscribe}
               >
                 <Input
                   type="email"
                   placeholder="Your Email Address"
                   className="flex-1 h-10" // set fixed height
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
                 />
-                <Button className="h-10 w-10 flex items-center justify-center bg-[#68C5C0] hover:bg-[#5ab3ae] p-0">
-                  <ArrowRight className="h-5 w-5 text-white" />
+                <Button
+                  type="submit"
+                  className="h-10 w-10 flex items-center justify-center bg-[#68C5C0] hover:bg-[#5ab3ae] p-0"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-5 w-5 text-white" />
+                  )}
                 </Button>
               </form>
 
@@ -446,9 +510,9 @@ const Footer: React.FC = () => {
           </div>
         </div>
       </div>
-      <PdfPopup 
-        isOpen={isPdfPopupOpen} 
-        onClose={() => setIsPdfPopupOpen(false)} 
+      <PdfPopup
+        isOpen={isPdfPopupOpen}
+        onClose={() => setIsPdfPopupOpen(false)}
         pdfUrl="/Stone_Guide.pdf"
         title="Quality & Certification"
       />

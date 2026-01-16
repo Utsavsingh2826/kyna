@@ -5,6 +5,8 @@ import SEO from "@/components/SEO";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const blogPosts = [
   {
@@ -64,6 +66,49 @@ const blogPosts = [
 ];
 
 const Blogs = () => {
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast.error("Please enter a valid email address.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/marketing/subscribe`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success(data.message || "Subscribed successfully!");
+        setEmail("");
+      } else {
+        toast.error(data.message || "Failed to subscribe. Please try again.");
+      }
+    } catch (error) {
+      console.error("Subscription error:", error);
+      toast.error("Something went wrong. Please try again later.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="">
       <SEO
@@ -149,17 +194,25 @@ const Blogs = () => {
             </p>
           </div>
           <div className="">
-            <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
+            <form className="flex gap-2" onSubmit={handleSubscribe}>
               <Input
                 type="email"
                 placeholder="Your Email Address"
-                className="flex-1"
+                className="flex-1 text-black"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
               />
               <Button
                 type="submit"
                 className="px-3 h-10 bg-[#68C5C0] hover:bg-[#5ab3ae]"
+                disabled={isLoading}
               >
-                <ArrowRight className="h-4 w-4 text-white" />
+                {isLoading ? (
+                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <ArrowRight className="h-4 w-4 text-white" />
+                )}
               </Button>
             </form>
           </div>

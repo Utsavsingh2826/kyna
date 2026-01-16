@@ -1,61 +1,40 @@
 import { Request, Response } from "express";
-import fetch from "node-fetch";
+import { getGooglePlaceDetails } from "../services/GoogleReviewsService";
 
-// Google Reviews API endpoint
-// This endpoint fetches Google Reviews using Google Places API
-export const getGoogleReviews = async (req: Request, res: Response) => {
+// GET /api/reviews/site
+export const getSiteReviews = async (req: Request, res: Response) => {
   try {
-    const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
-    const PLACE_ID = process.env.GOOGLE_PLACE_ID; // Your Google Business Place ID
+    const details = await getGooglePlaceDetails();
 
-    if (!GOOGLE_PLACES_API_KEY || !PLACE_ID) {
-      // Return empty array if API key is not configured
-      return res.status(200).json({
-        success: true,
-        data: [],
-        message: "Google Reviews API not configured",
-      });
-    }
+    // The frontend expects the reviews array in 'data'
+    // We can also include the summary info if needed, but for now we follow the existing pattern
+    // or we can send the whole details object if we update the frontend type.
+    // Given the requirement "Map Google review fields to existing Site Review UI fields",
+    // and "Do NOT change UI layout", we will return the reviews array as the main data
+    // but maybe include overall rating in meta or separate field if we want.
+    // Existing frontend expects: { success: true, data: GoogleReview[] }
 
-    // Fetch reviews from Google Places API
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=reviews&key=${GOOGLE_PLACES_API_KEY}`;
-
-    const response = await fetch(url);
-    const data = await response.json() as any;
-
-    if (data.status === "OK" && data.result && data.result.reviews) {
-      // Transform Google reviews to match our format
-      const reviews = data.result.reviews.map((review: any) => ({
-        author_name: review.author_name,
-        author_url: review.author_url,
-        profile_photo_url: review.profile_photo_url,
-        rating: review.rating,
-        relative_time_description: review.relative_time_description,
-        text: review.text,
-        time: review.time,
-      }));
-
-      return res.status(200).json({
-        success: true,
-        data: reviews,
-      });
-    } else {
-      // If API call fails, return empty array
-      console.warn("Google Places API error:", data.status);
-      return res.status(200).json({
-        success: true,
-        data: [],
-        message: "Unable to fetch Google reviews",
-      });
-    }
-  } catch (error) {
-    console.error("Error fetching Google reviews:", error);
-    // Return empty array on error instead of failing
     return res.status(200).json({
       success: true,
+      data: details.reviews,
+      summary: {
+        name: details.name,
+        rating: details.rating,
+        total_ratings: details.user_ratings_total
+      }
+    });
+
+  } catch (error) {
+    console.error("Error in getSiteReviews controller:", error);
+    return res.status(500).json({
+      success: false,
       data: [],
-      message: "Failed to fetch Google reviews",
-      error: error instanceof Error ? error.message : "Unknown error",
+      message: "Internal server error fetching site reviews"
     });
   }
 };
+
+// Keep existing alias if needed or just use the one above.
+// The user asked to create "GoogleReviewsController (or similar)".
+// This file is googleReviewsController.ts.
+

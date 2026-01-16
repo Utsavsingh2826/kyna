@@ -58,9 +58,9 @@ const CustomerReviewsPage: React.FC = () => {
     try {
       const response = await fetch("/api/reviews/all?limit=100");
       const data = await response.json();
-      
+
       console.log("Reviews API response:", data);
-      
+
       if (response.ok && data.success && Array.isArray(data.data)) {
         setProductReviews(data.data);
         if (data.data.length === 0) {
@@ -84,7 +84,7 @@ const CustomerReviewsPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/reviews/google");
+      const response = await fetch("/api/reviews/site");
       const data = await response.json();
       if (data.success && Array.isArray(data.data)) {
         setGoogleReviews(data.data);
@@ -163,21 +163,19 @@ const CustomerReviewsPage: React.FC = () => {
             <div className="flex space-x-8">
               <button
                 onClick={() => setActiveTab("site")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === "site"
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === "site"
                     ? "border-black text-black"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 Site Reviews
               </button>
               <button
                 onClick={() => setActiveTab("product")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === "product"
+                className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === "product"
                     ? "border-black text-black"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 Product Reviews
               </button>
@@ -217,104 +215,104 @@ const CustomerReviewsPage: React.FC = () => {
                 productReviews
                   .filter((review) => review && review._id && review.user) // Filter out invalid reviews
                   .map((review) => (
-                  <div
-                    key={review._id}
-                    className="border-b border-gray-200 pb-8 last:border-b-0"
-                  >
-                    <div className="flex items-start space-x-4">
-                      {/* Avatar */}
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-semibold">
-                          {getInitials(
-                            review.user?.firstName || "Customer",
-                            review.user?.lastName
+                    <div
+                      key={review._id}
+                      className="border-b border-gray-200 pb-8 last:border-b-0"
+                    >
+                      <div className="flex items-start space-x-4">
+                        {/* Avatar */}
+                        <div className="flex-shrink-0">
+                          <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-semibold">
+                            {getInitials(
+                              review.user?.firstName || "Customer",
+                              review.user?.lastName
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Review Content */}
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <span className="font-semibold text-gray-900">
+                              {review.user?.firstName || "Customer"}{" "}
+                              {review.user?.lastName?.charAt(0) || ""}
+                              {review.user?.lastName && "."}
+                            </span>
+                            <span className="text-sm text-gray-500 flex items-center">
+                              <CheckCircle className="w-4 h-4 mr-1 text-teal-600" />
+                              Verified Buyer
+                            </span>
+                          </div>
+
+                          {/* Rating */}
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="flex">{renderStars(review.rating)}</div>
+                            <span className="text-sm text-gray-500">
+                              {formatDate(review.createdAt)}
+                            </span>
+                          </div>
+
+                          {/* Title */}
+                          <h3 className="font-semibold text-lg text-gray-900 mb-2">
+                            {review.title}
+                          </h3>
+
+                          {/* Comment */}
+                          <p className="text-gray-700 mb-4">{review.comment}</p>
+
+                          {/* Product Info */}
+                          {review.product && (review.product.title || review.product.sku) && (
+                            <div className="mb-4">
+                              <p className="text-sm text-gray-600">
+                                Product Reviewed:{" "}
+                                <span className="font-medium">
+                                  {review.product.title || review.product.sku || "Unknown Product"}
+                                </span>
+                              </p>
+                            </div>
                           )}
-                        </div>
-                      </div>
 
-                      {/* Review Content */}
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-2">
-                          <span className="font-semibold text-gray-900">
-                            {review.user?.firstName || "Customer"}{" "}
-                            {review.user?.lastName?.charAt(0) || ""}
-                            {review.user?.lastName && "."}
-                          </span>
-                          <span className="text-sm text-gray-500 flex items-center">
-                            <CheckCircle className="w-4 h-4 mr-1 text-teal-600" />
-                            Verified Buyer
-                          </span>
-                        </div>
-
-                        {/* Rating */}
-                        <div className="flex items-center space-x-2 mb-2">
-                          <div className="flex">{renderStars(review.rating)}</div>
-                          <span className="text-sm text-gray-500">
-                            {formatDate(review.createdAt)}
-                          </span>
-                        </div>
-
-                        {/* Title */}
-                        <h3 className="font-semibold text-lg text-gray-900 mb-2">
-                          {review.title}
-                        </h3>
-
-                        {/* Comment */}
-                        <p className="text-gray-700 mb-4">{review.comment}</p>
-
-                        {/* Product Info */}
-                        {review.product && (review.product.title || review.product.sku) && (
-                          <div className="mb-4">
-                            <p className="text-sm text-gray-600">
-                              Product Reviewed:{" "}
-                              <span className="font-medium">
-                                {review.product.title || review.product.sku || "Unknown Product"}
-                              </span>
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Images */}
-                        {review.images && review.images.length > 0 && (
-                          <div className="flex space-x-2 mb-4">
-                            {review.images.slice(0, 3).map((img, idx) => (
-                              <img
-                                key={idx}
-                                src={img}
-                                alt={`Review image ${idx + 1}`}
-                                className="w-20 h-20 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-80"
-                                onClick={() => {
-                                  // Open image in lightbox or full view
-                                  window.open(img, "_blank");
-                                }}
-                              />
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Store Owner Reply */}
-                        {review.replies && review.replies.length > 0 && (
-                          <div className="mt-4 pl-4 border-l-2 border-teal-200 bg-teal-50 p-4 rounded">
-                            <p className="font-semibold text-sm text-gray-900 mb-1">
-                              Store Owner
-                            </p>
-                            {review.replies
-                              .filter((reply) => reply && reply.text)
-                              .map((reply, idx) => (
-                                <p
+                          {/* Images */}
+                          {review.images && review.images.length > 0 && (
+                            <div className="flex space-x-2 mb-4">
+                              {review.images.slice(0, 3).map((img, idx) => (
+                                <img
                                   key={idx}
-                                  className="text-sm text-gray-700"
-                                >
-                                  {reply.text}
-                                </p>
+                                  src={img}
+                                  alt={`Review image ${idx + 1}`}
+                                  className="w-20 h-20 object-cover rounded border border-gray-200 cursor-pointer hover:opacity-80"
+                                  onClick={() => {
+                                    // Open image in lightbox or full view
+                                    window.open(img, "_blank");
+                                  }}
+                                />
                               ))}
-                          </div>
-                        )}
+                            </div>
+                          )}
 
+                          {/* Store Owner Reply */}
+                          {review.replies && review.replies.length > 0 && (
+                            <div className="mt-4 pl-4 border-l-2 border-teal-200 bg-teal-50 p-4 rounded">
+                              <p className="font-semibold text-sm text-gray-900 mb-1">
+                                Store Owner
+                              </p>
+                              {review.replies
+                                .filter((reply) => reply && reply.text)
+                                .map((reply, idx) => (
+                                  <p
+                                    key={idx}
+                                    className="text-sm text-gray-700"
+                                  >
+                                    {reply.text}
+                                  </p>
+                                ))}
+                            </div>
+                          )}
+
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  ))
               )}
             </div>
           )}
