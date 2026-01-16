@@ -63,6 +63,8 @@ import BuildYourJewelleryEarrings from "./pages/Build_yr_own/BuildYourJewelleryE
 import BuildYourJewelleryRings from "./pages/Build_yr_own/BuildYourJewelleryRings";
 import TrackOrderPage from "./pages/TrackOrderPage";
 import Giftings from "./pages/Gifting/Giftings";
+import CustomerReviewsPage from "./pages/CustomerReviewsPage";
+import OrderHistoryPage from "./pages/OrderHistoryPage";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const isAuthenticated = useSelector(
@@ -347,7 +349,16 @@ function App() {
             element={<BuildYourJewelleryEarrings />}
           />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/customer-reviews" element={<CustomerReviewsPage />} />
           <Route path="/track-order" element={<TrackOrderPage />} />
+          <Route
+            path="/order-history"
+            element={
+              <PrivateRoute>
+                <OrderHistoryPage />
+              </PrivateRoute>
+            }
+          />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/payment-failed" element={<PaymentFailed />} />
         </Routes>

@@ -11,7 +11,7 @@ const columns = [
     title: "ABOUT",
     links: [
       { label: "Our Story", href: "/about" },
-      { label: "Customer Reviews", href: "/customer-service" },
+      { label: "Customer Reviews", href: "/customer-reviews" },
       { label: "Quality & Certification", href: "/quality-certification" },
     ],
   },
@@ -215,7 +215,7 @@ const Footer: React.FC = () => {
                 </li>
                 <li>
                   <a
-                    href="/customer-service"
+                    href="/customer-reviews"
                     className="text-sm text-gray-700 hover:text-teal-600 hover:underline"
                   >
                     Customer Reviews

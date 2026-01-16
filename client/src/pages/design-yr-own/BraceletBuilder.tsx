@@ -172,7 +172,8 @@ export default function RingBuilder() {
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const metalTypesRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const [selectedEngravingImage, setSelectedEngravingImage] = useState<string>("/newring.jpg");
+  const [selectedEngravingImage, setSelectedEngravingImage] =
+    useState<string>("/newring.jpg");
   const [isSizeGuidePopupOpen, setIsSizeGuidePopupOpen] = useState(false);
   const [showEngravingPopup, setShowEngravingPopup] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -972,48 +973,6 @@ export default function RingBuilder() {
                   </Select>
                 </div>
               </div>
-            </div>
-
-            {/* Metal Type */}
-            <div>
-              <label className="text-sm text-muted-foreground">
-                Metal Type <span className="text-red-500">*</span>
-              </label>
-              <Select
-                value={formData.metal}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, metal: value });
-                  // Auto-set appropriate karat based on metal type
-                  if (value === "Gold") {
-                    setFormData({
-                      ...formData,
-                      metal: value,
-                      goldKarat: "18KT",
-                    });
-                  } else if (value === "Platinum") {
-                    setFormData({
-                      ...formData,
-                      metal: value,
-                      goldKarat: "950",
-                    });
-                  } else if (value === "Silver") {
-                    setFormData({
-                      ...formData,
-                      metal: value,
-                      goldKarat: "925",
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="Gold">Gold</SelectItem>
-                  <SelectItem value="Platinum">Platinum</SelectItem>
-                  <SelectItem value="Silver">Silver</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             {/* Metal Type and Karat - 2 Column Layout */}
@@ -2539,9 +2498,9 @@ export default function RingBuilder() {
           onSave={handleEngravingSaved}
         />
       )}
-      <BraceletSizeGuidePopup 
-        isOpen={isSizeGuidePopupOpen} 
-        onClose={() => setIsSizeGuidePopupOpen(false)} 
+      <BraceletSizeGuidePopup
+        isOpen={isSizeGuidePopupOpen}
+        onClose={() => setIsSizeGuidePopupOpen(false)}
       />
     </div>
   );

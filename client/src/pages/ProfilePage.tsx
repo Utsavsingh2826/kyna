@@ -4,7 +4,7 @@ import {
   User,
   // Wallet,
   // CreditCard,
-  // Package,
+  Package,
   // Clock,
   // Heart,
   LogOut,
@@ -136,7 +136,7 @@ const ProfilePage: React.FC = () => {
     { icon: User, label: "User Account", active: true },
     // { icon: Wallet, label: "Wallet" },
     // { icon: CreditCard, label: "Cards & Address" },
-    // { icon: Package, label: "Order History" },
+    { icon: Package, label: "Order History" },
     { icon: Truck, label: "Track Order" },
     { icon: Heart, label: "Wishlist" },
     { icon: LogOut, label: "Signout" },
@@ -549,6 +549,10 @@ const ProfilePage: React.FC = () => {
                   onClick={() => {
                     if (item.label === "Track Order") {
                       window.location.href = "/track-order";
+                      return;
+                    }
+                    if (item.label === "Order History") {
+                      window.location.href = "/order-history";
                       return;
                     }
                     setActiveSection(item.label);
