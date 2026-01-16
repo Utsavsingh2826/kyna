@@ -1289,15 +1289,14 @@ export default function RingBuilder() {
                   ))}
                 </SelectContent>
               </Select>
-              <Link to="/RingSize-Education">
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="text-[#328F94] p-0 mt-1"
-                >
-                  Ring Size Guide
-                </Button>
-              </Link>
+              <Button
+                variant="link"
+                size="sm"
+                className="text-[#328F94] p-0 mt-1"
+                onClick={() => setIsRingSizePopupOpen(true)}
+              >
+                Ring Size Guide
+              </Button>
             </div>
 
             {/* Add Engraving - Updated with Popup */}
