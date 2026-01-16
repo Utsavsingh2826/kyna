@@ -333,7 +333,7 @@ class ApiService {
   // }
 
   async getOrders() {
-    return this.makeRequest("/orders");
+    return this.makeRequest("/orders/my");
   }
 
   async getOrder(id: string) {

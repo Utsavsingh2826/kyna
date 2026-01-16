@@ -5,9 +5,11 @@ import { v2 as cloudinary } from 'cloudinary';
 import {
   addReview,
   getProductReviews,
+  getAllReviews,
   toggleLike,
   addReply
 } from '../controllers/reviewController';
+import { getGoogleReviews } from '../controllers/googleReviewsController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
@@ -52,6 +54,8 @@ const upload = multer({
 
 // Routes
 router.post('/', authenticateToken, upload.array("images", 4), addReview);
+router.get('/all', getAllReviews);
+router.get('/google', getGoogleReviews);
 router.get('/product/:productId', getProductReviews);
 router.put('/:id/like', authenticateToken, toggleLike);
 router.post('/:id/replies', authenticateToken, addReply);
