@@ -93,7 +93,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const wishlistLoading = useSelector(selectWishlistLoading);
   const wishlistKeyMap = useSelector(selectWishlistKeyMap);
   const cachedData = useSelector(
-    (state: RootState) => state.productsCache.byCategory[category]
+    (state: RootState) => state.productsCache.byCategory[category],
   );
 
   useEffect(() => {
@@ -166,7 +166,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     async (
       page: number = 1,
       limit: number = 20,
-      forceRefresh: boolean = false
+      forceRefresh: boolean = false,
     ) => {
       try {
         // Generate cache key for current filters
@@ -186,8 +186,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           if (cacheAge < CACHE_DURATION) {
             console.log(
               "✨ Using cached products (age: " +
-              Math.round(cacheAge / 1000) +
-              "s)"
+                Math.round(cacheAge / 1000) +
+                "s)",
             );
             setProducts(cachedData.products);
             if (cachedData.pagination) {
@@ -232,6 +232,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             params.set("maxPrice", maxPrice.toString());
           }
 
+          // Add pagination parameters
+          params.set("page", page.toString());
+          params.set("limit", limit.toString());
+
           const apiUrl = `/api/products/category/earrings?${params.toString()}`;
           const response = await fetch(apiUrl, { signal });
           if (!response.ok) {
@@ -261,7 +265,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                   queryKey: cacheKey,
                   timestamp: Date.now(),
                 },
-              })
+              }),
             );
             console.log("💾 Saved earrings to cache with key:", cacheKey);
           } else {
@@ -290,13 +294,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             // Collect shapes from all ring subcategories
             const allSelectedShapes = new Set<string>();
             activeFilters.solitaire_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.engagement_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.fashion_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
 
             // Add centerStoneShape parameter if any shapes are selected
@@ -305,7 +309,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 "centerStoneShape",
                 Array.from(allSelectedShapes)
                   .map((s) => s.toLowerCase())
-                  .join(",")
+                  .join(","),
               );
             }
 
@@ -352,19 +356,19 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             // Collect shapes from all earring subcategories
             const allSelectedShapes = new Set<string>();
             activeFilters.studs_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.hoops_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.drop_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.fashion_earring_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.halo_earring_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
 
             if (allSelectedShapes.size > 0) {
@@ -372,7 +376,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 "centerStoneShape",
                 Array.from(allSelectedShapes)
                   .map((s) => s.toLowerCase())
-                  .join(",")
+                  .join(","),
               );
             }
 
@@ -417,7 +421,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             if (activeFilters.earring_length.length > 0) {
               params.set(
                 "earringLength",
-                activeFilters.earring_length.join(",")
+                activeFilters.earring_length.join(","),
               );
             }
           }
@@ -426,13 +430,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           if (category === "pendants") {
             const allSelectedShapes = new Set<string>();
             activeFilters.solitaire_pendant_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.fashion_pendant_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.halo_pendant_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
 
             if (allSelectedShapes.size > 0) {
@@ -440,7 +444,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 "centerStoneShape",
                 Array.from(allSelectedShapes)
                   .map((s) => s.toLowerCase())
-                  .join(",")
+                  .join(","),
               );
             }
 
@@ -473,10 +477,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           if (category === "bracelets") {
             const allSelectedShapes = new Set<string>();
             activeFilters.tennis_bracelet_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
             activeFilters.fashion_bracelet_diamond_shape.forEach((shape) =>
-              allSelectedShapes.add(shape)
+              allSelectedShapes.add(shape),
             );
 
             if (allSelectedShapes.size > 0) {
@@ -484,7 +488,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 "centerStoneShape",
                 Array.from(allSelectedShapes)
                   .map((s) => s.toLowerCase())
-                  .join(",")
+                  .join(","),
               );
             }
 
@@ -534,7 +538,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         console.log("📊 Active Filters State:", activeFilters);
         const response = await fetch(
           `/api/products/category/${apiCategory}?${filterParams.toString()}`,
-          { signal }
+          { signal },
         );
 
         if (!response.ok) {
@@ -571,11 +575,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 queryKey: cacheKey,
                 timestamp: Date.now(),
               },
-            })
+            }),
           );
           console.log(
             `💾 Saved ${category} products to cache (${data.products.length} items)`,
-            { category, cacheKey }
+            { category, cacheKey },
           );
         } else {
           throw new Error("API returned success: false");
@@ -589,7 +593,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         console.error("Error fetching products:", err);
         setError(
-          err instanceof Error ? err.message : "Failed to fetch products"
+          err instanceof Error ? err.message : "Failed to fetch products",
         );
         setProducts([]);
       } finally {
@@ -604,33 +608,49 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       generateCacheKey,
       cachedData,
       dispatch,
-    ]
+    ],
   );
 
   // Helper function to extract metal color code from image URL
   const getMetalColorFromImage = useCallback((imageUrl: string): string => {
-    if (!imageUrl) return 'WG'; // Default fallback
+    if (!imageUrl) return "WG"; // Default fallback
 
-    const filename = imageUrl.split('/').pop() || '';
+    const filename = imageUrl.split("/").pop() || "";
     const upperFilename = filename.toUpperCase();
 
     // Check for color codes in the filename
     // Priority: YG (Yellow Gold) > RG (Rose Gold) > WG (White Gold) > BR (Black Rhodium)
-    if (upperFilename.includes('YG') || upperFilename.includes('_YG_') || upperFilename.includes('-YG-')) {
-      return 'YG';
+    if (
+      upperFilename.includes("YG") ||
+      upperFilename.includes("_YG_") ||
+      upperFilename.includes("-YG-")
+    ) {
+      return "YG";
     }
-    if (upperFilename.includes('RG') || upperFilename.includes('_RG_') || upperFilename.includes('-RG-')) {
-      return 'RG';
+    if (
+      upperFilename.includes("RG") ||
+      upperFilename.includes("_RG_") ||
+      upperFilename.includes("-RG-")
+    ) {
+      return "RG";
     }
-    if (upperFilename.includes('WG') || upperFilename.includes('_WG_') || upperFilename.includes('-WG-')) {
-      return 'WG';
+    if (
+      upperFilename.includes("WG") ||
+      upperFilename.includes("_WG_") ||
+      upperFilename.includes("-WG-")
+    ) {
+      return "WG";
     }
-    if (upperFilename.includes('BR') || upperFilename.includes('_BR_') || upperFilename.includes('-BR-')) {
-      return 'BR';
+    if (
+      upperFilename.includes("BR") ||
+      upperFilename.includes("_BR_") ||
+      upperFilename.includes("-BR-")
+    ) {
+      return "BR";
     }
 
     // Default to WG if no color code found
-    return 'WG';
+    return "WG";
   }, []);
 
   const handleWishlistToggle = useCallback(
@@ -648,12 +668,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         return;
       }
 
-      const detectedMetalColor = getMetalColorFromImage(product.firstVariantImageUrl) || "WG";
+      const detectedMetalColor =
+        getMetalColorFromImage(product.firstVariantImageUrl) || "WG";
 
       const entryKey = buildWishlistKey(
         product._id,
         product.firstVariantSku || null,
-        detectedMetalColor
+        detectedMetalColor,
       );
       const existingEntryId = wishlistKeyMap[entryKey];
 
@@ -682,23 +703,37 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           categoryLabel: category,
           variantSku: product.firstVariantSku,
           metalColorCode: detectedMetalColor,
-          metalColorName: detectedMetalColor === "YG" ? "Yellow" : detectedMetalColor === "RG" ? "Rose" : detectedMetalColor === "BR" ? "Black Rhodium" : "White",
+          metalColorName:
+            detectedMetalColor === "YG"
+              ? "Yellow"
+              : detectedMetalColor === "RG"
+                ? "Rose"
+                : detectedMetalColor === "BR"
+                  ? "Black Rhodium"
+                  : "White",
           primaryImage: product.firstVariantImageUrl || null,
           price:
             typeof product.sellingPrice === "number"
               ? product.sellingPrice
               : null,
-        })
+        }),
       );
     },
-    [category, dispatch, isAuthenticated, navigate, wishlistKeyMap, getMetalColorFromImage]
+    [
+      category,
+      dispatch,
+      isAuthenticated,
+      navigate,
+      wishlistKeyMap,
+      getMetalColorFromImage,
+    ],
   );
 
   // Update URL when filters change - use comma-separated values
   const updateUrlFilters = (
     filterType: string,
     value: string,
-    checked: boolean
+    checked: boolean,
   ) => {
     const currentParams = new URLSearchParams(searchParams);
 
@@ -737,7 +772,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
   const updatePriceFilter = (
     type: "min_price" | "max_price",
-    value: string
+    value: string,
   ) => {
     const currentParams = new URLSearchParams(searchParams);
 
@@ -923,32 +958,32 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         hoops_diamond_shape: getFilterValues("hoops_diamond_shape"),
         drop_diamond_shape: getFilterValues("drop_diamond_shape"),
         fashion_earring_diamond_shape: getFilterValues(
-          "fashion_earring_diamond_shape"
+          "fashion_earring_diamond_shape",
         ),
         halo_earring_diamond_shape: getFilterValues(
-          "halo_earring_diamond_shape"
+          "halo_earring_diamond_shape",
         ),
         earring_length: getFilterValues("earring_length"),
 
         // Pendant filters
         pendant_category: getFilterValues("pendant_category"), // Add this missing field
         solitaire_pendant_diamond_shape: getFilterValues(
-          "solitaire_pendant_diamond_shape"
+          "solitaire_pendant_diamond_shape",
         ),
         fashion_pendant_diamond_shape: getFilterValues(
-          "fashion_pendant_diamond_shape"
+          "fashion_pendant_diamond_shape",
         ),
         halo_pendant_diamond_shape: getFilterValues(
-          "halo_pendant_diamond_shape"
+          "halo_pendant_diamond_shape",
         ),
 
         // Bracelet filters
         bracelet_category: getFilterValues("bracelet_category"),
         tennis_bracelet_diamond_shape: getFilterValues(
-          "tennis_bracelet_diamond_shape"
+          "tennis_bracelet_diamond_shape",
         ),
         fashion_bracelet_diamond_shape: getFilterValues(
-          "fashion_bracelet_diamond_shape"
+          "fashion_bracelet_diamond_shape",
         ),
 
         // Common filters
@@ -982,7 +1017,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   // Helper to determine if a filter group should be open based on URL params
   const shouldGroupBeOpen = (
     groupName: string,
-    categoryParam: string
+    categoryParam: string,
   ): boolean => {
     const paramValue = searchParams.get(categoryParam);
     if (!paramValue) return false;
@@ -995,10 +1030,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const handleFilterGroupToggle = (
     groupName: string,
     categoryParam: string,
-    isOpen: boolean
+    isOpen: boolean,
   ) => {
     console.log(
-      `🔧 Filter Group Toggle: ${groupName} - ${isOpen ? "OPENING" : "CLOSING"}`
+      `🔧 Filter Group Toggle: ${groupName} - ${isOpen ? "OPENING" : "CLOSING"}`,
     );
     const currentParams = new URLSearchParams(searchParams);
     const existingParam = currentParams.get(categoryParam);
@@ -1011,7 +1046,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         currentParams.set(categoryParam, existingValues.join(","));
         console.log(
           `✅ Added ${groupName} to ${categoryParam}:`,
-          existingValues
+          existingValues,
         );
         setSearchParams(currentParams);
 
@@ -1028,7 +1063,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         existingValues.splice(index, 1);
         console.log(
           `❌ Removed ${groupName} from ${categoryParam}:`,
-          existingValues
+          existingValues,
         );
 
         // Update or delete the category parameter
@@ -1153,8 +1188,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     // Helper to handle earring group toggle
     const handleEarringGroupToggle = (groupTitle: string, isOpen: boolean) => {
       console.log(
-        `🎵 Earring Group Toggle: ${groupTitle} - ${isOpen ? "OPENING" : "CLOSING"
-        }`
+        `🎵 Earring Group Toggle: ${groupTitle} - ${
+          isOpen ? "OPENING" : "CLOSING"
+        }`,
       );
       const mappedValue = mapEarringGroupToCategory1(groupTitle);
       const currentParams = new URLSearchParams(searchParams);
@@ -1218,7 +1254,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             if (shapesToRemove && shapesToRemove.length > 0) {
               console.log(
                 `🔍 Removing shapes from centerStoneShape:`,
-                shapesToRemove
+                shapesToRemove,
               );
               const existingShapes =
                 currentParams.get("centerStoneShape") || "";
@@ -1276,7 +1312,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     const setEarringCenterStoneShape = (
       groupTitle: string,
       shape: string,
-      checked: boolean
+      checked: boolean,
     ) => {
       const shapeLower = shape.toLowerCase();
 
@@ -1390,7 +1426,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     const setEarringCategory2 = (
       groupTitle: string,
       category2Value: string,
-      hasStyles: boolean
+      hasStyles: boolean,
     ) => {
       // category2Value can be comma-separated styles or length values
       // This contains ALL selected styles from all subcategories
@@ -1406,10 +1442,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       if (existingCategory2) {
         const parts = existingCategory2.split(",");
         existingStyles = parts.filter(
-          (p) => p && !["Small", "Medium", "Large"].includes(p)
+          (p) => p && !["Small", "Medium", "Large"].includes(p),
         );
         existingLengths = parts.filter((p) =>
-          ["Small", "Medium", "Large"].includes(p)
+          ["Small", "Medium", "Large"].includes(p),
         );
       }
 
@@ -1517,7 +1553,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     const renderStyleOptions = (
       styles: string[],
       categoryType: string,
-      categoryName: string
+      categoryName: string,
     ) => (
       <>
         {styles.map((style) => (
@@ -1549,7 +1585,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                   setEarringCategory2(
                     categoryName,
                     category2Value,
-                    currentStyles.length > 0
+                    currentStyles.length > 0,
                   );
                 } else {
                   // For non-earrings, batch URL updates to prevent race conditions
@@ -1638,7 +1674,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                   setEarringCategory2(
                     earringCategory,
                     category2Value,
-                    currentLengths.length > 0
+                    currentLengths.length > 0,
                   );
                 } else {
                   // For non-earrings, use the regular updateUrlFilters
@@ -1688,7 +1724,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                   setEarringCategory2(
                     earringCategory,
                     category2Value,
-                    currentStyles.length > 0
+                    currentStyles.length > 0,
                   );
                 }
               }}
@@ -1791,7 +1827,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       placeholder.textContent = shape.charAt(0);
                       e.currentTarget.parentNode?.insertBefore(
                         placeholder,
-                        e.currentTarget
+                        e.currentTarget,
                       );
                     }}
                   />
@@ -1856,7 +1892,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               handleFilterGroupToggle(
                 "Solitaire Rings",
                 "ring_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -1887,7 +1923,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               handleFilterGroupToggle(
                 "Engagement Rings",
                 "ring_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -1960,7 +1996,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             {renderStyleOptions(
               ["Daily Wear Rings", "Designer Rings"],
               "ring_category",
-              "Fashion Rings"
+              "Fashion Rings",
             )}
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
@@ -2074,7 +2110,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               {renderStyleOptions(
                 ["Daily Wear Earrings", "Designer Earrings"],
                 "earring_category",
-                "Fashion Earrings"
+                "Fashion Earrings",
               )}
             </div>
             <p className="eng-label-muted">PRICE</p>
@@ -2157,14 +2193,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             title="Solitaire Pendants"
             defaultOpen={shouldGroupBeOpen(
               "Solitaire Pendants",
-              "pendant_category"
+              "pendant_category",
             )}
             isSubGroup={true}
             onToggle={(isOpen) =>
               handleFilterGroupToggle(
                 "Solitaire Pendants",
                 "pendant_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -2191,14 +2227,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             title="Fashion Pendants"
             defaultOpen={shouldGroupBeOpen(
               "Fashion Pendants",
-              "pendant_category"
+              "pendant_category",
             )}
             isSubGroup={true}
             onToggle={(isOpen) =>
               handleFilterGroupToggle(
                 "Fashion Pendants",
                 "pendant_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -2214,7 +2250,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               {renderStyleOptions(
                 ["Daily Wear Pendants", "Designer Pendants"],
                 "pendant_category",
-                "Fashion Pendants"
+                "Fashion Pendants",
               )}
             </div>
             <p className="eng-label-muted">PRICE</p>
@@ -2233,14 +2269,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             title="Solitaire Halo"
             defaultOpen={shouldGroupBeOpen(
               "Solitaire Halo",
-              "pendant_category"
+              "pendant_category",
             )}
             isSubGroup={true}
             onToggle={(isOpen) =>
               handleFilterGroupToggle(
                 "Solitaire Halo",
                 "pendant_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -2273,14 +2309,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             title="Tennis Bracelets"
             defaultOpen={shouldGroupBeOpen(
               "Tennis Bracelets",
-              "bracelet_category"
+              "bracelet_category",
             )}
             isSubGroup={true}
             onToggle={(isOpen) =>
               handleFilterGroupToggle(
                 "Tennis Bracelets",
                 "bracelet_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -2307,14 +2343,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             title="Fashion Bracelets"
             defaultOpen={shouldGroupBeOpen(
               "Fashion Bracelets",
-              "bracelet_category"
+              "bracelet_category",
             )}
             isSubGroup={true}
             onToggle={(isOpen) =>
               handleFilterGroupToggle(
                 "Fashion Bracelets",
                 "bracelet_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -2330,7 +2366,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               {renderStyleOptions(
                 ["Daily Wear Bracelets", "Designer Bracelets"],
                 "bracelet_category",
-                "Fashion Bracelets"
+                "Fashion Bracelets",
               )}
             </div>
             <p className="eng-label-muted">PRICE</p>
@@ -2349,14 +2385,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             title="Chain Bracelets"
             defaultOpen={shouldGroupBeOpen(
               "Chain Bracelets",
-              "bracelet_category"
+              "bracelet_category",
             )}
             isSubGroup={true}
             onToggle={(isOpen) =>
               handleFilterGroupToggle(
                 "Chain Bracelets",
                 "bracelet_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -2365,7 +2401,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               {renderStyleOptions(
                 ["Gold Chains", "Silver Chains", "Rose Gold Chains"],
                 "bracelet_category",
-                "Chain Bracelets"
+                "Chain Bracelets",
               )}
             </div>
             <p className="eng-label-muted">PRICE</p>
@@ -2384,14 +2420,14 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             title="Charm Bracelets"
             defaultOpen={shouldGroupBeOpen(
               "Charm Bracelets",
-              "bracelet_category"
+              "bracelet_category",
             )}
             isSubGroup={true}
             onToggle={(isOpen) =>
               handleFilterGroupToggle(
                 "Charm Bracelets",
                 "bracelet_category",
-                isOpen
+                isOpen,
               )
             }
           >
@@ -2400,7 +2436,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               {renderStyleOptions(
                 ["Heart Charms", "Star Charms", "Custom Charms"],
                 "bracelet_category",
-                "Charm Bracelets"
+                "Charm Bracelets",
               )}
             </div>
             <p className="eng-label-muted">PRICE</p>
@@ -2501,7 +2537,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </p>
             <div className="flex flex-wrap gap-2 text-xs">
               {Object.entries(
-                (appliedFilters as unknown as Record<string, unknown>) || {}
+                (appliedFilters as unknown as Record<string, unknown>) || {},
               )
                 .filter(([, v]) => {
                   if (v === null || v === undefined) return false;
@@ -2626,11 +2662,16 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               !error &&
               products.map((p) => {
                 // Detect metal color from product image
-                const detectedMetalColor = getMetalColorFromImage(p.firstVariantImageUrl) || "WG";
+                const detectedMetalColor =
+                  getMetalColorFromImage(p.firstVariantImageUrl) || "WG";
 
                 const wishlistKey =
                   p._id &&
-                  buildWishlistKey(p._id, p.firstVariantSku || null, detectedMetalColor);
+                  buildWishlistKey(
+                    p._id,
+                    p.firstVariantSku || null,
+                    detectedMetalColor,
+                  );
                 const isWishlisted =
                   wishlistKey && Boolean(wishlistKeyMap[wishlistKey]);
 
@@ -2644,16 +2685,20 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                     wishlistKey,
                     isWishlisted,
                     wishlistKeyMapSize: Object.keys(wishlistKeyMap).length,
-                    wishlistKeyMapEntries: Object.entries(wishlistKeyMap).slice(0, 5),
+                    wishlistKeyMapEntries: Object.entries(wishlistKeyMap).slice(
+                      0,
+                      5,
+                    ),
                   });
                 }
 
                 return (
                   <Link
-                    to={`/product/${category}/${p.modelSku
-                      }?variantId=${encodeURIComponent(
-                        p.firstVariantSku
-                      )}&metalColor=${detectedMetalColor}`}
+                    to={`/product/${category}/${
+                      p.modelSku
+                    }?variantId=${encodeURIComponent(
+                      p.firstVariantSku,
+                    )}&metalColor=${detectedMetalColor}`}
                     key={`${category}-${p.modelSku}`}
                     className="block"
                   >
@@ -2662,8 +2707,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       aria-label={p.title}
                     >
                       <button
-                        className={`eng-wishlist ${isWishlisted ? "text-red-500" : ""
-                          } ${wishlistLoading ? "opacity-70" : ""}`}
+                        className={`eng-wishlist ${
+                          isWishlisted ? "text-red-500" : ""
+                        } ${wishlistLoading ? "opacity-70" : ""}`}
                         aria-label="Add to wishlist"
                         aria-pressed={Boolean(isWishlisted)}
                         onClick={(e) => handleWishlistToggle(e, p)}
