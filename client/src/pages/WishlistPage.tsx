@@ -1,51 +1,53 @@
-import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Heart } from 'lucide-react';
-import { toast } from 'sonner';
-import type { AppDispatch, RootState } from '@/store';
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Heart, MailIcon } from "lucide-react";
+import { toast } from "sonner";
+import type { AppDispatch, RootState } from "@/store";
 import {
   fetchWishlist,
   removeWishlistItemThunk,
   selectWishlistInitialized,
   selectWishlistItems,
   selectWishlistLoading,
-} from '@/store/slices/wishlistSlice';
-import type { WishlistEntry } from '@/store/slices/wishlistSlice';
+} from "@/store/slices/wishlistSlice";
+import type { WishlistEntry } from "@/store/slices/wishlistSlice";
 
 const WishlistPage = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { user, isAuthenticated } = useSelector(
+    (state: RootState) => state.auth,
+  );
   const wishlist = useSelector(selectWishlistItems);
   const wishlistLoading = useSelector(selectWishlistLoading);
   const wishlistInitialized = useSelector(selectWishlistInitialized);
   const wishlistError = useSelector((state: RootState) => state.wishlist.error);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState("all");
 
   const loading = wishlistLoading && !wishlistInitialized;
   const error = wishlistError;
 
   const formatCategoryLabel = (label: string) => {
-    if (label === 'all') return 'View All';
+    if (label === "all") return "View All";
     return label
-      .split('-')
+      .split("-")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .join(" ");
   };
 
   const buildProductUrl = (item: WishlistEntry) => {
-    const slug = item.categorySlug || 'rings';
+    const slug = item.categorySlug || "rings";
     const sku = item.modelSku || item.productId;
     const params = new URLSearchParams();
     if (item.variantSku) {
-      params.set('variantId', item.variantSku);
+      params.set("variantId", item.variantSku);
     }
     if (item.metalColorCode) {
-      params.set('metalColor', item.metalColorCode);
+      params.set("metalColor", item.metalColorCode);
     }
     const query = params.toString();
-    return `/product/${slug}/${sku}${query ? `?${query}` : ''}`;
+    return `/product/${slug}/${sku}${query ? `?${query}` : ""}`;
   };
 
   useEffect(() => {
@@ -61,23 +63,20 @@ const WishlistPage = () => {
   };
 
   const getFilteredWishlist = () => {
-    if (activeTab === 'all') return wishlist;
+    if (activeTab === "all") return wishlist;
     const tabValue = activeTab.toLowerCase();
-    return wishlist.filter(item => {
-      const categoryLabel = (item.category || '').toLowerCase();
-      const slug = (item.categorySlug || '').toLowerCase();
-      return (
-        categoryLabel.includes(tabValue) ||
-        slug.includes(tabValue)
-      );
+    return wishlist.filter((item) => {
+      const categoryLabel = (item.category || "").toLowerCase();
+      const slug = (item.categorySlug || "").toLowerCase();
+      return categoryLabel.includes(tabValue) || slug.includes(tabValue);
     });
   };
 
   const getCategoryCounts = () => {
     const counts: { [key: string]: number } = { all: wishlist.length };
 
-    wishlist.forEach(item => {
-      const category = item.category || item.categorySlug || 'Other';
+    wishlist.forEach((item) => {
+      const category = item.category || item.categorySlug || "Other";
       counts[category] = (counts[category] || 0) + 1;
     });
 
@@ -86,6 +85,36 @@ const WishlistPage = () => {
 
   const categoryCounts = getCategoryCounts();
   const filteredWishlist = getFilteredWishlist();
+
+  const handleWhatsAppShare = () => {
+    const baseUrl = window.location.origin;
+
+    const productLinks = wishlist
+      .map(
+        (item, index) => `• ${item.title}: ${baseUrl}${buildProductUrl(item)}`,
+      )
+      .join("\n");
+
+    const message = `Please check out my wishlist on Kyna Jewels \n\n${productLinks}`;
+
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleEmailShare = () => {
+    const baseUrl = window.location.origin;
+
+    const productLinks = wishlist
+      .map((item) => `${item.title}: ${baseUrl}${buildProductUrl(item)}`)
+      .join("\n");
+
+    const subject = "My Wishlist from Kyna Jewels";
+    const body = `Please check out my wishlist on Kyna Jewels 💍\n\n${productLinks}`;
+
+    window.location.href = `mailto:?subject=${encodeURIComponent(
+      subject,
+    )}&body=${encodeURIComponent(body)}`;
+  };
 
   if (loading) {
     return (
@@ -111,9 +140,7 @@ const WishlistPage = () => {
             Sign in to access your saved items
           </p>
           <Link to="/login">
-            <Button className="bg-teal-600 hover:bg-teal-700">
-              Login
-            </Button>
+            <Button className="bg-teal-600 hover:bg-teal-700">Login</Button>
           </Link>
         </div>
       </div>
@@ -125,7 +152,10 @@ const WishlistPage = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={() => dispatch(fetchWishlist())} className="bg-teal-600 hover:bg-teal-700">
+          <Button
+            onClick={() => dispatch(fetchWishlist())}
+            className="bg-teal-600 hover:bg-teal-700"
+          >
             Try Again
           </Button>
         </div>
@@ -140,11 +170,32 @@ const WishlistPage = () => {
         <div className="flex justify-between items-start mb-8">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              {user?.firstName || 'User'}'s Wish List
+              {user?.firstName || "User"}'s Wish List
             </h1>
             <p className="text-gray-600">
-              {wishlist.length} item{wishlist.length !== 1 ? 's' : ''} in your wishlist
+              {wishlist.length} item{wishlist.length !== 1 ? "s" : ""} in your
+              wishlist
             </p>
+          </div>
+
+          {/* Share Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={handleWhatsAppShare}
+              className="flex items-center gap-2 px-4 py-2 border border-teal-500 text-teal-600 rounded-md hover:bg-teal-50 transition"
+            >
+              Share Wish List
+              <img src="/Jan/Vector.png" alt="WhatsApp" className="w-5 h-5" />
+            </button>
+
+            <button
+              onClick={handleEmailShare}
+              className="flex items-center gap-2 px-4 py-2 border border-teal-500 text-teal-600 rounded-md hover:bg-teal-50 transition"
+            >
+              {/* <img src="/icons/mail.svg" alt="Email" className="w-5 h-5" /> */}
+              Share Wish List
+              <MailIcon className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -155,10 +206,11 @@ const WishlistPage = () => {
               <button
                 key={category}
                 onClick={() => setActiveTab(category)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === category
-                    ? 'border-teal-500 text-teal-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === category
+                    ? "border-teal-500 text-teal-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
               >
                 {formatCategoryLabel(category)} ({count})
               </button>
@@ -171,15 +223,14 @@ const WishlistPage = () => {
           <div className="text-center py-12">
             <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {activeTab === 'all'
-                ? 'Your wishlist is empty'
+              {activeTab === "all"
+                ? "Your wishlist is empty"
                 : `No ${formatCategoryLabel(activeTab)} items in your wishlist`}
             </h3>
             <p className="text-gray-500 mb-6">
-              {activeTab === 'all'
-                ? 'Start adding items you love to your wishlist'
-                : `Try browsing other categories or add some ${activeTab.toLowerCase()} items`
-              }
+              {activeTab === "all"
+                ? "Start adding items you love to your wishlist"
+                : `Try browsing other categories or add some ${activeTab.toLowerCase()} items`}
             </p>
             <Link to="/">
               <Button className="bg-teal-600 hover:bg-teal-700">
@@ -190,7 +241,10 @@ const WishlistPage = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredWishlist.map((item) => (
-              <div key={item._id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col h-full">
+              <div
+                key={item._id}
+                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
+              >
                 <div className="relative">
                   <img
                     src={item.image || "/placeholder.png"}
@@ -198,7 +252,9 @@ const WishlistPage = () => {
                     className="w-full h-64 object-cover rounded-t-lg"
                   />
                   <button
-                    onClick={() => handleRemoveFromWishlist(item._id, item.title)}
+                    onClick={() =>
+                      handleRemoveFromWishlist(item._id, item.title)
+                    }
                     className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors"
                   >
                     <Heart className="w-5 h-5 text-red-500 fill-current" />
@@ -213,18 +269,16 @@ const WishlistPage = () => {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900">
-                        {typeof item.price === 'number'
-                          ? `₹${item.price.toLocaleString('en-IN')}`
-                          : 'Price on request'}
+                        {typeof item.price === "number"
+                          ? `₹${item.price.toLocaleString("en-IN")}`
+                          : "Price on request"}
                       </span>
                     </div>
                     {item.rating && (
                       <div className="flex items-center text-sm text-gray-500">
                         <span>★</span>
                         <span className="ml-1">{item.rating.score}</span>
-                        <span className="ml-1">
-                          ({item.rating.reviews})
-                        </span>
+                        <span className="ml-1">({item.rating.reviews})</span>
                       </div>
                     )}
                   </div>
@@ -239,7 +293,9 @@ const WishlistPage = () => {
                     </div>
 
                     <button
-                      onClick={() => handleRemoveFromWishlist(item._id, item.title)}
+                      onClick={() =>
+                        handleRemoveFromWishlist(item._id, item.title)
+                      }
                       className="w-full text-sm text-gray-500 hover:text-red-600 transition-colors"
                     >
                       Remove

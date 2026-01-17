@@ -35,7 +35,7 @@ import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
 // Map color codes to display info (handles both single and combination colors)
 const getColorDisplayInfo = (
-  code: string
+  code: string,
 ): { name: string; colors: string[]; img: string } | null => {
   // Single colors
   const singleColorMap: Record<string, { name: string; img: string }> = {
@@ -294,12 +294,12 @@ const ProductDetail = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
+    (state: RootState) => state.auth,
   );
 
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
-    getInitialStyleAndDesign()
+    getInitialStyleAndDesign(),
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -318,14 +318,14 @@ const ProductDetail = () => {
 
     try {
       const response = await fetch(
-        `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`
+        `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`,
       );
       const data: ApiResponse = await response.json();
 
       if (data.success && data.entries) {
         // Fetch detailed product data for each entry
         const validEntries = data.entries.filter(
-          (e) => e.variants && e.variants.length > 0
+          (e) => e.variants && e.variants.length > 0,
         );
 
         const mappedSubstyles = validEntries.map((entry) => ({
@@ -340,8 +340,8 @@ const ProductDetail = () => {
           prev.map((cat) =>
             cat.name === categoryName
               ? { ...cat, substyles: mappedSubstyles, isLoaded: true }
-              : cat
-          )
+              : cat,
+          ),
         );
 
         // auto-select first style
@@ -364,7 +364,7 @@ const ProductDetail = () => {
         // Use selectedColorCode directly
         const metalCode = metalColorCode;
         const res = await fetch(
-          `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`
+          `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`,
         );
         const data: ProductModelResponse = await res.json();
         if (data && data.success) {
@@ -378,24 +378,24 @@ const ProductDetail = () => {
                       productDetails: data,
                       thumbnailImages: data.variantImages,
                       price: new Intl.NumberFormat("en-IN").format(
-                        data.sellingPrice
+                        data.sellingPrice,
                       ),
                     }
-                  : s
+                  : s,
               ),
-            }))
+            })),
           );
         }
       } catch (err) {
         console.error("Failed to update substyle product details:", err);
       }
     },
-    []
+    [],
   );
 
   // Get current category's substyles and selected style data
   const currentCategory = styleAndDesign.find(
-    (cat) => cat.name === selectedStyleCategory
+    (cat) => cat.name === selectedStyleCategory,
   );
   const currentSubstyles = currentCategory?.substyles || [];
   const selectedStyleData =
@@ -419,7 +419,7 @@ const ProductDetail = () => {
   // Load data for current category
   useEffect(() => {
     const currentCategory = styleAndDesign.find(
-      (cat) => cat.name === selectedStyleCategory
+      (cat) => cat.name === selectedStyleCategory,
     );
     if (currentCategory && !currentCategory.isLoaded) {
       fetchCategoryData(selectedStyleCategory);
@@ -584,7 +584,7 @@ const ProductDetail = () => {
         shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
 
       const caratCode = String(
-        Math.round(parseFloat(selectedDiamondSize) * 100)
+        Math.round(parseFloat(selectedDiamondSize) * 100),
       );
 
       const karat = selectedGoldKarat.replace("kt", "");
@@ -606,7 +606,7 @@ const ProductDetail = () => {
       selectedGoldKarat,
       selectedDiamondOrigin,
       selectedColorClarity,
-    ]
+    ],
   );
 
   const refetchUpdatedProduct = useCallback(
@@ -625,7 +625,7 @@ const ProductDetail = () => {
       const metalColor = colorCodeMap[selectedMetalColor] || "WG";
 
       const res = await fetch(
-        `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`
+        `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
       );
 
       const data: ProductModelResponse = await res.json();
@@ -639,17 +639,17 @@ const ProductDetail = () => {
                     ...s,
                     productDetails: data,
                     price: new Intl.NumberFormat("en-IN").format(
-                      data.sellingPrice
+                      data.sellingPrice,
                     ),
                     thumbnailImages: data.variantImages,
                   }
-                : s
+                : s,
             ),
-          }))
+          })),
         );
       }
     },
-    [generateVariantId, selectedMetalColor]
+    [generateVariantId, selectedMetalColor],
   );
 
   // Log when thumbnail images change
@@ -694,7 +694,7 @@ const ProductDetail = () => {
     // Map API diamond shapes to our shape objects
     return selectedStyleData.productDetails.diamondShape.map((shape) => {
       const shapeData = diamondShapes.shapes.find(
-        (s) => s.name.toUpperCase() === shape.toUpperCase()
+        (s) => s.name.toUpperCase() === shape.toUpperCase(),
       );
       return (
         shapeData || { name: shape, img: "/DIAMOND_SHAPES_WEBP/round.webp" }
@@ -838,9 +838,11 @@ const ProductDetail = () => {
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                              3D
-                            </div>
+                            <img
+                              src="/3D/green.svg"
+                              className="w-10 h-10"
+                              alt=""
+                            />
                           </div>
                         ) : (
                           <img
@@ -951,9 +953,11 @@ const ProductDetail = () => {
                         >
                           {is3DModel(image, index) ? (
                             <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                              <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                                3D
-                              </div>
+                              <img
+                                src="/3D/green.svg"
+                                className="w-10 h-10"
+                                alt=""
+                              />
                             </div>
                           ) : (
                             <img
@@ -1043,18 +1047,18 @@ const ProductDetail = () => {
                                             substyles: fallbackSubstyles,
                                             isLoaded: true,
                                           }
-                                        : cat
-                                    )
+                                        : cat,
+                                    ),
                                   );
                                   if (fallbackSubstyles.length > 0) {
                                     setSelectedRingStyle(
-                                      fallbackSubstyles[0].name
+                                      fallbackSubstyles[0].name,
                                     );
                                   }
                                 }
                               } else if (category.substyles.length > 0) {
                                 setSelectedRingStyle(
-                                  category.substyles[0].name
+                                  category.substyles[0].name,
                                 );
                               }
                             }}
@@ -1372,12 +1376,9 @@ const ProductDetail = () => {
                           normalized === "SILVER"
                             ? ["925"]
                             : normalized === "PLATINUM"
-                            ? ["950"]
-                            : selectedStyleData?.productDetails?.goldKarats || [
-                                "18kt",
-                                "14kt",
-                                "9kt",
-                              ];
+                              ? ["950"]
+                              : selectedStyleData?.productDetails
+                                  ?.goldKarats || ["18kt", "14kt", "9kt"];
 
                         setSelectedGoldKarat(newKarats[0]);
                       }}
@@ -1399,10 +1400,10 @@ const ProductDetail = () => {
                       {selectedMetalType === "GOLD"
                         ? "Select Gold Karat"
                         : selectedMetalType === "SILVER"
-                        ? "Silver Purity"
-                        : selectedMetalType === "PLATINUM"
-                        ? "Platinum Purity"
-                        : "Metal Purity"}
+                          ? "Silver Purity"
+                          : selectedMetalType === "PLATINUM"
+                            ? "Platinum Purity"
+                            : "Metal Purity"}
                       :{" "}
                       <span className="text-[#8D8A91]">
                         {selectedGoldKarat || getAvailableKarats()[0]}
@@ -1479,7 +1480,7 @@ const ProductDetail = () => {
                             setSelectedMetalColor(colorInfo.name);
                             setSelectedColorCode(code);
                           }}
-                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                          className={`w-10 h-10 flex justify-center items-center rounded-full border-2 transition-all hover:scale-105 ${
                             selectedColorCode === code
                               ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                               : "border-neutral-300 hover:border-neutral-400"
@@ -1490,7 +1491,7 @@ const ProductDetail = () => {
                             <img
                               src={colorInfo.img}
                               alt={colorInfo.name}
-                              className="w-8 h-8 object-cover rounded-full"
+                              className="w-7 h-7 object-cover rounded-full"
                             />
                           ) : (
                             <img
@@ -1522,7 +1523,7 @@ const ProductDetail = () => {
                               setSelectedMetalColor(colorInfo.name);
                               setSelectedColorCode(code);
                             }}
-                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                            className={`w-8 h-8 flex justify-center items-center sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
                               selectedColorCode === code
                                 ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                                 : "border-neutral-300 hover:border-neutral-400"
@@ -1533,7 +1534,7 @@ const ProductDetail = () => {
                               <img
                                 src={colorInfo.img}
                                 alt={colorInfo.name}
-                                className="w-6 h-6 sm:w-8 sm:h-8 object-cover rounded-full"
+                                className="w-4 h-4 sm:w-8 sm:h-8 object-cover rounded-full"
                               />
                             ) : (
                               <img
@@ -1729,7 +1730,7 @@ const ProductDetail = () => {
                         const resp: any = await apiService.addToCart(
                           productId,
                           1,
-                          variantData
+                          variantData,
                         );
                         if (resp?.success) {
                           toast.success?.("Added to cart");
@@ -1738,7 +1739,7 @@ const ProductDetail = () => {
                           toast.error?.(
                             resp?.error ||
                               resp?.message ||
-                              "Failed to add to cart"
+                              "Failed to add to cart",
                           );
                         }
                       } catch (err) {
@@ -2098,7 +2099,7 @@ declare global {
       Viewer: new (
         container: HTMLElement,
         project: object,
-        options: object
+        options: object,
       ) => void;
     };
   }

@@ -36,7 +36,7 @@ import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 
 // Map color codes to display info (handles both single and combination colors)
 const getColorDisplayInfo = (
-  code: string
+  code: string,
 ): { name: string; colors: string[]; img: string } | null => {
   // Single colors
   const singleColorMap: Record<string, { name: string; img: string }> = {
@@ -306,7 +306,7 @@ const GLBViewer = ({
         75,
         mountRef.current.clientWidth / mountRef.current.clientHeight,
         0.1,
-        1000
+        1000,
       );
       camera.position.set(0, 0, 5);
 
@@ -317,7 +317,7 @@ const GLBViewer = ({
       });
       renderer.setSize(
         mountRef.current.clientWidth,
-        mountRef.current.clientHeight
+        mountRef.current.clientHeight,
       );
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -376,12 +376,12 @@ const GLBViewer = ({
           const smallDiamondGeometry = new THREE.OctahedronGeometry(0.08);
           const smallDiamond = new THREE.Mesh(
             smallDiamondGeometry,
-            diamondMaterial
+            diamondMaterial,
           );
           smallDiamond.position.set(
             Math.cos(angle) * 1.3,
             0.1,
-            Math.sin(angle) * 1.3
+            Math.sin(angle) * 1.3,
           );
           smallDiamond.scale.set(0.7, 0.7, 0.7);
           group.add(smallDiamond);
@@ -399,7 +399,7 @@ const GLBViewer = ({
         const dracoLoader = new DRACOLoader();
         // Use CDN for DRACO decoder files
         dracoLoader.setDecoderPath(
-          "https://www.gstatic.com/draco/versioned/decoders/1.5.6/"
+          "https://www.gstatic.com/draco/versioned/decoders/1.5.6/",
         );
         dracoLoader.preload();
         loader.setDRACOLoader(dracoLoader);
@@ -438,7 +438,7 @@ const GLBViewer = ({
 
             dracoLoader.dispose();
             createPlaceholderModel();
-          }
+          },
         );
       } else {
         createPlaceholderModel();
@@ -464,12 +464,12 @@ const GLBViewer = ({
         };
 
         const deltaRotationQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(deltaMove.y * 0.01, deltaMove.x * 0.01, 0, "XYZ")
+          new THREE.Euler(deltaMove.y * 0.01, deltaMove.x * 0.01, 0, "XYZ"),
         );
 
         modelRef.current.quaternion.multiplyQuaternions(
           deltaRotationQuaternion,
-          modelRef.current.quaternion
+          modelRef.current.quaternion,
         );
         previousMousePosition = { x: event.clientX, y: event.clientY };
       };
@@ -524,7 +524,7 @@ const GLBViewer = ({
         camera.updateProjectionMatrix();
         renderer.setSize(
           mountRef.current.clientWidth,
-          mountRef.current.clientHeight
+          mountRef.current.clientHeight,
         );
       };
 
@@ -606,10 +606,10 @@ const ProductDetail = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
+    (state: RootState) => state.auth,
   );
   const { loading: cartLoading } = useSelector(
-    (state: RootState) => state.cart
+    (state: RootState) => state.cart,
   );
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
@@ -623,7 +623,7 @@ const ProductDetail = () => {
 
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
-    getInitialStyleAndDesign()
+    getInitialStyleAndDesign(),
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -642,14 +642,14 @@ const ProductDetail = () => {
 
     try {
       const response = await fetch(
-        `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`
+        `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`,
       );
       const data: ApiResponse = await response.json();
 
       if (data.success && data.entries) {
         // Fetch detailed product data for each entry
         const validEntries = data.entries.filter(
-          (e) => e.variants && e.variants.length > 0
+          (e) => e.variants && e.variants.length > 0,
         );
 
         const mappedSubstyles = validEntries.map((entry) => ({
@@ -664,8 +664,8 @@ const ProductDetail = () => {
           prev.map((category) =>
             category.name === categoryName
               ? { ...category, substyles: mappedSubstyles, isLoaded: true }
-              : category
-          )
+              : category,
+          ),
         );
 
         // Set first style as selected if none selected
@@ -687,7 +687,7 @@ const ProductDetail = () => {
       try {
         const metalCode = metalColorCode;
         const res = await fetch(
-          `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`
+          `/api/products/model/${parentSku}?variantId=${variantSku}&metalColor=${metalCode}`,
         );
         const data: ProductModelResponse = await res.json();
         if (data && data.success) {
@@ -701,24 +701,24 @@ const ProductDetail = () => {
                       productDetails: data,
                       thumbnailImages: data.variantImages,
                       price: new Intl.NumberFormat("en-IN").format(
-                        data.sellingPrice
+                        data.sellingPrice,
                       ),
                     }
-                  : s
+                  : s,
               ),
-            }))
+            })),
           );
         }
       } catch (err) {
         console.error("Failed to update substyle product details:", err);
       }
     },
-    []
+    [],
   );
 
   // Get current category's substyles and selected style data
   const currentCategory = styleAndDesign.find(
-    (cat) => cat.name === selectedStyleCategory
+    (cat) => cat.name === selectedStyleCategory,
   );
   const currentSubstyles = currentCategory?.substyles || [];
   const selectedStyleData =
@@ -742,7 +742,7 @@ const ProductDetail = () => {
   // Load data for current category
   useEffect(() => {
     const currentCategory = styleAndDesign.find(
-      (cat) => cat.name === selectedStyleCategory
+      (cat) => cat.name === selectedStyleCategory,
     );
     if (currentCategory && !currentCategory.isLoaded) {
       fetchCategoryData(selectedStyleCategory);
@@ -922,7 +922,7 @@ const ProductDetail = () => {
     const metalColor = selectedColorCode;
 
     const res = await fetch(
-      `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`
+      `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
     );
 
     const data: ProductModelResponse = await res.json();
@@ -936,13 +936,13 @@ const ProductDetail = () => {
                   ...s,
                   productDetails: data,
                   price: new Intl.NumberFormat("en-IN").format(
-                    data.sellingPrice
+                    data.sellingPrice,
                   ),
                   thumbnailImages: data.variantImages,
                 }
-              : s
+              : s,
           ),
-        }))
+        })),
       );
     }
   };
@@ -980,7 +980,7 @@ const ProductDetail = () => {
     // Map API diamond shapes to our shape objects
     return selectedStyleData.productDetails.diamondShape.map((shape) => {
       const shapeData = diamondShapes.shapes.find(
-        (s) => s.name.toUpperCase() === shape.toUpperCase()
+        (s) => s.name.toUpperCase() === shape.toUpperCase(),
       );
       return (
         shapeData || { name: shape, img: "/DIAMOND_SHAPES_WEBP/round.webp" }
@@ -1000,7 +1000,7 @@ const ProductDetail = () => {
     async (
       text: string,
       motifPath: string,
-      imageUrl?: string
+      imageUrl?: string,
     ): Promise<string | null> => {
       try {
         const formData = new FormData();
@@ -1013,7 +1013,7 @@ const ProductDetail = () => {
           } catch (err) {
             console.warn(
               "Failed to fetch engraving image URL, skipping appending image:",
-              err
+              err,
             );
           }
         }
@@ -1037,7 +1037,7 @@ const ProductDetail = () => {
         return null;
       }
     },
-    []
+    [],
   );
 
   const generateAndUploadEngravingImage = useCallback(async (): Promise<
@@ -1049,7 +1049,7 @@ const ProductDetail = () => {
       const uploadedUrl = await uploadEngravingToBackend(
         savedEngravingData.text,
         savedEngravingData.motif,
-        savedEngravingData.imageUrl
+        savedEngravingData.imageUrl,
       );
       return uploadedUrl;
     } catch (err) {
@@ -1435,9 +1435,11 @@ const ProductDetail = () => {
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                              3D
-                            </div>
+                            <img
+                              src="/3D/green.svg"
+                              className="w-10 h-10"
+                              alt=""
+                            />
                           </div>
                         ) : (
                           <img
@@ -1463,7 +1465,7 @@ const ProductDetail = () => {
                   <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {is3DModel(
                       thumbnailImages[selectedImage],
-                      selectedImage
+                      selectedImage,
                     ) ? (
                       <div className="">
                         <IjewelViewer
@@ -1523,9 +1525,11 @@ const ProductDetail = () => {
                                 className="w-full h-full"
                                 isMain={false}
                               />
-                              <div className="absolute top-1 right-1 bg-[#328F94] text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                                3D
-                              </div>
+                              <img
+                                src="/3D/green.svg"
+                                className="w-10 h-10"
+                                alt=""
+                              />
                             </div>
                           ) : (
                             <img
@@ -1607,7 +1611,7 @@ const ProductDetail = () => {
                                 // If already loaded, select first substyle
                                 if (category.substyles.length > 0) {
                                   setSelectedRingStyle(
-                                    category.substyles[0].name
+                                    category.substyles[0].name,
                                   );
                                 }
                               }
@@ -1990,10 +1994,10 @@ const ProductDetail = () => {
                           value === "SILVER"
                             ? ["SLV"]
                             : value === "PLATINUM"
-                            ? ["PT"]
-                            : selectedStyleData?.productDetails?.goldKarats?.filter(
-                                (k) => !["925", "950"].includes(k)
-                              ) || ["18kt", "14kt", "9kt"];
+                              ? ["PT"]
+                              : selectedStyleData?.productDetails?.goldKarats?.filter(
+                                  (k) => !["925", "950"].includes(k),
+                                ) || ["18kt", "14kt", "9kt"];
                         setSelectedGoldKarat(newKarats[0] || "");
                       }}
                     >
@@ -2014,19 +2018,19 @@ const ProductDetail = () => {
                       {selectedMetalType === "GOLD"
                         ? "Select Gold Karat"
                         : selectedMetalType === "SILVER"
-                        ? "Silver Purity"
-                        : selectedMetalType === "PLATINUM"
-                        ? "Platinum Purity"
-                        : "Metal Purity"}
+                          ? "Silver Purity"
+                          : selectedMetalType === "PLATINUM"
+                            ? "Platinum Purity"
+                            : "Metal Purity"}
                       :{" "}
                       <span className="text-[#8D8A91]">
                         {selectedMetalType === "GOLD"
                           ? `${selectedGoldKarat || getAvailableKarats()[0]}`
                           : selectedMetalType === "SILVER"
-                          ? "925"
-                          : selectedMetalType === "PLATINUM"
-                          ? "950"
-                          : ""}
+                            ? "925"
+                            : selectedMetalType === "PLATINUM"
+                              ? "950"
+                              : ""}
                       </span>
                     </h3>
                     <div className="flex items-center gap-2">
@@ -2124,7 +2128,7 @@ const ProductDetail = () => {
                             setSelectedMetalColor(colorInfo.name);
                             setSelectedColorCode(code);
                           }}
-                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                          className={`w-10 h-10 flex justify-center items-center rounded-full border-2 transition-all hover:scale-105 ${
                             selectedColorCode === code
                               ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                               : "border-neutral-300 hover:border-neutral-400"
@@ -2135,7 +2139,7 @@ const ProductDetail = () => {
                             <img
                               src={colorInfo.img}
                               alt={colorInfo.name}
-                              className="w-8 h-8 object-cover rounded-full"
+                              className="w-7 h-7 object-cover rounded-full"
                             />
                           ) : (
                             <img
@@ -2167,7 +2171,7 @@ const ProductDetail = () => {
                               setSelectedMetalColor(colorInfo.name);
                               setSelectedColorCode(code);
                             }}
-                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                            className={`w-8 h-8 flex justify-center items-center sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
                               selectedColorCode === code
                                 ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                                 : "border-neutral-300 hover:border-neutral-400"
@@ -2178,7 +2182,7 @@ const ProductDetail = () => {
                               <img
                                 src={colorInfo.img}
                                 alt={colorInfo.name}
-                                className="w-6 h-6 sm:w-8 sm:h-8 object-cover rounded-full"
+                                className="w-4 h-4 sm:w-8 sm:h-8 object-cover rounded-full"
                               />
                             ) : (
                               <img
@@ -2289,13 +2293,13 @@ const ProductDetail = () => {
                         if (evImage) {
                           evImage = evImage.replace(
                             /-(FV|SV|TV|BV|LV|RV|GP)\.webp$/i,
-                            "-EV.webp"
+                            "-EV.webp",
                           );
                           if (evImage === originalImage) {
                             // Fallback: replace extension with -EV.webp
                             evImage = originalImage.replace(
                               /\.webp$/i,
-                              "-EV.webp"
+                              "-EV.webp",
                             );
                           }
                         }
@@ -2306,7 +2310,7 @@ const ProductDetail = () => {
                             onSave={(
                               text?: string,
                               imageUrl?: string,
-                              motifPath?: string
+                              motifPath?: string,
                             ) => {
                               // Save a single engraving entry
                               const img = (imageUrl || evImage) as string;
