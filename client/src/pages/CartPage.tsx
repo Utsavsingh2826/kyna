@@ -21,7 +21,7 @@ const CartPage = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { cart, loading, error } = useSelector(
-    (state: RootState) => state.cart
+    (state: RootState) => state.cart,
   );
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   // const [setSelectedBillingAddress] = useState("");
@@ -67,7 +67,7 @@ const CartPage = () => {
     productId: string,
     newQuantity: number,
     variantSku?: string,
-    variantConfig?: any
+    variantConfig?: any,
   ) => {
     console.log("🔍 handleQuantityChange called with:", {
       productId,
@@ -82,7 +82,7 @@ const CartPage = () => {
         removeFromCart(productId, {
           variantSku,
           variantConfig,
-        })
+        }),
       );
     } else {
       console.log("➕ Updating quantity to:", newQuantity);
@@ -90,7 +90,7 @@ const CartPage = () => {
         updateCartItem(productId, newQuantity, {
           variantSku,
           variantConfig,
-        })
+        }),
       );
     }
   };
@@ -98,25 +98,27 @@ const CartPage = () => {
   const handleRemoveItem = async (
     productId: string,
     variantSku?: string,
-    variantConfig?: any
+    variantConfig?: any,
   ) => {
     dispatch(
       removeFromCart(productId, {
         variantSku,
         variantConfig,
-      })
+      }),
     );
   };
 
   const handleEditProduct = (
     product: any,
     variantSku: string,
-    metalColor?: string
+    metalColor?: string,
+    variantConfig?: any,
   ) => {
     console.log("✏️ handleEditProduct called with:", {
       product,
       variantSku,
       metalColor,
+      variantConfig,
     });
 
     // Safety check to ensure product and required properties exist
@@ -125,6 +127,53 @@ const CartPage = () => {
       console.error("Product or SKU is missing:", product);
       toast.error("Cannot edit details: Product information missing");
       return;
+    }
+
+    // Debug: Check if variantSku is missing metal code
+    if (variantSku && variantSku.includes("--")) {
+      console.error("⚠️ VARIANT SKU IS MALFORMED (double dash):", variantSku);
+      console.log("Variant Config:", variantConfig);
+
+      // Try to reconstruct the correct variant SKU from variantConfig
+      if (variantConfig?.metalType) {
+        const metalCodeMap: { [key: string]: string } = {
+          GOLD: "",
+          PLATINUM: "PT",
+          SILVER: "SLV",
+        };
+
+        let metalCode = "";
+        if (variantConfig.metalType === "GOLD") {
+          // Extract karat number (e.g., "18kt" -> "18")
+          const karatMatch = variantConfig.goldKarat?.match(/(\d+)/);
+          metalCode = karatMatch ? karatMatch[1] : "18";
+          console.log("🔍 GOLD detected, extracted karat:", metalCode);
+        } else {
+          metalCode = metalCodeMap[variantConfig.metalType] || "";
+          console.log(
+            "🔍 Non-GOLD metal detected:",
+            variantConfig.metalType,
+            "→ code:",
+            metalCode,
+          );
+        }
+
+        if (metalCode) {
+          // Replace double dash with metal code
+          const parts = variantSku.split("--");
+          if (parts.length === 2) {
+            const oldSku = variantSku;
+            variantSku = `${parts[0]}-${metalCode}-${parts[1]}`;
+            console.log("✅ RECONSTRUCTED VARIANT SKU:");
+            console.log("   OLD:", oldSku);
+            console.log("   NEW:", variantSku);
+          }
+        } else {
+          console.error("❌ Failed to extract metal code");
+        }
+      } else {
+        console.error("❌ variantConfig or metalType is missing");
+      }
     }
 
     // Navigate to product page with variant parameter and metal color
@@ -153,12 +202,14 @@ const CartPage = () => {
     };
 
     let url = `/product/${category}/${productSku}?variantId=${variantSku}`;
+    console.log("🚀 Navigating to:", url);
 
     // Add metal color parameter if available
     if (metalColor && metalColorMap[metalColor]) {
       url += `&metalColor=${metalColorMap[metalColor]}`;
     }
 
+    console.log("🚀 Final URL:", url);
     navigate(url);
   };
 
@@ -168,7 +219,7 @@ const CartPage = () => {
       // Note: You'll need to implement this endpoint in your backend
       const response = await apiService.updateCartItemRingSize(
         itemId,
-        newRingSize
+        newRingSize,
       );
       if (response.success) {
         dispatch(fetchCart()); // Refresh cart
@@ -283,7 +334,7 @@ const CartPage = () => {
                               handleRemoveItem(
                                 item.product?._id || item._id,
                                 item.variantSku,
-                                item.variantConfig
+                                item.variantConfig,
                               )
                             }
                             className="mt-2 text-red-500 hover:text-red-700 text-sm"
@@ -301,7 +352,7 @@ const CartPage = () => {
                     ? priceBreakdownRaw[0] || {}
                     : priceBreakdownRaw || {};
                   const rawVariantImages = Array.isArray(
-                    variantConfig?.variantImages
+                    variantConfig?.variantImages,
                   )
                     ? variantConfig.variantImages
                     : [];
@@ -309,7 +360,7 @@ const CartPage = () => {
                     .map((image: any) =>
                       typeof image === "string"
                         ? image
-                        : image?.url || image?.imageUrl || image?.src || ""
+                        : image?.url || image?.imageUrl || image?.src || "",
                     )
                     .filter(Boolean);
                   const primaryVariantImage = variantImages[0] || "";
@@ -352,7 +403,8 @@ const CartPage = () => {
                                 handleEditProduct(
                                   item.product,
                                   item.variantSku,
-                                  variantConfig?.metalColor
+                                  variantConfig?.metalColor,
+                                  variantConfig,
                                 )
                               }
                               className="bg-[#2a8a85] hover:bg-[#1f6b66] text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center space-x-1"
@@ -367,7 +419,9 @@ const CartPage = () => {
                           <div className="flex justify-end mt-2">
                             <p className="text-lg font-semibold text-gray-900">
                               ₹
-                              {(item.price * item.quantity).toLocaleString("en-IN")}
+                              {(item.price * item.quantity).toLocaleString(
+                                "en-IN",
+                              )}
                               .00
                             </p>
                           </div>
@@ -406,7 +460,7 @@ const CartPage = () => {
                                           className="w-12 h-12 object-cover rounded border-2 border-gray-200 hover:border-[#2a8a85] transition-colors flex-shrink-0 cursor-pointer"
                                           onError={(e) => {
                                             console.warn(
-                                              `Failed to load variant image: ${image}`
+                                              `Failed to load variant image: ${image}`,
                                             );
                                             e.currentTarget.style.display =
                                               "none";
@@ -537,7 +591,7 @@ const CartPage = () => {
                                         onChange={(e) =>
                                           handleRingSizeUpdate(
                                             item._id,
-                                            e.target.value
+                                            e.target.value,
                                           )
                                         }
                                         className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-[#2a8a85] bg-white min-w-[120px]"
@@ -633,7 +687,7 @@ const CartPage = () => {
                                     item.product._id,
                                     item.quantity - 1,
                                     item.variantSku,
-                                    item.variantConfig
+                                    item.variantConfig,
                                   )
                                 }
                                 className="w-8 h-8 flex items-center justify-center border-2 border-[#2a8a85] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
@@ -649,7 +703,7 @@ const CartPage = () => {
                                     item.product._id,
                                     item.quantity + 1,
                                     item.variantSku,
-                                    item.variantConfig
+                                    item.variantConfig,
                                   )
                                 }
                                 className="w-8 h-8 flex items-center justify-center border-2 border-[#182625] text-[#2a8a85] hover:bg-[#2a8a85] hover:text-white rounded-md transition-colors duration-200"
@@ -665,7 +719,7 @@ const CartPage = () => {
                                   handleRemoveItem(
                                     item.product._id,
                                     item.variantSku,
-                                    item.variantConfig
+                                    item.variantConfig,
                                   )
                                 }
                               >
@@ -850,8 +904,8 @@ const CartPage = () => {
             </div>
           </div>
         </div>
-      </div >
-    </div >
+      </div>
+    </div>
   );
 };
 

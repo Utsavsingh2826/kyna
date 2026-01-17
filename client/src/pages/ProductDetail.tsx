@@ -310,6 +310,19 @@ const ProductDetail = () => {
   // Helper function to parse karat and set metal type
   const parseKaratAndSetMetalType = useCallback(
     (goldKarat: string, productData: ProductData) => {
+      // Handle letter codes for Silver and Platinum
+      if (goldKarat === "SLV") {
+        setSelectedMetalType("SILVER");
+        setSelectedGoldKarat("925");
+        console.log("Set metal type: SILVER (from SLV code), purity: 925");
+        return;
+      } else if (goldKarat === "PT") {
+        setSelectedMetalType("PLATINUM");
+        setSelectedGoldKarat("950");
+        console.log("Set metal type: PLATINUM (from PT code), purity: 950");
+        return;
+      }
+
       const karatValue = normalizeKarat(`${goldKarat}kt`);
 
       // Determine metal type based on karat value
