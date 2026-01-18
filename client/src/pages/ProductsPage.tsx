@@ -302,6 +302,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             activeFilters.fashion_diamond_shape.forEach((shape) =>
               allSelectedShapes.add(shape),
             );
+            activeFilters.mens_diamond_shape.forEach((shape) =>
+              allSelectedShapes.add(shape),
+            );
 
             // Add centerStoneShape parameter if any shapes are selected
             if (allSelectedShapes.size > 0) {

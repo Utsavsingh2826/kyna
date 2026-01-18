@@ -99,7 +99,7 @@ const getColorDisplayInfo = (
     YG: { name: "Yellow", img: "/colors/gold.png" },
     RG: { name: "Rose", img: "/colors/rosegold.png" },
     BR: { name: "Black Rhodium", img: "/colors/br.png" },
-    "3T": { name: "Three Tone", img: "/colors/threetone.png" },
+    "3T": { name: "Three Tone", img: "/colors/3T.png" },
   };
 
   // Check if it's a single color
