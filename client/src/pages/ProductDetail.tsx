@@ -62,6 +62,16 @@ interface ProductData {
   diamondShape: string[];
   diamondSize: string[];
   diamondColorClarity: string[];
+  diamondOptions?: {
+    NATURAL?: {
+      GOLD?: string[];
+      PLATINUM?: string[];
+    };
+    LAB?: {
+      GOLD?: string[];
+      PLATINUM?: string[];
+    };
+  };
   isEngraving: boolean;
   priceBreakdown: {
     metalCost: number;
@@ -737,6 +747,33 @@ const ProductDetail = () => {
 
     fetchProductData();
   }, [id, category, parseVariantSku]);
+
+  // Reset clarity selection when metal type or diamond origin changes
+  useEffect(() => {
+    if (!productData || !productData.diamondOptions) return;
+
+    const diamondType =
+      selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+    const metalTypeKey = selectedMetalType === "PLATINUM" ? "PLATINUM" : "GOLD";
+
+    const clarityOptions =
+      productData.diamondOptions?.[diamondType]?.[metalTypeKey] || [];
+    const normalizedClarityOptions = clarityOptions.map((option) =>
+      option.replace(/\s+/g, ""),
+    );
+
+    // If current selection is not in the new options, reset to first available
+    if (
+      selectedColorClarity &&
+      !normalizedClarityOptions.includes(selectedColorClarity)
+    ) {
+      if (normalizedClarityOptions.length > 0) {
+        setSelectedColorClarity(normalizedClarityOptions[0]);
+      } else {
+        setSelectedColorClarity("");
+      }
+    }
+  }, [selectedMetalType, selectedDiamondOrigin, productData]);
 
   // ---------- iJewel Preload (Silent) ----------
   useEffect(() => {
@@ -2472,7 +2509,7 @@ const ProductDetail = () => {
 
                 {/* Diamond Shape - Only show if diamond shapes are available */}
                 {productData.diamondShape &&
-                  productData.diamondShape.length > 0 && (
+                  productData.diamondShape.length > 1 && (
                     <div>
                       <h3 className="mb-3 text-sm">
                         Diamond Shape:{" "}
@@ -2524,45 +2561,71 @@ const ProductDetail = () => {
                     </div>
                   )}
 
-                {/* Diamond Size & Color/Clarity - Only show if data is available */}
-                {productData.diamondSize.length > 0 && (
-                  <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
-                    {productData.diamondShape.length > 0 && (
-                      <div>
-                        <label className="block text-xs mb-2">
-                          Diamond Size
-                        </label>
-                        <Select
-                          value={selectedDiamondSize}
-                          onValueChange={(value) => {
-                            setSelectedDiamondSize(value);
-                          }}
-                        >
-                          <SelectTrigger className="text-sm border-neutral-300">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {productData.diamondSize
-                              .filter((size) => {
-                                // For Natural Diamond, only show sizes <= 1 carat
-                                if (
-                                  selectedDiamondOrigin === "Natural Diamond"
-                                ) {
-                                  return parseFloat(size) <= 1;
-                                }
-                                // For Lab Grown Diamond, show all sizes
-                                return true;
-                              })
-                              .map((size, index) => (
-                                <SelectItem key={index} value={size}>
-                                  {parseFloat(size).toFixed(2)} Carat
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    {productData.diamondColorClarity.length > 0 && (
+                <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
+                  {productData.diamondSize.length > 0 && (
+                    <div>
+                      <label className="block text-xs mb-2">Diamond Size</label>
+                      <Select
+                        value={selectedDiamondSize}
+                        onValueChange={(value) => {
+                          setSelectedDiamondSize(value);
+                        }}
+                      >
+                        <SelectTrigger className="text-sm border-neutral-300">
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          {productData.diamondSize
+                            .filter((size) => {
+                              // For Natural Diamond, only show sizes <= 1 carat
+                              if (selectedDiamondOrigin === "Natural Diamond") {
+                                return parseFloat(size) <= 1;
+                              }
+                              // For Lab Grown Diamond, show all sizes
+                              return true;
+                            })
+                            .map((size, index) => (
+                              <SelectItem key={index} value={size}>
+                                {parseFloat(size).toFixed(2)} Carat
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {(() => {
+                    // Get available clarity options based on diamond type and metal type
+                    const getAvailableClarityOptions = () => {
+                      if (!productData.diamondOptions) {
+                        // Fallback to old logic if diamondOptions is not available
+                        return productData.diamondColorClarity.filter((cc) => {
+                          return true;
+                        });
+                      }
+
+                      const diamondType =
+                        selectedDiamondOrigin === "Lab Grown Diamond"
+                          ? "LAB"
+                          : "NATURAL";
+                      const metalTypeKey =
+                        selectedMetalType === "PLATINUM" ? "PLATINUM" : "GOLD";
+
+                      const clarityOptions =
+                        productData.diamondOptions?.[diamondType]?.[
+                          metalTypeKey
+                        ] || [];
+
+                      // Map the clarity options to match the format used in the product
+                      return clarityOptions.map((option) => {
+                        // Convert "EF VVS" to "EFVVS", "D IF" to "DIF", "DE IF" to "DEIF", etc.
+                        return option.replace(/\s+/g, "");
+                      });
+                    };
+
+                    const availableClarityOptions =
+                      getAvailableClarityOptions();
+
+                    return availableClarityOptions.length > 0 ? (
                       <div>
                         <label className="block text-xs mb-2">
                           Color & Clarity
@@ -2578,28 +2641,17 @@ const ProductDetail = () => {
                           </SelectTrigger>
 
                           <SelectContent className="bg-white">
-                            {productData.diamondColorClarity
-                              .filter((cc) => {
-                                // For Lab Grown Diamond, exclude GHVS and GHSI
-                                if (
-                                  selectedDiamondOrigin === "Lab Grown Diamond"
-                                ) {
-                                  return cc !== "GHVS" && cc !== "GHSI";
-                                }
-                                // For Natural Diamond, show all options
-                                return true;
-                              })
-                              .map((cc, index) => (
-                                <SelectItem key={index} value={cc}>
-                                  {cc}
-                                </SelectItem>
-                              ))}
+                            {availableClarityOptions.map((cc, index) => (
+                              <SelectItem key={index} value={cc}>
+                                {cc}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
-                  </div>
-                )}
+                    ) : null;
+                  })()}
+                </div>
 
                 {/* Metal Type */}
                 <div className="my-6 grid grid-cols-2 gap-4">
