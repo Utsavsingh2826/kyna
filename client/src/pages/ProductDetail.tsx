@@ -10,7 +10,6 @@ import {
   MessageCircle,
   Share2,
   Play,
-  X,
 } from "lucide-react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -99,8 +98,8 @@ const getColorDisplayInfo = (
     WG: { name: "White", img: "/colors/white.png" },
     YG: { name: "Yellow", img: "/colors/gold.png" },
     RG: { name: "Rose", img: "/colors/rosegold.png" },
-    BR: { name: "Black Rhodium", img: "/colors/blackrohdium.png" },
-    "3T": { name: "Three Tone", img: "/metal_colors/threetone.png" },
+    BR: { name: "Black Rhodium", img: "/colors/br.png" },
+    "3T": { name: "Three Tone", img: "/colors/threetone.png" },
   };
 
   // Check if it's a single color
@@ -234,8 +233,8 @@ const ProductDetail = () => {
   const [selectedGoldKarat, setSelectedGoldKarat] = useState("");
   const [selectedMetalType, setSelectedMetalType] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState("");
-  const [selectedBandwidth, setSelectedBandwidth] = useState("");
   const [selectedFinishing, setSelectedFinishing] = useState("");
+  const [selectedBandwidth, setSelectedBandwidth] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
@@ -430,90 +429,91 @@ const ProductDetail = () => {
           return prev;
         });
       } else if (parts.length === 5) {
-        // 5-part format: modelSku-shape-carat-karat-specs
-        setOriginalVariantFormat("5-part");
-        const [, diamondShape, caratSize, goldKarat, specifications] = parts;
+        // 5-part format could be:
+        // - modelSku-karat-specs-bandwidth-finish (Men's rings: GR25-14-LGEFVS-8-BF)
+        // - modelSku-shape-carat-karat-specs (Women's rings/pendants)
+        const [, part2, , , part5] = parts;
 
-        // Parse diamond shape (CUS = Cushion, etc.)
-        const shapeMap: { [key: string]: string } = {
+        const finishingCodes = ["BF", "HM", "MF", "NF"];
+        const shapeCodeMap: { [key: string]: string } = {
           CUS: "CUSHION",
           EM: "EMERALD",
           OV: "OVAL",
           PRN: "PRINCESS",
           PRS: "PEAR",
           RD: "ROUND",
-          MAR: "MARQUISE", // Alternative mapping
-          MQ: "MARQUISE", // Primary mapping
+          MAR: "MARQUISE",
+          MQ: "MARQUISE",
           HEA: "HEART",
         };
 
-        if (
-          shapeMap[diamondShape] &&
-          productData.diamondShape.includes(shapeMap[diamondShape])
-        ) {
-          setSelectedDiamondShape(shapeMap[diamondShape]);
-          console.log("Set diamond shape:", shapeMap[diamondShape]);
-        }
-
-        // Parse diamond carat size (30 = 0.30 carat)
-        const caratValue = (parseInt(caratSize) / 100).toString();
-        if (productData.diamondSize.includes(caratValue)) {
-          setSelectedDiamondSize(caratValue);
-          console.log("Set diamond carat size:", caratValue);
-        }
-
-        // Parse karat and set metal type
-        parseKaratAndSetMetalType(goldKarat, productData);
-
-        // Parse diamond origin
-        const diamondOrigin = specifications.startsWith("LG")
-          ? "Lab Grown Diamond"
-          : "Natural Diamond";
-        setSelectedDiamondOrigin(diamondOrigin);
-
-        const clarity = specifications.replace(/^LG|^ND/, "");
-        // Only set clarity IF user has NOT selected one
-        setSelectedColorClarity((prev) => {
-          if (prev) return prev; // user-selected -> do not override
-          if (productData.diamondColorClarity.includes(clarity)) return clarity;
-          return prev;
-        });
-
-        console.log("Set diamond origin:", diamondOrigin);
-      } else if (parts.length === 5) {
-        // 5-part format could be:
-        // - modelSku-karat-specs-bandwidth-finish (Men's rings with both)
-        // Check if last part is a finishing code
-        setOriginalVariantFormat("3-part");
-        const [, goldKarat, specifications, part4, part5] = parts;
-
-        const finishingCodes = ["BF", "HM", "MF", "NF"];
-        if (finishingCodes.includes(part5)) {
+        // Check if it's Men's ring format (karat-specs-bandwidth-finish)
+        if (finishingCodes.includes(part5) && !shapeCodeMap[part2]) {
           // Format: modelSku-karat-specs-bandwidth-finish
-          setSelectedBandwidth(part4);
-          setSelectedFinishing(part5);
+          setOriginalVariantFormat("3-part");
+          const [, goldKarat, specifications, bandwidth, finishing] = parts;
+          setSelectedBandwidth(bandwidth);
+          setSelectedFinishing(finishing);
+          parseKaratAndSetMetalType(goldKarat, productData);
+
+          const diamondOrigin = specifications.startsWith("LG")
+            ? "Lab Grown Diamond"
+            : "Natural Diamond";
+          setSelectedDiamondOrigin(diamondOrigin);
+
+          const clarity = specifications.replace(/^LG|^ND/, "");
+          setSelectedColorClarity((prev) => {
+            if (prev) return prev;
+            if (productData.diamondColorClarity.includes(clarity))
+              return clarity;
+            return prev;
+          });
+
+          // Don't set diamond shape/size for Men's rings
+          setSelectedDiamondShape("");
+          setSelectedDiamondSize("");
+          console.log("Men's ring 5-part format: bandwidth + finish");
+        } else {
+          // Format: modelSku-shape-carat-karat-specs (5-part women's rings)
+          setOriginalVariantFormat("5-part");
+          const [, diamondShape, caratSize, goldKarat, specifications] = parts;
+
+          if (
+            shapeCodeMap[diamondShape] &&
+            productData.diamondShape.includes(shapeCodeMap[diamondShape])
+          ) {
+            setSelectedDiamondShape(shapeCodeMap[diamondShape]);
+            console.log("Set diamond shape:", shapeCodeMap[diamondShape]);
+          }
+
+          const caratValue = (parseInt(caratSize) / 100).toString();
+          if (productData.diamondSize.includes(caratValue)) {
+            setSelectedDiamondSize(caratValue);
+            console.log("Set diamond carat size:", caratValue);
+          }
+
+          parseKaratAndSetMetalType(goldKarat, productData);
+
+          const diamondOrigin = specifications.startsWith("LG")
+            ? "Lab Grown Diamond"
+            : "Natural Diamond";
+          setSelectedDiamondOrigin(diamondOrigin);
+
+          const clarity = specifications.replace(/^LG|^ND/, "");
+          setSelectedColorClarity((prev) => {
+            if (prev) return prev;
+            if (productData.diamondColorClarity.includes(clarity))
+              return clarity;
+            return prev;
+          });
+
+          console.log("Set diamond origin:", diamondOrigin);
         }
-
-        // Parse karat and set metal type
-        parseKaratAndSetMetalType(goldKarat, productData);
-
-        // Parse diamond origin
-        const diamondOrigin = specifications.startsWith("LG")
-          ? "Lab Grown Diamond"
-          : "Natural Diamond";
-        setSelectedDiamondOrigin(diamondOrigin);
-
-        const clarity = specifications.replace(/^LG|^ND/, "");
-        setSelectedColorClarity((prev) => {
-          if (prev) return prev;
-          if (productData.diamondColorClarity.includes(clarity)) return clarity;
-          return prev;
-        });
       } else if (parts.length === 4) {
         // 4-part format could be:
         // - modelSku-karat-specs-size (bracelets)
-        // - modelSku-karat-specs-bandwidth (Men's rings)
-        // - modelSku-karat-specs-finish (Men's rings)
+        // - modelSku-karat-specs-bandwidth (Men's rings: GR25-14-LGEFVS-8)
+        // - modelSku-karat-specs-finish (Men's rings: GR25-14-LGEFVS-BF)
         setOriginalVariantFormat("3-part");
         const [, goldKarat, specifications, lastPart] = parts;
 
@@ -522,17 +522,17 @@ const ProductDetail = () => {
         if (finishingCodes.includes(lastPart)) {
           // Format: modelSku-karat-specs-finish
           setSelectedFinishing(lastPart);
-        } else if (["6", "7", "8"].includes(lastPart)) {
+          console.log("Men's ring 4-part format: finish only");
+        } else if (["4", "5", "6", "7", "8", "9", "10"].includes(lastPart)) {
           // Could be bracelet size or bandwidth
           if (category === "bracelets") {
             setSelectedBraceletSize(lastPart);
+            console.log("Bracelet 4-part format: size", lastPart);
           } else {
             // Men's ring bandwidth
             setSelectedBandwidth(lastPart);
+            console.log("Men's ring 4-part format: bandwidth", lastPart);
           }
-        } else if (["4", "5"].includes(lastPart)) {
-          // Likely bandwidth for Men's rings (4-8mm range)
-          setSelectedBandwidth(lastPart);
         }
 
         // DO NOT auto-select diamond shape or size - keep them empty
@@ -557,27 +557,14 @@ const ProductDetail = () => {
 
         console.log("Set diamond origin:", diamondOrigin);
       } else if (parts.length === 3) {
-        // 3-part format: modelSku-karat-specs
+        // 3-part format: modelSku-karat-specs (Base Men's rings: GR25-14-LGEFVS)
         setOriginalVariantFormat("3-part");
         const [, goldKarat, specifications] = parts;
 
-        // Auto-select first available diamond shape
-        if (productData.diamondShape && productData.diamondShape.length > 0) {
-          setSelectedDiamondShape(productData.diamondShape[0]);
-          console.log(
-            "Auto-selected diamond shape:",
-            productData.diamondShape[0],
-          );
-        }
-
-        // Auto-select first available diamond size
-        if (productData.diamondSize && productData.diamondSize.length > 0) {
-          setSelectedDiamondSize(productData.diamondSize[0]);
-          console.log(
-            "Auto-selected diamond size:",
-            productData.diamondSize[0],
-          );
-        }
+        // For Men's rings, don't auto-select diamond shape/size
+        // They might have bandwidth/finishing options instead
+        setSelectedDiamondShape("");
+        setSelectedDiamondSize("");
 
         // Parse karat and set metal type
         parseKaratAndSetMetalType(goldKarat, productData);
@@ -587,7 +574,16 @@ const ProductDetail = () => {
           ? "Lab Grown Diamond"
           : "Natural Diamond";
         setSelectedDiamondOrigin(diamondOrigin);
+
+        const clarity = specifications.replace(/^LG|^ND/, "");
+        setSelectedColorClarity((prev) => {
+          if (prev) return prev;
+          if (productData.diamondColorClarity.includes(clarity)) return clarity;
+          return prev;
+        });
+
         console.log("Set diamond origin:", diamondOrigin);
+        console.log("3-part Men's ring format detected");
       } else {
         console.warn("Invalid variant SKU format:", variantSku);
 
@@ -648,17 +644,6 @@ const ProductDetail = () => {
         // real product information (images, options, price, etc.).
         // Log the response for debugging as well.
         setProductData(data);
-
-        // Auto-select first bandwidth and finishing for Men's Rings (if available)
-        if (data.bandwidth && data.bandwidth.length > 0 && !selectedBandwidth) {
-          setSelectedBandwidth(data.bandwidth[0]);
-          console.log("Auto-selected bandwidth:", data.bandwidth[0]);
-        }
-        if (data.finishing && data.finishing.length > 0 && !selectedFinishing) {
-          setSelectedFinishing(data.finishing[0].code);
-          console.log("Auto-selected finishing:", data.finishing[0].code);
-        }
-
         // If metal type is still empty, set default
         if (!selectedMetalType) {
           if (data.metalTypes.includes("GOLD")) {
@@ -884,8 +869,6 @@ const ProductDetail = () => {
     selectedGoldKarat,
     selectedMetalType,
     selectedBraceletSize,
-    selectedBandwidth,
-    selectedFinishing,
   ]);
 
   // Generate variant ID based on current selections
@@ -959,49 +942,15 @@ const ProductDetail = () => {
       karatCode = normalizedKarat.includes("kt")
         ? normalizedKarat.replace("kt", "")
         : normalizedKarat;
-
-      // Safety check: if karatCode is empty, default to first available karat
-      if (
-        !karatCode &&
-        productData.goldKarats &&
-        productData.goldKarats.length > 0
-      ) {
-        const firstGoldKarat = productData.goldKarats.find((k) =>
-          normalizeKarat(k).includes("kt"),
-        );
-        if (firstGoldKarat) {
-          const normalized = normalizeKarat(firstGoldKarat);
-          karatCode = normalized.replace("kt", "");
-        }
-      }
     } else {
       karatCode = metalCodeMap[selectedMetalType];
     }
 
     const originCode =
       selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
+    const specifications = `${originCode}${selectedColorClarity}`;
 
-    // Safety check: if selectedColorClarity is empty, use first available
-    let clarity = selectedColorClarity;
-    if (
-      !clarity &&
-      productData.diamondColorClarity &&
-      productData.diamondColorClarity.length > 0
-    ) {
-      clarity = productData.diamondColorClarity[0];
-      console.warn(
-        "⚠️ selectedColorClarity is empty, using first available:",
-        clarity,
-      );
-    }
-
-    const specifications = `${originCode}${clarity}`;
-
-    // Check if this is a Men's Ring (has bandwidth or finishing)
-    // Men's Rings ALWAYS use 3-part base format regardless of originalVariantFormat
-    const isMensRing = productData.bandwidth || productData.finishing;
-
-    if (originalVariantFormat === "5-part" && !isMensRing) {
+    if (originalVariantFormat === "5-part") {
       const shapeCodeMap: { [key: string]: string } = {
         CUSHION: "CUS",
         EMERALD: "EM",
@@ -1024,7 +973,7 @@ const ProductDetail = () => {
 
       return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}`;
     } else {
-      // 3-part base with optional bandwidth and finishing
+      // 3-part base with optional bandwidth and finishing (Men's rings)
       let variantId = `${modelSku}-${karatCode}-${specifications}`;
 
       // Add bandwidth if selected (Men's Rings)
@@ -1052,6 +1001,7 @@ const ProductDetail = () => {
     selectedBraceletSize,
     selectedBandwidth,
     selectedFinishing,
+    activeVariantSku,
   ]);
 
   // Update variant ID and refetch data
@@ -1130,8 +1080,6 @@ const ProductDetail = () => {
         setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
         setSelectedMetalType(lastValidStateRef.current.metalType);
         setSelectedBraceletSize(lastValidStateRef.current.braceletSize);
-        setSelectedBandwidth(lastValidStateRef.current.bandwidth);
-        setSelectedFinishing(lastValidStateRef.current.finishing);
 
         // Also revert the URL to the last valid variant
         // Use the last valid variant from productData if available
@@ -1187,8 +1135,6 @@ const ProductDetail = () => {
       setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
       setSelectedMetalType(lastValidStateRef.current.metalType);
       setSelectedBraceletSize(lastValidStateRef.current.braceletSize);
-      setSelectedBandwidth(lastValidStateRef.current.bandwidth);
-      setSelectedFinishing(lastValidStateRef.current.finishing);
 
       // Also revert the URL on network error
       if (productData?.chosenVariantSku) {
@@ -2779,26 +2725,34 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
-                {/* Bandwidth and Finishing Options (for Men's Rings) */}
-                {(productData?.bandwidth || productData?.finishing) && (
-                  <div className="my-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Bandwidth Dropdown */}
-                      {productData?.bandwidth &&
-                        productData.bandwidth.length > 0 && (
+                {/* Bandwidth and Finishing for Men's Rings */}
+                {originalVariantFormat === "3-part" &&
+                  ((productData?.bandwidth?.length ?? 0) > 0 ||
+                    (productData?.finishing?.length ?? 0) > 0) && (
+                    <div className="my-6">
+                      <div
+                        className={`grid ${
+                          (productData?.bandwidth?.length ?? 0) > 0 &&
+                          (productData?.finishing?.length ?? 0) > 0
+                            ? "grid-cols-2"
+                            : "grid-cols-1"
+                        } gap-4`}
+                      >
+                        {/* Bandwidth Selection */}
+                        {(productData?.bandwidth?.length ?? 0) > 0 && (
                           <div>
-                            <label className="block text-sm mb-2 font-medium">
-                              Bandwidth (mm)
+                            <label className="block text-sm mb-2">
+                              Band Width (mm)
                             </label>
                             <Select
                               value={selectedBandwidth}
                               onValueChange={setSelectedBandwidth}
                             >
-                              <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select Bandwidth" />
+                              <SelectTrigger className="w-1/2">
+                                <SelectValue placeholder="Select Width" />
                               </SelectTrigger>
                               <SelectContent className="bg-white">
-                                {productData.bandwidth.map((width) => (
+                                {productData.bandwidth?.map((width) => (
                                   <SelectItem key={width} value={width}>
                                     {width}mm
                                   </SelectItem>
@@ -2808,22 +2762,21 @@ const ProductDetail = () => {
                           </div>
                         )}
 
-                      {/* Finishing Dropdown */}
-                      {productData?.finishing &&
-                        productData.finishing.length > 0 && (
-                          <div className="bg-white">
-                            <label className="block text-sm mb-2 font-medium">
-                              Finishing
+                        {/* Finishing Selection */}
+                        {(productData?.finishing?.length ?? 0) > 0 && (
+                          <div>
+                            <label className="block text-sm mb-2">
+                              Finish Type
                             </label>
                             <Select
                               value={selectedFinishing}
                               onValueChange={setSelectedFinishing}
                             >
-                              <SelectTrigger className="w-full">
+                              <SelectTrigger className="w-1/2">
                                 <SelectValue placeholder="Select Finish" />
                               </SelectTrigger>
                               <SelectContent className="bg-white">
-                                {productData.finishing.map((finish) => (
+                                {productData.finishing?.map((finish) => (
                                   <SelectItem
                                     key={finish.code}
                                     value={finish.code}
@@ -2835,9 +2788,9 @@ const ProductDetail = () => {
                             </Select>
                           </div>
                         )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {category === "rings" && (
                   <div className="my-6 space-y-2">

@@ -33,21 +33,20 @@ declare global {
   }
 }
 
-export { };
+export {};
 
 export default function Navbar() {
   const isAuthenticated = useSelector(
-    (state: RootState) => state.auth.isAuthenticated
+    (state: RootState) => state.auth.isAuthenticated,
   );
   const displayName = useSelector(
-    (state: RootState) => state.auth.user?.firstName
+    (state: RootState) => state.auth.user?.firstName,
   );
   const cart = useSelector((state: RootState) => state.cart.cart);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const userMenuRef = React.useRef<HTMLDivElement | null>(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
 
   // Calculate unique product count from cart
   const cartItemCount = cart?.items?.length || 0;
@@ -110,7 +109,7 @@ export default function Navbar() {
             <div className="flex items-start justify-between md:grid md:grid-cols-3">
               {/* Left side */}
               <div className="flex mt-2 md:gap-4 text-white ">
-                <a href="tel:+918920610062" className="flex ">
+                <a href="tel:+918920610062" className="flex mt-1">
                   <Phone className="w-5 h-5" />
                   <span className="hover:underline hidden md:inline">
                     +91 8920610062
@@ -623,9 +622,10 @@ function CollapsibleSection({
               <NavLink
                 to={getBasePath(title)}
                 className={({ isActive }) =>
-                  `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${isActive
-                    ? "bg-[#68C5C0]/20 text-foreground"
-                    : "text-muted-foreground"
+                  `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${
+                    isActive
+                      ? "bg-[#68C5C0]/20 text-foreground"
+                      : "text-muted-foreground"
                   }`
                 }
               >
@@ -703,7 +703,8 @@ function CollapsibleSection({
                   <NavLink
                     to={getLinkForItem(title, item)}
                     className={({ isActive }) =>
-                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${isActive ? "bg-[#68C5C0]/20" : ""
+                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${
+                        isActive ? "bg-[#68C5C0]/20" : ""
                       }`
                     }
                   >
