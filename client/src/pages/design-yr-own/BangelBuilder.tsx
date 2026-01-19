@@ -13,7 +13,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Progress } from "@/components/ui/progress";
-import { X, Edit, Upload, ChevronRight, ChevronLeft } from "lucide-react";
+import {
+  X,
+  Edit,
+  Upload,
+  ChevronRight,
+  ChevronLeft,
+  Trash2,
+} from "lucide-react";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -177,6 +184,7 @@ export default function RingBuilder() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [engravingDone, setEngravingDone] = useState(false);
   const metalTypesRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Store engraved images as blobs for batch upload
   const [engravingBlobs, setEngravingBlobs] = useState<
@@ -199,20 +207,20 @@ export default function RingBuilder() {
   const defaultCountry =
     countries.find((c) => c.name === "India") || countries[0];
   const [selectedCountry, setSelectedCountry] = useState(
-    defaultCountry.isoCode
+    defaultCountry.isoCode,
   );
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
 
   // Get states for selected country (excluding Kerala)
   const states = State.getStatesOfCountry(selectedCountry).filter(
-    (state) => state.name.toLowerCase() !== "kerala"
+    (state) => state.name.toLowerCase() !== "kerala",
   );
 
   // Get cities for selected state (excluding Borivli)
   const cities = selectedState
     ? City.getCitiesOfState(selectedCountry, selectedState).filter(
-        (city) => city.name.toLowerCase() !== "borivli"
+        (city) => city.name.toLowerCase() !== "borivli",
       )
     : [];
 
@@ -232,7 +240,7 @@ export default function RingBuilder() {
     description: "",
     diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
-    diamondSize: "0.5 Carat",
+    diamondSize: "0.01 Carat",
     diamondColor: "D-FL",
     diamondClarity: "Center Stone",
     metal: "Gold",
@@ -274,7 +282,7 @@ export default function RingBuilder() {
       try {
         const parsedUser = JSON.parse(storedUser);
         return String(
-          parsedUser.id || parsedUser._id || parsedUser.userId || ""
+          parsedUser.id || parsedUser._id || parsedUser.userId || "",
         );
       } catch (e) {
         console.error("Error parsing stored user:", e);
@@ -298,6 +306,56 @@ export default function RingBuilder() {
       console.log("🔄 Updated userId in formData:", currentUserId);
     }
   }, [authUser, getUserId, formData.userId]);
+
+  // Function to get available diamond sizes based on diamond origin and metal
+  const getAvailableDiamondSizes = () => {
+    const diamondType =
+      formData.diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
+    const { metal } = formData;
+
+    // Define all possible bangle size options
+    const allSizes = [
+      "0.01 Carat",
+      "0.02 Carat",
+      "0.03 Carat",
+      "0.04 Carat",
+      "0.05 Carat",
+      "0.1 Carat",
+      "0.15 Carat",
+      "0.20 Carat",
+      "0.25 Carat",
+      "0.30 Carat",
+      "0.50 Carat",
+      "0.70 Carat",
+      "1.00 Carat",
+    ];
+
+    if (diamondType === "Natural") {
+      // Natural diamonds: Maximum 1 carat
+      return allSizes;
+    } else if (diamondType === "Lab Grown") {
+      if (metal === "Silver") {
+        // Lab Grown + Silver: Maximum 2 carat (but bangle max is 1 carat anyway)
+        return allSizes;
+      } else {
+        // Lab Grown + Gold/Platinum: bangle max is 1 carat
+        return allSizes;
+      }
+    }
+
+    return allSizes;
+  };
+
+  // Reset diamond size when metal or diamond origin changes if current selection is invalid
+  useEffect(() => {
+    const availableSizes = getAvailableDiamondSizes();
+    const currentSizeValid = availableSizes.includes(formData.diamondSize);
+
+    if (!currentSizeValid) {
+      const defaultSize = availableSizes[0] || "0.01 Carat";
+      setFormData((prev) => ({ ...prev, diamondSize: defaultSize }));
+    }
+  }, [formData.metal, formData.diamondOrigin]);
 
   // Sync country selection with formData
   useEffect(() => {
@@ -366,6 +424,24 @@ export default function RingBuilder() {
       zipCode: authUser?.zipCode,
     });
   }, [authUser]);
+
+  // Check serviceability when zipCode is loaded from user info
+  useEffect(() => {
+    if (
+      formData.zipCode &&
+      formData.zipCode.length === 6 &&
+      /^\d{6}$/.test(formData.zipCode)
+    ) {
+      // Only check if we haven't already checked this zipCode
+      if (serviceabilityStatus === "idle") {
+        console.log(
+          "🔍 Auto-checking serviceability for loaded zipCode:",
+          formData.zipCode,
+        );
+        checkServiceability(formData.zipCode);
+      }
+    }
+  }, [formData.zipCode]);
 
   // Auto-set metal color to White Gold for Platinum and Silver
   useEffect(() => {
@@ -457,8 +533,8 @@ export default function RingBuilder() {
           uploadedFiles.length > 0
             ? uploadedFiles
             : formData.url
-            ? [formData.url]
-            : [],
+              ? [formData.url]
+              : [],
         imageUrls: formData.url ? [formData.url] : [],
 
         // Customization data
@@ -494,7 +570,7 @@ export default function RingBuilder() {
       };
       console.log("💳 Step 3 - Complete API Payload:", completePayload);
       console.log(
-        "📋 Ready for API call to: POST /api/upload-you-own/complete"
+        "📋 Ready for API call to: POST /api/upload-you-own/complete",
       );
     }
   };
@@ -524,7 +600,7 @@ export default function RingBuilder() {
         formData.modificationRequest.trim().length < 15
       ) {
         toast.error(
-          "Please provide a modification description (min 15 characters)."
+          "Please provide a modification description (min 15 characters).",
         );
         return false;
       }
@@ -579,6 +655,69 @@ export default function RingBuilder() {
     return true;
   };
 
+  // Validate file before processing
+  const validateFile = (file: File): boolean => {
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+
+    if (!validTypes.includes(file.type)) {
+      alert(
+        `Invalid file type: ${file.name}. Please upload jpg, jpeg, png, or webp files only.`,
+      );
+      return false;
+    }
+
+    if (file.size > maxSize) {
+      alert(`File too large: ${file.name}. Maximum size is 5 MB.`);
+      return false;
+    }
+
+    return true;
+  };
+
+  // Process files (used by both drag-drop and file input)
+  const processFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter(validateFile);
+
+    if (validFiles.length === 0) {
+      return;
+    }
+
+    const imageUrls = validFiles.map((file) => URL.createObjectURL(file));
+    setUploadedImages((prev) => [...prev, ...imageUrls]);
+    setUploadedFiles((prev) => [...prev, ...validFiles]);
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFiles(files);
+    }
+  };
+
   const handleNextStep = (step: number) => {
     if (validateForStep(step)) setCurrentStep(step);
   };
@@ -621,21 +760,50 @@ export default function RingBuilder() {
               ))}
             </div>
 
-            {/* File Upload Area */}
-            <div className="border-2 border-dashed border-[#ABA7AF] rounded-lg p-8 text-center">
+            {/* File Upload Area with Drag and Drop */}
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
+                isDragging
+                  ? "border-[#328F94] bg-[#328F94]/5 scale-[1.02]"
+                  : "border-[#ABA7AF] hover:border-[#328F94] hover:bg-[#328F94]/5"
+              }`}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById("file-upload")?.click()}
+            >
               <div className="space-y-4">
-                <div className="w-12 h-12 mx-auto bg-[#328F94]/10 rounded-full flex items-center justify-center">
-                  <Upload className="w-6 h-6 text-[#328F94]" />
+                <div
+                  className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center transition-colors ${
+                    isDragging ? "bg-[#328F94]/20" : "bg-[#328F94]/10"
+                  }`}
+                >
+                  <Upload
+                    className={`w-6 h-6 transition-colors ${
+                      isDragging ? "text-[#328F94]" : "text-[#328F94]"
+                    }`}
+                  />
                 </div>
                 <div>
-                  <p className="font-medium">Drag&Drop file here</p>
+                  <p
+                    className={`font-medium transition-colors ${
+                      isDragging ? "text-[#328F94]" : "text-gray-900"
+                    }`}
+                  >
+                    {isDragging ? "Drop files here" : "Drag & Drop file here"}
+                  </p>
                   <p className="text-sm text-muted-foreground">or</p>
-                  <label htmlFor="file-upload">
+                  <label
+                    htmlFor="file-upload"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Button
                       className="mt-2 bg-[#328F94] text-white hover:bg-white hover:border-2 hover:border-[#328F94] hover:text-[#328F94]"
                       asChild
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="">
+                      <div className="cursor-pointer">
                         <img
                           src="/svg/vec.svg"
                           alt=""
@@ -650,12 +818,12 @@ export default function RingBuilder() {
                     id="file-upload"
                     type="file"
                     multiple
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                     onChange={handleImageUpload}
                     className="hidden"
                   />
                   <p className="text-xs text-muted-foreground mt-2">
-                    Maximum upload size 5 MB
+                    Maximum upload size 5 MB per file
                   </p>
                 </div>
               </div>
@@ -935,7 +1103,7 @@ export default function RingBuilder() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/50 rounded-lg ">
                   <label className="text-sm text-muted-foreground">
-                    Diamond Size *
+                    Diamond Size <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.diamondSize}
@@ -947,15 +1115,18 @@ export default function RingBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="0.5 Carat">0.5 Carat</SelectItem>
-                      <SelectItem value="1 Carat">1 Carat</SelectItem>
-                      <SelectItem value="1.5 Carat">1.5 Carat</SelectItem>
+                      {getAvailableDiamondSizes().map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {size}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">
-                    Diamond Color & Clarity *
+                    Diamond Color & Clarity{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <Select
                     value={formData.diamondColor}
@@ -976,6 +1147,48 @@ export default function RingBuilder() {
               </div>
             </div>
 
+            {/* Diamond Origin */}
+            <div>
+              <label className="text-sm text-muted-foreground">
+                Diamond Origin <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Natural Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-2xl border-2 transition-all ${
+                    formData.diamondOrigin === "Natural Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Natural Diamond</span>
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Lab Grown Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-2xl border-2 transition-all ${
+                    formData.diamondOrigin === "Lab Grown Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Lab Grown Diamond</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        rightColumn={
+          <div className="space-y-6">
             {/* Metal Type and Karat - 2 Column Layout */}
             <div className="grid grid-cols-2 gap-4">
               {/* Metal Type */}
@@ -1026,8 +1239,8 @@ export default function RingBuilder() {
                   {formData.metal === "Gold"
                     ? "Gold Karat"
                     : formData.metal === "Platinum"
-                    ? "Platinum Purity"
-                    : "Silver Purity"}
+                      ? "Platinum Purity"
+                      : "Silver Purity"}
                 </h3>
                 <div className="flex items-center gap-2">
                   <button
@@ -1124,48 +1337,6 @@ export default function RingBuilder() {
                     <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        }
-        rightColumn={
-          <div className="space-y-6">
-            {/* Diamond Origin */}
-            <div>
-              <label className="text-sm text-muted-foreground">
-                Diamond Origin <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <button
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      diamondOrigin: "Natural Diamond",
-                    })
-                  }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
-                    formData.diamondOrigin === "Natural Diamond"
-                      ? "border-[#328F94] bg-[#328F94]/5"
-                      : "border-gray-200 hover:border-[#328F94]/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">Natural Diamond</span>
-                </button>
-                <button
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      diamondOrigin: "Lab Grown Diamond",
-                    })
-                  }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
-                    formData.diamondOrigin === "Lab Grown Diamond"
-                      ? "border-[#328F94] bg-[#328F94]/5"
-                      : "border-gray-200 hover:border-[#328F94]/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">Lab Grown Diamond</span>
-                </button>
               </div>
             </div>
 
@@ -1301,7 +1472,7 @@ export default function RingBuilder() {
                         selectedImage: "/newring.jpg",
                         jewelryType: formData.jewelryType,
                         userId: formData.userId,
-                      }
+                      },
                     );
 
                     setSelectedEngravingImage("/newring.jpg");
@@ -1319,10 +1490,17 @@ export default function RingBuilder() {
 
                 {/* Current Engraving Display */}
                 {formData.engraving && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
                     <p className="text-xs text-green-700">
                       <strong>Current Engraving:</strong> "{formData.engraving}"
                     </p>
+                    <button
+                      onClick={handleRemoveEngraving}
+                      className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                      title="Remove Engraving"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </div>
@@ -1640,10 +1818,10 @@ export default function RingBuilder() {
                             serviceabilityStatus === "serviceable"
                               ? "text-green-600"
                               : serviceabilityStatus === "not-serviceable"
-                              ? "text-red-600"
-                              : serviceabilityStatus === "checking"
-                              ? "text-blue-600"
-                              : "text-gray-600"
+                                ? "text-red-600"
+                                : serviceabilityStatus === "checking"
+                                  ? "text-blue-600"
+                                  : "text-gray-600"
                           }`}
                         >
                           {serviceabilityMessage}
@@ -1728,14 +1906,14 @@ export default function RingBuilder() {
                 {Loading
                   ? "Creating Request..."
                   : !formData.zipCode
-                  ? "Enter Pincode First"
-                  : serviceabilityStatus === "checking"
-                  ? "Checking Area..."
-                  : serviceabilityStatus === "not-serviceable"
-                  ? "Area Not Serviceable"
-                  : serviceabilityStatus !== "serviceable"
-                  ? "Check Pincode Serviceability"
-                  : "Request Customization →"}
+                    ? "Enter Pincode First"
+                    : serviceabilityStatus === "checking"
+                      ? "Checking Area..."
+                      : serviceabilityStatus === "not-serviceable"
+                        ? "Area Not Serviceable"
+                        : serviceabilityStatus !== "serviceable"
+                          ? "Check Pincode Serviceability"
+                          : "Request Customization →"}
               </Button>
 
               <div className="text-xs text-muted-foreground space-y-1">
@@ -1842,9 +2020,35 @@ export default function RingBuilder() {
     setShowEngravingPopup(false);
   };
 
+  const handleRemoveEngraving = () => {
+    // Clear engraving text
+    setFormData((prev) => ({ ...prev, engraving: "" }));
+
+    // Reset engraving done flag
+    setEngravingDone(false);
+
+    // Remove engraving blobs and their URLs
+    engravingBlobs.forEach(({ url }) => {
+      URL.revokeObjectURL(url);
+    });
+    setEngravingBlobs([]);
+
+    // Remove engraving images from uploaded images
+    const engravingUrls = engravingBlobs.map(({ url }) => url);
+    setUploadedImages((prev) =>
+      prev.filter((url) => !engravingUrls.includes(url)),
+    );
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((url) => !engravingUrls.includes(url)),
+    }));
+
+    toast.success("Engraving removed successfully");
+  };
+
   const handleEngravingSaved = async (
     engravingText: string,
-    engravingImageUrl?: string
+    engravingImageUrl?: string,
   ) => {
     console.log("💾 Engraving saved:", { engravingText, engravingImageUrl });
 
@@ -1906,7 +2110,7 @@ export default function RingBuilder() {
             token: "b228a27399f07927985d57c0f7d94ce8",
             pin_code: pinCode,
           }),
-        }
+        },
       );
 
       const result = await response.json();
@@ -1917,7 +2121,7 @@ export default function RingBuilder() {
       console.debug(
         "🔎 Raw serviceability status from API:",
         statusRaw,
-        typeof statusRaw
+        typeof statusRaw,
       );
       const statusStr =
         statusRaw == null ? "" : String(statusRaw).trim().toLowerCase();
@@ -1927,13 +2131,13 @@ export default function RingBuilder() {
       if (isServiceableApi) {
         setServiceabilityStatus("serviceable");
         setServiceabilityMessage(
-          "✅ Great! This area is serviceable for delivery."
+          "✅ Great! This area is serviceable for delivery.",
         );
         return true;
       } else {
         setServiceabilityStatus("not-serviceable");
         setServiceabilityMessage(
-          "❌ Sorry, this area is not serviceable for delivery."
+          "❌ Sorry, this area is not serviceable for delivery.",
         );
         return false;
       }
@@ -1941,7 +2145,7 @@ export default function RingBuilder() {
       console.error("❌ Error checking serviceability:", error);
       setServiceabilityStatus("idle");
       setServiceabilityMessage(
-        "⚠️ Unable to check serviceability. Please try again."
+        "⚠️ Unable to check serviceability. Please try again.",
       );
       return false;
     }
@@ -1976,7 +2180,7 @@ export default function RingBuilder() {
       // Check if zip code is provided and valid
       if (!formData.zipCode) {
         toast.error(
-          "Please enter your zip code before creating the customization request."
+          "Please enter your zip code before creating the customization request.",
         );
         setLoading(false);
         return;
@@ -1992,13 +2196,13 @@ export default function RingBuilder() {
       if (serviceabilityStatus !== "serviceable") {
         if (serviceabilityStatus === "not-serviceable") {
           toast.error(
-            "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+            "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.",
           );
           setLoading(false);
           return;
         } else if (serviceabilityStatus === "checking") {
           toast.error(
-            "Please wait while we check if your area is serviceable."
+            "Please wait while we check if your area is serviceable.",
           );
           setLoading(false);
           return;
@@ -2006,13 +2210,13 @@ export default function RingBuilder() {
           // Status is 'idle' - need to check serviceability
           console.log(
             "📍 Checking serviceability for pincode:",
-            formData.zipCode
+            formData.zipCode,
           );
           const isServiceable = await checkServiceability(formData.zipCode);
 
           if (!isServiceable) {
             toast.error(
-              "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+              "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.",
             );
             setLoading(false);
             return;
@@ -2021,7 +2225,7 @@ export default function RingBuilder() {
       }
 
       console.log(
-        "✅ Area is serviceable, proceeding with customization request..."
+        "✅ Area is serviceable, proceeding with customization request...",
       );
 
       // Calculate Estimated Delivery Date (EDD) via Sequel247 before sending request
@@ -2152,7 +2356,7 @@ export default function RingBuilder() {
 
       console.log(
         "📤 Creating customization request with payment:",
-        customizationRequestData
+        customizationRequestData,
       );
       console.log("📋 Current formData state:", {
         firstName: formData.firstName,
@@ -2172,7 +2376,7 @@ export default function RingBuilder() {
       if (uploadedFiles.length > 0 || engravingBlobs.length > 0) {
         console.log("📤 Uploading images to Cloudinary first...");
         console.log(
-          `📎 Files to upload: ${uploadedFiles.length} original + ${engravingBlobs.length} engraving`
+          `📎 Files to upload: ${uploadedFiles.length} original + ${engravingBlobs.length} engraving`,
         );
 
         // Prepare FormData for image upload (same as order creation)
@@ -2197,7 +2401,7 @@ export default function RingBuilder() {
             `engraving-${index + 1}.png`,
             {
               type: "image/png",
-            }
+            },
           );
           imageFormData.append("images", engravingFile);
           console.log(`🖼️ Adding engraving file ${index + 1}:`, {
@@ -2235,7 +2439,7 @@ export default function RingBuilder() {
 
       console.log(
         "📤 Creating customization request with uploaded images:",
-        customizationRequestDataWithImages
+        customizationRequestDataWithImages,
       );
       console.log("🔍 Required fields check:", {
         title: customizationRequestDataWithImages.title,
@@ -2246,7 +2450,7 @@ export default function RingBuilder() {
       });
       console.log(
         "📞 Contact information being sent:",
-        customizationRequestDataWithImages.contactInfo
+        customizationRequestDataWithImages.contactInfo,
       );
 
       // Validate required fields before sending
@@ -2265,7 +2469,7 @@ export default function RingBuilder() {
           jewelryType: !!customizationRequestDataWithImages.jewelryType,
         });
         toast.error(
-          "Missing required information. Please fill in all required fields."
+          "Missing required information. Please fill in all required fields.",
         );
         setLoading(false);
         return;
@@ -2284,10 +2488,10 @@ export default function RingBuilder() {
       ) {
         console.error(
           "❌ Missing contact information:",
-          customizationRequestDataWithImages.contactInfo
+          customizationRequestDataWithImages.contactInfo,
         );
         toast.error(
-          "Please fill in all contact information fields (name, email, phone, address, city, pincode)."
+          "Please fill in all contact information fields (name, email, phone, address, city, pincode).",
         );
         setLoading(false);
         return;
@@ -2296,7 +2500,7 @@ export default function RingBuilder() {
       // Create customization request with payment integration
       console.log(
         "🔑 Auth token:",
-        localStorage.getItem("token") ? "Present" : "Missing"
+        localStorage.getItem("token") ? "Present" : "Missing",
       );
 
       // Test server connectivity first
@@ -2311,7 +2515,7 @@ export default function RingBuilder() {
       } catch (error) {
         console.error("❌ Server connectivity error:", error);
         toast.error(
-          "Cannot connect to server. Please make sure the server is running."
+          "Cannot connect to server. Please make sure the server is running.",
         );
         setLoading(false);
         return;
@@ -2338,7 +2542,7 @@ export default function RingBuilder() {
       if (result.success) {
         console.log(
           "✅ Customization request created successfully:",
-          result.data
+          result.data,
         );
 
         // Prepare customization request data for payment
@@ -2391,12 +2595,12 @@ export default function RingBuilder() {
 
         console.log(
           "💳 [PAYMENT] Preparing customization data for payment:",
-          customizationRequestDataForPayment
+          customizationRequestDataForPayment,
         );
 
         // Set customization data and show payment form
         setCustomizationData(
-          customizationRequestDataForPayment as CustomizationDataType
+          customizationRequestDataForPayment as CustomizationDataType,
         );
         setShowPaymentForm(true);
         setCurrentStep(3);
@@ -2408,24 +2612,24 @@ export default function RingBuilder() {
           : "No EDD";
 
         toast.success(
-          `Customization request created successfully! ${eddInfo}\n\nProceeding to payment...`
+          `Customization request created successfully! ${eddInfo}\n\nProceeding to payment...`,
         );
 
         setLoading(false);
       } else {
         console.error(
           "❌ Failed to create customization request:",
-          result.message
+          result.message,
         );
         toast.error(
-          `❌ Failed to submit customization request: ${result.message}`
+          `❌ Failed to submit customization request: ${result.message}`,
         );
         setLoading(false);
       }
     } catch (error) {
       console.error("❌ Error creating customization request:", error);
       toast.error(
-        "❌ An error occurred while submitting your customization request. Please try again."
+        "❌ An error occurred while submitting your customization request. Please try again.",
       );
       setLoading(false);
     }
@@ -2438,10 +2642,10 @@ export default function RingBuilder() {
     try {
       console.log(
         "🎉 Customization request saved successfully:",
-        customizationResult
+        customizationResult,
       );
       toast.success(
-        "🎉 Payment successful! Your customization request has been submitted successfully."
+        "🎉 Payment successful! Your customization request has been submitted successfully.",
       );
 
       // Navigate to success page or dashboard
@@ -2449,7 +2653,7 @@ export default function RingBuilder() {
     } catch (error) {
       console.error("❌ Error handling payment success:", error);
       toast.error(
-        "Payment successful but there was an issue. Please contact support."
+        "Payment successful but there was an issue. Please contact support.",
       );
     }
   };
@@ -2499,9 +2703,9 @@ export default function RingBuilder() {
           onSave={handleEngravingSaved}
         />
       )}
-      <BraceletSizeGuidePopup 
-        isOpen={isSizeGuidePopupOpen} 
-        onClose={() => setIsSizeGuidePopupOpen(false)} 
+      <BraceletSizeGuidePopup
+        isOpen={isSizeGuidePopupOpen}
+        onClose={() => setIsSizeGuidePopupOpen(false)}
       />
     </div>
   );

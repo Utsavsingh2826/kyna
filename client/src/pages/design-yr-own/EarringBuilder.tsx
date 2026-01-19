@@ -16,7 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Progress } from "@/components/ui/progress";
-import { X, Edit, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  X,
+  Edit,
+  Upload,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+} from "lucide-react";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 const steps = [
   { number: 1, title: "Inspiration Upload", active: true },
@@ -185,20 +192,21 @@ export default function EarringBuilder() {
   const defaultCountry =
     countries.find((c) => c.name === "India") || countries[0];
   const [selectedCountry, setSelectedCountry] = useState(
-    defaultCountry.isoCode
+    defaultCountry.isoCode,
   );
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
 
   // Get states for selected country (excluding Kerala)
   const states = State.getStatesOfCountry(selectedCountry).filter(
-    (state) => state.name.toLowerCase() !== "kerala"
+    (state) => state.name.toLowerCase() !== "kerala",
   );
+  const [isDragging, setIsDragging] = useState(false);
 
   // Get cities for selected state (excluding Borivli)
   const cities = selectedState
     ? City.getCitiesOfState(selectedCountry, selectedState).filter(
-        (city) => city.name.toLowerCase() !== "borivli"
+        (city) => city.name.toLowerCase() !== "borivli",
       )
     : [];
 
@@ -214,7 +222,7 @@ export default function EarringBuilder() {
     diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
     diamondSize: "0.5 Carat",
-    diamondColor: "D-FL",
+    diamondColor: "D-IF",
     priority: "normal",
     metalType: "Gold",
     metalColor: "Yellow Gold",
@@ -245,7 +253,7 @@ export default function EarringBuilder() {
       try {
         const parsedUser = JSON.parse(storedUser);
         return String(
-          parsedUser.id || parsedUser._id || parsedUser.userId || ""
+          parsedUser.id || parsedUser._id || parsedUser.userId || "",
         );
       } catch (e) {
         console.error("Error parsing stored user:", e);
@@ -267,6 +275,24 @@ export default function EarringBuilder() {
       console.log("🔄 Updated userId in formData:", currentUserId);
     }
   }, [authUser, getUserId, formData.userId]);
+
+  // Check serviceability when zipCode is loaded from user info
+  useEffect(() => {
+    if (
+      formData.zipCode &&
+      formData.zipCode.length === 6 &&
+      /^\d{6}$/.test(formData.zipCode)
+    ) {
+      // Only check if we haven't already checked this zipCode
+      if (serviceabilityStatus === "idle") {
+        console.log(
+          "🔍 Auto-checking serviceability for loaded zipCode:",
+          formData.zipCode,
+        );
+        checkServiceability(formData.zipCode);
+      }
+    }
+  }, [formData.zipCode]);
 
   // Sync country selection with formData
   useEffect(() => {
@@ -330,6 +356,47 @@ export default function EarringBuilder() {
     }
   }, [formData.metalType]);
 
+  // Function to get available color/clarity combinations based on diamond origin and metal
+  const getAvailableColorClarity = () => {
+    const { diamondOrigin, metalType } = formData;
+    const diamondType =
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
+
+    // Define all possible options with their display names
+    const allOptions = ["D-IF", "EF-VVS", "EF-VS", "GH-VS", "GH-SI"];
+
+    if (diamondType === "Natural") {
+      // Natural diamonds: All clarities available for Gold and Platinum
+      if (metalType === "Gold" || metalType === "Platinum") {
+        return allOptions;
+      }
+      // Natural diamonds not available in Silver
+      return [];
+    } else if (diamondType === "Lab Grown") {
+      // Lab Grown diamonds
+      if (metalType === "Gold" || metalType === "Platinum") {
+        // Only D-IF, EF-VVS, EF-VS available for Gold and Platinum
+        return ["D-IF", "EF-VVS", "EF-VS"];
+      } else if (metalType === "Silver") {
+        // Only EF-VVS and EF-VS available for Silver
+        return ["EF-VVS", "EF-VS"];
+      }
+    }
+
+    return allOptions;
+  };
+
+  // Reset color/clarity when metal or diamond origin changes if current selection is invalid
+  useEffect(() => {
+    const availableOptions = getAvailableColorClarity();
+    const currentIsValid = availableOptions.includes(formData.diamondColor);
+
+    if (!currentIsValid && formData.diamondColor !== "Center Stone") {
+      const defaultClarity = availableOptions[0] || "D-IF";
+      setFormData((prev) => ({ ...prev, diamondColor: defaultClarity }));
+    }
+  }, [formData.metalType, formData.diamondOrigin]);
+
   // Handle zip code change with real-time serviceability check
   const handleZipCodeChange = async (value: string) => {
     setFormData({ ...formData, zipCode: value });
@@ -350,10 +417,10 @@ export default function EarringBuilder() {
     try {
       console.log(
         "🎉 Customization request saved successfully:",
-        customizationResult
+        customizationResult,
       );
       toast.success(
-        "🎉 Payment successful! Your customization request has been submitted successfully."
+        "🎉 Payment successful! Your customization request has been submitted successfully.",
       );
 
       // Navigate to success page or dashboard
@@ -361,7 +428,7 @@ export default function EarringBuilder() {
     } catch (error) {
       console.error("❌ Error handling payment success:", error);
       toast.error(
-        "Payment successful but there was an issue. Please contact support."
+        "Payment successful but there was an issue. Please contact support.",
       );
     }
   };
@@ -382,6 +449,69 @@ export default function EarringBuilder() {
     setCurrentStep(step);
   };
 
+  // Validate file before processing
+  const validateFile = (file: File): boolean => {
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    const maxSize = 5 * 1024 * 1024; // 5 MB
+
+    if (!validTypes.includes(file.type)) {
+      alert(
+        `Invalid file type: ${file.name}. Please upload jpg, jpeg, png, or webp files only.`,
+      );
+      return false;
+    }
+
+    if (file.size > maxSize) {
+      alert(`File too large: ${file.name}. Maximum size is 5 MB.`);
+      return false;
+    }
+
+    return true;
+  };
+
+  // Process files (used by both drag-drop and file input)
+  const processFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const validFiles = fileArray.filter(validateFile);
+
+    if (validFiles.length === 0) {
+      return;
+    }
+
+    const imageUrls = validFiles.map((file) => URL.createObjectURL(file));
+    setUploadedImages((prev) => [...prev, ...imageUrls]);
+    setUploadedFiles((prev) => [...prev, ...validFiles]);
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      processFiles(files);
+    }
+  };
+
   // Validation per-step: step -> target step number
   const validateForStep = (targetStep: number): boolean => {
     // Moving from step 1 -> 2: check uploads and basic inputs on right column
@@ -393,7 +523,7 @@ export default function EarringBuilder() {
 
       if (!formData.modification || formData.modification.trim().length < 15) {
         toast.error(
-          "Please provide a modification description (min 15 characters)."
+          "Please provide a modification description (min 15 characters).",
         );
         return false;
       }
@@ -523,21 +653,50 @@ export default function EarringBuilder() {
               ))}
             </div>
 
-            {/* File Upload Area */}
-            <div className="border-2 border-dashed border-[#ABA7AF] rounded-lg p-8 text-center">
+            {/* File Upload Area with Drag and Drop */}
+            <div
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
+                isDragging
+                  ? "border-[#328F94] bg-[#328F94]/5 scale-[1.02]"
+                  : "border-[#ABA7AF] hover:border-[#328F94] hover:bg-[#328F94]/5"
+              }`}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => document.getElementById("file-upload")?.click()}
+            >
               <div className="space-y-4">
-                <div className="w-12 h-12 mx-auto bg-[#328F94]/10 rounded-full flex items-center justify-center">
-                  <Upload className="w-6 h-6 text-[#328F94]" />
+                <div
+                  className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center transition-colors ${
+                    isDragging ? "bg-[#328F94]/20" : "bg-[#328F94]/10"
+                  }`}
+                >
+                  <Upload
+                    className={`w-6 h-6 transition-colors ${
+                      isDragging ? "text-[#328F94]" : "text-[#328F94]"
+                    }`}
+                  />
                 </div>
                 <div>
-                  <p className="font-medium">Drag&Drop file here</p>
+                  <p
+                    className={`font-medium transition-colors ${
+                      isDragging ? "text-[#328F94]" : "text-gray-900"
+                    }`}
+                  >
+                    {isDragging ? "Drop files here" : "Drag & Drop file here"}
+                  </p>
                   <p className="text-sm text-muted-foreground">or</p>
-                  <label htmlFor="file-upload">
+                  <label
+                    htmlFor="file-upload"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Button
                       className="mt-2 bg-[#328F94] text-white hover:bg-white hover:border-2 hover:border-[#328F94] hover:text-[#328F94]"
                       asChild
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="">
+                      <div className="cursor-pointer">
                         <img
                           src="/svg/vec.svg"
                           alt=""
@@ -552,12 +711,12 @@ export default function EarringBuilder() {
                     id="file-upload"
                     type="file"
                     multiple
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                     onChange={handleImageUpload}
                     className="hidden"
                   />
                   <p className="text-xs text-muted-foreground mt-2">
-                    Maximum upload size 5 MB
+                    Maximum upload size 5 MB per file
                   </p>
                 </div>
               </div>
@@ -825,7 +984,7 @@ export default function EarringBuilder() {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="0.5 Carat">0.5 Carat</SelectItem>
                       <SelectItem value="1 Carat">1 Carat</SelectItem>
                       <SelectItem value="1.5 Carat">1.5 Carat</SelectItem>
@@ -846,16 +1005,75 @@ export default function EarringBuilder() {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="D-FL">D-FL</SelectItem>
-                      <SelectItem value="E-VVS1">E-VVS1</SelectItem>
-                      <SelectItem value="F-VVS2">F-VVS2</SelectItem>
+                    <SelectContent className="bg-white">
+                      {getAvailableColorClarity().map((clarity) => (
+                        <SelectItem key={clarity} value={clarity}>
+                          {clarity}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {getAvailableColorClarity().length === 0 &&
+                    formData.diamondOrigin === "Natural Diamond" &&
+                    formData.metalType === "Silver" && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Natural diamonds are not available in Silver. Please
+                        select Gold or Platinum.
+                      </p>
+                    )}
+                  {formData.diamondOrigin === "Lab Grown Diamond" &&
+                    formData.metalType === "Silver" && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        Only EF-VVS and EF-VS clarities available for Lab Grown
+                        diamonds in Silver.
+                      </p>
+                    )}
                 </div>
               </div>
             </div>
 
+            {/* Diamond Origin */}
+            <div>
+              <label className="text-sm text-muted-foreground">
+                Diamond Origin <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Natural Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-full border-2 transition-all ${
+                    formData.diamondOrigin === "Natural Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Natural Diamond</span>
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Lab Grown Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-full border-2 transition-all ${
+                    formData.diamondOrigin === "Lab Grown Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Lab Grown Diamond</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        rightColumn={
+          <div className="space-y-6">
             {/* Metal Type and Karat - 2 Column Layout */}
             <div className="grid grid-cols-2 gap-4">
               {/* Metal Type */}
@@ -906,8 +1124,8 @@ export default function EarringBuilder() {
                   {formData.metalType === "Gold"
                     ? "Gold Karat"
                     : formData.metalType === "Platinum"
-                    ? "Platinum Purity"
-                    : "Silver Purity"}
+                      ? "Platinum Purity"
+                      : "Silver Purity"}
                 </h3>
                 <div className="flex items-center gap-2">
                   <button
@@ -1004,48 +1222,6 @@ export default function EarringBuilder() {
                     <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
                   </button>
                 </div>
-              </div>
-            </div>
-          </div>
-        }
-        rightColumn={
-          <div className="space-y-6">
-            {/* Diamond Origin */}
-            <div>
-              <label className="text-sm text-muted-foreground">
-                Diamond Origin <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <button
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      diamondOrigin: "Natural Diamond",
-                    })
-                  }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
-                    formData.diamondOrigin === "Natural Diamond"
-                      ? "border-[#328F94] bg-[#328F94]/5"
-                      : "border-gray-200 hover:border-[#328F94]/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">Natural Diamond</span>
-                </button>
-                <button
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      diamondOrigin: "Lab Grown Diamond",
-                    })
-                  }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
-                    formData.diamondOrigin === "Lab Grown Diamond"
-                      ? "border-[#328F94] bg-[#328F94]/5"
-                      : "border-gray-200 hover:border-[#328F94]/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">Lab Grown Diamond</span>
-                </button>
               </div>
             </div>
 
@@ -1191,7 +1367,12 @@ export default function EarringBuilder() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">Selected Images</h3>
-                  <Button variant="link" size="sm" className="text-[#328F94]">
+                  <Button
+                    variant="link"
+                    onClick={() => setCurrentStep(1)}
+                    size="sm"
+                    className="text-[#328F94]"
+                  >
                     Change Image
                   </Button>
                 </div>
@@ -1417,10 +1598,10 @@ export default function EarringBuilder() {
                             serviceabilityStatus === "serviceable"
                               ? "text-green-600"
                               : serviceabilityStatus === "not-serviceable"
-                              ? "text-red-600"
-                              : serviceabilityStatus === "checking"
-                              ? "text-blue-600"
-                              : "text-gray-600"
+                                ? "text-red-600"
+                                : serviceabilityStatus === "checking"
+                                  ? "text-blue-600"
+                                  : "text-gray-600"
                           }`}
                         >
                           {serviceabilityMessage}
@@ -1492,14 +1673,14 @@ export default function EarringBuilder() {
                 {Loading
                   ? "Creating Request..."
                   : !formData.zipCode
-                  ? "Enter Pincode First"
-                  : serviceabilityStatus === "checking"
-                  ? "Checking Area..."
-                  : serviceabilityStatus === "not-serviceable"
-                  ? "Area Not Serviceable"
-                  : serviceabilityStatus !== "serviceable"
-                  ? "Check Pincode Serviceability"
-                  : "Request Customization →"}
+                    ? "Enter Pincode First"
+                    : serviceabilityStatus === "checking"
+                      ? "Checking Area..."
+                      : serviceabilityStatus === "not-serviceable"
+                        ? "Area Not Serviceable"
+                        : serviceabilityStatus !== "serviceable"
+                          ? "Check Pincode Serviceability"
+                          : "Request Customization →"}
               </Button>
 
               <div className="text-xs text-muted-foreground space-y-1">
@@ -1565,7 +1746,7 @@ export default function EarringBuilder() {
             token: "b228a27399f07927985d57c0f7d94ce8",
             pin_code: pinCode,
           }),
-        }
+        },
       );
 
       const result = await response.json();
@@ -1576,7 +1757,7 @@ export default function EarringBuilder() {
       console.debug(
         "🔎 Raw serviceability status from API:",
         statusRaw,
-        typeof statusRaw
+        typeof statusRaw,
       );
       const statusStr =
         statusRaw == null ? "" : String(statusRaw).trim().toLowerCase();
@@ -1586,13 +1767,13 @@ export default function EarringBuilder() {
       if (isServiceableApi) {
         setServiceabilityStatus("serviceable");
         setServiceabilityMessage(
-          "✅ Great! This area is serviceable for delivery."
+          "✅ Great! This area is serviceable for delivery.",
         );
         return true;
       } else {
         setServiceabilityStatus("not-serviceable");
         setServiceabilityMessage(
-          "❌ Sorry, this area is not serviceable for delivery."
+          "❌ Sorry, this area is not serviceable for delivery.",
         );
         return false;
       }
@@ -1600,7 +1781,7 @@ export default function EarringBuilder() {
       console.error("❌ Error checking serviceability:", error);
       setServiceabilityStatus("idle");
       setServiceabilityMessage(
-        "⚠️ Unable to check serviceability. Please try again."
+        "⚠️ Unable to check serviceability. Please try again.",
       );
       return false;
     }
@@ -1622,7 +1803,7 @@ export default function EarringBuilder() {
       // Check if zip code is provided and valid
       if (!formData.zipCode) {
         toast.error(
-          "Please enter your zip code before creating the customization request."
+          "Please enter your zip code before creating the customization request.",
         );
         setLoading(false);
         return;
@@ -1638,13 +1819,13 @@ export default function EarringBuilder() {
       if (serviceabilityStatus !== "serviceable") {
         if (serviceabilityStatus === "not-serviceable") {
           toast.error(
-            "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+            "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.",
           );
           setLoading(false);
           return;
         } else if (serviceabilityStatus === "checking") {
           toast.error(
-            "Please wait while we check if your area is serviceable."
+            "Please wait while we check if your area is serviceable.",
           );
           setLoading(false);
           return;
@@ -1652,13 +1833,13 @@ export default function EarringBuilder() {
           // Status is 'idle' - need to check serviceability
           console.log(
             "📍 Checking serviceability for pincode:",
-            formData.zipCode
+            formData.zipCode,
           );
           const isServiceable = await checkServiceability(formData.zipCode);
 
           if (!isServiceable) {
             toast.error(
-              "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+              "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.",
             );
             setLoading(false);
             return;
@@ -1667,7 +1848,7 @@ export default function EarringBuilder() {
       }
 
       console.log(
-        "✅ Area is serviceable, proceeding with customization request..."
+        "✅ Area is serviceable, proceeding with customization request...",
       );
 
       // Calculate Estimated Delivery Date (EDD) via Sequel247 before sending request
@@ -1790,7 +1971,7 @@ export default function EarringBuilder() {
 
       console.log(
         "� Creating customization request with payment:",
-        customizationRequestData
+        customizationRequestData,
       );
       console.log("📋 Current formData state:", {
         firstName: formData.firstName,
@@ -1853,7 +2034,7 @@ export default function EarringBuilder() {
 
       console.log(
         "📤 Creating customization request with uploaded images:",
-        customizationRequestDataWithImages
+        customizationRequestDataWithImages,
       );
       console.log("🔍 Required fields check:", {
         title: customizationRequestDataWithImages.title,
@@ -1864,7 +2045,7 @@ export default function EarringBuilder() {
       });
       console.log(
         "📞 Contact information being sent:",
-        customizationRequestDataWithImages.contactInfo
+        customizationRequestDataWithImages.contactInfo,
       );
 
       // Validate required fields before sending
@@ -1883,7 +2064,7 @@ export default function EarringBuilder() {
           jewelryType: !!customizationRequestDataWithImages.jewelryType,
         });
         toast.error(
-          "Missing required information. Please fill in all required fields."
+          "Missing required information. Please fill in all required fields.",
         );
         setLoading(false);
         return;
@@ -1902,10 +2083,10 @@ export default function EarringBuilder() {
       ) {
         console.error(
           "❌ Missing contact information:",
-          customizationRequestDataWithImages.contactInfo
+          customizationRequestDataWithImages.contactInfo,
         );
         toast.error(
-          "Please fill in all contact information fields (name, email, phone, address, city, pincode)."
+          "Please fill in all contact information fields (name, email, phone, address, city, pincode).",
         );
         setLoading(false);
         return;
@@ -1914,7 +2095,7 @@ export default function EarringBuilder() {
       // Create customization request with payment integration
       console.log(
         "🔑 Auth token:",
-        localStorage.getItem("token") ? "Present" : "Missing"
+        localStorage.getItem("token") ? "Present" : "Missing",
       );
 
       // Test server connectivity first
@@ -1929,7 +2110,7 @@ export default function EarringBuilder() {
       } catch (error) {
         console.error("❌ Server connectivity error:", error);
         toast.error(
-          "Cannot connect to server. Please make sure the server is running."
+          "Cannot connect to server. Please make sure the server is running.",
         );
         setLoading(false);
         return;
@@ -1956,17 +2137,17 @@ export default function EarringBuilder() {
       if (result.success) {
         console.log(
           "✅ Customization request created successfully:",
-          result.data
+          result.data,
         );
 
         console.log(
           "💳 [PAYMENT] Preparing customization data for payment:",
-          customizationRequestDataWithImages
+          customizationRequestDataWithImages,
         );
 
         // Set customization data and show payment form
         setCustomizationData(
-          customizationRequestDataWithImages as CustomizationDataType
+          customizationRequestDataWithImages as CustomizationDataType,
         );
         setShowPaymentForm(true);
         setLoading(false);
@@ -1975,17 +2156,17 @@ export default function EarringBuilder() {
       } else {
         console.error(
           "❌ Failed to create customization request:",
-          result.message
+          result.message,
         );
         toast.error(
-          `❌ Failed to submit customization request: ${result.message}`
+          `❌ Failed to submit customization request: ${result.message}`,
         );
         setLoading(false);
       }
     } catch (error) {
       console.error("❌ Error creating customization request:", error);
       toast.error(
-        "❌ An error occurred while submitting your customization request. Please try again."
+        "❌ An error occurred while submitting your customization request. Please try again.",
       );
       setLoading(false);
     }

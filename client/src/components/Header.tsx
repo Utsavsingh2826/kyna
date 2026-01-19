@@ -20,6 +20,7 @@ import {
   Phone,
   ChevronDown,
   ChevronRight,
+  CalendarCheck,
 } from "lucide-react";
 import logo from "/logo.png";
 
@@ -33,21 +34,20 @@ declare global {
   }
 }
 
-export { };
+export {};
 
 export default function Navbar() {
   const isAuthenticated = useSelector(
-    (state: RootState) => state.auth.isAuthenticated
+    (state: RootState) => state.auth.isAuthenticated,
   );
   const displayName = useSelector(
-    (state: RootState) => state.auth.user?.firstName
+    (state: RootState) => state.auth.user?.firstName,
   );
   const cart = useSelector((state: RootState) => state.cart.cart);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const userMenuRef = React.useRef<HTMLDivElement | null>(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-
 
   // Calculate unique product count from cart
   const cartItemCount = cart?.items?.length || 0;
@@ -85,7 +85,7 @@ export default function Navbar() {
 
   const openCalendly = () => {
     window.Calendly.initPopupWidget({
-      url: "https://calendly.com/pranaytiwariprpk",
+      url: "https://calendly.com/enquiries-kynajewels",
     });
   };
 
@@ -110,20 +110,20 @@ export default function Navbar() {
             <div className="flex items-start justify-between md:grid md:grid-cols-3">
               {/* Left side */}
               <div className="flex mt-2 md:gap-4 text-white ">
-                <a href="tel:+918920610062" className="flex ">
+                <a href="tel:+918920610062" className="flex mt-1">
                   <Phone className="w-5 h-5" />
                   <span className="hover:underline hidden md:inline">
                     +91 8920610062
                   </span>
                 </a>
-
                 <button
                   onClick={openCalendly}
                   className="inline ld:px-4 hover:underline ml-2 text-white hover:text-gray-100"
                 >
-                  <Calendar className="w-5 h-5 inline-block mr-1" />
+                  <CalendarCheck className="w-5 h-5 inline-block mr-1" />
                   <p className="hidden md:inline"> Book Virtual Appointment</p>
                 </button>
+                <span className="sm:hidden"> Book Appointment</span>
               </div>
               {/* Brand */}
               <Link
@@ -420,7 +420,7 @@ function getLinkForItem(sectionTitle: string, itemLabel: string): string {
     case "Earrings":
       switch (itemLabel) {
         case "Studs":
-          return "/earrings?category1=studs&centerStoneShape=&category2=&category3=";
+          return "/earrings?category1=stud%27s&centerStoneShape=&category2=&category3=";
         case "Hoops / Huggies":
           return "/earrings?category1=hoops/huggies&centerStoneShape=&category2=&category3=";
         case "Halo Earrings":
@@ -623,9 +623,10 @@ function CollapsibleSection({
               <NavLink
                 to={getBasePath(title)}
                 className={({ isActive }) =>
-                  `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${isActive
-                    ? "bg-[#68C5C0]/20 text-foreground"
-                    : "text-muted-foreground"
+                  `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${
+                    isActive
+                      ? "bg-[#68C5C0]/20 text-foreground"
+                      : "text-muted-foreground"
                   }`
                 }
               >
@@ -703,7 +704,8 @@ function CollapsibleSection({
                   <NavLink
                     to={getLinkForItem(title, item)}
                     className={({ isActive }) =>
-                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${isActive ? "bg-[#68C5C0]/20" : ""
+                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${
+                        isActive ? "bg-[#68C5C0]/20" : ""
                       }`
                     }
                   >

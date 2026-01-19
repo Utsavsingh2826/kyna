@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Country, State, City } from "country-state-city";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -12,7 +13,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Progress } from "@/components/ui/progress";
-import { X, Edit, Upload, ChevronRight, ChevronLeft } from "lucide-react";
+import {
+  X,
+  Edit,
+  Upload,
+  ChevronRight,
+  ChevronLeft,
+  Trash2,
+} from "lucide-react";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -245,11 +253,12 @@ export default function RingBuilder() {
     modificationRequest: "",
     description: "",
     diamondShape: "Round",
-    diamondSize: "Center Stone",
-    diamondColor: "Center Stone",
+    diamondSize: "0.5 Carat",
+    diamondColor: "D-IF",
     diamondClarity: "Center Stone",
+    diamondOrigin: "Natural Diamond",
     metal: "Gold",
-    metalColor: "Same as Image",
+    metalColor: "White Gold",
     goldKarat: "18KT",
     ringSize: "",
     engraving: "",
@@ -283,7 +292,7 @@ export default function RingBuilder() {
       try {
         const parsedUser = JSON.parse(storedUser);
         return String(
-          parsedUser.id || parsedUser._id || parsedUser.userId || ""
+          parsedUser.id || parsedUser._id || parsedUser.userId || "",
         );
       } catch (e) {
         console.error("Error parsing stored user:", e);
@@ -352,20 +361,38 @@ export default function RingBuilder() {
     });
   }, [authUser]);
 
+  // Check serviceability when zipCode is loaded from user info
+  useEffect(() => {
+    if (
+      formData.zipCode &&
+      formData.zipCode.length === 6 &&
+      /^\d{6}$/.test(formData.zipCode)
+    ) {
+      // Only check if we haven't already checked this zipCode
+      if (serviceabilityStatus === "idle") {
+        console.log(
+          "🔍 Auto-checking serviceability for loaded zipCode:",
+          formData.zipCode,
+        );
+        checkServiceability(formData.zipCode);
+      }
+    }
+  }, [formData.zipCode]);
+
   // Validate file before processing
   const validateFile = (file: File): boolean => {
     const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     const maxSize = 5 * 1024 * 1024; // 5 MB
 
     if (!validTypes.includes(file.type)) {
-      alert(
-        `Invalid file type: ${file.name}. Please upload jpg, jpeg, png, or webp files only.`
+      toast.error(
+        `Invalid file type: ${file.name}. Please upload jpg, jpeg, png, or webp files only.`,
       );
       return false;
     }
 
     if (file.size > maxSize) {
-      alert(`File too large: ${file.name}. Maximum size is 5 MB.`);
+      toast.error(`File too large: ${file.name}. Maximum size is 5 MB.`);
       return false;
     }
 
@@ -407,12 +434,134 @@ export default function RingBuilder() {
     }
   }, [selectedCity]);
 
+  // Function to get available diamond sizes based on diamond origin and metal
+  const getAvailableDiamondSizes = () => {
+    const { diamondOrigin, metal } = formData;
+    const diamondType =
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
+
+    // Define all possible size options
+    const allSizes = [
+      "Center Stone",
+      "0.3 Carat",
+      "0.5 Carat",
+      "0.7 Carat",
+      "1 Carat",
+      "1.5 Carat",
+      "2 Carat",
+      "3 Carat",
+      "4 Carat",
+      "5 Carat",
+    ];
+
+    if (diamondType === "Natural") {
+      // Natural diamonds: Maximum 1 carat only
+      return allSizes.filter(
+        (size) =>
+          size === "Center Stone" ||
+          size === "0.3 Carat" ||
+          size === "0.5 Carat" ||
+          size === "0.7 Carat" ||
+          size === "1 Carat",
+      );
+    } else if (diamondType === "Lab Grown") {
+      if (metal === "Silver") {
+        // Lab Grown + Silver: Maximum 2 carat only
+        return allSizes.filter(
+          (size) =>
+            size === "Center Stone" ||
+            size === "0.3 Carat" ||
+            size === "0.5 Carat" ||
+            size === "0.7 Carat" ||
+            size === "1 Carat" ||
+            size === "1.5 Carat" ||
+            size === "2 Carat",
+        );
+      } else {
+        // Lab Grown + Gold/Platinum: Up to 5 carat
+        return allSizes;
+      }
+    }
+
+    return allSizes;
+  };
+
+  // Function to get available color/clarity combinations based on diamond origin and metal
+  const getAvailableColorClarity = () => {
+    const { diamondOrigin, metal } = formData;
+    const diamondType =
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
+
+    // Define all possible options with their display names and values
+    const allOptions = [
+      { display: "D-IF", value: "DIF" },
+      { display: "EF-VVS", value: "EFVVS" },
+      { display: "EF-VS", value: "EFVS" },
+      { display: "GH-VS", value: "GHVS" },
+      { display: "GH-SI", value: "GHSI" },
+    ];
+
+    if (diamondType === "Natural") {
+      // Natural diamonds: All clarities available for Gold and Platinum
+      if (metal === "Gold" || metal === "Platinum") {
+        return allOptions;
+      }
+      // Natural diamonds not available in Silver
+      return [];
+    } else if (diamondType === "Lab Grown") {
+      // Lab Grown diamonds
+      if (metal === "Gold" || metal === "Platinum") {
+        // Only DIF, EFVVS, EFVS available for Gold and Platinum
+        return allOptions.filter(
+          (opt) =>
+            opt.value === "DIF" ||
+            opt.value === "EFVVS" ||
+            opt.value === "EFVS",
+        );
+      } else if (metal === "Silver") {
+        // Only EFVVS and EFVS available for Silver
+        return allOptions.filter(
+          (opt) => opt.value === "EFVVS" || opt.value === "EFVS",
+        );
+      }
+    }
+
+    return allOptions;
+  };
+
   // Auto-set metal color to White Gold for Platinum and Silver
   useEffect(() => {
     if (formData.metal === "Platinum" || formData.metal === "Silver") {
       setFormData((prev) => ({ ...prev, metalColor: "White Gold" }));
     }
   }, [formData.metal]);
+
+  // Reset diamond size when metal or diamond type changes if current selection is invalid
+  useEffect(() => {
+    const availableSizes = getAvailableDiamondSizes();
+    const currentSizeValid = availableSizes.includes(formData.diamondSize);
+
+    if (!currentSizeValid) {
+      // Set to first available size (excluding Center Stone if possible)
+      const defaultSize =
+        availableSizes.find((size) => size !== "Center Stone") ||
+        availableSizes[0] ||
+        "0.5 Carat";
+      setFormData((prev) => ({ ...prev, diamondSize: defaultSize }));
+    }
+  }, [formData.metal, formData.diamondOrigin]);
+
+  // Reset color/clarity when metal or diamond type changes if current selection is invalid
+  useEffect(() => {
+    const availableOptions = getAvailableColorClarity();
+    const currentIsValid = availableOptions.some(
+      (opt) => opt.display === formData.diamondColor,
+    );
+
+    if (!currentIsValid && formData.diamondColor !== "Center Stone") {
+      setFormData((prev) => ({ ...prev, diamondColor: "Center Stone" }));
+    }
+  }, [formData.metal, formData.diamondOrigin]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -545,7 +694,7 @@ export default function RingBuilder() {
       };
       console.log("💳 Step 3 - Complete API Payload:", completePayload);
       console.log(
-        "📋 Ready for API call to: POST /api/upload-you-own/complete"
+        "📋 Ready for API call to: POST /api/upload-you-own/complete",
       );
     }
   };
@@ -555,10 +704,17 @@ export default function RingBuilder() {
     // Moving from step 1 -> 2: require at least one image and basic text
     if (targetStep === 2) {
       const hasAnyImage =
-        uploadedFiles.length > 0 || uploadedImages.length > 0 || !!formData.url;
+        uploadedFiles.length > 2 || uploadedImages.length > 0 || !!formData.url;
 
       if (!hasAnyImage) {
-        alert("Please upload at least 1 image before proceeding.");
+        toast.error("Please upload at least 2 image before proceeding.");
+        return false;
+      }
+      const totalImages =
+        uploadedFiles.length + uploadedImages.length + (formData.url ? 1 : 0);
+
+      if (totalImages < 3) {
+        toast.error("Please upload at least 2 images before proceeding.");
         return false;
       }
 
@@ -566,12 +722,14 @@ export default function RingBuilder() {
         !formData.modificationRequest ||
         formData.modificationRequest.trim().length < 15
       ) {
-        alert("Please provide a modification description (min 15 characters).");
+        toast.error(
+          "Please provide a modification description (min 15 characters).",
+        );
         return false;
       }
 
       if (!formData.description || formData.description.trim() === "") {
-        alert("Please provide a description (max 100 words).");
+        toast.error("Please provide a description (max 100 words).");
         return false;
       }
 
@@ -580,7 +738,7 @@ export default function RingBuilder() {
         .split(/\s+/)
         .filter(Boolean).length;
       if (descWords > 100) {
-        alert("The description field must not exceed 100 words.");
+        toast.error("The description field must not exceed 100 words.");
         return false;
       }
 
@@ -607,8 +765,13 @@ export default function RingBuilder() {
           field as unknown as string
         ];
         const value = typeof valueRaw === "string" ? valueRaw : "";
-        if (!value || value.trim() === "") {
-          alert(`Please fill out the ${field} field.`);
+        if (
+          !value ||
+          value.trim() === "" ||
+          value === "Select" ||
+          value === "Center Stone"
+        ) {
+          toast.error(`Please fill out the ${field} field.`);
           return false;
         }
       }
@@ -981,7 +1144,7 @@ export default function RingBuilder() {
               >
                 Select Diamond Specification
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-white/50 rounded-lg ">
                   <label className="text-sm text-muted-foreground">
                     Diamond Size <span className="text-red-500">*</span>
@@ -996,14 +1159,32 @@ export default function RingBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="Center Stone">Center Stone</SelectItem>
-                      <SelectItem value="0.5 Carat">0.5 Carat</SelectItem>
-                      <SelectItem value="1 Carat">1 Carat</SelectItem>
-                      <SelectItem value="1.5 Carat">1.5 Carat</SelectItem>
+                      {getAvailableDiamondSizes().map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {size}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {/* {formData.diamondType === "Natural" && (
+                    <p className="text-xs text-blue-500 mt-1">
+                      Natural diamonds available up to 1 carat
+                    </p>
+                  )} */}
+                  {/* {formData.diamondType === "Lab Grown" &&
+                    formData.metal === "Silver" && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        Lab Grown diamonds in Silver available up to 2 carat
+                      </p>
+                    )} */}
+                  {/* {formData.diamondType === "Lab Grown" &&
+                    formData.metal !== "Silver" && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        Lab Grown diamonds available up to 5 carat
+                      </p>
+                    )} */}
                 </div>
-                <div>
+                <div className="bg-white/50 rounded-lg">
                   <label className="text-sm text-muted-foreground">
                     Diamond Color & Clarity{" "}
                     <span className="text-red-500">*</span>
@@ -1018,16 +1199,79 @@ export default function RingBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="Center Stone">Center Stone</SelectItem>
-                      <SelectItem value="D-FL">D-FL</SelectItem>
-                      <SelectItem value="E-VVS1">E-VVS1</SelectItem>
-                      <SelectItem value="F-VVS2">F-VVS2</SelectItem>
+                      <SelectItem value="Center Stone"></SelectItem>
+                      {getAvailableColorClarity().map((option) => (
+                        <SelectItem key={option.value} value={option.display}>
+                          {option.display}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {getAvailableColorClarity().length === 0 &&
+                    formData.diamondOrigin === "Natural Diamond" &&
+                    formData.metal === "Silver" && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Natural diamonds are not available in Silver. Please
+                        select Gold or Platinum.
+                      </p>
+                    )}
+                  {formData.diamondOrigin === "Lab Grown Diamond" &&
+                    formData.metal === "Silver" && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        Only EF-VVS and EF-VS clarities available for Lab Grown
+                        diamonds in Silver.
+                      </p>
+                    )}
                 </div>
               </div>
             </div>
 
+            {/* Diamond Origin */}
+            <div>
+              <label className="text-sm text-muted-foreground">
+                Diamond Origin <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Natural Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-full border-2 transition-all ${formData.diamondOrigin === "Natural Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-sm font-medium">Natural diamond</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Lab Grown Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-full border-2 transition-all ${formData.diamondOrigin === "Lab Grown Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                    }`}
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-sm font-medium">
+                      Lab Grown Diamond
+                    </span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        rightColumn={
+          <div className="space-y-6">
             {/* Metal Type and Karat - 2 Column Layout */}
             <div className="grid grid-cols-2 gap-4">
               {/* Metal Type */}
@@ -1175,17 +1419,16 @@ export default function RingBuilder() {
                 </div>
               </div>
             </div>
-          </div>
-        }
-        rightColumn={
-          <div className="space-y-6">
+
             {/* Metal Color */}
             <div>
               <label
                 className={`text-sm text-muted-foreground ${formData.sameAsImage ? "text-gray-400" : ""
                   }`}
               >
-                Metal Color: Same as Image
+                Metal Color:{" "}
+                {metalTypesRef.current ? ` ${formData.metalColor}` : ""}{" "}
+                <span className="text-red-500">*</span>
                 {formData.sameAsImage && (
                   <span className="text-xs text-gray-500 ml-2">
                     (Same as Image)
@@ -1205,10 +1448,6 @@ export default function RingBuilder() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="Same as Image">Same as Image</SelectItem>
-                  <SelectItem value="Yellow Gold">Yellow Gold</SelectItem>
-                  <SelectItem value="White Gold">White Gold</SelectItem>
-                  <SelectItem value="Rose Gold">Rose Gold</SelectItem>
                   {formData.metal === "Gold" && (
                     <>
                       <SelectItem value="Yellow Gold" className="gap-">
@@ -1303,11 +1542,13 @@ export default function RingBuilder() {
                 <Button
                   onClick={() => {
                     if (!selectedEngravingImage) {
-                      alert("Please select an image for engraving first.");
+                      toast.error(
+                        "Please select an image for engraving first.",
+                      );
                       return;
                     }
                     if (engravingDone) {
-                      alert("Engraving can only be performed once.");
+                      toast.error("Engraving can only be performed once.");
                       return;
                     }
 
@@ -1317,7 +1558,7 @@ export default function RingBuilder() {
                         selectedImage: "/newring.jpg",
                         jewelryType: formData.jewelryType,
                         userId: formData.userId,
-                      }
+                      },
                     );
 
                     setSelectedEngravingImage("/newring.jpg");
@@ -1334,10 +1575,17 @@ export default function RingBuilder() {
 
                 {/* Current Engraving Display */}
                 {formData.engraving && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
                     <p className="text-xs text-green-700">
                       <strong>Current Engraving:</strong> "{formData.engraving}"
                     </p>
+                    <button
+                      onClick={handleRemoveEngraving}
+                      className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                      title="Remove Engraving"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </div>
@@ -1414,7 +1662,12 @@ export default function RingBuilder() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">Selected Images</h3>
-                  <Button variant="link" size="sm" className="text-[#328F94]">
+                  <Button
+                    variant="link"
+                    onClick={() => setCurrentStep(1)}
+                    size="sm"
+                    className="text-[#328F94]"
+                  >
                     Change Image
                   </Button>
                 </div>
@@ -1474,8 +1727,6 @@ export default function RingBuilder() {
                       </div>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Metal Type:</span>
-                      <div>{formData.metal}</div>
                       <span className="text-muted-foreground w-1/2">
                         Metal Type:
                       </span>
@@ -1643,12 +1894,12 @@ export default function RingBuilder() {
                       {serviceabilityMessage && (
                         <div
                           className={`text-xs mt-1 ${serviceabilityStatus === "serviceable"
-                            ? "text-green-600"
-                            : serviceabilityStatus === "not-serviceable"
-                              ? "text-red-600"
-                              : serviceabilityStatus === "checking"
-                                ? "text-blue-600"
-                                : "text-gray-600"
+                              ? "text-green-600"
+                              : serviceabilityStatus === "not-serviceable"
+                                ? "text-red-600"
+                                : serviceabilityStatus === "checking"
+                                  ? "text-blue-600"
+                                  : "text-gray-600"
                             }`}
                         >
                           {serviceabilityMessage}
@@ -1846,9 +2097,35 @@ export default function RingBuilder() {
     setShowEngravingPopup(false);
   };
 
+  const handleRemoveEngraving = () => {
+    // Clear engraving text
+    setFormData((prev) => ({ ...prev, engraving: "" }));
+
+    // Reset engraving done flag
+    setEngravingDone(false);
+
+    // Remove engraving blobs and their URLs
+    engravingBlobs.forEach(({ url }) => {
+      URL.revokeObjectURL(url);
+    });
+    setEngravingBlobs([]);
+
+    // Remove engraving images from uploaded images
+    const engravingUrls = engravingBlobs.map(({ url }) => url);
+    setUploadedImages((prev) =>
+      prev.filter((url) => !engravingUrls.includes(url)),
+    );
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((url) => !engravingUrls.includes(url)),
+    }));
+
+    toast.success("Engraving removed successfully");
+  };
+
   const handleEngravingSaved = async (
     engravingText: string,
-    engravingImageUrl?: string
+    engravingImageUrl?: string,
   ) => {
     console.log("💾 Engraving saved:", { engravingText, engravingImageUrl });
 
@@ -1910,7 +2187,7 @@ export default function RingBuilder() {
             token: "b228a27399f07927985d57c0f7d94ce8",
             pin_code: pinCode,
           }),
-        }
+        },
       );
 
       const result = await response.json();
@@ -1921,7 +2198,7 @@ export default function RingBuilder() {
       console.debug(
         "🔎 Raw serviceability status from API:",
         statusRaw,
-        typeof statusRaw
+        typeof statusRaw,
       );
       const statusStr =
         statusRaw == null ? "" : String(statusRaw).trim().toLowerCase();
@@ -1931,13 +2208,13 @@ export default function RingBuilder() {
       if (isServiceableApi) {
         setServiceabilityStatus("serviceable");
         setServiceabilityMessage(
-          "✅ Great! This area is serviceable for delivery."
+          "✅ Great! This area is serviceable for delivery.",
         );
         return true;
       } else {
         setServiceabilityStatus("not-serviceable");
         setServiceabilityMessage(
-          "❌ Sorry, this area is not serviceable for delivery."
+          "❌ Sorry, this area is not serviceable for delivery.",
         );
         return false;
       }
@@ -1945,22 +2222,32 @@ export default function RingBuilder() {
       console.error("❌ Error checking serviceability:", error);
       setServiceabilityStatus("idle");
       setServiceabilityMessage(
-        "⚠️ Unable to check serviceability. Please try again."
+        "⚠️ Unable to check serviceability. Please try again.",
       );
       return false;
     }
   };
 
-  // Handle zip code change with real-time serviceability check
-  const handleZipCodeChange = async (value: string) => {
-    setFormData({ ...formData, zipCode: value });
+  const handleZipCodeChange = (value: string) => {
+    // Allow only numbers
+    const numericValue = value.replace(/\D/g, "");
 
-    // Check serviceability when user enters a valid 6-digit pincode
-    if (value.length === 6 && /^\d{6}$/.test(value)) {
-      await checkServiceability(value);
-    } else if (value.length < 6) {
+    // Update input
+    setFormData((prev) => ({
+      ...prev,
+      zipCode: numericValue,
+    }));
+
+    // If less than 6 digits → reset state
+    if (numericValue.length < 6) {
       setServiceabilityStatus("idle");
       setServiceabilityMessage("");
+      return;
+    }
+
+    // Call API only when exactly 6 digits
+    if (numericValue.length === 6) {
+      checkServiceability(numericValue);
     }
   };
 
@@ -1972,22 +2259,22 @@ export default function RingBuilder() {
       // Ensure we have the latest userId
       const currentUserId = getUserId();
       if (!currentUserId) {
-        alert("Please login to proceed with customization request.");
+        toast.error("Please login to proceed with customization request.");
         navigate("/login");
         return;
       }
 
       // Check if zip code is provided and valid
       if (!formData.zipCode) {
-        alert(
-          "Please enter your zip code before creating the customization request."
+        toast.error(
+          "Please enter your zip code before creating the customization request.",
         );
         setLoading(false);
         return;
       }
 
       if (formData.zipCode.length !== 6 || !/^\d{6}$/.test(formData.zipCode)) {
-        alert("Please enter a valid 6-digit pincode.");
+        toast.error("Please enter a valid 6-digit pincode.");
         setLoading(false);
         return;
       }
@@ -1995,26 +2282,28 @@ export default function RingBuilder() {
       // Check if serviceability has been verified
       if (serviceabilityStatus !== "serviceable") {
         if (serviceabilityStatus === "not-serviceable") {
-          alert(
-            "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+          toast.error(
+            "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.",
           );
           setLoading(false);
           return;
         } else if (serviceabilityStatus === "checking") {
-          alert("Please wait while we check if your area is serviceable.");
+          toast.error(
+            "Please wait while we check if your area is serviceable.",
+          );
           setLoading(false);
           return;
         } else {
           // Status is 'idle' - need to check serviceability
           console.log(
             "📍 Checking serviceability for pincode:",
-            formData.zipCode
+            formData.zipCode,
           );
           const isServiceable = await checkServiceability(formData.zipCode);
 
           if (!isServiceable) {
-            alert(
-              "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
+            toast.error(
+              "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information.",
             );
             setLoading(false);
             return;
@@ -2023,7 +2312,7 @@ export default function RingBuilder() {
       }
 
       console.log(
-        "✅ Area is serviceable, proceeding with customization request..."
+        "✅ Area is serviceable, proceeding with customization request...",
       );
 
       // Calculate Estimated Delivery Date (EDD) via Sequel247 before sending request
@@ -2147,7 +2436,7 @@ export default function RingBuilder() {
 
       console.log(
         "📤 Creating customization request with payment:",
-        customizationRequestData
+        customizationRequestData,
       );
       console.log("📋 Current formData state:", {
         firstName: formData.firstName,
@@ -2167,7 +2456,7 @@ export default function RingBuilder() {
       if (uploadedFiles.length > 0 || engravingBlobs.length > 0) {
         console.log("📤 Uploading images to Cloudinary first...");
         console.log(
-          `📎 Files to upload: ${uploadedFiles.length} original + ${engravingBlobs.length} engraving`
+          `📎 Files to upload: ${uploadedFiles.length} original + ${engravingBlobs.length} engraving`,
         );
 
         // Prepare FormData for image upload (same as order creation)
@@ -2192,7 +2481,7 @@ export default function RingBuilder() {
             `engraving-${index + 1}.png`,
             {
               type: "image/png",
-            }
+            },
           );
           imageFormData.append("images", engravingFile);
           console.log(`🖼️ Adding engraving file ${index + 1}:`, {
@@ -2215,7 +2504,7 @@ export default function RingBuilder() {
           console.log("✅ Images uploaded successfully:", uploadedImageUrls);
         } else {
           console.error("❌ Failed to upload images:", imageResult.message);
-          alert("Failed to upload images. Please try again.");
+          toast.error("Failed to upload images. Please try again.");
           setLoading(false);
           return;
         }
@@ -2230,7 +2519,7 @@ export default function RingBuilder() {
 
       console.log(
         "📤 Creating customization request with uploaded images:",
-        customizationRequestDataWithImages
+        customizationRequestDataWithImages,
       );
       console.log("🔍 Required fields check:", {
         title: customizationRequestDataWithImages.title,
@@ -2241,7 +2530,7 @@ export default function RingBuilder() {
       });
       console.log(
         "📞 Contact information being sent:",
-        customizationRequestDataWithImages.contactInfo
+        customizationRequestDataWithImages.contactInfo,
       );
 
       // Validate required fields before sending
@@ -2259,8 +2548,8 @@ export default function RingBuilder() {
           subCategory: !!customizationRequestDataWithImages.subCategory,
           jewelryType: !!customizationRequestDataWithImages.jewelryType,
         });
-        alert(
-          "Missing required information. Please fill in all required fields."
+        toast.error(
+          "Missing required information. Please fill in all required fields.",
         );
         setLoading(false);
         return;
@@ -2279,10 +2568,10 @@ export default function RingBuilder() {
       ) {
         console.error(
           "❌ Missing contact information:",
-          customizationRequestDataWithImages.contactInfo
+          customizationRequestDataWithImages.contactInfo,
         );
-        alert(
-          "Please fill in all contact information fields (name, email, phone, address, city, pincode)."
+        toast.error(
+          "Please fill in all contact information fields (name, email, phone, address, city, pincode).",
         );
         setLoading(false);
         return;
@@ -2291,7 +2580,7 @@ export default function RingBuilder() {
       // Create customization request with payment integration
       console.log(
         "🔑 Auth token:",
-        localStorage.getItem("token") ? "Present" : "Missing"
+        localStorage.getItem("token") ? "Present" : "Missing",
       );
 
       // Test server connectivity first
@@ -2305,8 +2594,8 @@ export default function RingBuilder() {
         console.log("🔗 Server connectivity test:", testResponse.status);
       } catch (error) {
         console.error("❌ Server connectivity error:", error);
-        alert(
-          "Cannot connect to server. Please make sure the server is running."
+        toast.error(
+          "Cannot connect to server. Please make sure the server is running.",
         );
         setLoading(false);
         return;
@@ -2333,7 +2622,7 @@ export default function RingBuilder() {
       if (result.success) {
         console.log(
           "✅ Customization request created successfully:",
-          result.data
+          result.data,
         );
 
         // Prepare customization request data for payment
@@ -2381,12 +2670,12 @@ export default function RingBuilder() {
 
         console.log(
           "💳 [PAYMENT] Preparing customization data for payment:",
-          customizationRequestDataForPayment
+          customizationRequestDataForPayment,
         );
 
         // Set customization data and show payment form
         setCustomizationData(
-          customizationRequestDataForPayment as CustomizationDataType
+          customizationRequestDataForPayment as CustomizationDataType,
         );
         setShowPaymentForm(true);
         setCurrentStep(3);
@@ -2396,23 +2685,25 @@ export default function RingBuilder() {
           })`
           : "No EDD";
 
-        alert(
-          `Customization request created successfully! ${eddInfo}\n\nProceeding to payment...`
+        toast.success(
+          `Customization request created successfully! ${eddInfo}\n\nProceeding to payment...`,
         );
 
         setLoading(false);
       } else {
         console.error(
           "❌ Failed to create customization request:",
-          result.message
+          result.message,
         );
-        alert(`❌ Failed to submit customization request: ${result.message}`);
+        toast.error(
+          `❌ Failed to submit customization request: ${result.message}`,
+        );
         setLoading(false);
       }
     } catch (error) {
       console.error("❌ Error creating customization request:", error);
-      alert(
-        "❌ An error occurred while submitting your customization request. Please try again."
+      toast.error(
+        "❌ An error occurred while submitting your customization request. Please try again.",
       );
       setLoading(false);
     }
@@ -2917,18 +3208,18 @@ export default function RingBuilder() {
     try {
       console.log(
         "🎉 Customization request saved successfully:",
-        customizationResult
+        customizationResult,
       );
-      alert(
-        "🎉 Payment successful! Your customization request has been submitted successfully."
+      toast.success(
+        "🎉 Payment successful! Your customization request has been submitted successfully.",
       );
 
       // Navigate to success page or dashboard
       navigate("/");
     } catch (error) {
       console.error("❌ Error handling payment success:", error);
-      alert(
-        "Payment successful but there was an issue. Please contact support."
+      toast.error(
+        "Payment successful but there was an issue. Please contact support.",
       );
     }
   };
@@ -2941,7 +3232,7 @@ export default function RingBuilder() {
 
   const handlePaymentError = (error: string) => {
     console.error("❌ Payment error:", error);
-    alert(`Payment Error: ${error}`);
+    toast.error(`Payment Error: ${error}`);
     setShowPaymentForm(false);
   };
 

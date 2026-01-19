@@ -10,7 +10,6 @@ import {
   MessageCircle,
   Share2,
   Play,
-  X,
 } from "lucide-react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -28,6 +27,7 @@ import {
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import Engrave from "./Engrave";
+import PdfPopup from "../components/PdfPopup";
 import {
   Accordion,
   AccordionContent,
@@ -46,6 +46,7 @@ import {
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
 import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
+import BraceletSizeGuidePopup from "@/components/BraceletSizeGuidePopup";
 import "@/styles/image-loading.css"; // Ensure CSS for blur/skeleton is included
 
 // Product interface for API data
@@ -63,6 +64,16 @@ interface ProductData {
   diamondShape: string[];
   diamondSize: string[];
   diamondColorClarity: string[];
+  diamondOptions?: {
+    NATURAL?: {
+      GOLD?: string[];
+      PLATINUM?: string[];
+    };
+    LAB?: {
+      GOLD?: string[];
+      PLATINUM?: string[];
+    };
+  };
   isEngraving: boolean;
   priceBreakdown: {
     metalCost: number;
@@ -86,11 +97,13 @@ interface ProductData {
   chosenVariantSku?: string;
   netWeightGrams?: number;
   availableColors?: string[];
+  bandwidth?: string[];
+  finishing?: Array<{ code: string; type: string }>;
 }
 
 // Map color codes to display info (handles both single and combination colors)
 const getColorDisplayInfo = (
-  code: string
+  code: string,
 ): { name: string; colors: string[]; img: string } | null => {
   // Single colors
   const singleColorMap: Record<string, { name: string; img: string }> = {
@@ -98,7 +111,7 @@ const getColorDisplayInfo = (
     YG: { name: "Yellow", img: "/colors/gold.png" },
     RG: { name: "Rose", img: "/colors/rosegold.png" },
     BR: { name: "Black Rhodium", img: "/colors/br.png" },
-    "3T": { name: "Three Tone", img: "/colors/threetone.png" },
+    "3T": { name: "Three Tone", img: "/colors/3T.png" },
   };
 
   // Check if it's a single color
@@ -199,10 +212,10 @@ const ProductDetail = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
+    (state: RootState) => state.auth,
   );
   const { loading: cartLoading } = useSelector(
-    (state: RootState) => state.cart
+    (state: RootState) => state.cart,
   );
 
   const [productData, setProductData] = useState<ProductData | null>(null);
@@ -223,6 +236,7 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
+  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White");
   const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code (e.g., "WG", "WG-RG")
@@ -232,9 +246,12 @@ const ProductDetail = () => {
   const [selectedGoldKarat, setSelectedGoldKarat] = useState("");
   const [selectedMetalType, setSelectedMetalType] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState("");
+  const [selectedFinishing, setSelectedFinishing] = useState("");
+  const [selectedBandwidth, setSelectedBandwidth] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
+  const [isBraceletSizePopupOpen, setIsBraceletSizePopupOpen] = useState(false);
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
@@ -247,6 +264,8 @@ const ProductDetail = () => {
     goldKarat: "",
     metalType: "",
     braceletSize: "6",
+    bandwidth: "",
+    finishing: "",
   });
 
   const activeVariantSku = useMemo(() => {
@@ -273,7 +292,7 @@ const ProductDetail = () => {
       state,
       productData._id,
       activeVariantSku,
-      currentMetalColorCode
+      currentMetalColorCode,
     );
   });
   const isInWishlist = Boolean(wishlistEntryId);
@@ -290,7 +309,8 @@ const ProductDetail = () => {
   }, [dispatch, isAuthenticated, wishlistInitialized, wishlistLoading]);
 
   // Separate refs for different scroll containers
-  const thumbnailsRef = useRef<HTMLDivElement>(null);
+  const thumbnailsDesktopRef = useRef<HTMLDivElement>(null);
+  const thumbnailsMobileRef = useRef<HTMLDivElement>(null);
   const metalTypesRef = useRef<HTMLDivElement>(null);
   const mainViewerRef = useRef<HTMLDivElement | null>(null);
 
@@ -309,6 +329,19 @@ const ProductDetail = () => {
   // Helper function to parse karat and set metal type
   const parseKaratAndSetMetalType = useCallback(
     (goldKarat: string, productData: ProductData) => {
+      // Handle letter codes for Silver and Platinum
+      if (goldKarat === "SLV") {
+        setSelectedMetalType("SILVER");
+        setSelectedGoldKarat("925");
+        console.log("Set metal type: SILVER (from SLV code), purity: 925");
+        return;
+      } else if (goldKarat === "PT") {
+        setSelectedMetalType("PLATINUM");
+        setSelectedGoldKarat("950");
+        console.log("Set metal type: PLATINUM (from PT code), purity: 950");
+        return;
+      }
+
       const karatValue = normalizeKarat(`${goldKarat}kt`);
 
       // Determine metal type based on karat value
@@ -340,7 +373,7 @@ const ProductDetail = () => {
         // console.log("Set metal type: GOLD (fallback), karat:", karatValue);
       }
     },
-    [normalizeKarat]
+    [normalizeKarat],
   );
 
   // Parse variant SKU and update UI selections
@@ -410,64 +443,110 @@ const ProductDetail = () => {
           return prev;
         });
       } else if (parts.length === 5) {
-        // 5-part format: modelSku-shape-carat-karat-specs
-        setOriginalVariantFormat("5-part");
-        const [, diamondShape, caratSize, goldKarat, specifications] = parts;
+        // 5-part format could be:
+        // - modelSku-karat-specs-bandwidth-finish (Men's rings: GR25-14-LGEFVS-8-BF)
+        // - modelSku-shape-carat-karat-specs (Women's rings/pendants)
+        const [, part2, , , part5] = parts;
 
-        // Parse diamond shape (CUS = Cushion, etc.)
-        const shapeMap: { [key: string]: string } = {
+        const finishingCodes = ["BF", "HM", "MF", "NF"];
+        const shapeCodeMap: { [key: string]: string } = {
           CUS: "CUSHION",
           EM: "EMERALD",
           OV: "OVAL",
           PRN: "PRINCESS",
           PRS: "PEAR",
           RD: "ROUND",
-          MAR: "MARQUISE", // Alternative mapping
-          MQ: "MARQUISE", // Primary mapping
+          MAR: "MARQUISE",
+          MQ: "MARQUISE",
           HEA: "HEART",
         };
 
-        if (
-          shapeMap[diamondShape] &&
-          productData.diamondShape.includes(shapeMap[diamondShape])
-        ) {
-          setSelectedDiamondShape(shapeMap[diamondShape]);
-          console.log("Set diamond shape:", shapeMap[diamondShape]);
+        // Check if it's Men's ring format (karat-specs-bandwidth-finish)
+        if (finishingCodes.includes(part5) && !shapeCodeMap[part2]) {
+          // Format: modelSku-karat-specs-bandwidth-finish
+          setOriginalVariantFormat("3-part");
+          const [, goldKarat, specifications, bandwidth, finishing] = parts;
+          setSelectedBandwidth(bandwidth);
+          setSelectedFinishing(finishing);
+          parseKaratAndSetMetalType(goldKarat, productData);
+
+          const diamondOrigin = specifications.startsWith("LG")
+            ? "Lab Grown Diamond"
+            : "Natural Diamond";
+          setSelectedDiamondOrigin(diamondOrigin);
+
+          const clarity = specifications.replace(/^LG|^ND/, "");
+          setSelectedColorClarity((prev) => {
+            if (prev) return prev;
+            if (productData.diamondColorClarity.includes(clarity))
+              return clarity;
+            return prev;
+          });
+
+          // Don't set diamond shape/size for Men's rings
+          setSelectedDiamondShape("");
+          setSelectedDiamondSize("");
+          console.log("Men's ring 5-part format: bandwidth + finish");
+        } else {
+          // Format: modelSku-shape-carat-karat-specs (5-part women's rings)
+          setOriginalVariantFormat("5-part");
+          const [, diamondShape, caratSize, goldKarat, specifications] = parts;
+
+          if (
+            shapeCodeMap[diamondShape] &&
+            productData.diamondShape.includes(shapeCodeMap[diamondShape])
+          ) {
+            setSelectedDiamondShape(shapeCodeMap[diamondShape]);
+            console.log("Set diamond shape:", shapeCodeMap[diamondShape]);
+          }
+
+          const caratValue = (parseInt(caratSize) / 100).toString();
+          if (productData.diamondSize.includes(caratValue)) {
+            setSelectedDiamondSize(caratValue);
+            console.log("Set diamond carat size:", caratValue);
+          }
+
+          parseKaratAndSetMetalType(goldKarat, productData);
+
+          const diamondOrigin = specifications.startsWith("LG")
+            ? "Lab Grown Diamond"
+            : "Natural Diamond";
+          setSelectedDiamondOrigin(diamondOrigin);
+
+          const clarity = specifications.replace(/^LG|^ND/, "");
+          setSelectedColorClarity((prev) => {
+            if (prev) return prev;
+            if (productData.diamondColorClarity.includes(clarity))
+              return clarity;
+            return prev;
+          });
+
+          console.log("Set diamond origin:", diamondOrigin);
         }
-
-        // Parse diamond carat size (30 = 0.30 carat)
-        const caratValue = (parseInt(caratSize) / 100).toString();
-        if (productData.diamondSize.includes(caratValue)) {
-          setSelectedDiamondSize(caratValue);
-          console.log("Set diamond carat size:", caratValue);
-        }
-
-        // Parse karat and set metal type
-        parseKaratAndSetMetalType(goldKarat, productData);
-
-        // Parse diamond origin
-        const diamondOrigin = specifications.startsWith("LG")
-          ? "Lab Grown Diamond"
-          : "Natural Diamond";
-        setSelectedDiamondOrigin(diamondOrigin);
-
-        const clarity = specifications.replace(/^LG|^ND/, "");
-        // Only set clarity IF user has NOT selected one
-        setSelectedColorClarity((prev) => {
-          if (prev) return prev; // user-selected -> do not override
-          if (productData.diamondColorClarity.includes(clarity)) return clarity;
-          return prev;
-        });
-
-        console.log("Set diamond origin:", diamondOrigin);
       } else if (parts.length === 4) {
-        // 4-part format for bracelets: modelSku-karat-specs-size (no diamond shape/size)
+        // 4-part format could be:
+        // - modelSku-karat-specs-size (bracelets)
+        // - modelSku-karat-specs-bandwidth (Men's rings: GR25-14-LGEFVS-8)
+        // - modelSku-karat-specs-finish (Men's rings: GR25-14-LGEFVS-BF)
         setOriginalVariantFormat("3-part");
-        const [, goldKarat, specifications, braceletSize] = parts;
+        const [, goldKarat, specifications, lastPart] = parts;
 
-        // Apply bracelet size
-        if (braceletSize && ["6", "7", "8"].includes(braceletSize)) {
-          setSelectedBraceletSize(braceletSize);
+        // Check if last part is a finishing code
+        const finishingCodes = ["BF", "HM", "MF", "NF"];
+        if (finishingCodes.includes(lastPart)) {
+          // Format: modelSku-karat-specs-finish
+          setSelectedFinishing(lastPart);
+          console.log("Men's ring 4-part format: finish only");
+        } else if (["4", "5", "6", "7", "8", "9", "10"].includes(lastPart)) {
+          // Could be bracelet size or bandwidth
+          if (category === "bracelets") {
+            setSelectedBraceletSize(lastPart);
+            console.log("Bracelet 4-part format: size", lastPart);
+          } else {
+            // Men's ring bandwidth
+            setSelectedBandwidth(lastPart);
+            console.log("Men's ring 4-part format: bandwidth", lastPart);
+          }
         }
 
         // DO NOT auto-select diamond shape or size - keep them empty
@@ -491,29 +570,15 @@ const ProductDetail = () => {
         });
 
         console.log("Set diamond origin:", diamondOrigin);
-        console.log("4-part bracelet format detected - no diamond shape/size");
       } else if (parts.length === 3) {
-        // 3-part format: modelSku-karat-specs
+        // 3-part format: modelSku-karat-specs (Base Men's rings: GR25-14-LGEFVS)
         setOriginalVariantFormat("3-part");
         const [, goldKarat, specifications] = parts;
 
-        // Auto-select first available diamond shape
-        if (productData.diamondShape && productData.diamondShape.length > 0) {
-          setSelectedDiamondShape(productData.diamondShape[0]);
-          console.log(
-            "Auto-selected diamond shape:",
-            productData.diamondShape[0]
-          );
-        }
-
-        // Auto-select first available diamond size
-        if (productData.diamondSize && productData.diamondSize.length > 0) {
-          setSelectedDiamondSize(productData.diamondSize[0]);
-          console.log(
-            "Auto-selected diamond size:",
-            productData.diamondSize[0]
-          );
-        }
+        // For Men's rings, don't auto-select diamond shape/size
+        // They might have bandwidth/finishing options instead
+        setSelectedDiamondShape("");
+        setSelectedDiamondSize("");
 
         // Parse karat and set metal type
         parseKaratAndSetMetalType(goldKarat, productData);
@@ -523,7 +588,16 @@ const ProductDetail = () => {
           ? "Lab Grown Diamond"
           : "Natural Diamond";
         setSelectedDiamondOrigin(diamondOrigin);
+
+        const clarity = specifications.replace(/^LG|^ND/, "");
+        setSelectedColorClarity((prev) => {
+          if (prev) return prev;
+          if (productData.diamondColorClarity.includes(clarity)) return clarity;
+          return prev;
+        });
+
         console.log("Set diamond origin:", diamondOrigin);
+        console.log("3-part Men's ring format detected");
       } else {
         console.warn("Invalid variant SKU format:", variantSku);
 
@@ -538,7 +612,7 @@ const ProductDetail = () => {
         return;
       }
     },
-    [parseKaratAndSetMetalType]
+    [parseKaratAndSetMetalType],
   );
 
   // Fetch product data from API
@@ -564,13 +638,13 @@ const ProductDetail = () => {
           const variantId = params.get("variantId");
           const modelUrl = variantId
             ? `/api/products/model/${id}?variantId=${encodeURIComponent(
-                variantId
+                variantId,
               )}&metalColor=${params.get("metalColor") || "WG"}`
             : `/api/products/model/${id}`;
           response = await fetch(modelUrl);
           if (!response.ok) {
             throw new Error(
-              `Failed to fetch product by modelSku: ${response.status}`
+              `Failed to fetch product by modelSku: ${response.status}`,
             );
           }
         }
@@ -637,7 +711,7 @@ const ProductDetail = () => {
           const colorInfo = getColorDisplayInfo(metalColorParam);
           if (colorInfo) {
             console.log(
-              `Setting metal color from URL: ${metalColorParam} -> ${colorInfo.name}`
+              `Setting metal color from URL: ${metalColorParam} -> ${colorInfo.name}`,
             );
             setSelectedMetalColor(colorInfo.name);
             setSelectedColorCode(metalColorParam);
@@ -646,7 +720,7 @@ const ProductDetail = () => {
             // Fallback to first available color if available
             if (data.availableColors && data.availableColors.length > 0) {
               const firstColorInfo = getColorDisplayInfo(
-                data.availableColors[0]
+                data.availableColors[0],
               );
               if (firstColorInfo) {
                 setSelectedMetalColor(firstColorInfo.name);
@@ -660,7 +734,7 @@ const ProductDetail = () => {
             const firstColorInfo = getColorDisplayInfo(data.availableColors[0]);
             if (firstColorInfo) {
               console.log(
-                `Setting default metal color: ${firstColorInfo.name}`
+                `Setting default metal color: ${firstColorInfo.name}`,
               );
               setSelectedMetalColor(firstColorInfo.name);
               setSelectedColorCode(data.availableColors[0]);
@@ -678,6 +752,33 @@ const ProductDetail = () => {
     fetchProductData();
   }, [id, category, parseVariantSku]);
 
+  // Reset clarity selection when metal type or diamond origin changes
+  useEffect(() => {
+    if (!productData || !productData.diamondOptions) return;
+
+    const diamondType =
+      selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+    const metalTypeKey = selectedMetalType === "PLATINUM" ? "PLATINUM" : "GOLD";
+
+    const clarityOptions =
+      productData.diamondOptions?.[diamondType]?.[metalTypeKey] || [];
+    const normalizedClarityOptions = clarityOptions.map((option) =>
+      option.replace(/\s+/g, ""),
+    );
+
+    // If current selection is not in the new options, reset to first available
+    if (
+      selectedColorClarity &&
+      !normalizedClarityOptions.includes(selectedColorClarity)
+    ) {
+      if (normalizedClarityOptions.length > 0) {
+        setSelectedColorClarity(normalizedClarityOptions[0]);
+      } else {
+        setSelectedColorClarity("");
+      }
+    }
+  }, [selectedMetalType, selectedDiamondOrigin, productData]);
+
   // ---------- iJewel Preload (Silent) ----------
   useEffect(() => {
     if (!productData) return;
@@ -685,7 +786,7 @@ const ProductDetail = () => {
 
     const glb =
       (productData.variantImages || []).find(
-        (u: string) => !!u && u.endsWith && u.endsWith(".glb")
+        (u: string) => !!u && u.endsWith && u.endsWith(".glb"),
       ) ||
       (productData.variantImages && productData.variantImages[1]) ||
       "";
@@ -728,7 +829,7 @@ const ProductDetail = () => {
         const pre = new (window as any).ijewelViewer.Viewer(
           container,
           project,
-          viewerOptions
+          viewerOptions,
         );
         (window as any).__ijewelPreloadViewer = pre;
         (window as any).__ijewelPreloadLoaded = true;
@@ -789,11 +890,13 @@ const ProductDetail = () => {
         goldKarat: selectedGoldKarat,
         metalType: selectedMetalType,
         braceletSize: selectedBraceletSize,
+        bandwidth: selectedBandwidth,
+        finishing: selectedFinishing,
       };
       initialStateSetRef.current = true;
       console.log(
         "Initial lastValidStateRef set from loaded variant:",
-        lastValidStateRef.current
+        lastValidStateRef.current,
       );
     }
   }, [
@@ -905,13 +1008,26 @@ const ProductDetail = () => {
       const caratCode = selectedDiamondSize
         ? String(Math.round(parseFloat(selectedDiamondSize) * 100)).padStart(
             2,
-            "0"
+            "0",
           )
         : "30";
 
       return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}`;
     } else {
-      return `${modelSku}-${karatCode}-${specifications}`;
+      // 3-part base with optional bandwidth and finishing (Men's rings)
+      let variantId = `${modelSku}-${karatCode}-${specifications}`;
+
+      // Add bandwidth if selected (Men's Rings)
+      if (selectedBandwidth) {
+        variantId += `-${selectedBandwidth}`;
+      }
+
+      // Add finishing if selected (Men's Rings)
+      if (selectedFinishing) {
+        variantId += `-${selectedFinishing}`;
+      }
+
+      return variantId;
     }
   }, [
     productData,
@@ -924,6 +1040,9 @@ const ProductDetail = () => {
     selectedColorClarity,
     category,
     selectedBraceletSize,
+    selectedBandwidth,
+    selectedFinishing,
+    activeVariantSku,
   ]);
 
   // Update variant ID and refetch data
@@ -944,11 +1063,11 @@ const ProductDetail = () => {
       : `/product/${id}`;
     navigate(
       `${currentPath}?variantId=${encodeURIComponent(
-        newVariantId
+        newVariantId,
       )}&metalColor=${metalColor}`,
       {
         replace: true,
-      }
+      },
     );
   }, [
     generateVariantId,
@@ -972,7 +1091,7 @@ const ProductDetail = () => {
 
     try {
       const response = await fetch(
-        `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`
+        `/api/products/model/${id}?variantId=${currentVariantId}&metalColor=${metalCode}`,
       );
 
       const newData = await response.json();
@@ -989,7 +1108,7 @@ const ProductDetail = () => {
           "Variant not found for:",
           currentVariantId,
           "with metal color:",
-          metalCode
+          metalCode,
         );
 
         // Revert to last valid state
@@ -1011,16 +1130,16 @@ const ProductDetail = () => {
             : `/product/${id}`;
           navigate(
             `${currentPath}?variantId=${encodeURIComponent(
-              productData.chosenVariantSku
+              productData.chosenVariantSku,
             )}&metalColor=${lastValidStateRef.current.colorCode}`,
             {
               replace: true,
-            }
+            },
           );
         }
 
         toast.error(
-          "This combination is not available. Please select a different option."
+          "This combination is not available. Please select a different option.",
         );
         return;
       }
@@ -1039,6 +1158,8 @@ const ProductDetail = () => {
         goldKarat: selectedGoldKarat,
         metalType: selectedMetalType,
         braceletSize: selectedBraceletSize,
+        bandwidth: selectedBandwidth,
+        finishing: selectedFinishing,
       };
 
       // Reset to first image to avoid showing wrong cached images
@@ -1063,11 +1184,11 @@ const ProductDetail = () => {
           : `/product/${id}`;
         navigate(
           `${currentPath}?variantId=${encodeURIComponent(
-            productData.chosenVariantSku
+            productData.chosenVariantSku,
           )}&metalColor=${lastValidStateRef.current.colorCode}`,
           {
             replace: true,
-          }
+          },
         );
       }
     } finally {
@@ -1136,6 +1257,8 @@ const ProductDetail = () => {
     selectedColorCode,
     selectedColorClarity,
     selectedBraceletSize,
+    selectedBandwidth,
+    selectedFinishing,
   ]);
 
   // Auto-select appropriate karat and default metal color when metal type changes
@@ -1185,17 +1308,17 @@ const ProductDetail = () => {
     switch (selectedMetalType) {
       case "GOLD":
         availableKarats = productData.goldKarats.filter((karat) =>
-          karat.toString().includes("kt")
+          karat.toString().includes("kt"),
         );
         break;
       case "PLATINUM":
         availableKarats = productData.goldKarats.filter(
-          (karat) => karat.toString() === "950"
+          (karat) => karat.toString() === "950",
         );
         break;
       case "SILVER":
         availableKarats = productData.goldKarats.filter(
-          (karat) => karat.toString() === "925"
+          (karat) => karat.toString() === "925",
         );
         break;
       default:
@@ -1262,7 +1385,7 @@ const ProductDetail = () => {
         // Don't call refetchProductData here - let the main useEffect handle it
       }
     },
-    [navigate]
+    [navigate],
   );
 
   // Removed: Refetch is now handled by the main variant update useEffect
@@ -1307,8 +1430,8 @@ const ProductDetail = () => {
             typeof productData.sellingPrice === "number"
               ? productData.sellingPrice
               : typeof productData.priceBreakdown?.totalWithGst === "number"
-              ? productData.priceBreakdown.totalWithGst
-              : null,
+                ? productData.priceBreakdown.totalWithGst
+                : null,
           engraving:
             hasEngraving &&
             (engravingText || engravingMotifPath || engravingImageUrl)
@@ -1318,7 +1441,7 @@ const ProductDetail = () => {
                   imageUrl: engravingImageUrl || undefined,
                 }
               : undefined,
-        })
+        }),
       );
     },
     [
@@ -1337,7 +1460,7 @@ const ProductDetail = () => {
       selectedMetalColor,
       wishlistEntryId,
       selectedImage,
-    ]
+    ],
   );
 
   // REMOVED: Duplicate useEffect that was causing infinite loop
@@ -1350,18 +1473,23 @@ const ProductDetail = () => {
     switch (selectedMetalType) {
       case "GOLD":
         // Show only kt values for gold (filter out 950 and 925)
-        return productData.goldKarats.filter((karat) =>
-          normalizeKarat(karat).includes("kt")
-        );
+        // Sort in descending order (18kt, 14kt, 9kt)
+        return productData.goldKarats
+          .filter((karat) => normalizeKarat(karat).includes("kt"))
+          .sort((a, b) => {
+            const numA = parseInt(normalizeKarat(a));
+            const numB = parseInt(normalizeKarat(b));
+            return numB - numA; // Descending order
+          });
       case "PLATINUM":
         // Show only 950 for platinum
         return productData.goldKarats.filter(
-          (karat) => karat.toString() === "950"
+          (karat) => karat.toString() === "950",
         );
       case "SILVER":
         // Show only 925 for silver
         return productData.goldKarats.filter(
-          (karat) => karat.toString() === "925"
+          (karat) => karat.toString() === "925",
         );
       default:
         return productData.goldKarats;
@@ -1396,26 +1524,26 @@ const ProductDetail = () => {
 
   // Improved thumbnail scroll handlers with proper scroll amount
   const scrollThumbnailsUp = () => {
-    if (thumbnailsRef.current) {
-      thumbnailsRef.current.scrollBy({ top: -72, behavior: "smooth" }); // 64px thumbnail + 8px gap
+    if (thumbnailsDesktopRef.current) {
+      thumbnailsDesktopRef.current.scrollBy({ top: -72, behavior: "smooth" }); // 64px thumbnail + 8px gap
     }
   };
 
   const scrollThumbnailsDown = () => {
-    if (thumbnailsRef.current) {
-      thumbnailsRef.current.scrollBy({ top: 72, behavior: "smooth" }); // 64px thumbnail + 8px gap
+    if (thumbnailsDesktopRef.current) {
+      thumbnailsDesktopRef.current.scrollBy({ top: 72, behavior: "smooth" }); // 64px thumbnail + 8px gap
     }
   };
 
   const scrollThumbnailsLeft = () => {
-    if (thumbnailsRef.current) {
-      thumbnailsRef.current.scrollBy({ left: -72, behavior: "smooth" }); // 64px thumbnail + 8px gap
+    if (thumbnailsMobileRef.current) {
+      thumbnailsMobileRef.current.scrollBy({ left: -72, behavior: "smooth" }); // 64px thumbnail + 8px gap
     }
   };
 
   const scrollThumbnailsRight = () => {
-    if (thumbnailsRef.current) {
-      thumbnailsRef.current.scrollBy({ left: 72, behavior: "smooth" }); // 64px thumbnail + 8px gap
+    if (thumbnailsMobileRef.current) {
+      thumbnailsMobileRef.current.scrollBy({ left: 72, behavior: "smooth" }); // 64px thumbnail + 8px gap
     }
   };
 
@@ -1527,14 +1655,14 @@ const ProductDetail = () => {
         if (engravingImageUrl && engravingImageUrl.startsWith("blob:")) {
           console.log(
             "🎨 Fetching engraved image from blob URL:",
-            engravingImageUrl
+            engravingImageUrl,
           );
           const response = await fetch(engravingImageUrl);
           const blob = await response.blob();
           formData.append("image", blob, "engraving.png");
         } else {
           console.warn(
-            "⚠️ No valid engraving image URL found, using placeholder"
+            "⚠️ No valid engraving image URL found, using placeholder",
           );
           const response = await fetch("/rings.jpg");
           const blob = await response.blob();
@@ -1560,7 +1688,7 @@ const ProductDetail = () => {
         return null;
       }
     },
-    [engravingImageUrl]
+    [engravingImageUrl],
   );
 
   // Generate and upload engraving data
@@ -1578,7 +1706,7 @@ const ProductDetail = () => {
       // Upload engraving data to backend
       const uploadedUrl = await uploadEngravingToBackend(
         engravingText,
-        engravingMotifPath
+        engravingMotifPath,
       );
       return uploadedUrl;
     } catch (error) {
@@ -1627,7 +1755,7 @@ const ProductDetail = () => {
         }
         console.log(
           "✅ Engraving uploaded successfully:",
-          cloudinaryEngravingUrl
+          cloudinaryEngravingUrl,
         );
       } catch (error) {
         console.error("❌ Engraving upload error:", error);
@@ -1780,7 +1908,7 @@ const ProductDetail = () => {
       setShowEngraveModal(false);
       console.log("Engraving saved:", { text, imageUrl, motifPath });
     },
-    []
+    [],
   );
 
   // Handle undo engraving
@@ -1843,12 +1971,12 @@ const ProductDetail = () => {
   const handleEmailShare = () => {
     const url = getCurrentUrl();
     const subject = encodeURIComponent(
-      `Check out this jewelry: ${productData?.title || "Product"}`
+      `Check out this jewelry: ${productData?.title || "Product"}`,
     );
     const body = encodeURIComponent(
       `I thought you might be interested in this jewelry piece:\n\n${
         productData?.title || "Product"
-      }\n\nView it here: ${url}`
+      }\n\nView it here: ${url}`,
     );
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=enquires@kynajewels.com&su=${subject}&body=${body}`;
     window.open(gmailUrl, "_blank");
@@ -1884,7 +2012,7 @@ const ProductDetail = () => {
     // Check if trying to select natural diamond with silver metal
     if (origin === "Natural Diamond" && selectedMetalType === "SILVER") {
       toast.error(
-        "Natural diamonds are not available for silver metals. Please select Lab Grown Diamond or change the metal type."
+        "Natural diamonds are not available for silver metals. Please select Lab Grown Diamond or change the metal type.",
       );
       return;
     }
@@ -1924,7 +2052,7 @@ const ProductDetail = () => {
               showUiButtons: false,
               showLogo: false,
               showConfigurator: false,
-            }
+            },
           );
         } catch (err) {
           console.warn("Failed to init ijewel viewer fallback:", err);
@@ -2012,7 +2140,7 @@ const ProductDetail = () => {
                     <ChevronUp className="w-4 h-4 text-gray-600" />
                   </button>
                   <div
-                    ref={thumbnailsRef}
+                    ref={thumbnailsDesktopRef}
                     className="flex flex-col gap-2 overflow-y-auto scrollbar-hide max-h-[400px]"
                     style={{
                       scrollbarWidth: "none",
@@ -2067,12 +2195,12 @@ const ProductDetail = () => {
                                 `Failed to load desktop thumbnail ${
                                   index + 1
                                 }:`,
-                                image
+                                image,
                               );
                             }}
                             onLoad={() => {
                               console.error(
-                                `Loaded desktop thumbnail ${index + 1}`
+                                `Loaded desktop thumbnail ${index + 1}`,
                               );
                             }}
                           />
@@ -2091,7 +2219,7 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div
-                  className={`flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden transition-opacity duration-300 ${
+                  className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${
                     isUpdating ? "opacity-50" : "opacity-100"
                   }`}
                 >
@@ -2189,7 +2317,7 @@ const ProductDetail = () => {
                     <ChevronLeft className="w-4 h-4 text-gray-600" />
                   </button>
                   <div
-                    ref={thumbnailsRef}
+                    ref={thumbnailsMobileRef}
                     className="flex gap-2 overflow-x-auto scrollbar-hide max-w-[260px]"
                     style={{
                       scrollbarWidth: "none",
@@ -2242,7 +2370,7 @@ const ProductDetail = () => {
                             onError={() => {
                               console.error(
                                 `Failed to load mobile thumbnail ${index + 1}:`,
-                                image
+                                image,
                               );
                             }}
                             // onLoad={() => {
@@ -2348,9 +2476,12 @@ const ProductDetail = () => {
                         </div>
                       )}
                     </button>
-                    <span className="text-[#328F94] underline">
+                    <button
+                      onClick={() => setIsPdfPopupOpen(true)}
+                      className="text-[#328F94] underline"
+                    >
                       Stone Guide
-                    </span>
+                    </button>
                   </h3>
 
                   <div className="flex gap-2">
@@ -2367,8 +2498,8 @@ const ProductDetail = () => {
                             isDisabled
                               ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
                               : selectedDiamondOrigin === origin
-                              ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
-                              : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
+                                ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
+                                : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
                           }`}
                         >
                           {origin}
@@ -2390,7 +2521,7 @@ const ProductDetail = () => {
 
                 {/* Diamond Shape - Only show if diamond shapes are available */}
                 {productData.diamondShape &&
-                  productData.diamondShape.length > 0 && (
+                  productData.diamondShape.length > 1 && (
                     <div>
                       <h3 className="mb-3 text-sm">
                         Diamond Shape:{" "}
@@ -2403,8 +2534,8 @@ const ProductDetail = () => {
                         {sampleProduct.diamondShapes
                           .filter((shape) =>
                             productData.diamondShape.includes(
-                              shape.name.toUpperCase()
-                            )
+                              shape.name.toUpperCase(),
+                            ),
                           )
                           .map((shape) => (
                             <button
@@ -2442,10 +2573,12 @@ const ProductDetail = () => {
                     </div>
                   )}
 
-                {/* Diamond Size & Color/Clarity - Only show if data is available */}
-                {productData.diamondSize.length > 0 && (
-                  <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
-                    {productData.diamondShape.length > 0 && (
+                <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
+                  {productData.diamondSize.length > 0 &&
+                    !(
+                      productData.diamondSize.length === 1 &&
+                      productData.diamondSize[0] === "0"
+                    ) && (
                       <div>
                         <label className="block text-xs mb-2">
                           Diamond Size
@@ -2471,6 +2604,7 @@ const ProductDetail = () => {
                                 // For Lab Grown Diamond, show all sizes
                                 return true;
                               })
+                              .sort((a, b) => parseFloat(a) - parseFloat(b))
                               .map((size, index) => (
                                 <SelectItem key={index} value={size}>
                                   {parseFloat(size).toFixed(2)} Carat
@@ -2480,7 +2614,39 @@ const ProductDetail = () => {
                         </Select>
                       </div>
                     )}
-                    {productData.diamondColorClarity.length > 0 && (
+                  {(() => {
+                    // Get available clarity options based on diamond type and metal type
+                    const getAvailableClarityOptions = () => {
+                      if (!productData.diamondOptions) {
+                        // Fallback to old logic if diamondOptions is not available
+                        return productData.diamondColorClarity.filter((cc) => {
+                          return true;
+                        });
+                      }
+
+                      const diamondType =
+                        selectedDiamondOrigin === "Lab Grown Diamond"
+                          ? "LAB"
+                          : "NATURAL";
+                      const metalTypeKey =
+                        selectedMetalType === "PLATINUM" ? "PLATINUM" : "GOLD";
+
+                      const clarityOptions =
+                        productData.diamondOptions?.[diamondType]?.[
+                          metalTypeKey
+                        ] || [];
+
+                      // Map the clarity options to match the format used in the product
+                      return clarityOptions.map((option) => {
+                        // Convert "EF VVS" to "EFVVS", "D IF" to "DIF", "DE IF" to "DEIF", etc.
+                        return option.replace(/\s+/g, "");
+                      });
+                    };
+
+                    const availableClarityOptions =
+                      getAvailableClarityOptions();
+
+                    return availableClarityOptions.length > 0 ? (
                       <div>
                         <label className="block text-xs mb-2">
                           Color & Clarity
@@ -2496,28 +2662,17 @@ const ProductDetail = () => {
                           </SelectTrigger>
 
                           <SelectContent className="bg-white">
-                            {productData.diamondColorClarity
-                              .filter((cc) => {
-                                // For Lab Grown Diamond, exclude GHVS and GHSI
-                                if (
-                                  selectedDiamondOrigin === "Lab Grown Diamond"
-                                ) {
-                                  return cc !== "GHVS" && cc !== "GHSI";
-                                }
-                                // For Natural Diamond, show all options
-                                return true;
-                              })
-                              .map((cc, index) => (
-                                <SelectItem key={index} value={cc}>
-                                  {cc}
-                                </SelectItem>
-                              ))}
+                            {availableClarityOptions.map((cc, index) => (
+                              <SelectItem key={index} value={cc}>
+                                {cc}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
-                    )}
-                  </div>
-                )}
+                    ) : null;
+                  })()}
+                </div>
 
                 {/* Metal Type */}
                 <div className="my-6 grid grid-cols-2 gap-4">
@@ -2643,6 +2798,87 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
+                {/* Bandwidth and Finishing for Men's Rings */}
+                {originalVariantFormat === "3-part" &&
+                  ((productData?.bandwidth?.length ?? 0) > 0 ||
+                    (productData?.finishing?.length ?? 0) > 0) && (
+                    <div className="my-6">
+                      <div
+                        className={`grid ${
+                          (productData?.bandwidth?.length ?? 0) > 0 &&
+                          (productData?.finishing?.length ?? 0) > 0
+                            ? "grid-cols-2"
+                            : "grid-cols-1"
+                        } gap-4`}
+                      >
+                        {/* Bandwidth Selection */}
+                        {(productData?.bandwidth?.length ?? 0) > 0 && (
+                          <div className=" ">
+                            <label className="block text-sm mb-2">
+                              Band Width (mm)
+                            </label>
+                            <Select
+                              value={selectedBandwidth}
+                              onValueChange={setSelectedBandwidth}
+                            >
+                              <SelectTrigger
+                                className={`text-sm border-neutral-300 ${
+                                  (productData?.bandwidth?.length ?? 0) > 0 &&
+                                  (productData?.finishing?.length ?? 0) > 0
+                                    ? "w-full"
+                                    : "w-1/2"
+                                }`}
+                              >
+                                <SelectValue placeholder="Select Width" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white">
+                                {productData.bandwidth?.map((width) => (
+                                  <SelectItem key={width} value={width}>
+                                    {width}mm
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {/* Finishing Selection */}
+                        {(productData?.finishing?.length ?? 0) > 0 && (
+                          <div>
+                            <label className="block text-sm mb-2">
+                              Finish Type
+                            </label>
+                            <Select
+                              value={selectedFinishing}
+                              onValueChange={setSelectedFinishing}
+                            >
+                              <SelectTrigger
+                                className={`${
+                                  (productData?.bandwidth?.length ?? 0) > 0 &&
+                                  (productData?.finishing?.length ?? 0) > 0
+                                    ? "w-full"
+                                    : "w-1/2"
+                                } border-neutral-300`}
+                              >
+                                <SelectValue placeholder="Select Finish" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white">
+                                {productData.finishing?.map((finish) => (
+                                  <SelectItem
+                                    key={finish.code}
+                                    value={finish.code}
+                                  >
+                                    {finish.type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                 {category === "rings" && (
                   <div className="my-6 space-y-2">
                     {" "}
@@ -2676,7 +2912,7 @@ const ProductDetail = () => {
                     <Button
                       variant="link"
                       size="sm"
-                      className="text-[#328F94] p-0 mt-1"
+                      className="text-[#328F94] hover:underline p-0 mt-1"
                       onClick={() => setIsRingSizePopupOpen(true)}
                     >
                       Ring Size Guide
@@ -2685,31 +2921,41 @@ const ProductDetail = () => {
                 )}
 
                 {category === "bracelets" && (
-                  <div className="my-6 space-y-2">
-                    {/* Bracelet Size */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm mb-2">
-                          Bracelet Size
-                        </label>
-                        <Select
-                          value={selectedBraceletSize}
-                          onValueChange={setSelectedBraceletSize}
-                        >
-                          <SelectTrigger className="text-sm border-neutral-300">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {braceletSizes.map((size) => (
-                              <SelectItem key={size} value={size}>
-                                Size {size}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                  <>
+                    <div className="">
+                      {/* Bracelet Size */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm mb-2">
+                            Bracelet Size
+                          </label>
+                          <Select
+                            value={selectedBraceletSize}
+                            onValueChange={setSelectedBraceletSize}
+                          >
+                            <SelectTrigger className="text-sm border-neutral-300">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {braceletSizes.map((size) => (
+                                <SelectItem key={size} value={size}>
+                                  Size {size}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-[#328F94] p-0"
+                      onClick={() => setIsBraceletSizePopupOpen(true)}
+                    >
+                      Bracelet Size Guide
+                    </Button>
+                  </>
                 )}
 
                 {/* Free Engraving - Only show if engraving is available */}
@@ -2805,8 +3051,8 @@ const ProductDetail = () => {
                     {isUploadingEngraving
                       ? "Uploading Engraving..."
                       : cartLoading
-                      ? "Processing..."
-                      : "Buy Now"}
+                        ? "Processing..."
+                        : "Buy Now"}
                   </Button>
                   <Button
                     onClick={handleAddToCart}
@@ -3142,7 +3388,7 @@ const ProductDetail = () => {
             const evImage =
               originalImage?.replace(
                 /-(FV|SV|TV|BV|LV|RV|GP)\.webp$/i,
-                "-EV.webp"
+                "-EV.webp",
               ) || originalImage;
 
             console.log("🎨 ENGRAVE COMPONENT - Image URLs:");
@@ -3168,9 +3414,19 @@ const ProductDetail = () => {
             );
           })()}
       </main>
-      <RingSizeGuidePopup 
-        isOpen={isRingSizePopupOpen} 
-        onClose={() => setIsRingSizePopupOpen(false)} 
+      <RingSizeGuidePopup
+        isOpen={isRingSizePopupOpen}
+        onClose={() => setIsRingSizePopupOpen(false)}
+      />
+      <BraceletSizeGuidePopup
+        isOpen={isBraceletSizePopupOpen}
+        onClose={() => setIsBraceletSizePopupOpen(false)}
+      />
+      <PdfPopup
+        isOpen={isPdfPopupOpen}
+        onClose={() => setIsPdfPopupOpen(false)}
+        pdfUrl="/Stone_Guide.pdf"
+        title="Quality & Certification"
       />
     </div>
   );
@@ -3185,7 +3441,7 @@ declare global {
       Viewer: new (
         container: HTMLElement,
         project: object,
-        options: object
+        options: object,
       ) => void;
     };
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import SEO from "@/components/SEO";
 import { ChevronRight, Menu, X } from "lucide-react";
+import { title } from "process";
 
 const sections = [
   {
@@ -20,48 +21,143 @@ const sections = [
       },
       { id: "reviews-feedback", title: "Submission of Reviews and Feedback" },
     ],
-  },{
-  id: "loyalty-programs-promotions",
-  title: "LOYALTY PROGRAMS AND PROMOTIONS",
-  subsections: [
-    {
-      id: "extension-privileges-promos",
-      title: "Extension of Privileges / Promos",
-    },
-    {
-      id: "gift-cards",
-      title: "Gift Cards",
-    },
-    {
-      id: "loyalty-points",
-      title: "Loyalty Points",
-    },
-    {
-      id: "friends-family-discount",
-      title: "Friends & Family Discount",
-    },
-    {
-      id: "referral-discount",
-      title: "Referral Discount",
-    },
-    {
-      id: "design-your-own-jewellery",
-      title: "Design Your Own Jewellery",
-    },
-  ],
-},
-{
-  id: "customer-service-support",
-  title: "CUSTOMER SERVICE AND SUPPORT",
-  subsections: [
-    { id: "contact-information", title: "Contact Information" },
-    { id: "hours-of-operation", title: "Hours of Operation for Customer Service" },
-    {
-      id: "resolving-customer-inquiries",
-      title: "Process for Resolving Customer Inquiries and Complaints",
-    },
-  ],
-},
+  },
+  {
+    id: "loyalty-programs-promotions",
+    title: "LOYALTY PROGRAMS AND PROMOTIONS",
+    subsections: [
+      {
+        id: "extension-privileges-promos",
+        title: "Extension of Privileges / Promos",
+      },
+      {
+        id: "gift-cards",
+        title: "Gift Cards",
+      },
+      {
+        id: "loyalty-points",
+        title: "Loyalty Points",
+      },
+      {
+        id: "friends-family-discount",
+        title: "Friends & Family Discount",
+      },
+      {
+        id: "referral-discount",
+        title: "Referral Discount",
+      },
+      {
+        id: "design-your-own-jewellery",
+        title: "Design Your Own Jewellery",
+      },
+    ],
+  },
+  {
+    id: "customer-service-support",
+    title: "CUSTOMER SERVICE AND SUPPORT",
+    subsections: [
+      { id: "contact-information", title: "Contact Information" },
+      {
+        id: "hours-of-operation",
+        title: "Hours of Operation for Customer Service",
+      },
+      {
+        id: "resolving-customer-inquiries",
+        title: "Process for Resolving Customer Inquiries and Complaints",
+      },
+    ],
+  },
+  {
+    id: "terms-conditions-metals",
+    title:
+      "Terms and Conditions for Kyna Jewellery - Metals (Gold, Silver, Platinum, Diamond)",
+    subsections: [
+      { id: "gold-jewelry", title: "Gold Jewelry" },
+      { id: "silver-jewelry", title: "Silver Jewelry" },
+      { id: "platinum-jewelry", title: "Platinum Jewelry" },
+      { id: "diamond-jewelry", title: "Diamond Jewelry" },
+      { id: "metal-alloy-combination", title: "Metal Alloy Combination" },
+      { id: "metal-variations", title: "Metal Variations" },
+      { id: "care-and-maintenance", title: "Care and Maintenance" },
+      {
+        id: "warranty-and-defects",
+        title: "Warranty for Metal-Related Defects",
+      },
+      {
+        id: "returns-and-exchanges",
+        title: "Returns and Exchanges for Metal Jewelry",
+      },
+    ],
+  },
+  {
+    id: "terms-conditions-repolishing",
+    title: "Terms and Conditions – Free Lifetime Repolishing for Tarnish",
+    subsections: [
+      { id: "eligibility", title: "Eligibility" },
+      { id: "exclusions", title: "Exclusions" },
+      { id: "service-process", title: "Service Process" },
+      { id: "care-recommendations", title: "Care Recommendations" },
+      { id: "limitations", title: "Limitations" },
+      { id: "modification-of-terms", title: "Modification of Terms" },
+    ],
+  },
+  {
+    id: "terms-conditions-packaging",
+    title: "Terms and Conditions – Packaging",
+    subsections: [
+      { id: "shipping-partner", title: "Shipping Partner" },
+      { id: "insurance-and-liability", title: "Insurance and Liability" },
+      { id: "packaging-security", title: "Packaging and Security" },
+      { id: "delivery-acceptance", title: "Delivery and Acceptance" },
+      { id: "returns-refunds", title: "Returns and Refunds" },
+      { id: "customer-responsibilities", title: "Customer Responsibilities" },
+      {
+        id: "governing-law-jurisdiction",
+        title: "Governing Law and Jurisdiction",
+      },
+    ],
+  },
+  {
+    id: "terms-conditions-product-collection-nominee",
+    title: "Terms and Conditions - Product Collection by a Nominee",
+    subsections: [
+      { id: "introduction", title: "Introduction" },
+      { id: "authorization-of-nominee", title: "Authorization of Nominee" },
+      {
+        id: "identification-and-verification",
+        title: "Identification and Verification",
+      },
+      { id: "security-and-liability", title: "Security and Liability" },
+      { id: "timeframe-for-collection", title: "Timeframe for Collection" },
+      {
+        id: "collection-from-sequel-logistics-store",
+        title: "Collection from Sequel Logistics or Store",
+      },
+      {
+        id: "governing-law-jurisdiction",
+        title: "Discrepancies and Disputes",
+      },
+    ],
+  },
+  {
+    id: "terms-conditions-engraved-products",
+    title: "Terms and Conditions – Engraved Products",
+    subsections: [
+      {
+        id: "customization-and-personalization",
+        title: "Customization and Personalization",
+      },
+      { id: "production-timeline", title: "Production Timeline" },
+      { id: "returns-and-refunds-engraved", title: "Returns & Refunds Policy" },
+      { id: "customer-responsibility", title: "Customer Responsibility" },
+      {
+        id: "intellectual-property",
+        title: "Intellectual Property and Messaging",
+      },
+      { id: "limitation-of-liability", title: "Limitation of Liability" },
+      { id: "cancellations-engraved", title: "Cancellations" },
+    ],
+  },
 ];
 
 export default function TermsAndConditions() {
@@ -603,7 +699,7 @@ export default function TermsAndConditions() {
                   </p>
                 </div>
               </section>
-              
+
               {/* 02.	LOYALTY PROGRAMS AND PROMOTIONS */}
               {/* <section id="loyalty-programs-and-promotions" className="mb-12">
                 <h2 className="text-2xl font-bold mb-4">Loyalty Programs and Promotions</h2>
@@ -617,129 +713,1026 @@ export default function TermsAndConditions() {
                 </p>
               </section> */}
               <section id="loyalty-programs-promotions" className="mb-12">
-  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
-    06. LOYALTY PROGRAMS AND PROMOTIONS
-  </h2>
+                <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                  06. LOYALTY PROGRAMS AND PROMOTIONS
+                </h2>
 
-  <div id="extension-privileges-promos" className="mb-8">
-    <h3 className="text-xl font-semibold mb-4">
-      Extension of Privileges / Promos
-    </h3>
+                <div id="extension-privileges-promos" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    Extension of Privileges / Promos
+                  </h3>
 
-    <div id="gift-cards" className="mb-6">
-      <h4 className="text-lg font-semibold mb-3">1. Gift Cards</h4>
-      <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
-        <li>Gift Card(s) can be redeemed across the Website and Mobile site, or mobile apps.</li>
-        <li>Gift Card(s) can be redeemed on the purchase of any jewellery products.</li>
-        <li>On the payment page, click on the tab "Gift Card" and enter your Gift Card number and pin for redemption.</li>
-        <li>Multiple Gift Cards can be used to make a payment in a single transaction.</li>
-        <li>Gift Card(s) can be combined with any other payment type.</li>
-        <li>Gift Card(s) once bought online, shall be considered as sold and cannot be Cancelled, Exchanged or Refunded.</li>
-        <li>Gift card(s) can also be redeemed partially, as many times as a user wishes to, till its balance is consumed or it expires.</li>
-        <li>Gift cards are valid for a period of one year from the date of issuance to the recipient.</li>
-        <li>Gift cards cannot be used to purchase another Gift Card.</li>
-        <li>If lost or misused, the Gift Card(s) cannot be replaced.</li>
-        <li>Gift cards are void if resold and cannot be exchanged for credit(s) or cash and cannot be re-validated once past the expiry date.</li>
-      </ul>
-    </div>
+                  <div id="gift-cards" className="mb-6">
+                    <h4 className="text-lg font-semibold mb-3">
+                      1. Gift Cards
+                    </h4>
+                    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                      <li>
+                        Gift Card(s) can be redeemed across the Website and
+                        Mobile site, or mobile apps.
+                      </li>
+                      <li>
+                        Gift Card(s) can be redeemed on the purchase of any
+                        jewellery products.
+                      </li>
+                      <li>
+                        On the payment page, click on the tab "Gift Card" and
+                        enter your Gift Card number and pin for redemption.
+                      </li>
+                      <li>
+                        Multiple Gift Cards can be used to make a payment in a
+                        single transaction.
+                      </li>
+                      <li>
+                        Gift Card(s) can be combined with any other payment
+                        type.
+                      </li>
+                      <li>
+                        Gift Card(s) once bought online, shall be considered as
+                        sold and cannot be Cancelled, Exchanged or Refunded.
+                      </li>
+                      <li>
+                        Gift card(s) can also be redeemed partially, as many
+                        times as a user wishes to, till its balance is consumed
+                        or it expires.
+                      </li>
+                      <li>
+                        Gift cards are valid for a period of one year from the
+                        date of issuance to the recipient.
+                      </li>
+                      <li>
+                        Gift cards cannot be used to purchase another Gift Card.
+                      </li>
+                      <li>
+                        If lost or misused, the Gift Card(s) cannot be replaced.
+                      </li>
+                      <li>
+                        Gift cards are void if resold and cannot be exchanged
+                        for credit(s) or cash and cannot be re-validated once
+                        past the expiry date.
+                      </li>
+                    </ul>
+                  </div>
 
-    <div id="loyalty-points" className="mb-6">
-      <h4 className="text-lg font-semibold mb-3">2. Loyalty Points</h4>
-      <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
-        <li>For every purchase made on the website, the customer is entitled to get loyalty points.</li>
-        <li>1% of value before GST will be added as points.</li>
-        <li>1 point will be equivalent to 1 rupee at the time of redemption.</li>
-        <li>Loyalty Points cannot be clubbed with any other offer.</li>
-        <li>Loyalty points are applicable on all products and will be valid for 3 years only.</li>
-      </ul>
-    </div>
+                  <div id="loyalty-points" className="mb-6">
+                    <h4 className="text-lg font-semibold mb-3">
+                      2. Loyalty Points
+                    </h4>
+                    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                      <li>
+                        For every purchase made on the website, the customer is
+                        entitled to get loyalty points.
+                      </li>
+                      <li>1% of value before GST will be added as points.</li>
+                      <li>
+                        1 point will be equivalent to 1 rupee at the time of
+                        redemption.
+                      </li>
+                      <li>
+                        Loyalty Points cannot be clubbed with any other offer.
+                      </li>
+                      <li>
+                        Loyalty points are applicable on all products and will
+                        be valid for 3 years only.
+                      </li>
+                    </ul>
+                  </div>
 
-    <div id="friends-family-discount" className="mb-6">
-      <h4 className="text-lg font-semibold mb-3">3. Friends & Family Discount</h4>
-      <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
-        <li>15% discount on the total jewellery value.</li>
-        <li>The discount value will be added to the customer account under credits and can be availed at the time of purchasing any product.</li>
-        <li>Valid until one year from the date of receipt of advance on order confirmation.</li>
-        <li>This offer can't be combined and redeemed with any other ongoing offer or discount.</li>
-        <li>This offer is non-transferable to any other individual and can be availed by the person making the purchase.</li>
-      </ul>
-    </div>
+                  <div id="friends-family-discount" className="mb-6">
+                    <h4 className="text-lg font-semibold mb-3">
+                      3. Friends & Family Discount
+                    </h4>
+                    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                      <li>15% discount on the total jewellery value.</li>
+                      <li>
+                        The discount value will be added to the customer account
+                        under credits and can be availed at the time of
+                        purchasing any product.
+                      </li>
+                      <li>
+                        Valid until one year from the date of receipt of advance
+                        on order confirmation.
+                      </li>
+                      <li>
+                        This offer can't be combined and redeemed with any other
+                        ongoing offer or discount.
+                      </li>
+                      <li>
+                        This offer is non-transferable to any other individual
+                        and can be availed by the person making the purchase.
+                      </li>
+                    </ul>
+                  </div>
 
-    <div id="referral-discount" className="mb-6">
-      <h4 className="text-lg font-semibold mb-3">4. Referral Discount</h4>
-      <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
-        <li>5% discount on the total jewellery value in case another customer purchases on the website through a reference/referral code.</li>
-        <li>The discount value will be added to the customer account under credits and can be availed at the time of purchasing any product.</li>
-        <li>Valid until one year from the date of receipt of advance on order confirmation.</li>
-        <li>This offer can't be combined and redeemed with any other ongoing offer or discount.</li>
-        <li>This offer is non-transferable to any other individual and can be availed by the person making the purchase.</li>
-      </ul>
-    </div>
+                  <div id="referral-discount" className="mb-6">
+                    <h4 className="text-lg font-semibold mb-3">
+                      4. Referral Discount
+                    </h4>
+                    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                      <li>
+                        5% discount on the total jewellery value in case another
+                        customer purchases on the website through a
+                        reference/referral code.
+                      </li>
+                      <li>
+                        The discount value will be added to the customer account
+                        under credits and can be availed at the time of
+                        purchasing any product.
+                      </li>
+                      <li>
+                        Valid until one year from the date of receipt of advance
+                        on order confirmation.
+                      </li>
+                      <li>
+                        This offer can't be combined and redeemed with any other
+                        ongoing offer or discount.
+                      </li>
+                      <li>
+                        This offer is non-transferable to any other individual
+                        and can be availed by the person making the purchase.
+                      </li>
+                    </ul>
+                  </div>
 
-    <div id="design-your-own-jewellery" className="mb-6">
-      <h4 className="text-lg font-semibold mb-3">5. Design Your Own Jewellery</h4>
-      <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
-        <li>If a customer cancels a “Design your own jewellery” order before production starts (within 2 days), the whole amount will be refunded to the customer.</li>
-        <li>Cancellation request after 2 days will not be accepted or entertained.</li>
-      </ul>
-    </div>
-  </div>
-</section>
+                  <div id="design-your-own-jewellery" className="mb-6">
+                    <h4 className="text-lg font-semibold mb-3">
+                      5. Design Your Own Jewellery
+                    </h4>
+                    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                      <li>
+                        If a customer cancels a “Design your own jewellery”
+                        order before production starts (within 2 days), the
+                        whole amount will be refunded to the customer.
+                      </li>
+                      <li>
+                        Cancellation request after 2 days will not be accepted
+                        or entertained.
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </section>
 
-<section id="customer-service-support" className="mb-12">
-  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
-    03. CUSTOMER SERVICE AND SUPPORT
-  </h2>
+              <section id="customer-service-support" className="mb-12">
+                <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                  03. CUSTOMER SERVICE AND SUPPORT
+                </h2>
 
-  <div id="contact-information" className="mb-8">
-    <h3 className="text-xl font-semibold mb-4">1. Contact Information:</h3>
-    <p className="text-muted-foreground leading-relaxed mb-4">
-      For any assistance, our dedicated customer support team is available via:
-    </p>
-    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
-      <li>Phone: +91 8928610682</li>
-      <li>Email: enquiries@kynajewels.com</li>
-      <li>Live Chat: Accessible through our website during operational hours.</li>
-    </ul>
-  </div>
+                <div id="contact-information" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    1. Contact Information:
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    For any assistance, our dedicated customer support team is
+                    available via:
+                  </p>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>Phone: +91 8928610682</li>
+                    <li>Email: enquiries@kynajewels.com</li>
+                    <li>
+                      Live Chat: Accessible through our website during
+                      operational hours.
+                    </li>
+                  </ul>
+                </div>
 
-  <div id="hours-of-operation" className="mb-8">
-    <h3 className="text-xl font-semibold mb-4">
-      2. Hours of Operation for Customer Service:
-    </h3>
-    <p className="text-muted-foreground leading-relaxed mb-4">
-      Our customer service operates during the following hours:
-    </p>
-    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
-      <li>Monday to Friday: 9 a.m. to 6 p.m. IST</li>
-      <li>Please note that timings may vary on holidays and special occasions.</li>
-    </ul>
-  </div>
+                <div id="hours-of-operation" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    2. Hours of Operation for Customer Service:
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed mb-4">
+                    Our customer service operates during the following hours:
+                  </p>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>Monday to Friday: 9 a.m. to 6 p.m. IST</li>
+                    <li>
+                      Please note that timings may vary on holidays and special
+                      occasions.
+                    </li>
+                  </ul>
+                </div>
 
-  <div id="resolving-customer-inquiries" className="mb-8">
-    <h3 className="text-xl font-semibold mb-4">
-      3. Process for Resolving Customer Inquiries and Complaints:
-    </h3>
-    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
-      <li>Upon receipt, the inquiry/complaint is logged into our system.</li>
-      <li>A member of our customer support team promptly acknowledges receipt of the inquiry/complaint.</li>
-      <li>Our dedicated team thoroughly investigates the matter to understand the root cause of the issue.</li>
-      <li>This may involve gathering additional information from the customer, reviewing relevant records, or consulting with other departments.</li>
-      <li>Based on the investigation, a resolution plan is formulated.</li>
-      <li>The plan may include corrective actions, refunds, replacements, or other appropriate measures to address the customer's concerns.</li>
-      <li>We keep the customer informed throughout the process, providing regular updates on the status of their inquiry/complaint.</li>
-      <li>Once the resolution plan is finalized, it is implemented promptly.</li>
-      <li>After the resolution has been implemented, we follow up with the customer to ensure their satisfaction.</li>
-      <li>We encourage feedback on the resolution process, allowing us to continually improve our services and prevent similar issues in the future.</li>
-      <li>The entire resolution process is documented for future reference and analysis.</li>
-      <li>Once the inquiry/complaint has been satisfactorily resolved and the customer is content, the case is marked as closed in our system.</li>
-      <li>Any claim for non-receipt of a product or empty box will be entertained only if submitted within 24 hours of receipt along with an unboxing video which includes the original outer seal. Send the video via WhatsApp within 24 hours of receiving the product.</li>
-      <li>We provide resolution within 7 - 10 working days.</li>
-    </ul>
-  </div>
-</section>
+                <div id="resolving-customer-inquiries" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    3. Process for Resolving Customer Inquiries and Complaints:
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Upon receipt, the inquiry/complaint is logged into our
+                      system.
+                    </li>
+                    <li>
+                      A member of our customer support team promptly
+                      acknowledges receipt of the inquiry/complaint.
+                    </li>
+                    <li>
+                      Our dedicated team thoroughly investigates the matter to
+                      understand the root cause of the issue.
+                    </li>
+                    <li>
+                      This may involve gathering additional information from the
+                      customer, reviewing relevant records, or consulting with
+                      other departments.
+                    </li>
+                    <li>
+                      Based on the investigation, a resolution plan is
+                      formulated.
+                    </li>
+                    <li>
+                      The plan may include corrective actions, refunds,
+                      replacements, or other appropriate measures to address the
+                      customer's concerns.
+                    </li>
+                    <li>
+                      We keep the customer informed throughout the process,
+                      providing regular updates on the status of their
+                      inquiry/complaint.
+                    </li>
+                    <li>
+                      Once the resolution plan is finalized, it is implemented
+                      promptly.
+                    </li>
+                    <li>
+                      After the resolution has been implemented, we follow up
+                      with the customer to ensure their satisfaction.
+                    </li>
+                    <li>
+                      We encourage feedback on the resolution process, allowing
+                      us to continually improve our services and prevent similar
+                      issues in the future.
+                    </li>
+                    <li>
+                      The entire resolution process is documented for future
+                      reference and analysis.
+                    </li>
+                    <li>
+                      Once the inquiry/complaint has been satisfactorily
+                      resolved and the customer is content, the case is marked
+                      as closed in our system.
+                    </li>
+                    <li>
+                      Any claim for non-receipt of a product or empty box will
+                      be entertained only if submitted within 24 hours of
+                      receipt along with an unboxing video which includes the
+                      original outer seal. Send the video via WhatsApp within 24
+                      hours of receiving the product.
+                    </li>
+                    <li>We provide resolution within 7 - 10 working days.</li>
+                  </ul>
+                </div>
+              </section>
 
+              <section id="terms-conditions-metals" className="mb-12">
+                <div id="gold-jewelry">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Gold Jewelry
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Gold Content: All gold jewelry offered by Kyna Jewellery
+                      is crafted from high-quality gold. Our gold items are made
+                      with a minimum purity of 14K unless specified otherwise in
+                      the product description.
+                    </li>
+                    <li>
+                      Gold Plating: Some of our jewelry items may feature gold
+                      plating over silver or other metals. This plating is
+                      applied to enhance the appearance of the item, but over
+                      time, it may wear off due to regular use
+                    </li>
+                    <li>
+                      Gold Color Options: Kyna Jewellery offers various gold
+                      colors, including yellow, white, and rose gold. The color
+                      of the gold may vary slightly due to the unique nature of
+                      each batch and alloy mixture.
+                    </li>
+                    <li>
+                      Gold Care:To maintain the quality and shine of your gold
+                      jewelry, we recommend regular cleaning and avoiding
+                      exposure to harsh chemicals, water, or perfumes. Store
+                      your gold jewelry in a soft cloth pouch or jewelry box to
+                      prevent scratching.
+                    </li>
+                  </ul>
+                </div>
+                <div id="silver-jewelry">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Silver jewellery
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Silver Content: Kyna Jewellery uses sterling silver (92.5%
+                      pure silver) for the majority of our silver jewelry
+                      pieces. Some items may include additional alloy metals to
+                      provide strength and durability.
+                    </li>
+                    <li>
+                      Tarnishing: Silver jewelry may tarnish over time due to
+                      exposure to air, moisture, or chemicals. Tarnishing is a
+                      natural occurrence and does not indicate poor quality.
+                      Regular cleaning with a silver polishing cloth can restore
+                      its shine.
+                    </li>
+                    <li>
+                      Tarnishing: Silver jewelry may tarnish over time due to
+                      exposure to air, moisture, or chemicals. Tarnishing is a
+                      natural occurrence and does not indicate poor quality.
+                      Regular cleaning with a silver polishing cloth can restore
+                      its shine.
+                    </li>
+                  </ul>
+                </div>
+                <div id="platinum-jewelry">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Platinum jewellery
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Platinum Purity: All platinum jewelry from Kyna Jewellery
+                      is made with a minimum purity of 95%. Platinum is known
+                      for its rarity, strength, and long-lasting quality.
+                    </li>
+                    <li>
+                      Platinum Maintenance: Platinum does not tarnish in the
+                      same way as silver, but it can develop a natural patina
+                      over time. This patina is a characteristic of platinum and
+                      adds to its unique appearance. If you prefer a high-gloss
+                      finish, polishing can be done to restore the original
+                      shine.
+                    </li>
+                    <li>
+                      Durability: Platinum is highly durable and resistant to
+                      wear, making it an ideal choice for everyday jewelry.
+                      However, as with all metals, it may still accumulate
+                      scratches over time, which can be buffed out by a
+                      professional jeweler.
+                    </li>
+                  </ul>
+                </div>
+                <div id="diamond-jewelry">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Diamond jewellery
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Diamond Setting: Kyna Jewellery offers diamonds set in a
+                      variety of precious metals, including gold, silver, and
+                      platinum. The metal choice can affect the appearance,
+                      durability, and overall value of the jewelry.
+                    </li>
+                    <li>
+                      Diamond Care: Diamonds are extremely durable but can be
+                      chipped or scratched if exposed to harsh impacts. We
+                      recommend cleaning your diamond jewelry regularly with a
+                      soft cloth and avoiding exposure to chlorine or other
+                      harsh chemicals.
+                    </li>
+                    <li>
+                      Diamond Quality: All diamonds used in Kyna Jewellery
+                      pieces are carefully selected for their quality. We
+                      provide details regarding the cut, color, clarity, and
+                      carat weight of each diamond in the product description.
+                    </li>
+                  </ul>
+                </div>
+                <div id="metal-alloy-combination">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Metal Alloy Combinations
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Alloying Metals:To ensure durability and workability, we
+                      may use various metal alloys in the crafting of our
+                      jewelry. This includes the use of copper, silver,
+                      palladium, and other elements, which are carefully blended
+                      to enhance the strength, color, and finish of the final
+                      piece.
+                    </li>
+                    <li>
+                      Hypoallergenic Options: Our gold and platinum jewelry is
+                      designed to minimize the likelihood of allergic reactions.
+                      However, some individuals may have sensitivities to
+                      specific alloys. If you have known allergies to certain
+                      metals, we recommend contacting our customer service for
+                      guidance on suitable options.
+                    </li>
+                  </ul>
+                </div>
+                <div id="metal-variations">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Metal Variations
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Natural Metal Variations: Each metal, whether gold,
+                      silver, or platinum, may have slight color variations due
+                      to its natural composition and the methods used in
+                      crafting the jewelry. These variations do not affect the
+                      quality of the piece.
+                    </li>
+                    <li>
+                      Customization and Metal Choices: Kyna Jewellery offers
+                      customization options for certain jewelry pieces, where
+                      you may choose from different metals, such as gold,
+                      silver, or platinum, based on your personal preferences.
+                      Please note that customization may affect the price and
+                      lead time.
+                    </li>
+                  </ul>
+                </div>
+                <div id="care-and-maintenance">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Care and Maintenance
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      General Metal Care: To prolong the beauty and longevity of
+                      your jewelry, avoid exposure to harsh chemicals, excessive
+                      heat, or rough environments. Regular maintenance and
+                      professional cleaning will help preserve the brilliance of
+                      your jewelry.
+                    </li>
+                    <li>
+                      Professional Inspection: We recommend having your jewelry
+                      inspected by a professional jeweler periodically,
+                      especially if it contains diamonds, to ensure the settings
+                      and metal are intact.
+                    </li>
+                  </ul>
+                </div>
+                <div id="warranty-and-defects">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Warranty for Metal-Related Defects
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Warranty Coverage: Kyna Jewellery offers a limited
+                      warranty for defects in metal craftsmanship under normal
+                      use for 15 days from the date of purchase.The warranty
+                      covers issues such as loose settings, broken clasps, or
+                      manufacturing defects in the metal.
+                    </li>
+                    <li>
+                      Exclusions: The warranty does not cover damage caused by
+                      misuse, accidental damage, tarnishing, or natural wear and
+                      tear of the metal.
+                    </li>
+                  </ul>
+                </div>
+                <div id="returns-and-exchanges">
+                  <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                    Returns and Exchanges for Metal Jewelry
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Return Policy: Due to the nature of precious metals,
+                      returns or exchanges on jewelry are accepted under certain
+                      conditions, such as defects or damage upon receipt. For
+                      more information on our return policy, please refer to our
+                      general terms and conditions.
+                    </li>
+                    <li>
+                      Non-Refundable Metals: Custom-made pieces, including those
+                      crafted in specific metal choices, may not be eligible for
+                      return or exchange unless defective
+                    </li>
+                  </ul>
+                </div>
+              </section>
 
+              <section id="terms-conditions-repolishing">
+                <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                  Repolishing Services
+                </h2>
+                <div id="eligibility">
+                  <h2 className="text-2xl font-bold mb-6 text-black">
+                    1 Eligibility:
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Free lifetime repolishing is available only for tarnishing
+                      of gold-plated silver jewellery.
+                    </li>
+                    <li>
+                      Jewellery must pass QC inspection before approval for
+                      repolishing.
+                    </li>
+                  </ul>
+                </div>
+                <div id="exclusions">
+                  <h2 className="text-2xl font-bold mb-6 text-black">
+                    2 Exclusions:
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      The service does not cover physical damage, stone loss, or
+                      general wear and tear.
+                    </li>
+                    <li>
+                      Scratches, dents, or structural damage are excluded.
+                    </li>
+                  </ul>
+                </div>
+                <div id="service-process">
+                  <h2 className="text-2xl font-bold mb-6 text-black">
+                    3 Service Process:
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Customers must bring or send their jewellery for QC
+                      inspection.
+                    </li>
+                    <li>
+                      If approved, repolishing will be performed free of charge.
+                    </li>
+                    <li>
+                      If rejected, repolishing or repairs may be available at an
+                      additional cost.
+                    </li>
+                  </ul>
+                </div>
+                <div id="care-recommendations">
+                  <h2 className="text-2xl font-bold mb-6 text-black">
+                    4 Care Recommendations:
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Customers should follow proper care instructions to
+                      maintain the gold plating.
+                    </li>
+                    <li>
+                      Excessive exposure to moisture, sweat, or chemicals may
+                      reduce plating longevity.
+                    </li>
+                  </ul>
+                </div>
+                <div id="limitations">
+                  <h2 className="text-2xl font-bold mb-6 text-black">
+                    5 Limitations:
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      The free repolishing service applies only to tarnishing
+                      and does not include full re-plating.
+                    </li>
+                    <li>
+                      The company reserves the right to deny service if the
+                      jewellery does not meet QC requirements.
+                    </li>
+                  </ul>
+                </div>
+                <div id="modification-of-terms">
+                  <h2 className="text-2xl font-bold mb-6 text-black">
+                    6 Modification of Terms:
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      The company may modify or discontinue the free repolishing
+                      service at any time without prior notice.
+                    </li>
+                  </ul>
+                </div>
+                <p>
+                  By purchasing jewelry from Kyna Jewellery, you agree to these
+                  terms regarding the metals used in our products. Should you
+                  have any questions about specific metal-related concerns or
+                  need further clarification, please do not hesitate to contact
+                  our customer service team.
+                </p>
+              </section>
+
+              <section id="terms-conditions-packaging">
+                <h2 className="text-2xl pt-4 font-bold mb-6 text-[#328F94]">
+                  Terms and conditions - Packaging Services
+                </h2>
+                <p className="pb-4">
+                  We have partnered with Sequel Logistics, a specialized
+                  logistics company, to ensure the secure and reliable delivery
+                  of all jewellery orders. Sequel offers insured and tracked
+                  shipping services to protect your valuable purchases.
+                </p>
+                <div>
+                  <h2 className="text-2xl font-bold mb-6 text-black">
+                    1 Service Availability:
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Free lifetime repolishing is available only for tarnishing
+                      of gold-plated silver jewellery.
+                    </li>
+                    <li>
+                      Jewellery must pass QC inspection before approval for
+                      repolishing.
+                    </li>
+                  </ul>
+                </div>
+                <div id="insurance-and-liability">
+                  <h2 className="text-2xl pt-4 font-bold mb-6 text-[#328F94]">
+                    Insurance and Liability
+                  </h2>
+                  <div>
+                    <h2 className="text-2xl font-bold mb-6 text-black">
+                      1 Insurance Coverage:
+                    </h2>
+                    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                      <li>
+                        All shipments through Sequel Logistics are fully insured
+                        against theft, loss, and damage during transit.
+                      </li>
+                      <li>
+                        The insurance coverage is valid until the shipment is
+                        signed for by the customer or their authorized
+                        representative.
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold mb-6 text-black">
+                      2 Liability Limitations
+                    </h2>
+                    <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                      <li>
+                        We are not liable for delays caused by Sequel Logistics
+                        or force majeure events (e.g., natural disasters,
+                        strikes, or governmental actions).
+                      </li>
+                      <li>
+                        Any claims regarding loss or damage during shipping must
+                        be reported to us within 24 hours of receiving the
+                        shipment. Sequel’s insurance terms will apply.
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div id="packaging-security">
+                  <h2 className="text-2xl pt-4 font-bold mb-6 text-[#328F94]">
+                    Packaging and Security
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      All jewellery items are securely packaged to prevent
+                      tampering or damage.
+                    </li>
+                    <li>
+                      For security reasons, the package will not display any
+                      branding indicating that it contains jewellery.
+                    </li>
+                  </ul>
+                </div>
+                <div id="delivery-acceptance">
+                  <h2 className="text-2xl pt-4 font-bold mb-6 text-[#328F94]">
+                    Delivery and Acceptance
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      Upon delivery, customers or their authorized
+                      representatives must inspect the package before signing
+                      the receipt.
+                    </li>
+                    <li>
+                      If you notice any damage or tampering, you must inform the
+                      delivery agent immediately and refuse the package. Notify
+                      us within 24 hours.
+                    </li>
+                  </ul>
+                </div>
+                <div id="returns-refunds">
+                  <h2 className="text-2xl pt-4 font-bold mb-6 text-[#328F94]">
+                    Returns and Refunds
+                  </h2>
+                  <h2 className="">1 Return Shipping</h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      In case of returns, Sequel Logistics will be used as the
+                      shipping partner.
+                    </li>
+                    <li>
+                      The cost of return shipping will be deducted from your
+                      refund unless the return is due to our error.
+                    </li>
+                  </ul>
+                  <h2>2 Refunds for Lost or Damaged Shipments</h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      In the rare event of shipment loss or damage, the claim
+                      will be processed through Sequel’s insurance policy.
+                    </li>
+                    <li>
+                      Refunds will be issued only after the claim is approved by
+                      Sequel Logistics, which may take 7-15 business days.
+                    </li>
+                  </ul>
+                </div>
+                <div id="customer-responsibilities">
+                  <h2 className="text-2xl pt-4 font-bold mb-6 text-[#328F94]">
+                    Customer Responsibilities
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      You must provide accurate shipping details. We are not
+                      responsible for delays or losses due to incorrect
+                      addresses.
+                    </li>
+                    <li>
+                      You agree to be available to receive the shipment. If
+                      Sequel Logistics attempts delivery and you are
+                      unavailable, additional re-delivery charges may apply.
+                    </li>
+                  </ul>
+                </div>
+                <div id="governing-law-jurisdiction">
+                  <h2 className="text-2xl pt-4 font-bold mb-6 text-[#328F94]">
+                    Governing Law and Jurisdiction
+                  </h2>
+                  <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
+                    <li>
+                      These Terms are governed by the laws of India Any disputes
+                      related to shipping or Sequel Logistics will be resolved
+                      in the courts of Mumbai
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section
+                id="terms-conditions-product-collection-nominee"
+                className="mb-12"
+              >
+                <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                  Terms and Conditions – Product Collection by a Nominee
+                </h2>
+
+                <div id="introduction" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    1. Introduction
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    These Terms and Conditions govern the collection of
+                    jewellery products by a third-party nominee (“Nominee”) on
+                    behalf of the original purchaser (“Customer”). By
+                    authorizing a nominee for collection, the Customer agrees to
+                    be bound by these Terms.
+                  </p>
+                </div>
+
+                <div id="authorization-of-nominee" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    2. Authorization of Nominee
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      The Customer may authorize a nominee by providing a
+                      written authorization letter or completing an official
+                      nominee collection form.
+                    </li>
+                    <li>The authorization must include:</li>
+                    <ul className="list-disc pl-6 mt-2">
+                      <li>Customer’s full name and contact details</li>
+                      <li>
+                        Nominee’s full name, government-issued ID number, and
+                        contact details
+                      </li>
+                      <li>Order number and collection details</li>
+                      <li>Customer’s signature and date</li>
+                    </ul>
+                    <li>
+                      Verbal or informal authorizations will not be accepted.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="identification-and-verification" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    3. Identification and Verification
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>Valid government-issued ID of the nominee</li>
+                    <li>Copy of the original order confirmation or invoice</li>
+                    <li>Signed authorization letter or nominee form</li>
+                  </ul>
+                  <p className="mt-3 text-muted-foreground">
+                    <strong>Verification Process:</strong>
+                  </p>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Identity and documents will be verified by our staff
+                    </li>
+                    <li>Nominee must sign an acknowledgment receipt</li>
+                    <li>
+                      Failure to provide valid documents may result in refusal
+                      of collection
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="security-and-liability" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    4. Security and Liability
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Responsibility transfers to the Customer once the
+                      jewellery is handed over to the nominee.
+                    </li>
+                    <li>
+                      We are not liable for loss, theft, or damage after
+                      collection.
+                    </li>
+                    <li>
+                      The Customer is responsible for ensuring the nominee is
+                      trustworthy.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="timeframe-for-collection" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    5. Timeframe for Collection
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Collection must be completed within the timeframe stated
+                      in the order confirmation (typically 7–10 business days).
+                    </li>
+                    <li>
+                      Failure to collect within this period may result in return
+                      of the order and applicable re-stocking or logistics
+                      charges.
+                    </li>
+                  </ul>
+                </div>
+
+                <div
+                  id="collection-from-sequel-logistics-store"
+                  className="mb-8"
+                >
+                  <h3 className="text-xl font-semibold mb-4">
+                    6. Collection from Sequel Logistics or Store
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Nominees must comply with security procedures of Sequel
+                      Logistics or the store location.
+                    </li>
+                    <li>
+                      Contact details and signature will be recorded at the time
+                      of collection.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="governing-law-jurisdiction" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    7. Discrepancies and Disputes
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Any discrepancy must be reported within 24 hours of
+                      collection.
+                    </li>
+                    <li>
+                      Failure to report within this period will be considered
+                      acceptance of the product.
+                    </li>
+                  </ul>
+                </div>
+              </section>
+              <section
+                id="terms-conditions-engraved-products"
+                className="mb-12"
+              >
+                <h2 className="text-2xl font-bold mb-6 text-[#328F94]">
+                  Terms and Conditions – Engraved Products
+                </h2>
+
+                <div id="customization-and-personalization" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    1. Customization and Personalization
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      All engravings are performed exactly as submitted. Please
+                      ensure spelling, dates, initials, and symbols are correct.
+                    </li>
+                    <li>
+                      We reserve the right to refuse engraving requests
+                      containing offensive, defamatory, or illegal content.
+                    </li>
+                    <li>
+                      Font style, size, and placement depend on the product
+                      design and will be communicated during ordering.
+                    </li>
+                    <li>
+                      Once an engraving is submitted and confirmed, changes
+                      cannot be made.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="production-timeline" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    2. Production Timeline
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Engraved jewellery requires an additional 3–7 business
+                      days for production.
+                    </li>
+                    <li>
+                      During peak seasons or high demand, timelines may extend
+                      slightly. Customers will be notified if delays occur.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="returns-and-refunds-engraved" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    3. Returns & Refunds Policy
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Engraved or personalized items are final sale and not
+                      eligible for return, exchange, or refund.
+                    </li>
+                    <li>
+                      Exceptions apply only if the product arrives damaged or
+                      contains an engraving error not caused by the customer.
+                    </li>
+                    <li>
+                      Issues must be reported within 3 business days of delivery
+                      with clear images of the product and packaging.
+                    </li>
+                    <li>
+                      Approved cases may be repaired, replaced, or refunded at
+                      our discretion.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="customer-responsibility" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    4. Customer Responsibility
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Customers are fully responsible for the accuracy of
+                      engraving text.
+                    </li>
+                    <li>
+                      We are not liable for spelling errors, incorrect dates, or
+                      formatting submitted by the customer.
+                    </li>
+                    <li>
+                      Customers must carefully review engraving details before
+                      confirming orders.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="intellectual-property" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    5. Intellectual Property and Messaging
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      By submitting engraving content, you confirm you own the
+                      rights or have permission to use the text or symbols.
+                    </li>
+                    <li>
+                      Kyna Jewellery is not responsible for copyright or IP
+                      violations arising from customer-provided content.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="limitation-of-liability" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    6. Limitation of Liability
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Minor variations in engraving depth, alignment, or finish
+                      may occur due to the handcrafted nature of engraving.
+                    </li>
+                    <li>Such variations are not considered defects.</li>
+                    <li>
+                      Kyna’s liability is limited to the original purchase value
+                      of the product.
+                    </li>
+                  </ul>
+                </div>
+
+                <div id="cancellations-engraved" className="mb-8">
+                  <h3 className="text-xl font-semibold mb-4">
+                    7. Cancellations
+                  </h3>
+                  <ul className="text-muted-foreground leading-relaxed list-disc pl-6">
+                    <li>
+                      Engraved orders cannot be cancelled once production has
+                      begun.
+                    </li>
+                  </ul>
+                </div>
+              </section>
             </div>
           </div>
         </div>

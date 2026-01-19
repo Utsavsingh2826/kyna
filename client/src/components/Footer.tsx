@@ -101,13 +101,13 @@ const Footer: React.FC = () => {
   // Function to open Calendly popup
   const openCalendly = () => {
     // Replace 'your-calendly-url' with your actual Calendly scheduling URL
-    const calendlyUrl = "https://calendly.com/pranaytiwariprpk"; // Update this with your actual Calendly URL
+    const calendlyUrl = "https://calendly.com/enquiries-kynajewels"; // Update this with your actual Calendly URL
 
     // Open Calendly in a popup window
     window.open(
       calendlyUrl,
       "calendly-popup",
-      "width=800,height=600,scrollbars=yes,resizable=yes"
+      "width=800,height=600,scrollbars=yes,resizable=yes",
     );
   };
 
@@ -190,10 +190,7 @@ const Footer: React.FC = () => {
               Get updates, news & offers.
             </p>
 
-            <form
-              className="mt-3 flex gap-2"
-              onSubmit={handleSubscribe}
-            >
+            <form className="mt-3 flex gap-2" onSubmit={handleSubscribe}>
               <Input
                 type="email"
                 placeholder="Your Email Address"

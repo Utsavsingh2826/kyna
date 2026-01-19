@@ -23,7 +23,7 @@ const benefits = [
 
 const openCalendly = () => {
   window.Calendly.initPopupWidget({
-    url: "https://calendly.com/pranaytiwariprpk",
+    url: "https://calendly.com/enquiries-kynajewels",
   });
 };
 

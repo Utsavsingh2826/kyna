@@ -193,7 +193,7 @@ const RingSizeGuidePage: React.FC = () => {
           jewellery we offer has been selected with love and care. Let our
           experts guide you through your diamond journey.
         </p>
-        <Link to="/about">
+        <Link to="/customer-service">
           <button className="bg-white text-teal-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">
             Contact Our Experts
           </button>

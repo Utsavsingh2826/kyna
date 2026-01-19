@@ -20,7 +20,7 @@ const EducationPage: React.FC = () => {
         </div>
 
         {/* Round Bangle Size Guide */}
-        <div className="md:ml-40 bg-white rounded-lg shadow-sm p-8 mb-8">
+        <div className=" bg-white rounded-lg shadow-sm p-8 mb-8">
           <h1 className="text-4xl font-semibold mb-12 text-gray-800">
             Round Bangle Size Guide
           </h1>
@@ -116,7 +116,7 @@ const EducationPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row justify-start">
+          <div className="flex flex-col justify-center items-center ">
             {/* Measurement Diagrams */}
             <div>
               <img
@@ -166,7 +166,7 @@ const EducationPage: React.FC = () => {
                         >
                           {diameter}
                         </div>
-                      )
+                      ),
                     )}
                   </div>
                 </div>

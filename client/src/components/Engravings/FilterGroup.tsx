@@ -23,6 +23,9 @@ export const FilterGroup: React.FC<FilterGroupProps> = ({
   };
 
   return (
+    // Use `defaultOpen` (uncontrolled) so the user’s open/close choice persists
+    // across re-renders. Using `open={defaultOpen}` would forcibly reset the
+    // group when filters change (e.g., unchecking a diamond shape).
     <details className="eng-group" open={defaultOpen} onToggle={handleToggle}>
       <summary>
         {isSubGroup ? (

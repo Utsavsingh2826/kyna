@@ -1,93 +1,87 @@
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, User, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
 import SEO from "@/components/SEO";
 
-// Define types
-interface BlogSection {
-  heading: string;
-  text: string;
+// Define interfaces
+interface BlogImage {
+  url: string;
+  publicId: string;
 }
 
-interface BlogPostType {
+interface BlogType {
+  _id: string;
   title: string;
-  date: string;
-  author: string;
-  category: string;
-  image: string;
-  excerpt: string;
-  content: BlogSection[];
+  displayImage: string;
+  displayImagePublicId?: string;
+  notes: string;
+  images: BlogImage[];
+  createdAt: string;
+  updatedAt: string;
 }
-
-const blogContent: Record<string, BlogPostType> = {
-  "solitaire-rings-guide": {
-    title: "Solitaire Rings Guide",
-    date: "December 15, 2024",
-    author: "KYNA",
-    category: "Rings",
-    image: "/images/collections/mens-ring.jpg",
-    excerpt:
-      "Discover the timeless elegance of solitaire rings and learn how to choose the perfect one for your special moment.",
-    content: [
-      {
-        heading: "What Are Solitaire Rings?",
-        text: "Solitaire rings are the epitome of classic elegance for symbolically and aesthetically speaking. Whether you're considering a solitaire engagement ring, or want to add this classic style to your jewelry collection, it's good to know what makes a ring a solitaire and what you can expect from this type of ring. The defining characteristic of a solitaire ring is its single center stone that sits prominently above the band, like a crown in a royal favorite.",
-      },
-      {
-        heading: "When To Solder Rings Together",
-        text: "Solitaire rings and bands meant rings become together using a means called soldered. You likes help permanently secure the rings, choosing a solitaire and one ring band or band of women. The most common type of settings tend to join engagement rings and wedding bands for a polished look. Permanent contact, and aesthetic mechanic achieved them rings.",
-      },
-      {
-        heading: "Pros Of Soldered Rings",
-        text: "Soldering rings together offers several advantages:\n\n• Improved alignment: Ensure exceptional rings positioning benefits any pumping choice, creating a seamless look.\n• Enhanced Comfort: Proper band arrangements unify for basic movement, enhancing purchasing.\n• Reduced Wear: Solitaire rings relating less with general decreased wear on both rings.\n• Secure fit: Band rings in place, reducing the chance of a ring lost.",
-      },
-    ],
-  },
-  "diamond-care-guide": {
-    title: "Diamond Care & Maintenance",
-    date: "December 12, 2024",
-    author: "KYNA",
-    category: "Care",
-    image: "/images/collections/pendant.jpg",
-    excerpt:
-      "Essential tips to keep your diamonds sparkling and maintain their brilliance for years to come.",
-    content: [
-      {
-        heading: "Daily Diamond Care",
-        text: "Diamonds are among the hardest natural substances, but they still require proper care to maintain their brilliance. Daily exposure to oils from your skin, lotions, and environmental factors can dull their sparkle over time.",
-      },
-      {
-        heading: "Cleaning Your Diamonds",
-        text: "Regular cleaning is essential for maintaining your diamond's fire and brilliance. Use warm water with mild dish soap and a soft brush to gently clean your diamonds. Avoid harsh chemicals and ultrasonic cleaners unless recommended by a professional.",
-      },
-      {
-        heading: "Storage and Protection",
-        text: "Store your diamond jewelry separately to prevent scratching. Use individual soft pouches or a jewelry box with compartments. Remove diamond jewelry before engaging in physical activities, cleaning, or gardening.",
-      },
-    ],
-  },
-};
 
 const BlogPost = () => {
   const { id } = useParams<{ id: string }>();
+  const [blog, setBlog] = useState<BlogType | null>(null);
+  const [relatedBlogs, setRelatedBlogs] = useState<BlogType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!id || !blogContent[id]) {
-    return <Navigate to="/blogs" replace />;
+  useEffect(() => {
+    const fetchBlog = async () => {
+      try {
+        const res = await fetch(`/api/blogs/${id}`);
+        if (!res.ok) throw new Error("Blog not found");
+        const data = await res.json();
+        setBlog(data.data);
+
+        // Fetch all blogs for related section
+        const relatedRes = await fetch("/api/blogs");
+        const relatedData = await relatedRes.json();
+        const allBlogs = relatedData.data.blogs || [];
+        const filtered = allBlogs.filter((b: BlogType) => b._id !== id);
+
+        setRelatedBlogs(filtered.slice(0, 2)); // limit to 2
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) fetchBlog();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-gray-600">
+        Loading blog...
+      </div>
+    );
   }
 
-  const post = blogContent[id];
+  if (error || !blog) {
+    return <Navigate to="/blogs" replace />;
+  }
 
   return (
     <>
       <SEO
-        title={`${post.title} | KYNA Blog`}
-        description={post.excerpt}
+        title={`${blog.title} | KYNA Blog`}
+        description={blog.notes.slice(0, 150)}
         canonical={`/blog/${id}`}
       />
 
-      <main className="min-h-screen bg-background">
-        {/* breadcrumbs */}
+      <main
+        style={{ fontFamily: "Poppins, sans-serif" }}
+        className="min-h-screen bg-background"
+      >
+        {/* Breadcrumbs */}
         <div className="container max-w-6xl mx-auto px-4 py-3">
           <nav className="text-sm text-gray-600">
             <Link to="/" className="hover:text-teal-600">
@@ -98,95 +92,117 @@ const BlogPost = () => {
               Blog
             </Link>
             <span className="mx-2">-</span>
-            <span className="text-gray-800">{post.title}</span>
+            <span className="text-gray-800">{blog.title}</span>
           </nav>
         </div>
+
+        {/* Main Blog Section */}
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           <Link
             to="/blogs"
-            className="inline-flex items-center text-[#328F94] hover:text-primary/80 mb-8 transition-colors"
+            className="inline-flex items-center text-gray-600 mb-8 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Blog
           </Link>
 
           <article>
-            <header className="mb-8">
+            <header className="flex-col items-center mb-8">
+              <div className="flex-col justify-items-center gap-4 mb-4">
+                <div className="flex space-x-6 mb-2">
+                  <div className="flex items-center text-[#328F94] font-bold text-sm">
+                    <User className="w-4 h-4 mr-1 text-[#328F94]" />
+                    KYNA
+                  </div>
+                  <div className="flex text-[#8D8A91] items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    {new Date(blog.createdAt).toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-black mb-4">
+                    {blog.title}
+                  </h1>
+                </div>
+              </div>
               <div className="aspect-[16/9] w-full mb-6 rounded-lg overflow-hidden">
                 <img
-                  src={post.image}
-                  alt={post.title}
+                  src={blog.displayImage}
+                  alt={blog.title}
                   className="w-full h-full object-cover"
                 />
               </div>
 
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-center text-muted-foreground text-sm">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  {post.date}
-                </div>
-                <div className="flex items-center text-muted-foreground text-sm">
-                  <User className="w-4 h-4 mr-1" />
-                  {post.author}
-                </div>
-              </div>
-
-              <h1 className="text-4xl font-bold text-foreground mb-4">
-                {post.title}
-              </h1>
-
-              <p className="text-lg text-muted-foreground">{post.excerpt}</p>
+              {/* <p className="text-lg text-muted-foreground">
+                {blog.notes.length > 200
+                  ? blog.notes.slice(0, 200) + "..."
+                  : blog.notes}
+              </p> */}
             </header>
 
             <div className="prose prose-lg max-w-none">
-              {post.content.map((section, index) => (
-                <section key={index} className="mb-8">
-                  <h2 className="text-2xl font-semibold text-foreground mb-4">
-                    {section.heading}
-                  </h2>
-                  <div className="text-muted-foreground whitespace-pre-line">
-                    {section.text}
-                  </div>
+              <section className="mb-8">
+                <h2 className="text-2xl font-semibold text-foreground mb-4">
+                  About this blog
+                </h2>
+                <div className="text-muted-foreground text-justify whitespace-pre-line">
+                  {blog.notes}
+                </div>
+              </section>
+
+              {blog.images.length > 0 && (
+                <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                  {blog.images.map((img, i) => (
+                    <img
+                      key={i}
+                      src={img.url}
+                      alt={`Blog Image ${i + 1}`}
+                      className="rounded-lg object-cover w-full h-64"
+                    />
+                  ))}
                 </section>
-              ))}
+              )}
             </div>
           </article>
 
-          <div className="mt-12 pt-8 border-t">
-            <h3 className="text-xl font-semibold mb-6">Related Articles</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.entries(blogContent)
-                .filter(([key]) => key !== id)
-                .slice(0, 2)
-                .map(([key, relatedPost]) => (
+          {/* Related Articles */}
+          {relatedBlogs.length > 0 && (
+            <div className="mt-12 pt-8 border-t">
+              <h3 className="text-xl font-semibold mb-6">Related Articles</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {relatedBlogs.map((related) => (
                   <Card
-                    key={key}
+                    key={related._id}
                     className="group cursor-pointer hover:shadow-lg transition-shadow duration-300"
                   >
-                    <Link to={`/blog/${key}`}>
+                    <Link to={`/blog/${related._id}`}>
                       <div className="aspect-video overflow-hidden rounded-t-lg">
                         <img
-                          src={relatedPost.image}
-                          alt={relatedPost.title}
+                          src={related.displayImage}
+                          alt={related.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                       <CardContent className="p-4">
-                        {/* <Badge variant="secondary" className="text-xs mb-2">
-                          {relatedPost.category}
-                        </Badge> */}
                         <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors mb-2">
-                          {relatedPost.title}
+                          {related.title}
                         </h4>
                         <p className="text-sm text-muted-foreground line-clamp-2">
-                          {relatedPost.excerpt}
+                          {related.notes.length > 100
+                            ? related.notes.slice(0, 100) + "..."
+                            : related.notes}
                         </p>
                       </CardContent>
                     </Link>
                   </Card>
                 ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </>
