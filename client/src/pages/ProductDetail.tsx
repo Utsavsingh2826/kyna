@@ -2799,7 +2799,7 @@ const ProductDetail = () => {
                       >
                         {/* Bandwidth Selection */}
                         {(productData?.bandwidth?.length ?? 0) > 0 && (
-                          <div>
+                          <div className=" ">
                             <label className="block text-sm mb-2">
                               Band Width (mm)
                             </label>
@@ -2807,7 +2807,14 @@ const ProductDetail = () => {
                               value={selectedBandwidth}
                               onValueChange={setSelectedBandwidth}
                             >
-                              <SelectTrigger className="w-1/2">
+                              <SelectTrigger
+                                className={`text-sm border-neutral-300 ${
+                                  (productData?.bandwidth?.length ?? 0) > 0 &&
+                                  (productData?.finishing?.length ?? 0) > 0
+                                    ? "w-full"
+                                    : "w-1/2"
+                                }`}
+                              >
                                 <SelectValue placeholder="Select Width" />
                               </SelectTrigger>
                               <SelectContent className="bg-white">
@@ -2831,7 +2838,14 @@ const ProductDetail = () => {
                               value={selectedFinishing}
                               onValueChange={setSelectedFinishing}
                             >
-                              <SelectTrigger className="w-1/2">
+                              <SelectTrigger
+                                className={`${
+                                  (productData?.bandwidth?.length ?? 0) > 0 &&
+                                  (productData?.finishing?.length ?? 0) > 0
+                                    ? "w-full"
+                                    : "w-1/2"
+                                } border-neutral-300`}
+                              >
                                 <SelectValue placeholder="Select Finish" />
                               </SelectTrigger>
                               <SelectContent className="bg-white">

@@ -252,7 +252,6 @@ export default function RingBuilder() {
     sameAsImage: false,
     modificationRequest: "",
     description: "",
-    diamondType: "Natural",
     diamondShape: "Round",
     diamondSize: "0.5 Carat",
     diamondColor: "D-IF",
@@ -435,9 +434,11 @@ export default function RingBuilder() {
     }
   }, [selectedCity]);
 
-  // Function to get available diamond sizes based on diamond type and metal
+  // Function to get available diamond sizes based on diamond origin and metal
   const getAvailableDiamondSizes = () => {
-    const { diamondType, metal } = formData;
+    const { diamondOrigin, metal } = formData;
+    const diamondType =
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
 
     // Define all possible size options
     const allSizes = [
@@ -485,9 +486,11 @@ export default function RingBuilder() {
     return allSizes;
   };
 
-  // Function to get available color/clarity combinations based on diamond type and metal
+  // Function to get available color/clarity combinations based on diamond origin and metal
   const getAvailableColorClarity = () => {
-    const { diamondType, metal } = formData;
+    const { diamondOrigin, metal } = formData;
+    const diamondType =
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
 
     // Define all possible options with their display names and values
     const allOptions = [
@@ -541,7 +544,7 @@ export default function RingBuilder() {
         "0.5 Carat";
       setFormData((prev) => ({ ...prev, diamondSize: defaultSize }));
     }
-  }, [formData.metal, formData.diamondType]);
+  }, [formData.metal, formData.diamondOrigin]);
 
   // Reset color/clarity when metal or diamond type changes if current selection is invalid
   useEffect(() => {
@@ -553,7 +556,7 @@ export default function RingBuilder() {
     if (!currentIsValid && formData.diamondColor !== "Center Stone") {
       setFormData((prev) => ({ ...prev, diamondColor: "Center Stone" }));
     }
-  }, [formData.metal, formData.diamondType]);
+  }, [formData.metal, formData.diamondOrigin]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -1148,27 +1151,6 @@ export default function RingBuilder() {
                 Select Diamond Specification
               </h3>
               <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="bg-white/50 rounded-lg">
-                  <label className="text-sm text-muted-foreground">
-                    Diamond Type <span className="text-red-500">*</span>
-                  </label>
-                  <Select
-                    value={formData.diamondType}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, diamondType: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="Natural">Natural Diamond</SelectItem>
-                      <SelectItem value="Lab Grown">
-                        Lab Grown Diamond
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="bg-white/50 rounded-lg ">
                   <label className="text-sm text-muted-foreground">
                     Diamond Size <span className="text-red-500">*</span>
@@ -1208,45 +1190,45 @@ export default function RingBuilder() {
                       </p>
                     )} */}
                 </div>
-              </div>
-              <div>
-                <label className="text-sm text-muted-foreground">
-                  Diamond Color & Clarity{" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                <Select
-                  value={formData.diamondColor}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, diamondColor: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="Center Stone"></SelectItem>
-                    {getAvailableColorClarity().map((option) => (
-                      <SelectItem key={option.value} value={option.display}>
-                        {option.display}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {getAvailableColorClarity().length === 0 &&
-                  formData.diamondType === "Natural" &&
-                  formData.metal === "Silver" && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Natural diamonds are not available in Silver. Please
-                      select Gold or Platinum.
-                    </p>
-                  )}
-                {formData.diamondType === "Lab Grown" &&
-                  formData.metal === "Silver" && (
-                    <p className="text-xs text-blue-500 mt-1">
-                      Only EF-VVS and EF-VS clarities available for Lab Grown
-                      diamonds in Silver.
-                    </p>
-                  )}
+                <div className="bg-white/50 rounded-lg">
+                  <label className="text-sm text-muted-foreground">
+                    Diamond Color & Clarity{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  <Select
+                    value={formData.diamondColor}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, diamondColor: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="Center Stone"></SelectItem>
+                      {getAvailableColorClarity().map((option) => (
+                        <SelectItem key={option.value} value={option.display}>
+                          {option.display}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {getAvailableColorClarity().length === 0 &&
+                    formData.diamondOrigin === "Natural Diamond" &&
+                    formData.metal === "Silver" && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Natural diamonds are not available in Silver. Please
+                        select Gold or Platinum.
+                      </p>
+                    )}
+                  {formData.diamondOrigin === "Lab Grown Diamond" &&
+                    formData.metal === "Silver" && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        Only EF-VVS and EF-VS clarities available for Lab Grown
+                        diamonds in Silver.
+                      </p>
+                    )}
+                </div>
               </div>
             </div>
 
