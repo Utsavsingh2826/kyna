@@ -20,6 +20,7 @@ import {
   Phone,
   ChevronDown,
   ChevronRight,
+  CalendarCheck,
 } from "lucide-react";
 import logo from "/logo.png";
 
@@ -115,14 +116,14 @@ export default function Navbar() {
                     +91 8920610062
                   </span>
                 </a>
-
                 <button
                   onClick={openCalendly}
                   className="inline ld:px-4 hover:underline ml-2 text-white hover:text-gray-100"
                 >
-                  <Calendar className="w-5 h-5 inline-block mr-1" />
+                  <CalendarCheck className="w-5 h-5 inline-block mr-1" />
                   <p className="hidden md:inline"> Book Virtual Appointment</p>
                 </button>
+                <span className="sm:hidden"> Book Appointment</span>
               </div>
               {/* Brand */}
               <Link
