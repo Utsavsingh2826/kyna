@@ -72,6 +72,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const [maxPrice, setMaxPrice] = useState<number>(50000);
   const priceDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const mainContainerRef = useRef<HTMLElement | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,11 +137,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     min_price: "0",
     max_price: "50000",
 
-      // Earrings API (new) fields (category2 also used for Engagement Ring styles)
-      category1: "" as string,
-      category2: "" as string,
-      category3: "" as string,
-      centerStoneShape: "" as string,
+    // Earrings API (new) fields (category2 also used for Engagement Ring styles)
+    category1: "" as string,
+    category2: "" as string,
+    category3: "" as string,
+    centerStoneShape: "" as string,
   });
 
   // Generate cache key from current filters (without page number - cache all pages together)
@@ -540,12 +541,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               "Daily Wear Rings",
               "Designer Rings",
             ];
-            
+
             // Filter out styles that go to category2 from style parameter
             const filteredStyles = activeFilters.style.filter(
               (style) => !stylesInCategory2.includes(style),
             );
-            
+
             // Only set style parameter if there are styles that don't go to category2
             if (filteredStyles.length > 0) {
               params.set("style", filteredStyles.join(","));
@@ -1115,11 +1116,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }));
           } else if (groupName === "Engagement Rings") {
             currentParams.delete("engagement_diamond_shape");
-            
+
             // Clear Engagement Ring styles from category2
             const existingCategory2 = currentParams.get("category2");
             if (existingCategory2) {
-              const category2Values = existingCategory2.split(",").map((v) => v.trim());
+              const category2Values = existingCategory2
+                .split(",")
+                .map((v) => v.trim());
               // Engagement Ring styles that should be removed
               const engagementRingStyles = [
                 "Accent",
@@ -1130,12 +1133,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 "7 STONE",
                 "8 STONE",
               ];
-              
+
               // Remove all Engagement Ring styles from category2
               const filteredCategory2 = category2Values.filter(
                 (value) => !engagementRingStyles.includes(value),
               );
-              
+
               // Update or delete category2
               if (filteredCategory2.length > 0) {
                 currentParams.set("category2", filteredCategory2.join(","));
@@ -1143,7 +1146,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 currentParams.delete("category2");
               }
             }
-            
+
             setActiveFilters((prev) => {
               // Get current category2 and remove Engagement Ring styles
               const currentCategory2 = prev.category2
@@ -1161,7 +1164,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               const filteredCategory2 = currentCategory2.filter(
                 (value) => !engagementRingStyles.includes(value),
               );
-              
+
               return {
                 ...prev,
                 [categoryParam]: existingValues,
@@ -1181,22 +1184,21 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }));
           } else if (groupName === "Fashion Rings") {
             currentParams.delete("fashion_diamond_shape");
-            
+
             // Clear Fashion Ring styles from category2
             const existingCategory2 = currentParams.get("category2");
             if (existingCategory2) {
-              const category2Values = existingCategory2.split(",").map((v) => v.trim());
+              const category2Values = existingCategory2
+                .split(",")
+                .map((v) => v.trim());
               // Fashion Ring styles that should be removed
-              const fashionRingStyles = [
-                "Daily Wear Rings",
-                "Designer Rings",
-              ];
-              
+              const fashionRingStyles = ["Daily Wear Rings", "Designer Rings"];
+
               // Remove all Fashion Ring styles from category2
               const filteredCategory2 = category2Values.filter(
                 (value) => !fashionRingStyles.includes(value),
               );
-              
+
               // Update or delete category2
               if (filteredCategory2.length > 0) {
                 currentParams.set("category2", filteredCategory2.join(","));
@@ -1204,20 +1206,17 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 currentParams.delete("category2");
               }
             }
-            
+
             setActiveFilters((prev) => {
               // Get current category2 and remove Fashion Ring styles
               const currentCategory2 = prev.category2
                 ? prev.category2.split(",").map((v) => v.trim())
                 : [];
-              const fashionRingStyles = [
-                "Daily Wear Rings",
-                "Designer Rings",
-              ];
+              const fashionRingStyles = ["Daily Wear Rings", "Designer Rings"];
               const filteredCategory2 = currentCategory2.filter(
                 (value) => !fashionRingStyles.includes(value),
               );
-              
+
               return {
                 ...prev,
                 [categoryParam]: existingValues,
@@ -1245,7 +1244,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             const nextStyles = styleParts.filter(
               (s) => !stylesToRemove.includes(s),
             );
-            if (nextStyles.length > 0) currentParams.set("style", nextStyles.join(","));
+            if (nextStyles.length > 0)
+              currentParams.set("style", nextStyles.join(","));
             else currentParams.delete("style");
             setActiveFilters((prev) => ({
               ...prev,
@@ -1272,7 +1272,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           } else if (groupName === "Fashion Bracelets") {
             currentParams.delete("fashion_bracelet_diamond_shape");
             // Clear bracelet styles when closing the group
-            const stylesToRemove = ["Daily Wear Bracelets", "Designer Bracelets"];
+            const stylesToRemove = [
+              "Daily Wear Bracelets",
+              "Designer Bracelets",
+            ];
             const existingStyleParam = currentParams.get("style") || "";
             const styleParts = existingStyleParam
               ? existingStyleParam.split(",").map((v) => v.trim())
@@ -1280,7 +1283,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             const nextStyles = styleParts.filter(
               (s) => !stylesToRemove.includes(s),
             );
-            if (nextStyles.length > 0) currentParams.set("style", nextStyles.join(","));
+            if (nextStyles.length > 0)
+              currentParams.set("style", nextStyles.join(","));
             else currentParams.delete("style");
             setActiveFilters((prev) => ({
               ...prev,
@@ -1302,7 +1306,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             const nextStyles = styleParts.filter(
               (s) => !stylesToRemove.includes(s),
             );
-            if (nextStyles.length > 0) currentParams.set("style", nextStyles.join(","));
+            if (nextStyles.length > 0)
+              currentParams.set("style", nextStyles.join(","));
             else currentParams.delete("style");
             setActiveFilters((prev) => ({
               ...prev,
@@ -1311,7 +1316,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }));
           } else if (groupName === "Charm Bracelets") {
             // Clear charm bracelet styles when closing the group
-            const stylesToRemove = ["Heart Charms", "Star Charms", "Custom Charms"];
+            const stylesToRemove = [
+              "Heart Charms",
+              "Star Charms",
+              "Custom Charms",
+            ];
             const existingStyleParam = currentParams.get("style") || "";
             const styleParts = existingStyleParam
               ? existingStyleParam.split(",").map((v) => v.trim())
@@ -1319,7 +1328,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             const nextStyles = styleParts.filter(
               (s) => !stylesToRemove.includes(s),
             );
-            if (nextStyles.length > 0) currentParams.set("style", nextStyles.join(","));
+            if (nextStyles.length > 0)
+              currentParams.set("style", nextStyles.join(","));
             else currentParams.delete("style");
             setActiveFilters((prev) => ({
               ...prev,
@@ -1823,8 +1833,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                     ) {
                       // EARRINGS: send styles ONLY in category2, with required API mapping
                       const mapEarringStyleToCategory2 = (uiLabel: string) => {
-                        if (uiLabel === "Daily Wear Earrings") return "DAILY WEAR";
-                        if (uiLabel === "Designer Earrings") return "DESIGNER EARRINGS";
+                        if (uiLabel === "Daily Wear Earrings")
+                          return "DAILY WEAR";
+                        if (uiLabel === "Designer Earrings")
+                          return "DESIGNER EARRINGS";
                         return uiLabel;
                       };
 
@@ -1840,7 +1852,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       const apiValue = mapEarringStyleToCategory2(style);
                       const nextStyles = existingStyles.slice();
                       if (e.target.checked) {
-                        if (!nextStyles.includes(apiValue)) nextStyles.push(apiValue);
+                        if (!nextStyles.includes(apiValue))
+                          nextStyles.push(apiValue);
                       } else {
                         const idx = nextStyles.indexOf(apiValue);
                         if (idx > -1) nextStyles.splice(idx, 1);
@@ -1882,7 +1895,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
                       // Update category2 in URL
                       if (category2Values.length > 0) {
-                        currentParams.set("category2", category2Values.join(","));
+                        currentParams.set(
+                          "category2",
+                          category2Values.join(","),
+                        );
                       } else {
                         currentParams.delete("category2");
                       }
@@ -1909,7 +1925,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                           styleValues.push(style);
                         }
                         // Also add category if not present
-                        const existingCategories = currentParams.get(categoryType);
+                        const existingCategories =
+                          currentParams.get(categoryType);
                         const categoryValues = existingCategories
                           ? existingCategories.split(",")
                           : [];
@@ -1917,7 +1934,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                           categoryValues.push(categoryName);
                         }
                         if (categoryValues.length > 0) {
-                          currentParams.set(categoryType, categoryValues.join(","));
+                          currentParams.set(
+                            categoryType,
+                            categoryValues.join(","),
+                          );
                         }
                       } else {
                         const index = styleValues.indexOf(style);
@@ -2050,7 +2070,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       updateUrlFilters("style", item, e.target.checked);
                       // Also update earring_category when style is selected
                       if (e.target.checked) {
-                        updateUrlFilters("earring_category", earringCategory, true);
+                        updateUrlFilters(
+                          "earring_category",
+                          earringCategory,
+                          true,
+                        );
                       }
                     }
                   }}
@@ -2181,8 +2205,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     // Returns array of API values (for "7 & 8 Stone" it returns ["7 STONE", "8 STONE"])
     const mapEngagementStyleToApi = (uiLabel: string): string[] => {
       const mapping: Record<string, string[]> = {
-        "Accents": ["Accent"],
-        "Halo": ["Halo"],
+        Accents: ["Accent"],
+        Halo: ["Halo"],
         "Hidden Halo": ["Hidden Halo"],
         "3 Stone": ["3 Stone"],
         "5 Stone": ["5 Stone"],
@@ -2194,8 +2218,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     // Map API values to UI labels (reverse mapping)
     const mapApiToEngagementStyle = (apiValue: string): string => {
       const mapping: Record<string, string> = {
-        "Accent": "Accents",
-        "Halo": "Halo",
+        Accent: "Accents",
+        Halo: "Halo",
         "Hidden Halo": "Hidden Halo",
         "3 Stone": "3 Stone",
         "5 Stone": "5 Stone",
@@ -2223,7 +2247,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           ].map((uiLabel) => {
             // Map UI label to API values (array - for "7 & 8 Stone" it's ["7 STONE", "8 STONE"])
             const apiValues = mapEngagementStyleToApi(uiLabel);
-            
+
             // Check if all API values for this UI label are in category2
             // For "7 & 8 Stone", both "7 STONE" and "8 STONE" must be present
             const isChecked = apiValues.every((apiValue) =>
@@ -2254,9 +2278,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                         }
                       });
                       // Only add ring_category if not already present
-                      if (
-                        !activeFilters.ring_category.includes(ringCategory)
-                      ) {
+                      if (!activeFilters.ring_category.includes(ringCategory)) {
                         updateUrlFilters("ring_category", ringCategory, true);
                       }
                     } else {
@@ -2880,8 +2902,25 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     setProducts(sortedProducts);
   };
 
+  // Function to scroll to top using multiple methods
+  const scrollToTop = () => {
+    // Try scrolling the window
+    window.scrollTo({ top: 0, behavior: "instant" });
+    // Also try scrolling document
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    // Try scrolling the main container if it exists
+    if (mainContainerRef.current) {
+      mainContainerRef.current.scrollTop = 0;
+    }
+  };
+
   return (
-    <main aria-labelledby="products-heading" className="eng-root">
+    <main
+      ref={mainContainerRef}
+      aria-labelledby="products-heading"
+      className="eng-root"
+    >
       <div className="eng-wrap">
         <nav
           aria-label="Breadcrumb"
@@ -3197,7 +3236,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           <div className="flex justify-center items-center mt-8 space-x-2">
             <button
               onClick={() => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                scrollToTop();
                 fetchProducts(pagination.currentPage - 1, 20);
               }}
               disabled={pagination.currentPage === 1}
@@ -3212,7 +3251,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
             <button
               onClick={() => {
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                scrollToTop();
                 fetchProducts(pagination.currentPage + 1, 20);
               }}
               disabled={pagination.currentPage === pagination.totalPages}
