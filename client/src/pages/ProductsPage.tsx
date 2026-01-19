@@ -136,11 +136,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     min_price: "0",
     max_price: "50000",
 
-    // Earrings API (new) fields
-    category1: "" as string,
-    category2: "" as string,
-    category3: "" as string,
-    centerStoneShape: "" as string,
+      // Earrings API (new) fields (category2 also used for Engagement Ring styles)
+      category1: "" as string,
+      category2: "" as string,
+      category3: "" as string,
+      centerStoneShape: "" as string,
   });
 
   // Generate cache key from current filters (without page number - cache all pages together)
@@ -352,6 +352,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             if (isEngravingsPage) {
               params.set("isEngraving", "true");
             }
+
+            // Add category2 parameter for Engagement Ring styles
+            if (activeFilters.category2) {
+              params.set("category2", activeFilters.category2);
+            }
           }
 
           // Handle earrings filters
@@ -451,28 +456,28 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               );
             }
 
-            const pendantTypes = new Set<string>();
+            const pendantCategory1 = new Set<string>();
             if (
               activeFilters.pendant_category.includes("Solitaire Pendants") ||
               activeFilters.solitaire_pendant_diamond_shape.length > 0
             ) {
-              pendantTypes.add("solitaire");
+              pendantCategory1.add("Soliatre Pendant");
             }
             if (
               activeFilters.pendant_category.includes("Fashion Pendants") ||
               activeFilters.fashion_pendant_diamond_shape.length > 0
             ) {
-              pendantTypes.add("fashion");
+              pendantCategory1.add("Fashion Pendants");
             }
             if (
               activeFilters.pendant_category.includes("Solitaire Halo") ||
               activeFilters.halo_pendant_diamond_shape.length > 0
             ) {
-              pendantTypes.add("halo");
+              pendantCategory1.add("Solitaire Halo");
             }
 
-            if (pendantTypes.size > 0) {
-              params.set("pendantType", Array.from(pendantTypes).join(","));
+            if (pendantCategory1.size > 0) {
+              params.set("category1", Array.from(pendantCategory1).join(","));
             }
           }
 
@@ -520,9 +525,31 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }
           }
 
-          // Handle styles
+          // Handle styles (exclude Engagement Ring and Fashion Ring styles which go to category2)
           if (activeFilters.style.length > 0) {
-            params.set("style", activeFilters.style.join(","));
+            // Styles that should NOT be in style parameter (they go to category2)
+            const stylesInCategory2 = [
+              // Engagement Ring styles
+              "Accents",
+              "Halo",
+              "Hidden Halo",
+              "3 Stone",
+              "5 Stone",
+              "7 & 8 Stone",
+              // Fashion Ring styles
+              "Daily Wear Rings",
+              "Designer Rings",
+            ];
+            
+            // Filter out styles that go to category2 from style parameter
+            const filteredStyles = activeFilters.style.filter(
+              (style) => !stylesInCategory2.includes(style),
+            );
+            
+            // Only set style parameter if there are styles that don't go to category2
+            if (filteredStyles.length > 0) {
+              params.set("style", filteredStyles.join(","));
+            }
           }
 
           // Handle price range - use current slider values directly
@@ -996,7 +1023,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         // Earrings API (new) fields from URL
         category1: searchParams.get("category1") || "",
-        category2: searchParams.get("category2") || "",
+        category2: searchParams.get("category2") || "", // Also used for Engagement Ring styles
         category3: searchParams.get("category3") || "",
         centerStoneShape: searchParams.get("centerStoneShape") || "",
       });
@@ -1088,11 +1115,60 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }));
           } else if (groupName === "Engagement Rings") {
             currentParams.delete("engagement_diamond_shape");
-            setActiveFilters((prev) => ({
-              ...prev,
-              [categoryParam]: existingValues,
-              engagement_diamond_shape: [],
-            }));
+            
+            // Clear Engagement Ring styles from category2
+            const existingCategory2 = currentParams.get("category2");
+            if (existingCategory2) {
+              const category2Values = existingCategory2.split(",").map((v) => v.trim());
+              // Engagement Ring styles that should be removed
+              const engagementRingStyles = [
+                "Accent",
+                "Halo",
+                "Hidden Halo",
+                "3 Stone",
+                "5 Stone",
+                "7 STONE",
+                "8 STONE",
+              ];
+              
+              // Remove all Engagement Ring styles from category2
+              const filteredCategory2 = category2Values.filter(
+                (value) => !engagementRingStyles.includes(value),
+              );
+              
+              // Update or delete category2
+              if (filteredCategory2.length > 0) {
+                currentParams.set("category2", filteredCategory2.join(","));
+              } else {
+                currentParams.delete("category2");
+              }
+            }
+            
+            setActiveFilters((prev) => {
+              // Get current category2 and remove Engagement Ring styles
+              const currentCategory2 = prev.category2
+                ? prev.category2.split(",").map((v) => v.trim())
+                : [];
+              const engagementRingStyles = [
+                "Accent",
+                "Halo",
+                "Hidden Halo",
+                "3 Stone",
+                "5 Stone",
+                "7 STONE",
+                "8 STONE",
+              ];
+              const filteredCategory2 = currentCategory2.filter(
+                (value) => !engagementRingStyles.includes(value),
+              );
+              
+              return {
+                ...prev,
+                [categoryParam]: existingValues,
+                engagement_diamond_shape: [],
+                category2: filteredCategory2.join(","),
+              };
+            });
           } else if (
             groupName === "Mens Rings" ||
             groupName === "Men's Rings"
@@ -1105,11 +1181,50 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }));
           } else if (groupName === "Fashion Rings") {
             currentParams.delete("fashion_diamond_shape");
-            setActiveFilters((prev) => ({
-              ...prev,
-              [categoryParam]: existingValues,
-              fashion_diamond_shape: [],
-            }));
+            
+            // Clear Fashion Ring styles from category2
+            const existingCategory2 = currentParams.get("category2");
+            if (existingCategory2) {
+              const category2Values = existingCategory2.split(",").map((v) => v.trim());
+              // Fashion Ring styles that should be removed
+              const fashionRingStyles = [
+                "Daily Wear Rings",
+                "Designer Rings",
+              ];
+              
+              // Remove all Fashion Ring styles from category2
+              const filteredCategory2 = category2Values.filter(
+                (value) => !fashionRingStyles.includes(value),
+              );
+              
+              // Update or delete category2
+              if (filteredCategory2.length > 0) {
+                currentParams.set("category2", filteredCategory2.join(","));
+              } else {
+                currentParams.delete("category2");
+              }
+            }
+            
+            setActiveFilters((prev) => {
+              // Get current category2 and remove Fashion Ring styles
+              const currentCategory2 = prev.category2
+                ? prev.category2.split(",").map((v) => v.trim())
+                : [];
+              const fashionRingStyles = [
+                "Daily Wear Rings",
+                "Designer Rings",
+              ];
+              const filteredCategory2 = currentCategory2.filter(
+                (value) => !fashionRingStyles.includes(value),
+              );
+              
+              return {
+                ...prev,
+                [categoryParam]: existingValues,
+                fashion_diamond_shape: [],
+                category2: filteredCategory2.join(","),
+              };
+            });
           }
         } else if (category === "pendants") {
           if (groupName === "Solitaire Pendants") {
@@ -1121,10 +1236,22 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }));
           } else if (groupName === "Fashion Pendants") {
             currentParams.delete("fashion_pendant_diamond_shape");
+            // Clear pendant styles when closing the group
+            const stylesToRemove = ["Daily Wear Pendants", "Designer Pendants"];
+            const existingStyleParam = currentParams.get("style") || "";
+            const styleParts = existingStyleParam
+              ? existingStyleParam.split(",").map((v) => v.trim())
+              : [];
+            const nextStyles = styleParts.filter(
+              (s) => !stylesToRemove.includes(s),
+            );
+            if (nextStyles.length > 0) currentParams.set("style", nextStyles.join(","));
+            else currentParams.delete("style");
             setActiveFilters((prev) => ({
               ...prev,
               [categoryParam]: existingValues,
               fashion_pendant_diamond_shape: [],
+              style: prev.style.filter((s) => !stylesToRemove.includes(s)),
             }));
           } else if (groupName === "Solitaire Halo") {
             currentParams.delete("halo_pendant_diamond_shape");
@@ -1144,10 +1271,60 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }));
           } else if (groupName === "Fashion Bracelets") {
             currentParams.delete("fashion_bracelet_diamond_shape");
+            // Clear bracelet styles when closing the group
+            const stylesToRemove = ["Daily Wear Bracelets", "Designer Bracelets"];
+            const existingStyleParam = currentParams.get("style") || "";
+            const styleParts = existingStyleParam
+              ? existingStyleParam.split(",").map((v) => v.trim())
+              : [];
+            const nextStyles = styleParts.filter(
+              (s) => !stylesToRemove.includes(s),
+            );
+            if (nextStyles.length > 0) currentParams.set("style", nextStyles.join(","));
+            else currentParams.delete("style");
             setActiveFilters((prev) => ({
               ...prev,
               [categoryParam]: existingValues,
               fashion_bracelet_diamond_shape: [],
+              style: prev.style.filter((s) => !stylesToRemove.includes(s)),
+            }));
+          } else if (groupName === "Chain Bracelets") {
+            // Clear chain bracelet styles when closing the group
+            const stylesToRemove = [
+              "Gold Chains",
+              "Silver Chains",
+              "Rose Gold Chains",
+            ];
+            const existingStyleParam = currentParams.get("style") || "";
+            const styleParts = existingStyleParam
+              ? existingStyleParam.split(",").map((v) => v.trim())
+              : [];
+            const nextStyles = styleParts.filter(
+              (s) => !stylesToRemove.includes(s),
+            );
+            if (nextStyles.length > 0) currentParams.set("style", nextStyles.join(","));
+            else currentParams.delete("style");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              style: prev.style.filter((s) => !stylesToRemove.includes(s)),
+            }));
+          } else if (groupName === "Charm Bracelets") {
+            // Clear charm bracelet styles when closing the group
+            const stylesToRemove = ["Heart Charms", "Star Charms", "Custom Charms"];
+            const existingStyleParam = currentParams.get("style") || "";
+            const styleParts = existingStyleParam
+              ? existingStyleParam.split(",").map((v) => v.trim())
+              : [];
+            const nextStyles = styleParts.filter(
+              (s) => !stylesToRemove.includes(s),
+            );
+            if (nextStyles.length > 0) currentParams.set("style", nextStyles.join(","));
+            else currentParams.delete("style");
+            setActiveFilters((prev) => ({
+              ...prev,
+              [categoryParam]: existingValues,
+              style: prev.style.filter((s) => !stylesToRemove.includes(s)),
             }));
           }
         }
@@ -1284,10 +1461,61 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }
 
             // Clear the shape filter in state
+            // ALSO clear any other filters that belong to this earring group (category2 + lengths)
+            const existingCategory2 = currentParams.get("category2") || "";
+            const category2Parts = existingCategory2
+              ? existingCategory2.split(",").map((v) => v.trim())
+              : [];
+            const existingLengths = category2Parts.filter((p) =>
+              ["Small", "Medium", "Large"].includes(p),
+            );
+            const existingStyles = category2Parts.filter(
+              (p) => p && !["Small", "Medium", "Large"].includes(p),
+            );
+
+            // Which category2 style values belong to this group?
+            const mapEarringUiStyleToCategory2 = (uiLabel: string) => {
+              if (uiLabel === "Daily Wear Earrings") return "DAILY WEAR";
+              if (uiLabel === "Designer Earrings") return "DESIGNER EARRINGS";
+              return uiLabel;
+            };
+
+            let stylesToRemove: string[] = [];
+            if (groupTitle === "Fashion Earrings") {
+              stylesToRemove = [
+                mapEarringUiStyleToCategory2("Daily Wear Earrings"),
+                mapEarringUiStyleToCategory2("Designer Earrings"),
+              ];
+            }
+            if (groupTitle === "Drop Earrings") {
+              stylesToRemove = ["Classic Solitaire", "Halo Drop Earrings"];
+            }
+
+            // Hoops group owns the earring lengths
+            const shouldClearLengths = groupTitle === "Hoops / Huggies";
+
+            const filteredStyles = existingStyles.filter(
+              (s) => !stylesToRemove.includes(s),
+            );
+            const filteredLengths = shouldClearLengths ? [] : existingLengths;
+            const nextCategory2Parts = [...filteredStyles, ...filteredLengths];
+
+            if (nextCategory2Parts.length > 0) {
+              currentParams.set("category2", nextCategory2Parts.join(","));
+            } else {
+              currentParams.delete("category2");
+            }
+            if (shouldClearLengths) {
+              currentParams.delete("earring_length");
+            }
+
             setActiveFilters((prev) => ({
               ...prev,
               category1: values.join(","),
               [shapeFilterKey]: [],
+              // Earrings category2 is the source of truth for styles/lengths
+              category2: nextCategory2Parts.join(","),
+              earring_length: shouldClearLengths ? [] : prev.earring_length,
             }));
           } else {
             // Update category1 in state
@@ -1513,9 +1741,6 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
       const category1Value = Array.from(category1Array).join(",");
 
-      // Extract the style values (excluding length) for the style array
-      const styleValues = newStyles;
-
       // Extract length values from category2Value for earring_length persistence
       const lengthValues = category2Value
         .split(",")
@@ -1526,7 +1751,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         ...prev,
         category1: category1Value,
         category2: hasStyles ? finalCategory2 : "",
-        style: styleValues,
+        // IMPORTANT: Earrings styles must be sent ONLY in category2 (never in style)
+        style: [],
         earring_length:
           lengthValues.length > 0 ? lengthValues : prev.earring_length,
       }));
@@ -1536,12 +1762,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       currentParams.set("category2", hasStyles ? finalCategory2 : "");
       if (!currentParams.has("category3")) currentParams.set("category3", "");
 
-      // CRITICAL: Also set the "style" URL parameter for checkbox persistence
-      if (styleValues.length > 0) {
-        currentParams.set("style", styleValues.join(","));
-      } else {
-        currentParams.delete("style");
-      }
+      // IMPORTANT: Earrings styles must be sent ONLY in category2 (never in style)
+      currentParams.delete("style");
 
       // CRITICAL: Also set the "earring_length" URL parameter for length checkbox persistence
       if (lengthValues.length > 0) {
@@ -1557,92 +1779,176 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       styles: string[],
       categoryType: string,
       categoryName: string,
-    ) => (
-      <>
-        {styles.map((style) => (
-          <label key={`${categoryName}-${style}`} className="eng-suboption">
-            <input
-              type="checkbox"
-              checked={activeFilters.style.includes(style)}
-              onChange={(e) => {
-                // For earrings, ONLY use setEarringCategory2 (don't call updateUrlFilters)
-                if (
-                  category === "earrings" &&
-                  categoryType === "earring_category"
-                ) {
-                  // Update style array
-                  const currentStyles = activeFilters.style.slice();
-                  if (e.target.checked) {
-                    if (!currentStyles.includes(style)) {
-                      currentStyles.push(style);
-                    }
-                  } else {
-                    const idx = currentStyles.indexOf(style);
-                    if (idx > -1) {
-                      currentStyles.splice(idx, 1);
-                    }
-                  }
+    ) => {
+      // Check if these are Fashion Ring styles that should go to category2
+      const fashionRingStyles = ["Daily Wear Rings", "Designer Rings"];
+      const isFashionRingStyles =
+        category === "rings" &&
+        categoryName === "Fashion Rings" &&
+        styles.some((s) => fashionRingStyles.includes(s));
 
-                  // Call setEarringCategory2 with the combined styles
-                  const category2Value = currentStyles.join(",");
-                  setEarringCategory2(
-                    categoryName,
-                    category2Value,
-                    currentStyles.length > 0,
-                  );
-                } else {
-                  // For non-earrings, batch URL updates to prevent race conditions
-                  const currentParams = new URLSearchParams(searchParams);
+      return (
+        <>
+          {styles.map((style) => {
+            // For Fashion Ring styles, check category2 instead of style
+            const isFashionRingStyle = fashionRingStyles.includes(style);
+            const currentCategory2 = activeFilters.category2
+              ? activeFilters.category2.split(",").map((v) => v.trim())
+              : [];
+            const mapEarringStyleToCategory2 = (uiLabel: string) => {
+              if (uiLabel === "Daily Wear Earrings") return "DAILY WEAR";
+              if (uiLabel === "Designer Earrings") return "DESIGNER EARRINGS";
+              return uiLabel;
+            };
 
-                  // Update style parameter
-                  const existingStyles = currentParams.get("style");
-                  const styleValues = existingStyles
-                    ? existingStyles.split(",")
-                    : [];
+            // EARRINGS: styles are stored in category2 (not in activeFilters.style)
+            const isEarringStyle =
+              category === "earrings" && categoryType === "earring_category";
+            const isChecked = isFashionRingStyle
+              ? currentCategory2.includes(style)
+              : isEarringStyle
+                ? currentCategory2.includes(mapEarringStyleToCategory2(style))
+                : activeFilters.style.includes(style);
 
-                  if (e.target.checked) {
-                    if (!styleValues.includes(style)) {
-                      styleValues.push(style);
-                    }
-                    // Also add category if not present
-                    const existingCategories = currentParams.get(categoryType);
-                    const categoryValues = existingCategories
-                      ? existingCategories.split(",")
-                      : [];
-                    if (!categoryValues.includes(categoryName)) {
-                      categoryValues.push(categoryName);
-                    }
-                    if (categoryValues.length > 0) {
-                      currentParams.set(categoryType, categoryValues.join(","));
-                    }
-                  } else {
-                    const index = styleValues.indexOf(style);
-                    if (index > -1) {
-                      styleValues.splice(index, 1);
-                    }
-                  }
+            return (
+              <label key={`${categoryName}-${style}`} className="eng-suboption">
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    // For earrings, ONLY use setEarringCategory2 (don't call updateUrlFilters)
+                    if (
+                      category === "earrings" &&
+                      categoryType === "earring_category"
+                    ) {
+                      // EARRINGS: send styles ONLY in category2, with required API mapping
+                      const mapEarringStyleToCategory2 = (uiLabel: string) => {
+                        if (uiLabel === "Daily Wear Earrings") return "DAILY WEAR";
+                        if (uiLabel === "Designer Earrings") return "DESIGNER EARRINGS";
+                        return uiLabel;
+                      };
 
-                  // Update or delete style parameter
-                  if (styleValues.length > 0) {
-                    currentParams.set("style", styleValues.join(","));
-                  } else {
-                    currentParams.delete("style");
-                  }
+                      // Current "styles" in category2 are stored in activeFilters.category2 (excluding lengths)
+                      const existingCategory2 = activeFilters.category2 || "";
+                      const parts = existingCategory2
+                        ? existingCategory2.split(",").map((v) => v.trim())
+                        : [];
+                      const existingStyles = parts.filter(
+                        (p) => p && !["Small", "Medium", "Large"].includes(p),
+                      );
 
-                  // Update URL and state together
-                  setSearchParams(currentParams);
-                  setActiveFilters((prev) => ({
-                    ...prev,
-                    style: styleValues,
-                  }));
-                }
-              }}
-            />
-            <span>{style}</span>
-          </label>
-        ))}
-      </>
-    );
+                      const apiValue = mapEarringStyleToCategory2(style);
+                      const nextStyles = existingStyles.slice();
+                      if (e.target.checked) {
+                        if (!nextStyles.includes(apiValue)) nextStyles.push(apiValue);
+                      } else {
+                        const idx = nextStyles.indexOf(apiValue);
+                        if (idx > -1) nextStyles.splice(idx, 1);
+                      }
+
+                      // Call setEarringCategory2 with the combined (API) style values
+                      const category2Value = nextStyles.join(",");
+                      setEarringCategory2(
+                        categoryName,
+                        category2Value,
+                        nextStyles.length > 0,
+                      );
+                    } else if (isFashionRingStyle) {
+                      // For Fashion Ring styles, send to category2 instead of style
+                      const currentParams = new URLSearchParams(searchParams);
+                      const existingCategory2 = currentParams.get("category2");
+                      const category2Values = existingCategory2
+                        ? existingCategory2.split(",").map((v) => v.trim())
+                        : [];
+
+                      if (e.target.checked) {
+                        // Add to category2 if not already present
+                        if (!category2Values.includes(style)) {
+                          category2Values.push(style);
+                        }
+                        // Also add ring_category if not already present
+                        if (
+                          !activeFilters.ring_category.includes(categoryName)
+                        ) {
+                          updateUrlFilters("ring_category", categoryName, true);
+                        }
+                      } else {
+                        // Remove from category2
+                        const index = category2Values.indexOf(style);
+                        if (index > -1) {
+                          category2Values.splice(index, 1);
+                        }
+                      }
+
+                      // Update category2 in URL
+                      if (category2Values.length > 0) {
+                        currentParams.set("category2", category2Values.join(","));
+                      } else {
+                        currentParams.delete("category2");
+                      }
+
+                      setSearchParams(currentParams);
+
+                      // Update activeFilters state
+                      setActiveFilters((prev) => ({
+                        ...prev,
+                        category2: category2Values.join(","),
+                      }));
+                    } else {
+                      // For other styles, batch URL updates to prevent race conditions
+                      const currentParams = new URLSearchParams(searchParams);
+
+                      // Update style parameter
+                      const existingStyles = currentParams.get("style");
+                      const styleValues = existingStyles
+                        ? existingStyles.split(",")
+                        : [];
+
+                      if (e.target.checked) {
+                        if (!styleValues.includes(style)) {
+                          styleValues.push(style);
+                        }
+                        // Also add category if not present
+                        const existingCategories = currentParams.get(categoryType);
+                        const categoryValues = existingCategories
+                          ? existingCategories.split(",")
+                          : [];
+                        if (!categoryValues.includes(categoryName)) {
+                          categoryValues.push(categoryName);
+                        }
+                        if (categoryValues.length > 0) {
+                          currentParams.set(categoryType, categoryValues.join(","));
+                        }
+                      } else {
+                        const index = styleValues.indexOf(style);
+                        if (index > -1) {
+                          styleValues.splice(index, 1);
+                        }
+                      }
+
+                      // Update or delete style parameter
+                      if (styleValues.length > 0) {
+                        currentParams.set("style", styleValues.join(","));
+                      } else {
+                        currentParams.delete("style");
+                      }
+
+                      // Update URL and state together
+                      setSearchParams(currentParams);
+                      setActiveFilters((prev) => ({
+                        ...prev,
+                        style: styleValues,
+                      }));
+                    }
+                  }}
+                />
+                <span>{style}</span>
+              </label>
+            );
+          })}
+        </>
+      );
+    };
 
     // Enhanced earring length options with URL updates
     const renderEarringLengths = (earringCategory: string) => (
@@ -1695,48 +2001,67 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     );
 
     // Enhanced drop earring styles with URL updates
-    const renderDropEarringStyles = (earringCategory: string) => (
-      <>
-        {["Classic Solitaire", "Halo Drop Earrings"].map((item) => (
-          <label key={`drop-earring-${item}`} className="eng-suboption">
-            <input
-              type="checkbox"
-              checked={activeFilters.style.includes(item)}
-              onChange={(e) => {
-                updateUrlFilters("style", item, e.target.checked);
-                // Also update earring_category when style is selected
-                if (e.target.checked) {
-                  updateUrlFilters("earring_category", earringCategory, true);
-                }
-                // Map drop styles to category2 for earrings
-                if (category === "earrings") {
-                  // Update style array
-                  const currentStyles = activeFilters.style.slice();
-                  if (e.target.checked) {
-                    if (!currentStyles.includes(item)) {
-                      currentStyles.push(item);
-                    }
-                  } else {
-                    const idx = currentStyles.indexOf(item);
-                    if (idx > -1) {
-                      currentStyles.splice(idx, 1);
-                    }
-                  }
+    const renderDropEarringStyles = (earringCategory: string) => {
+      // For earrings, check category2 instead of style
+      const currentCategory2 = activeFilters.category2
+        ? activeFilters.category2.split(",").map((v) => v.trim())
+        : [];
 
-                  const category2Value = currentStyles.join(",");
-                  setEarringCategory2(
-                    earringCategory,
-                    category2Value,
-                    currentStyles.length > 0,
-                  );
-                }
-              }}
-            />
-            <span>{item}</span>
-          </label>
-        ))}
-      </>
-    );
+      return (
+        <>
+          {["Classic Solitaire", "Halo Drop Earrings"].map((item) => {
+            // Check if this item is in category2
+            const isChecked = currentCategory2.includes(item);
+
+            return (
+              <label key={`drop-earring-${item}`} className="eng-suboption">
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    // For earrings, send to category2 only (not style)
+                    if (category === "earrings") {
+                      // Current "styles" in category2 are stored in activeFilters.category2 (excluding lengths)
+                      const existingCategory2 = activeFilters.category2 || "";
+                      const parts = existingCategory2
+                        ? existingCategory2.split(",").map((v) => v.trim())
+                        : [];
+                      const existingStyles = parts.filter(
+                        (p) => p && !["Small", "Medium", "Large"].includes(p),
+                      );
+
+                      const nextStyles = existingStyles.slice();
+                      if (e.target.checked) {
+                        if (!nextStyles.includes(item)) nextStyles.push(item);
+                      } else {
+                        const idx = nextStyles.indexOf(item);
+                        if (idx > -1) nextStyles.splice(idx, 1);
+                      }
+
+                      // Call setEarringCategory2 with the combined (API) style values
+                      const category2Value = nextStyles.join(",");
+                      setEarringCategory2(
+                        earringCategory,
+                        category2Value,
+                        nextStyles.length > 0,
+                      );
+                    } else {
+                      // For non-earrings, use the regular updateUrlFilters
+                      updateUrlFilters("style", item, e.target.checked);
+                      // Also update earring_category when style is selected
+                      if (e.target.checked) {
+                        updateUrlFilters("earring_category", earringCategory, true);
+                      }
+                    }
+                  }}
+                />
+                <span>{item}</span>
+              </label>
+            );
+          })}
+        </>
+      );
+    };
 
     // Enhanced DiamondShapeSelector with category-specific filters
     const EnhancedDiamondShapeSelector = ({
@@ -1852,36 +2177,121 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       );
     };
 
-    const renderEngagementRingStyles = (ringCategory: string) => (
-      <>
-        {[
-          "Accents",
-          "Halo",
-          "Hidden Halo",
-          "3 Stone",
-          "5 Stone",
-          "7 & 8 Stone",
-        ].map((item) => (
-          <label key={`${ringCategory}-${item}`} className="eng-suboption">
-            <input
-              type="checkbox"
-              checked={activeFilters.style.includes(item)}
-              onChange={(e) => {
-                updateUrlFilters("style", item, e.target.checked);
-                // Only add ring_category if style is being checked and category not already present
-                if (
-                  e.target.checked &&
-                  !activeFilters.ring_category.includes(ringCategory)
-                ) {
-                  updateUrlFilters("ring_category", ringCategory, true);
-                }
-              }}
-            />
-            <span>{item}</span>
-          </label>
-        ))}
-      </>
-    );
+    // Map UI labels to API values for Engagement Ring styles
+    // Returns array of API values (for "7 & 8 Stone" it returns ["7 STONE", "8 STONE"])
+    const mapEngagementStyleToApi = (uiLabel: string): string[] => {
+      const mapping: Record<string, string[]> = {
+        "Accents": ["Accent"],
+        "Halo": ["Halo"],
+        "Hidden Halo": ["Hidden Halo"],
+        "3 Stone": ["3 Stone"],
+        "5 Stone": ["5 Stone"],
+        "7 & 8 Stone": ["7 STONE", "8 STONE"],
+      };
+      return mapping[uiLabel] || [uiLabel];
+    };
+
+    // Map API values to UI labels (reverse mapping)
+    const mapApiToEngagementStyle = (apiValue: string): string => {
+      const mapping: Record<string, string> = {
+        "Accent": "Accents",
+        "Halo": "Halo",
+        "Hidden Halo": "Hidden Halo",
+        "3 Stone": "3 Stone",
+        "5 Stone": "5 Stone",
+        "7 STONE": "7 & 8 Stone",
+        "8 STONE": "7 & 8 Stone",
+      };
+      return mapping[apiValue] || apiValue;
+    };
+
+    const renderEngagementRingStyles = (ringCategory: string) => {
+      // Get current category2 values from state/URL
+      const currentCategory2 = activeFilters.category2
+        ? activeFilters.category2.split(",").map((v) => v.trim())
+        : [];
+
+      return (
+        <>
+          {[
+            "Accents",
+            "Halo",
+            "Hidden Halo",
+            "3 Stone",
+            "5 Stone",
+            "7 & 8 Stone",
+          ].map((uiLabel) => {
+            // Map UI label to API values (array - for "7 & 8 Stone" it's ["7 STONE", "8 STONE"])
+            const apiValues = mapEngagementStyleToApi(uiLabel);
+            
+            // Check if all API values for this UI label are in category2
+            // For "7 & 8 Stone", both "7 STONE" and "8 STONE" must be present
+            const isChecked = apiValues.every((apiValue) =>
+              currentCategory2.includes(apiValue),
+            );
+
+            return (
+              <label
+                key={`${ringCategory}-${uiLabel}`}
+                className="eng-suboption"
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    // Update category2 for Engagement Ring styles (only, not style)
+                    const currentParams = new URLSearchParams(searchParams);
+                    const existingCategory2 = currentParams.get("category2");
+                    const category2Values = existingCategory2
+                      ? existingCategory2.split(",").map((v) => v.trim())
+                      : [];
+
+                    if (e.target.checked) {
+                      // Add all API values to category2 if not already present
+                      apiValues.forEach((apiValue) => {
+                        if (!category2Values.includes(apiValue)) {
+                          category2Values.push(apiValue);
+                        }
+                      });
+                      // Only add ring_category if not already present
+                      if (
+                        !activeFilters.ring_category.includes(ringCategory)
+                      ) {
+                        updateUrlFilters("ring_category", ringCategory, true);
+                      }
+                    } else {
+                      // Remove all API values from category2
+                      apiValues.forEach((apiValue) => {
+                        const index = category2Values.indexOf(apiValue);
+                        if (index > -1) {
+                          category2Values.splice(index, 1);
+                        }
+                      });
+                    }
+
+                    // Update category2 in URL
+                    if (category2Values.length > 0) {
+                      currentParams.set("category2", category2Values.join(","));
+                    } else {
+                      currentParams.delete("category2");
+                    }
+
+                    setSearchParams(currentParams);
+
+                    // Update activeFilters state
+                    setActiveFilters((prev) => ({
+                      ...prev,
+                      category2: category2Values.join(","),
+                    }));
+                  }}
+                />
+                <span>{uiLabel}</span>
+              </label>
+            );
+          })}
+        </>
+      );
+    };
 
     if (category === "rings") {
       return (
