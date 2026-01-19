@@ -17,7 +17,7 @@ interface EngraveProps {
   onSave?: (
     engravingText: string,
     engravingImageUrl?: string,
-    motifPath?: string
+    motifPath?: string,
   ) => void;
   initialText?: string;
   initialMotif?: string;
@@ -63,7 +63,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
   });
   const [motifs, setMotifs] = useState<string[]>([]);
   const [selectedMotif, setSelectedMotif] = useState<string | null>(
-    initialMotif || null
+    initialMotif || null,
   );
   const [motifPosition, setMotifPosition] = useState<number>(-1); // position in text where motif is inserted (-1 = not inserted)
   const [motifScale, setMotifScale] = useState<number>(1); // multiplier of fontSize (1 = same height as text)
@@ -81,7 +81,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
           "Arsenal-Italic.ttf",
           "Arsenal-BoldItalic.ttf",
           "PinyonScript-Regular.ttf",
-          "OpenSans.ttf",
+          "OpenSans-Regular.ttf",
         ];
 
         const fontNames: string[] = [];
@@ -388,7 +388,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                 const engravingImageUrl = URL.createObjectURL(blob);
                 console.log(
                   "🎨 Generated engraved image URL:",
-                  engravingImageUrl
+                  engravingImageUrl,
                 );
                 resolve(engravingImageUrl);
               } else {
@@ -396,7 +396,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
               }
             },
             "image/png",
-            0.9
+            0.9,
           );
         };
         // If motif selected, draw it then finalize; otherwise finalize immediately
@@ -533,13 +533,13 @@ const EngravingPage: React.FC<EngraveProps> = ({
                       onLoad={() =>
                         console.log(
                           "✅ Image loaded successfully:",
-                          currentSelectedImage
+                          currentSelectedImage,
                         )
                       }
                       onError={(e) => {
                         console.error(
                           "❌ Image failed to load:",
-                          currentSelectedImage
+                          currentSelectedImage,
                         );
                         console.error("Error details:", e);
                       }}
@@ -885,7 +885,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                             0,
                             maxCount -
                               engravingText.length -
-                              (selectedMotif && motifPosition >= 0 ? 2 : 0)
+                              (selectedMotif && motifPosition >= 0 ? 2 : 0),
                           )}
                         </div>
                       </div>
@@ -904,7 +904,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                           // Allow save if there is text or a selected motif
                           if (!engravingText.trim() && !selectedMotif) {
                             alert(
-                              "Please enter some text or select a motif for engraving"
+                              "Please enter some text or select a motif for engraving",
                             );
                             return;
                           }
@@ -917,7 +917,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                               jewelryType: engravingData.jewelryType,
                               userId: engravingData.userId,
                               motif: selectedMotif,
-                            }
+                            },
                           );
 
                           // Save and process the engraving

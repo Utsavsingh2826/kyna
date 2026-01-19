@@ -27,6 +27,7 @@ import {
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import Engrave from "./Engrave";
+import PdfPopup from "../components/PdfPopup";
 import {
   Accordion,
   AccordionContent,
@@ -45,6 +46,7 @@ import {
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
 import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
+import BraceletSizeGuidePopup from "@/components/BraceletSizeGuidePopup";
 import "@/styles/image-loading.css"; // Ensure CSS for blur/skeleton is included
 
 // Product interface for API data
@@ -234,6 +236,7 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
+  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White");
   const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code (e.g., "WG", "WG-RG")
@@ -248,6 +251,7 @@ const ProductDetail = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
+  const [isBraceletSizePopupOpen, setIsBraceletSizePopupOpen] = useState(false);
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
@@ -2467,9 +2471,12 @@ const ProductDetail = () => {
                         </div>
                       )}
                     </button>
-                    <span className="text-[#328F94] underline">
+                    <button
+                      onClick={() => setIsPdfPopupOpen(true)}
+                      className="text-[#328F94] underline"
+                    >
                       Stone Guide
-                    </span>
+                    </button>
                   </h3>
 
                   <div className="flex gap-2">
@@ -2877,7 +2884,7 @@ const ProductDetail = () => {
                     <Button
                       variant="link"
                       size="sm"
-                      className="text-[#328F94] p-0 mt-1"
+                      className="text-[#328F94] hover:underline p-0 mt-1"
                       onClick={() => setIsRingSizePopupOpen(true)}
                     >
                       Ring Size Guide
@@ -2886,31 +2893,41 @@ const ProductDetail = () => {
                 )}
 
                 {category === "bracelets" && (
-                  <div className="my-6 space-y-2">
-                    {/* Bracelet Size */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm mb-2">
-                          Bracelet Size
-                        </label>
-                        <Select
-                          value={selectedBraceletSize}
-                          onValueChange={setSelectedBraceletSize}
-                        >
-                          <SelectTrigger className="text-sm border-neutral-300">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {braceletSizes.map((size) => (
-                              <SelectItem key={size} value={size}>
-                                Size {size}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                  <>
+                    <div className="">
+                      {/* Bracelet Size */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm mb-2">
+                            Bracelet Size
+                          </label>
+                          <Select
+                            value={selectedBraceletSize}
+                            onValueChange={setSelectedBraceletSize}
+                          >
+                            <SelectTrigger className="text-sm border-neutral-300">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {braceletSizes.map((size) => (
+                                <SelectItem key={size} value={size}>
+                                  Size {size}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-[#328F94] p-0"
+                      onClick={() => setIsBraceletSizePopupOpen(true)}
+                    >
+                      Bracelet Size Guide
+                    </Button>
+                  </>
                 )}
 
                 {/* Free Engraving - Only show if engraving is available */}
@@ -3372,6 +3389,16 @@ const ProductDetail = () => {
       <RingSizeGuidePopup
         isOpen={isRingSizePopupOpen}
         onClose={() => setIsRingSizePopupOpen(false)}
+      />
+      <BraceletSizeGuidePopup
+        isOpen={isBraceletSizePopupOpen}
+        onClose={() => setIsBraceletSizePopupOpen(false)}
+      />
+      <PdfPopup
+        isOpen={isPdfPopupOpen}
+        onClose={() => setIsPdfPopupOpen(false)}
+        pdfUrl="/Stone_Guide.pdf"
+        title="Quality & Certification"
       />
     </div>
   );

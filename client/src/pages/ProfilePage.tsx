@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Truck,
   Heart,
+  Trash2,
 } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -109,27 +110,27 @@ const ProfilePage: React.FC = () => {
   // Get dynamic lists
   const allCountries = Country.getAllCountries();
   const profileStates = State.getStatesOfCountry(profileCountryIso).filter(
-    (state) => state.name.toLowerCase() !== "kerala"
+    (state) => state.name.toLowerCase() !== "kerala",
   );
   const profileCities = City.getCitiesOfState(
     profileCountryIso,
-    profileStateIso
+    profileStateIso,
   ).filter((city) => city.name.toLowerCase() !== "borivli");
 
   const billingStates = State.getStatesOfCountry(billingCountryIso).filter(
-    (state) => state.name.toLowerCase() !== "kerala"
+    (state) => state.name.toLowerCase() !== "kerala",
   );
   const billingCities = City.getCitiesOfState(
     billingCountryIso,
-    billingStateIso
+    billingStateIso,
   ).filter((city) => city.name.toLowerCase() !== "borivli");
 
   const shippingStates = State.getStatesOfCountry(shippingCountryIso).filter(
-    (state) => state.name.toLowerCase() !== "kerala"
+    (state) => state.name.toLowerCase() !== "kerala",
   );
   const shippingCities = City.getCitiesOfState(
     shippingCountryIso,
-    shippingStateIso
+    shippingStateIso,
   ).filter((city) => city.name.toLowerCase() !== "borivli");
 
   const sidebarItems = [
@@ -170,6 +171,99 @@ const ProfilePage: React.FC = () => {
     setShippingStateIso(billingStateIso);
   };
 
+  const handleClearBillingAddress = async () => {
+    try {
+      // Clear billing address in the backend
+      const response = await apiService.updateProfile({
+        address: {
+          billingAddress: {
+            firstName: "",
+            lastName: "",
+            companyName: "",
+            street: "",
+            city: "",
+            state: "",
+            country: "",
+            zipCode: "",
+            email: "",
+            phoneNumber: "",
+          },
+        },
+      });
+
+      if (response.success) {
+        // Clear local state
+        setBillingAddress({
+          firstName: "",
+          lastName: "",
+          companyName: "",
+          address: "",
+          country: "",
+          regionState: "",
+          city: "",
+          zipCode: "",
+          email: "",
+          phoneNumber: "",
+        });
+        setBillingCountryIso("");
+        setBillingStateIso("");
+        toast.success("Billing address cleared successfully!");
+      } else {
+        toast.error("Failed to clear billing address");
+      }
+    } catch (err) {
+      console.error("Error clearing billing address:", err);
+      toast.error("Something went wrong while clearing billing address.");
+    }
+  };
+
+  const handleClearShippingAddress = async () => {
+    try {
+      // Clear shipping address in the backend
+      const response = await apiService.updateProfile({
+        address: {
+          shippingAddress: {
+            firstName: "",
+            lastName: "",
+            companyName: "",
+            street: "",
+            city: "",
+            state: "",
+            country: "",
+            zipCode: "",
+            email: "",
+            phoneNumber: "",
+            sameAsBilling: false,
+          },
+        },
+      });
+
+      if (response.success) {
+        // Clear local state
+        setShippingAddress({
+          firstName: "",
+          lastName: "",
+          companyName: "",
+          address: "",
+          country: "",
+          regionState: "",
+          city: "",
+          zipCode: "",
+          email: "",
+          phoneNumber: "",
+        });
+        setShippingCountryIso("");
+        setShippingStateIso("");
+        toast.success("Shipping address cleared successfully!");
+      } else {
+        toast.error("Failed to clear shipping address");
+      }
+    } catch (err) {
+      console.error("Error clearing shipping address:", err);
+      toast.error("Something went wrong while clearing shipping address.");
+    }
+  };
+
   const handleSaveAddresses = async () => {
     try {
       // Prepare the address data to send to backend
@@ -208,7 +302,7 @@ const ProfilePage: React.FC = () => {
         toast.success("Addresses saved successfully!");
       } else {
         toast.error(
-          "Error saving addresses: " + (response.message || "Unknown error")
+          "Error saving addresses: " + (response.message || "Unknown error"),
         );
       }
     } catch (err) {
@@ -264,7 +358,7 @@ const ProfilePage: React.FC = () => {
       // Pass the profile image if it exists
       const response = (await apiService.updateProfile(
         profileUpdateData,
-        profileData.profileImage || undefined
+        profileData.profileImage || undefined,
       )) as UpdateProfileResponse;
 
       if (response.success) {
@@ -300,7 +394,7 @@ const ProfilePage: React.FC = () => {
         toast.success("Profile updated successfully!");
       } else {
         toast.error(
-          "Error updating profile: " + (response.message || "Unknown error")
+          "Error updating profile: " + (response.message || "Unknown error"),
         );
       }
     } catch (err) {
@@ -350,7 +444,7 @@ const ProfilePage: React.FC = () => {
           // Set ISO codes for country/state based on loaded data
           if (userData.country) {
             const country = allCountries.find(
-              (c) => c.name === userData.country
+              (c) => c.name === userData.country,
             );
             if (country) {
               setProfileCountryIso(country.isoCode);
@@ -385,7 +479,7 @@ const ProfilePage: React.FC = () => {
               // Set billing country/state ISO codes
               if (billing.country) {
                 const country = allCountries.find(
-                  (c) => c.name === billing.country
+                  (c) => c.name === billing.country,
                 );
                 if (country) {
                   setBillingCountryIso(country.isoCode);
@@ -419,7 +513,7 @@ const ProfilePage: React.FC = () => {
               // Set shipping country/state ISO codes
               if (shipping.country) {
                 const country = allCountries.find(
-                  (c) => c.name === shipping.country
+                  (c) => c.name === shipping.country,
                 );
                 if (country) {
                   setShippingCountryIso(country.isoCode);
@@ -557,10 +651,11 @@ const ProfilePage: React.FC = () => {
                     }
                     setActiveSection(item.label);
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-b-0 ${activeSection === item.label
+                  className={`w-full flex items-center px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-b-0 ${
+                    activeSection === item.label
                       ? "bg-[#328F94] text-white "
                       : "text-gray-700"
-                    }`}
+                  }`}
                 >
                   <item.icon className="w-5 h-5 mr-3" />
                   <span className="text-sm font-medium">{item.label}</span>
@@ -627,7 +722,7 @@ const ProfilePage: React.FC = () => {
                         ) : (
                           getInitials(
                             profileData.firstName,
-                            profileData.lastName
+                            profileData.lastName,
                           )
                         )}
                       </div>
@@ -679,7 +774,7 @@ const ProfilePage: React.FC = () => {
                           {profileData.profileImage ? (
                             <img
                               src={URL.createObjectURL(
-                                profileData.profileImage
+                                profileData.profileImage,
                               )}
                               alt="Profile"
                               className="w-full h-full object-cover"
@@ -693,7 +788,7 @@ const ProfilePage: React.FC = () => {
                           ) : (
                             getInitials(
                               profileData.firstName,
-                              profileData.lastName
+                              profileData.lastName,
                             )
                           )}
                         </div>
@@ -774,7 +869,7 @@ const ProfilePage: React.FC = () => {
                             onChange={(e) =>
                               handleInputChange(
                                 "secondaryEmail",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             className="w-full"
@@ -806,7 +901,7 @@ const ProfilePage: React.FC = () => {
                               value={profileData.country}
                               onChange={(e) => {
                                 const selectedCountry = allCountries.find(
-                                  (c) => c.name === e.target.value
+                                  (c) => c.name === e.target.value,
                                 );
                                 if (selectedCountry) {
                                   setProfileCountryIso(selectedCountry.isoCode);
@@ -873,7 +968,7 @@ const ProfilePage: React.FC = () => {
                                 value={profileData.state}
                                 onChange={(e) => {
                                   const selectedState = profileStates.find(
-                                    (s) => s.name === e.target.value
+                                    (s) => s.name === e.target.value,
                                   );
                                   if (selectedState) {
                                     setProfileStateIso(selectedState.isoCode);
@@ -1010,14 +1105,14 @@ const ProfilePage: React.FC = () => {
                               value={billingAddress.country}
                               onChange={(e) => {
                                 const selectedCountry = allCountries.find(
-                                  (c) => c.name === e.target.value
+                                  (c) => c.name === e.target.value,
                                 );
                                 if (selectedCountry) {
                                   setBillingCountryIso(selectedCountry.isoCode);
                                   setBillingStateIso("");
                                   handleBillingChange(
                                     "country",
-                                    e.target.value
+                                    e.target.value,
                                   );
                                   handleBillingChange("regionState", "");
                                   handleBillingChange("city", "");
@@ -1048,13 +1143,13 @@ const ProfilePage: React.FC = () => {
                               value={billingAddress.regionState}
                               onChange={(e) => {
                                 const selectedState = billingStates.find(
-                                  (s) => s.name === e.target.value
+                                  (s) => s.name === e.target.value,
                                 );
                                 if (selectedState) {
                                   setBillingStateIso(selectedState.isoCode);
                                   handleBillingChange(
                                     "regionState",
-                                    e.target.value
+                                    e.target.value,
                                   );
                                   handleBillingChange("city", "");
                                 }
@@ -1151,12 +1246,21 @@ const ProfilePage: React.FC = () => {
                           />
                         </div>
 
-                        <Button
-                          onClick={handleSaveAddresses}
-                          className="bg-[#328F94] hover:text-[#328F94] hover:border-[#328F94] border-2 text-white px-8 py-3 rounded-md font-medium transition-colors"
-                        >
-                          Save Changes
-                        </Button>
+                        <div className="flex justify-between gap-4">
+                          <Button
+                            onClick={handleSaveAddresses}
+                            className="bg-[#328F94] hover:text-[#328F94] hover:border-[#328F94] border-2 text-white px-8 py-3 rounded-md font-medium transition-colors"
+                          >
+                            Save Changes
+                          </Button>
+                          <Button
+                            onClick={handleClearBillingAddress}
+                            variant="outline"
+                            className="text-red-500 hover:bg-red-50 px-4 py-3 rounded-md font-medium transition-colors"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Shipping Address */}
@@ -1184,7 +1288,7 @@ const ProfilePage: React.FC = () => {
                               onChange={(e) =>
                                 handleShippingChange(
                                   "firstName",
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               placeholder="Kevin"
@@ -1218,7 +1322,7 @@ const ProfilePage: React.FC = () => {
                             onChange={(e) =>
                               handleShippingChange(
                                 "companyName",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             placeholder="Your Company Name"
@@ -1250,16 +1354,16 @@ const ProfilePage: React.FC = () => {
                               value={shippingAddress.country}
                               onChange={(e) => {
                                 const selectedCountry = allCountries.find(
-                                  (c) => c.name === e.target.value
+                                  (c) => c.name === e.target.value,
                                 );
                                 if (selectedCountry) {
                                   setShippingCountryIso(
-                                    selectedCountry.isoCode
+                                    selectedCountry.isoCode,
                                   );
                                   setShippingStateIso("");
                                   handleShippingChange(
                                     "country",
-                                    e.target.value
+                                    e.target.value,
                                   );
                                   handleShippingChange("regionState", "");
                                   handleShippingChange("city", "");
@@ -1290,13 +1394,13 @@ const ProfilePage: React.FC = () => {
                               value={shippingAddress.regionState}
                               onChange={(e) => {
                                 const selectedState = shippingStates.find(
-                                  (s) => s.name === e.target.value
+                                  (s) => s.name === e.target.value,
                                 );
                                 if (selectedState) {
                                   setShippingStateIso(selectedState.isoCode);
                                   handleShippingChange(
                                     "regionState",
-                                    e.target.value
+                                    e.target.value,
                                   );
                                   handleShippingChange("city", "");
                                 }
@@ -1388,7 +1492,7 @@ const ProfilePage: React.FC = () => {
                             onChange={(e) =>
                               handleShippingChange(
                                 "phoneNumber",
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             placeholder="+91-202-555-0118"
@@ -1396,12 +1500,21 @@ const ProfilePage: React.FC = () => {
                           />
                         </div>
 
-                        <Button
-                          onClick={handleSaveAddresses}
-                          className="bg-[#328F94] hover:text-[#328F94] hover:border-[#328F94] border-2 text-white px-8 py-3 rounded-md font-medium transition-colors"
-                        >
-                          Save Changes
-                        </Button>
+                        <div className="flex justify-between gap-4">
+                          <Button
+                            onClick={handleSaveAddresses}
+                            className="bg-[#328F94] hover:text-[#328F94] hover:border-[#328F94] border-2 text-white px-8 py-3 rounded-md font-medium transition-colors"
+                          >
+                            Save Changes
+                          </Button>
+                          <Button
+                            onClick={handleClearShippingAddress}
+                            variant="outline"
+                            className="text-red-500 hover:bg-red-50 px-4 py-3 rounded-md font-medium transition-colors"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
