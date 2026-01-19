@@ -389,7 +389,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               activeFilters.earring_category.includes("Studs") ||
               activeFilters.studs_diamond_shape.length > 0
             ) {
-              earringTypes.add("studs");
+              earringTypes.add("stud's");
             }
             if (
               activeFilters.earring_category.includes("Hoops / Huggies") ||
@@ -1170,7 +1170,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     // Helpers for Earrings mapping (do not change UI, just wire to API fields)
     const mapEarringGroupToCategory1 = (group: string) => {
       const g = group.toLowerCase();
-      if (g.includes("studs")) return "studs";
+      if (g.includes("studs")) return "stud's";
       if (g.includes("hoops")) return "hoops/huggies";
       if (g.includes("fashion")) return "fashion earrings";
       if (g.includes("drop")) return "drop earrings";
@@ -1342,7 +1342,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         activeFilters.studs_diamond_shape.length > 0 ||
         (groupTitle === "Studs" && checked)
       ) {
-        category1Array.add("studs");
+        category1Array.add("stud's");
       }
       if (
         activeFilters.hoops_diamond_shape.length > 0 ||
@@ -1493,7 +1493,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
       // Check each earring subcategory to see if it has any selected shapes
       if (activeFilters.studs_diamond_shape.length > 0) {
-        category1Array.add("studs");
+        category1Array.add("stud's");
       }
       if (activeFilters.hoops_diamond_shape.length > 0) {
         category1Array.add("hoops/huggies");
