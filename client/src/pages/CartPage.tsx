@@ -231,7 +231,7 @@ const CartPage = () => {
   const promoDiscount = appliedPromo?.discountAmount || 0;
   const referralDiscount = appliedReferral?.discountAmount || 0;
   const totalDiscount = promoDiscount + referralDiscount;
-  const tax = Math.round((subtotal - totalDiscount) * 0.18); // 18% GST
+  const tax = Math.round((subtotal - totalDiscount) * 0.03); // 3% GST
   const total = subtotal - totalDiscount + tax;
 
   return (

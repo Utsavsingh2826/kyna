@@ -990,7 +990,7 @@ const CheckoutPage = () => {
     try {
       // Calculate totals
       const subtotal = cart.totalAmount;
-      const gst = subtotal * 0.18; // 18% GST
+      const gst = subtotal * 0.03; // 3% GST
       const shippingCharge = subtotal > 5000 ? 0 : 200; // Free shipping above ₹5000
       const finalAmount = subtotal + gst + shippingCharge;
 
@@ -1701,16 +1701,16 @@ const CheckoutPage = () => {
                   <div
                     key={method.id}
                     className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${selectedPaymentMethod === method.id
-                        ? "border-[#3AAFA9] bg-[#3AAFA9]/5"
-                        : "border-gray-200 hover:border-gray-300"
+                      ? "border-[#3AAFA9] bg-[#3AAFA9]/5"
+                      : "border-gray-200 hover:border-gray-300"
                       }`}
                     onClick={() => handlePaymentMethodChange(method.id)}
                   >
                     <div className="flex items-center space-x-3">
                       <div
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === method.id
-                            ? "border-[#3AAFA9] bg-[#3AAFA9]"
-                            : "border-gray-300"
+                          ? "border-[#3AAFA9] bg-[#3AAFA9]"
+                          : "border-gray-300"
                           }`}
                       >
                         {selectedPaymentMethod === method.id && (
