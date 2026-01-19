@@ -2214,7 +2214,7 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div
-                  className={`flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden transition-opacity duration-300 ${
+                  className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${
                     isUpdating ? "opacity-50" : "opacity-100"
                   }`}
                 >
