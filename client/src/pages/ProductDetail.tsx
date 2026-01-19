@@ -1473,9 +1473,14 @@ const ProductDetail = () => {
     switch (selectedMetalType) {
       case "GOLD":
         // Show only kt values for gold (filter out 950 and 925)
-        return productData.goldKarats.filter((karat) =>
-          normalizeKarat(karat).includes("kt"),
-        );
+        // Sort in descending order (18kt, 14kt, 9kt)
+        return productData.goldKarats
+          .filter((karat) => normalizeKarat(karat).includes("kt"))
+          .sort((a, b) => {
+            const numA = parseInt(normalizeKarat(a));
+            const numB = parseInt(normalizeKarat(b));
+            return numB - numA; // Descending order
+          });
       case "PLATINUM":
         // Show only 950 for platinum
         return productData.goldKarats.filter(
@@ -2569,37 +2574,46 @@ const ProductDetail = () => {
                   )}
 
                 <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
-                  {productData.diamondSize.length > 0 && (
-                    <div>
-                      <label className="block text-xs mb-2">Diamond Size</label>
-                      <Select
-                        value={selectedDiamondSize}
-                        onValueChange={(value) => {
-                          setSelectedDiamondSize(value);
-                        }}
-                      >
-                        <SelectTrigger className="text-sm border-neutral-300">
-                          <SelectValue placeholder="Select" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          {productData.diamondSize
-                            .filter((size) => {
-                              // For Natural Diamond, only show sizes <= 1 carat
-                              if (selectedDiamondOrigin === "Natural Diamond") {
-                                return parseFloat(size) <= 1;
-                              }
-                              // For Lab Grown Diamond, show all sizes
-                              return true;
-                            })
-                            .map((size, index) => (
-                              <SelectItem key={index} value={size}>
-                                {parseFloat(size).toFixed(2)} Carat
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  {productData.diamondSize.length > 0 &&
+                    !(
+                      productData.diamondSize.length === 1 &&
+                      productData.diamondSize[0] === "0"
+                    ) && (
+                      <div>
+                        <label className="block text-xs mb-2">
+                          Diamond Size
+                        </label>
+                        <Select
+                          value={selectedDiamondSize}
+                          onValueChange={(value) => {
+                            setSelectedDiamondSize(value);
+                          }}
+                        >
+                          <SelectTrigger className="text-sm border-neutral-300">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            {productData.diamondSize
+                              .filter((size) => {
+                                // For Natural Diamond, only show sizes <= 1 carat
+                                if (
+                                  selectedDiamondOrigin === "Natural Diamond"
+                                ) {
+                                  return parseFloat(size) <= 1;
+                                }
+                                // For Lab Grown Diamond, show all sizes
+                                return true;
+                              })
+                              .sort((a, b) => parseFloat(a) - parseFloat(b))
+                              .map((size, index) => (
+                                <SelectItem key={index} value={size}>
+                                  {parseFloat(size).toFixed(2)} Carat
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   {(() => {
                     // Get available clarity options based on diamond type and metal type
                     const getAvailableClarityOptions = () => {
