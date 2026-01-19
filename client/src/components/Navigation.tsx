@@ -25,7 +25,7 @@ const Navigation: React.FC = () => {
   const rightLinks = [
     ["/rings?ring_category=Mens+Rings", "Men's Rings"],
     [
-      "/earrings?category1=studs&centerStoneShape=&category2=&category3=men%27s+stud",
+      "/earrings?category1=stud%27s&centerStoneShape=&category2=&category3=men%27s+stud",
       "Men's Studs",
     ],
     [
@@ -89,7 +89,7 @@ const Navigation: React.FC = () => {
                 <div className="py-2">
                   {[
                     [
-                      "?category1=studs&centerStoneShape=round&category2=&category3=",
+                      "?category1=stud%27s&centerStoneShape=round&category2=&category3=",
                       "Studs",
                     ],
                     [

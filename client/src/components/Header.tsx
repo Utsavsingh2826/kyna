@@ -419,7 +419,7 @@ function getLinkForItem(sectionTitle: string, itemLabel: string): string {
     case "Earrings":
       switch (itemLabel) {
         case "Studs":
-          return "/earrings?category1=studs&centerStoneShape=&category2=&category3=";
+          return "/earrings?category1=stud%27s&centerStoneShape=&category2=&category3=";
         case "Hoops / Huggies":
           return "/earrings?category1=hoops/huggies&centerStoneShape=&category2=&category3=";
         case "Halo Earrings":
