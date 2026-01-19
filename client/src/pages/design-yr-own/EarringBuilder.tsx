@@ -16,7 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Progress } from "@/components/ui/progress";
-import { X, Edit, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  X,
+  Edit,
+  Upload,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+} from "lucide-react";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 const steps = [
   { number: 1, title: "Inspiration Upload", active: true },
@@ -215,7 +222,7 @@ export default function EarringBuilder() {
     diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
     diamondSize: "0.5 Carat",
-    diamondColor: "D-FL",
+    diamondColor: "D-IF",
     priority: "normal",
     metalType: "Gold",
     metalColor: "Yellow Gold",
@@ -268,6 +275,24 @@ export default function EarringBuilder() {
       console.log("🔄 Updated userId in formData:", currentUserId);
     }
   }, [authUser, getUserId, formData.userId]);
+
+  // Check serviceability when zipCode is loaded from user info
+  useEffect(() => {
+    if (
+      formData.zipCode &&
+      formData.zipCode.length === 6 &&
+      /^\d{6}$/.test(formData.zipCode)
+    ) {
+      // Only check if we haven't already checked this zipCode
+      if (serviceabilityStatus === "idle") {
+        console.log(
+          "🔍 Auto-checking serviceability for loaded zipCode:",
+          formData.zipCode,
+        );
+        checkServiceability(formData.zipCode);
+      }
+    }
+  }, [formData.zipCode]);
 
   // Sync country selection with formData
   useEffect(() => {
@@ -330,6 +355,47 @@ export default function EarringBuilder() {
       setFormData((prev) => ({ ...prev, metalColor: "White Gold" }));
     }
   }, [formData.metalType]);
+
+  // Function to get available color/clarity combinations based on diamond origin and metal
+  const getAvailableColorClarity = () => {
+    const { diamondOrigin, metalType } = formData;
+    const diamondType =
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
+
+    // Define all possible options with their display names
+    const allOptions = ["D-IF", "EF-VVS", "EF-VS", "GH-VS", "GH-SI"];
+
+    if (diamondType === "Natural") {
+      // Natural diamonds: All clarities available for Gold and Platinum
+      if (metalType === "Gold" || metalType === "Platinum") {
+        return allOptions;
+      }
+      // Natural diamonds not available in Silver
+      return [];
+    } else if (diamondType === "Lab Grown") {
+      // Lab Grown diamonds
+      if (metalType === "Gold" || metalType === "Platinum") {
+        // Only D-IF, EF-VVS, EF-VS available for Gold and Platinum
+        return ["D-IF", "EF-VVS", "EF-VS"];
+      } else if (metalType === "Silver") {
+        // Only EF-VVS and EF-VS available for Silver
+        return ["EF-VVS", "EF-VS"];
+      }
+    }
+
+    return allOptions;
+  };
+
+  // Reset color/clarity when metal or diamond origin changes if current selection is invalid
+  useEffect(() => {
+    const availableOptions = getAvailableColorClarity();
+    const currentIsValid = availableOptions.includes(formData.diamondColor);
+
+    if (!currentIsValid && formData.diamondColor !== "Center Stone") {
+      const defaultClarity = availableOptions[0] || "D-IF";
+      setFormData((prev) => ({ ...prev, diamondColor: defaultClarity }));
+    }
+  }, [formData.metalType, formData.diamondOrigin]);
 
   // Handle zip code change with real-time serviceability check
   const handleZipCodeChange = async (value: string) => {
@@ -918,7 +984,7 @@ export default function EarringBuilder() {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white">
                       <SelectItem value="0.5 Carat">0.5 Carat</SelectItem>
                       <SelectItem value="1 Carat">1 Carat</SelectItem>
                       <SelectItem value="1.5 Carat">1.5 Carat</SelectItem>
@@ -939,16 +1005,75 @@ export default function EarringBuilder() {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="D-FL">D-FL</SelectItem>
-                      <SelectItem value="E-VVS1">E-VVS1</SelectItem>
-                      <SelectItem value="F-VVS2">F-VVS2</SelectItem>
+                    <SelectContent className="bg-white">
+                      {getAvailableColorClarity().map((clarity) => (
+                        <SelectItem key={clarity} value={clarity}>
+                          {clarity}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {getAvailableColorClarity().length === 0 &&
+                    formData.diamondOrigin === "Natural Diamond" &&
+                    formData.metalType === "Silver" && (
+                      <p className="text-xs text-red-500 mt-1">
+                        Natural diamonds are not available in Silver. Please
+                        select Gold or Platinum.
+                      </p>
+                    )}
+                  {formData.diamondOrigin === "Lab Grown Diamond" &&
+                    formData.metalType === "Silver" && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        Only EF-VVS and EF-VS clarities available for Lab Grown
+                        diamonds in Silver.
+                      </p>
+                    )}
                 </div>
               </div>
             </div>
 
+            {/* Diamond Origin */}
+            <div>
+              <label className="text-sm text-muted-foreground">
+                Diamond Origin <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Natural Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-full border-2 transition-all ${
+                    formData.diamondOrigin === "Natural Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Natural Diamond</span>
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Lab Grown Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-full border-2 transition-all ${
+                    formData.diamondOrigin === "Lab Grown Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Lab Grown Diamond</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        rightColumn={
+          <div className="space-y-6">
             {/* Metal Type and Karat - 2 Column Layout */}
             <div className="grid grid-cols-2 gap-4">
               {/* Metal Type */}
@@ -1099,48 +1224,6 @@ export default function EarringBuilder() {
                 </div>
               </div>
             </div>
-          </div>
-        }
-        rightColumn={
-          <div className="space-y-6">
-            {/* Diamond Origin */}
-            <div>
-              <label className="text-sm text-muted-foreground">
-                Diamond Origin <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <button
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      diamondOrigin: "Natural Diamond",
-                    })
-                  }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
-                    formData.diamondOrigin === "Natural Diamond"
-                      ? "border-[#328F94] bg-[#328F94]/5"
-                      : "border-gray-200 hover:border-[#328F94]/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">Natural Diamond</span>
-                </button>
-                <button
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      diamondOrigin: "Lab Grown Diamond",
-                    })
-                  }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
-                    formData.diamondOrigin === "Lab Grown Diamond"
-                      ? "border-[#328F94] bg-[#328F94]/5"
-                      : "border-gray-200 hover:border-[#328F94]/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">Lab Grown Diamond</span>
-                </button>
-              </div>
-            </div>
 
             {/* Metal Color */}
             <div>
@@ -1284,7 +1367,12 @@ export default function EarringBuilder() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-medium">Selected Images</h3>
-                  <Button variant="link" size="sm" className="text-[#328F94]">
+                  <Button
+                    variant="link"
+                    onClick={() => setCurrentStep(1)}
+                    size="sm"
+                    className="text-[#328F94]"
+                  >
                     Change Image
                   </Button>
                 </div>

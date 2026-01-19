@@ -13,7 +13,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Progress } from "@/components/ui/progress";
-import { X, Edit, Upload, ChevronRight, ChevronLeft } from "lucide-react";
+import {
+  X,
+  Edit,
+  Upload,
+  ChevronRight,
+  ChevronLeft,
+  Trash2,
+} from "lucide-react";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
@@ -233,7 +240,7 @@ export default function RingBuilder() {
     description: "",
     diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
-    diamondSize: "0.5 Carat",
+    diamondSize: "0.1 Carat",
     diamondColor: "D-FL",
     diamondClarity: "Center Stone",
     metal: "Gold",
@@ -299,6 +306,82 @@ export default function RingBuilder() {
       console.log("🔄 Updated userId in formData:", currentUserId);
     }
   }, [authUser, getUserId, formData.userId]);
+
+  // Function to get available diamond sizes based on diamond origin and metal
+  const getAvailableDiamondSizes = () => {
+    const diamondType =
+      formData.diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
+    const { metal } = formData;
+
+    // Define all possible necklace size options (same as pendant)
+    const allSizes = [
+      "0.1 Carat",
+      "0.15 Carat",
+      "0.2 Carat",
+      "0.25 Carat",
+      "0.3 Carat",
+      "0.5 Carat",
+      "0.7 Carat",
+      "1 Carat",
+      "1.3 Carat",
+      "1.5 Carat",
+      "1.8 Carat",
+      "2 Carat",
+      "3 Carat",
+      "4 Carat",
+      "5 Carat",
+    ];
+
+    if (diamondType === "Natural") {
+      // Natural diamonds: Maximum 1 carat
+      return allSizes.filter(
+        (size) =>
+          size === "0.1 Carat" ||
+          size === "0.15 Carat" ||
+          size === "0.2 Carat" ||
+          size === "0.25 Carat" ||
+          size === "0.3 Carat" ||
+          size === "0.5 Carat" ||
+          size === "0.7 Carat" ||
+          size === "1 Carat",
+      );
+    } else if (diamondType === "Lab Grown") {
+      if (metal === "Silver") {
+        // Lab Grown + Silver: Maximum 2 carat
+        return allSizes.filter(
+          (size) =>
+            size === "0.1 Carat" ||
+            size === "0.15 Carat" ||
+            size === "0.2 Carat" ||
+            size === "0.25 Carat" ||
+            size === "0.3 Carat" ||
+            size === "0.5 Carat" ||
+            size === "0.7 Carat" ||
+            size === "1 Carat" ||
+            size === "1.3 Carat" ||
+            size === "1.5 Carat" ||
+            size === "1.8 Carat" ||
+            size === "2 Carat",
+        );
+      } else {
+        // Lab Grown + Gold/Platinum: Up to 5 carat
+        return allSizes;
+      }
+    }
+
+    return allSizes;
+  };
+
+  // Reset diamond size when metal or diamond origin changes if current selection is invalid
+  useEffect(() => {
+    const availableSizes = getAvailableDiamondSizes();
+    const currentSizeValid = availableSizes.includes(formData.diamondSize);
+
+    if (!currentSizeValid) {
+      const defaultSize = availableSizes[0] || "0.1 Carat";
+      setFormData((prev) => ({ ...prev, diamondSize: defaultSize }));
+    }
+  }, [formData.metal, formData.diamondOrigin]);
 
   // Sync country selection with formData
   useEffect(() => {
@@ -367,6 +450,24 @@ export default function RingBuilder() {
       zipCode: authUser?.zipCode,
     });
   }, [authUser]);
+
+  // Check serviceability when zipCode is loaded from user info
+  useEffect(() => {
+    if (
+      formData.zipCode &&
+      formData.zipCode.length === 6 &&
+      /^\d{6}$/.test(formData.zipCode)
+    ) {
+      // Only check if we haven't already checked this zipCode
+      if (serviceabilityStatus === "idle") {
+        console.log(
+          "🔍 Auto-checking serviceability for loaded zipCode:",
+          formData.zipCode,
+        );
+        checkServiceability(formData.zipCode);
+      }
+    }
+  }, [formData.zipCode]);
 
   // Auto-set metal color to White Gold for Platinum and Silver
   useEffect(() => {
@@ -1047,9 +1148,11 @@ export default function RingBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="0.5 Carat">0.5 Carat</SelectItem>
-                      <SelectItem value="1 Carat">1 Carat</SelectItem>
-                      <SelectItem value="1.5 Carat">1.5 Carat</SelectItem>
+                      {getAvailableDiamondSizes().map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {size}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1077,6 +1180,48 @@ export default function RingBuilder() {
               </div>
             </div>
 
+            {/* Diamond Origin */}
+            <div>
+              <label className="text-sm text-muted-foreground">
+                Diamond Origin <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3 mt-2">
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Natural Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-2xl border-2 transition-all ${
+                    formData.diamondOrigin === "Natural Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Natural Diamond</span>
+                </button>
+                <button
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      diamondOrigin: "Lab Grown Diamond",
+                    })
+                  }
+                  className={`p-2 rounded-2xl border-2 transition-all ${
+                    formData.diamondOrigin === "Lab Grown Diamond"
+                      ? "border-[#328F94] bg-[#328F94]/5"
+                      : "border-gray-200 hover:border-[#328F94]/50"
+                  }`}
+                >
+                  <span className="text-sm font-medium">Lab Grown Diamond</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        rightColumn={
+          <div className="space-y-6">
             {/* Metal Type and Karat - 2 Column Layout */}
             <div className="grid grid-cols-2 gap-4">
               {/* Metal Type */}
@@ -1227,48 +1372,6 @@ export default function RingBuilder() {
                 </div>
               </div>
             </div>
-          </div>
-        }
-        rightColumn={
-          <div className="space-y-6">
-            {/* Diamond Origin */}
-            <div>
-              <label className="text-sm text-muted-foreground">
-                Diamond Origin <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <button
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      diamondOrigin: "Natural Diamond",
-                    })
-                  }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
-                    formData.diamondOrigin === "Natural Diamond"
-                      ? "border-[#328F94] bg-[#328F94]/5"
-                      : "border-gray-200 hover:border-[#328F94]/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">Natural Diamond</span>
-                </button>
-                <button
-                  onClick={() =>
-                    setFormData({
-                      ...formData,
-                      diamondOrigin: "Lab Grown Diamond",
-                    })
-                  }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
-                    formData.diamondOrigin === "Lab Grown Diamond"
-                      ? "border-[#328F94] bg-[#328F94]/5"
-                      : "border-gray-200 hover:border-[#328F94]/50"
-                  }`}
-                >
-                  <span className="text-sm font-medium">Lab Grown Diamond</span>
-                </button>
-              </div>
-            </div>
 
             {/* Metal Color */}
             <div>
@@ -1382,10 +1485,17 @@ export default function RingBuilder() {
 
                 {/* Current Engraving Display */}
                 {formData.engraving && (
-                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-between">
                     <p className="text-xs text-green-700">
                       <strong>Current Engraving:</strong> "{formData.engraving}"
                     </p>
+                    <button
+                      onClick={handleRemoveEngraving}
+                      className="text-red-600 hover:text-red-700 p-1 hover:bg-red-50 rounded transition-colors"
+                      title="Remove Engraving"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </div>
@@ -1902,6 +2012,32 @@ export default function RingBuilder() {
 
   const handleCloseEngraving = () => {
     setShowEngravingPopup(false);
+  };
+
+  const handleRemoveEngraving = () => {
+    // Clear engraving text
+    setFormData((prev) => ({ ...prev, engraving: "" }));
+
+    // Reset engraving done flag
+    setEngravingDone(false);
+
+    // Remove engraving blobs and their URLs
+    engravingBlobs.forEach(({ url }) => {
+      URL.revokeObjectURL(url);
+    });
+    setEngravingBlobs([]);
+
+    // Remove engraving images from uploaded images
+    const engravingUrls = engravingBlobs.map(({ url }) => url);
+    setUploadedImages((prev) =>
+      prev.filter((url) => !engravingUrls.includes(url)),
+    );
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((url) => !engravingUrls.includes(url)),
+    }));
+
+    toast.success("Engraving removed successfully");
   };
 
   const handleEngravingSaved = async (

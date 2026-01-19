@@ -511,8 +511,13 @@ export default function RingBuilder() {
     } else if (diamondType === "Lab Grown") {
       // Lab Grown diamonds
       if (metal === "Gold" || metal === "Platinum") {
-        // All options available for Gold and Platinum
-        return allOptions;
+        // Only DIF, EFVVS, EFVS available for Gold and Platinum
+        return allOptions.filter(
+          (opt) =>
+            opt.value === "DIF" ||
+            opt.value === "EFVVS" ||
+            opt.value === "EFVS",
+        );
       } else if (metal === "Silver") {
         // Only EFVVS and EFVS available for Silver
         return allOptions.filter(
