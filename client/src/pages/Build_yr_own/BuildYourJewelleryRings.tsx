@@ -224,40 +224,26 @@ const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
 // Hardcoded category mappings
 const categoryMappings: { [key: string]: string } = {
   CLASSIC: "CLASSIC",
-  "CHANNEL SET": "CHANNEL SET",
-  "DOUBLE ROW": "DOUBLE ROW",
-  LUXURY: "LUXURY",
-  SPORT: "SPORT",
   "NATURE INSPIRED": "NATURE INSPIRED",
-  TIMELESS: "TIMELESS",
-  "EAST WEST SETTING": "EAST WEST SETTING",
-  "ART DECO": "ART DECO",
   "FLORAL INSPIRED": "FLORAL INSPIRED",
   VINTAGE: "VINTAGE",
+  "ART DECO": "ART DECO",
+  "EAST WEST SETTING": "EAST WEST SETTING",
+  "SINGLE HALO": "SINGLE HALO",
+  "HIDDEN HALO": "HIDDEN HALO",
+  BLOOM: "BLOOM",
+  "MULTI STONE": "MULTI STONE",
+  "3 STONE": "3 STONE",
+  "7 STONE": "7 STONE",
+  "2 ROW": "2 ROW",
+  "WIDE SHANK": "WIDE SHANK",
+  PETITE: "PETITE",
+  CLUSTER: "CLUSTER",
+  TIMELESS: "TIMELESS",
 };
 
 // Initial hardcoded structure that will be populated with API data
 const getInitialStyleAndDesign = () => [
-  {
-    name: "CHANNEL SET",
-    substyles: [] as SubStyle[],
-    isLoaded: false,
-  },
-  {
-    name: "DOUBLE ROW",
-    substyles: [] as SubStyle[],
-    isLoaded: false,
-  },
-  {
-    name: "LUXURY",
-    substyles: [] as SubStyle[],
-    isLoaded: false,
-  },
-  {
-    name: "SPORT",
-    substyles: [] as SubStyle[],
-    isLoaded: false,
-  },
   {
     name: "CLASSIC",
     substyles: [] as SubStyle[],
@@ -265,21 +251,6 @@ const getInitialStyleAndDesign = () => [
   },
   {
     name: "NATURE INSPIRED",
-    substyles: [] as SubStyle[],
-    isLoaded: false,
-  },
-  {
-    name: "TIMELESS",
-    substyles: [] as SubStyle[],
-    isLoaded: false,
-  },
-  {
-    name: "EAST WEST SETTING",
-    substyles: [] as SubStyle[],
-    isLoaded: false,
-  },
-  {
-    name: "ART DECO",
     substyles: [] as SubStyle[],
     isLoaded: false,
   },
@@ -293,6 +264,71 @@ const getInitialStyleAndDesign = () => [
     substyles: [] as SubStyle[],
     isLoaded: false,
   },
+  {
+    name: "ART DECO",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "EAST WEST SETTING",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "SINGLE HALO",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "HIDDEN HALO",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "BLOOM",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "MULTI STONE",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "3 STONE",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "7 STONE",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "2 ROW",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "WIDE SHANK",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "PETITE",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "CLUSTER",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
+  {
+    name: "TIMELESS",
+    substyles: [] as SubStyle[],
+    isLoaded: false,
+  },
 ];
 
 const diamondShapes = {
@@ -301,7 +337,7 @@ const diamondShapes = {
     { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.png" },
     { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.png" },
     { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.png" },
-    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.png" },
+    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
     { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.png" },
     { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.png" },
     { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.png" },
