@@ -87,11 +87,16 @@ const EngravingPage: React.FC<EngraveProps> = ({
         const fontNames: string[] = [];
 
         for (const fontFile of fontFiles) {
-          const fontName = fontFile
-            .replace(".ttf", "")
-            .replace(/-Regular|-Bold|-Italic|-BoldItalic/g, "")
-            .replace(/([A-Z])/g, " $1")
-            .trim();
+          const fontMap: Record<string, string> = {
+            "Arsenal-Regular.ttf": "Arsenal",
+            "Arsenal-Bold.ttf": "Arsenal",
+            "Arsenal-Italic.ttf": "Arsenal",
+            "Arsenal-BoldItalic.ttf": "Arsenal",
+            "PinyonScript-Regular.ttf": "Pinyon Script",
+            "OpenSans-Regular.ttf": "Open Sans",
+          };
+
+          const fontName = fontMap[fontFile];
 
           // Create @font-face rule
           const fontFace = new FontFace(fontName, `url(/fonts/${fontFile})`);
