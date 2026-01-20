@@ -1789,6 +1789,14 @@ export default function RingBuilder() {
                       <div className="text-[#328F94]">{formData.ringSize}</div>
                     </div>
                   </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">
+                      Diamond Origin:
+                    </span>
+                    <span className="text-sm text-[#328F94]">
+                      {formData.diamondOrigin}
+                    </span>
+                  </div>
                   {formData.engraving && (
                     <div className="flex items-center gap-3">
                       <span className="text-sm text-muted-foreground">

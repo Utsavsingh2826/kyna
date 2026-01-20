@@ -1506,9 +1506,9 @@ export default function RingBuilder() {
                   <SelectValue placeholder="Select Size" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="5">Size 5</SelectItem>
-                  <SelectItem value="6">Size 6</SelectItem>
-                  <SelectItem value="7">Size 7</SelectItem>
+                  <SelectItem value="5">5 inches</SelectItem>
+                  <SelectItem value="6">6 inches</SelectItem>
+                  <SelectItem value="7">7 inches</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -1744,9 +1744,17 @@ export default function RingBuilder() {
                         Bangel Size:
                       </span>
                       <div className="text-[#328F94]">
-                        {formData.braceletSize}
+                        {formData.braceletSize} inches
                       </div>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">
+                      Diamond Origin:
+                    </span>
+                    <span className="text-sm text-[#328F94]">
+                      {formData.diamondOrigin}
+                    </span>
                   </div>
                   {formData.engraving && (
                     <div className="flex items-center gap-3">
