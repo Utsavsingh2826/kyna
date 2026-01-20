@@ -137,7 +137,7 @@ export default function AboutPage() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
+                <h2 className="text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight">
                   Personalized Guidance with Kyna Mentors{" "}
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -174,7 +174,7 @@ export default function AboutPage() {
               </div>
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
+                <h2 className="text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight">
                   Community Engagement with Kyna Ambassadors
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
