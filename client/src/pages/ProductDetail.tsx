@@ -2104,6 +2104,10 @@ const ProductDetail = () => {
         title={`${productData.title} - Premium Jewelry Collection`}
         description={productData.description}
         canonical={`/product/${id}`}
+        image={
+          productData?.variantImages?.[0] ||
+          "https://cdn.kynajewels.com/RENDERING%20PHOTOS/SRAER/ENG1-10/ENG1-CUS-100-WG-GP.web"
+        }
       />
       <main className="min-h-screen max-w-6xl bg-background">
         {/* Breadcrumb */}
