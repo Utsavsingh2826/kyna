@@ -243,7 +243,7 @@ export default function RingBuilder() {
     diamondColor: "D-FL",
     diamondClarity: "Center Stone",
     metal: "Gold",
-    metalColor: "Yellow Gold",
+    metalColor: "Yellow",
     goldKarat: "18KT",
     // Unified size field (backend normalization prefers `size`)
     size: "",
@@ -392,32 +392,27 @@ export default function RingBuilder() {
     }
   }, [formData.zipCode]);
 
-  // Auto-set metal color to White Gold for Platinum and Silver
+  // Auto-set metal color to White for Platinum and Silver
   useEffect(() => {
     if (formData.metal === "Platinum" || formData.metal === "Silver") {
-      setFormData((prev) => ({ ...prev, metalColor: "White Gold" }));
+      setFormData((prev) => ({ ...prev, metalColor: "White" }));
     }
   }, [formData.metal]);
 
   // Function to get available diamond sizes based on diamond origin and metal
   const getAvailableDiamondSizes = () => {
+    const { diamondOrigin, metal } = formData;
     const diamondType =
-      formData.diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
-    const { metal } = formData;
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
 
-    // Define all possible pendant size options
+    // Define all possible size options
     const allSizes = [
-      "0.1 Carat",
-      "0.15 Carat",
-      "0.2 Carat",
-      "0.25 Carat",
+      "Center Stone",
       "0.3 Carat",
       "0.5 Carat",
       "0.7 Carat",
       "1 Carat",
-      "1.3 Carat",
       "1.5 Carat",
-      "1.8 Carat",
       "2 Carat",
       "3 Carat",
       "4 Carat",
@@ -425,13 +420,10 @@ export default function RingBuilder() {
     ];
 
     if (diamondType === "Natural") {
-      // Natural diamonds: Maximum 1 carat
+      // Natural diamonds: Maximum 1 carat only
       return allSizes.filter(
         (size) =>
-          size === "0.1 Carat" ||
-          size === "0.15 Carat" ||
-          size === "0.2 Carat" ||
-          size === "0.25 Carat" ||
+          size === "Center Stone" ||
           size === "0.3 Carat" ||
           size === "0.5 Carat" ||
           size === "0.7 Carat" ||
@@ -439,20 +431,15 @@ export default function RingBuilder() {
       );
     } else if (diamondType === "Lab Grown") {
       if (metal === "Silver") {
-        // Lab Grown + Silver: Maximum 2 carat
+        // Lab Grown + Silver: Maximum 2 carat only
         return allSizes.filter(
           (size) =>
-            size === "0.1 Carat" ||
-            size === "0.15 Carat" ||
-            size === "0.2 Carat" ||
-            size === "0.25 Carat" ||
+            size === "Center Stone" ||
             size === "0.3 Carat" ||
             size === "0.5 Carat" ||
             size === "0.7 Carat" ||
             size === "1 Carat" ||
-            size === "1.3 Carat" ||
             size === "1.5 Carat" ||
-            size === "1.8 Carat" ||
             size === "2 Carat",
         );
       } else {
@@ -503,7 +490,12 @@ export default function RingBuilder() {
     const currentSizeValid = availableSizes.includes(formData.diamondSize);
 
     if (!currentSizeValid) {
-      setFormData((prev) => ({ ...prev, diamondSize: "0.5 Carat" }));
+      // Set to first available size (excluding Center Stone if possible)
+      const defaultSize =
+        availableSizes.find((size) => size !== "Center Stone") ||
+        availableSizes[0] ||
+        "0.5 Carat";
+      setFormData((prev) => ({ ...prev, diamondSize: defaultSize }));
     }
   }, [formData.metal, formData.diamondOrigin]);
 
@@ -807,7 +799,7 @@ export default function RingBuilder() {
           <div className="space-y-6">
             <div className="mb-8">
               <h1 className="text-3xl text-[#1A141F] font-bold mb-4">
-                Upload Image Or Share Link
+                Upload Image
               </h1>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>• At least 2 images should be added.</p>
@@ -819,22 +811,32 @@ export default function RingBuilder() {
             </div>
             {/* Uploaded Images */}
             <div className="flex gap-4">
-              {uploadedImages.map((image, index) => (
-                <div key={index} className="relative">
-                  <img
-                    src={image}
-                    alt={`View ${index + 1}`}
-                    className="w-24 h-24 object-cover rounded-lg border"
-                  />
-                  <button
-                    onClick={() => removeImage(index)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-xs"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                  <p className="text-xs text-center mt-1">View {index + 1}</p>
-                </div>
-              ))}
+              {uploadedImages.map((image, index) => {
+                // Check if this image is an engraving image
+                const isEngravingImage = engravingBlobs.some(
+                  ({ url }) => url === image,
+                );
+
+                return (
+                  <div key={index} className="relative">
+                    <img
+                      src={image}
+                      alt={`View ${index + 1}`}
+                      className="w-24 h-24 object-cover rounded-lg border"
+                    />
+                    {/* Hide remove button for engraving images in step 1 */}
+                    {!isEngravingImage && (
+                      <button
+                        onClick={() => removeImage(index)}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-xs"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                    <p className="text-xs text-center mt-1">View {index + 1}</p>
+                  </div>
+                );
+              })}
             </div>
 
             {/* File Upload Area with Drag and Drop */}
@@ -1481,41 +1483,41 @@ export default function RingBuilder() {
                 <SelectContent className="bg-white">
                   {formData.metal === "Gold" && (
                     <>
-                      <SelectItem value="Yellow Gold" className="gap-">
+                      <SelectItem value="Yellow" className="gap-">
                         <img
                           src="/colors/gold.png"
-                          alt="Yellow Gold"
+                          alt="Yellow"
                           className="inline-block h-6 w-6 mr-2 mb-1"
                         />
-                        Yellow Gold{" "}
+                        Yellow{" "}
                       </SelectItem>
-                      <SelectItem value="White Gold">
+                      <SelectItem value="White">
                         <img
                           src="/colors/white.png"
-                          alt="White Gold"
+                          alt="White"
                           className="inline-block h-6 w-6 mr-2 mb-1"
                         />
-                        White Gold
+                        White
                       </SelectItem>
-                      <SelectItem value="Rose Gold">
+                      <SelectItem value="Rose">
                         <img
                           src="/colors/rosegold.png"
-                          alt="Rose Gold"
+                          alt="Rose"
                           className="inline-block h-6 w-6 mr-2 mb-1"
                         />
-                        Rose Gold
+                        Rose
                       </SelectItem>
                     </>
                   )}
                   {(formData.metal === "Platinum" ||
                     formData.metal === "Silver") && (
-                    <SelectItem value="White Gold">
+                    <SelectItem value="White">
                       <img
                         src="/colors/white.png"
-                        alt="White Gold"
+                        alt="White"
                         className="inline-block h-6 w-6 mr-2 mb-1"
                       />
-                      White Gold
+                      White
                     </SelectItem>
                   )}
                 </SelectContent>
@@ -1638,7 +1640,7 @@ export default function RingBuilder() {
       {showPaymentForm && customizationData && authUser ? (
         <CustomizationPaymentForm
           customizationData={customizationData}
-          amount={1800}
+          amount={1770}
           userInfo={{
             userId: authUser.id || "",
             firstName: authUser.firstName || formData.firstName,
@@ -1966,7 +1968,7 @@ export default function RingBuilder() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Value</span>
-                    <span>₹6500</span>
+                    <span>₹1500</span>
                   </div>
                   <div className="flex justify-between">
                     <span>GST</span>
@@ -1975,7 +1977,7 @@ export default function RingBuilder() {
                   <div className="border-t pt-2 mt-2">
                     <div className="flex justify-between font-medium">
                       <span>Total</span>
-                      <span>₹1,800</span>
+                      <span>₹1,770</span>
                     </div>
                   </div>
                 </div>
@@ -2028,7 +2030,7 @@ export default function RingBuilder() {
                     Need Assistance? <span className="underline">Chat Now</span>
                   </a>{" "}
                   &nbsp;or&nbsp;
-                  <a href="tel:+918235567890" className="hover:underline">
+                  <a href="tel:+918928610682" className="hover:underline">
                     call <span className="underline">+91 8235567890</span>
                   </a>
                 </div>

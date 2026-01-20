@@ -67,7 +67,7 @@ export default function AboutPage() {
             Jewellery That Celebrates You
           </motion.h1>
           <motion.p
-            className="text-lg md:text-2xl max-w-3xl mx-auto px-4 italic font-light"
+            className="text-sm md:text-lg max-w-3xl mx-auto px-4 font-light"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
@@ -112,7 +112,7 @@ export default function AboutPage() {
                 className="rounded-3xl w-full max-w-md object-cover mb-6"
               />
               {/* Quote below image */}
-              <p className="text-center text-muted-foreground text-lg md:text-xl italic mb-2">
+              <p className="text-center text-muted-foreground text-md md:text-lg italic mb-2">
                 “We started Kyna to redefine jewelry by blending timeless
                 craftsmanship with modern elegance, creating pieces that
                 celebrate individuality and tell unique stories.”
@@ -137,7 +137,7 @@ export default function AboutPage() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
                   Personalized Guidance with Kyna Mentors{" "}
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -174,7 +174,7 @@ export default function AboutPage() {
               </div>
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
                   Community Engagement with Kyna Ambassadors
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">

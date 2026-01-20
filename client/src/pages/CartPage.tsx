@@ -299,7 +299,7 @@ const CartPage = () => {
             Need Assistance? Chat Now
           </a>{" "}
           &nbsp;or&nbsp;
-          <a href="tel:+918235567890" className="hover:underline">
+          <a href="tel:+918928610682" className="hover:underline">
             call +91 8235567890
           </a>
         </div>
