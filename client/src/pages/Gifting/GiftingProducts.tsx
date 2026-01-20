@@ -684,43 +684,19 @@ export default function JewelleryPage({
 }: JewelleryPageProps) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [minPrice, setMinPrice] = useState<number>(0);
-  const [maxPrice, setMaxPrice] = useState<number>(500000);
+  const [maxPrice, setMaxPrice] = useState<number>(25000);
   const [searchParams, setSearchParams] = useSearchParams();
   const [apiProducts, setApiProducts] = useState<APIProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [urlParamsInitialized, setUrlParamsInitialized] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
 
-  // Filter state management with backend parameter names
+  // Simplified filter state - only category and price
   const [activeFilters, setActiveFilters] = useState({
-    // Ring categories and filters
-    ring_category: [] as string[],
-    solitaire_diamond_shape: [] as string[],
-    engagement_diamond_shape: [] as string[],
-    fashion_diamond_shape: [] as string[],
-
-    // Earring categories and filters
-    earring_category: [] as string[],
-    studs_diamond_shape: [] as string[],
-    hoops_diamond_shape: [] as string[],
-    drop_diamond_shape: [] as string[],
-    fashion_earring_diamond_shape: [] as string[],
-    earring_length: [] as string[],
-
-    // Pendant categories and filters
-    pendant_category: [] as string[],
-    solitaire_pendant_diamond_shape: [] as string[],
-    fashion_pendant_diamond_shape: [] as string[],
-    halo_pendant_diamond_shape: [] as string[],
-
-    // Bracelet categories and filters
-    bracelet_category: [] as string[],
-    tennis_bracelet_diamond_shape: [] as string[],
-
-    // Common filters
-    style: [] as string[],
+    category: "",
     min_price: "0",
-    max_price: "500000",
+    max_price: "25000",
   });
 
   // Helper: build URLSearchParams from the full filters state
@@ -732,7 +708,7 @@ export default function JewelleryPage({
       } else if (key === "min_price") {
         if (value !== "0") params.set(key, value);
       } else if (key === "max_price") {
-        if (value !== "500000") params.set(key, value);
+        if (value !== "25000") params.set(key, value);
       }
     });
     return params;
@@ -775,29 +751,14 @@ export default function JewelleryPage({
   // Clear all filters
   const clearAllFilters = () => {
     setActiveFilters({
-      ring_category: [],
-      solitaire_diamond_shape: [],
-      engagement_diamond_shape: [],
-      fashion_diamond_shape: [],
-      earring_category: [],
-      studs_diamond_shape: [],
-      hoops_diamond_shape: [],
-      drop_diamond_shape: [],
-      fashion_earring_diamond_shape: [],
-      earring_length: [],
-      pendant_category: [],
-      solitaire_pendant_diamond_shape: [],
-      fashion_pendant_diamond_shape: [],
-      halo_pendant_diamond_shape: [],
-      bracelet_category: [],
-      tennis_bracelet_diamond_shape: [],
-      style: [],
+      category: "",
       min_price: "0",
-      max_price: "500000",
+      max_price: "25000",
     });
+    setSelectedCategory("");
     setSearchParams(new URLSearchParams(), { replace: true });
     setMinPrice(0);
-    setMaxPrice(500000);
+    setMaxPrice(25000);
   };
 
   // Initialize filters from URL on component mount
@@ -807,48 +768,18 @@ export default function JewelleryPage({
     if (searchParams.toString()) {
       const urlMinPrice = searchParams.get("min_price");
       const urlMaxPrice = searchParams.get("max_price");
+      const urlCategory = searchParams.get("category");
 
-      console.log(`📥 [FRONTEND] Reading URL params: min_price=${urlMinPrice}, max_price=${urlMaxPrice}`);
+      console.log(`📥 [FRONTEND] Reading URL params: min_price=${urlMinPrice}, max_price=${urlMaxPrice}, category=${urlCategory}`);
 
       if (urlMinPrice) setMinPrice(parseInt(urlMinPrice));
       if (urlMaxPrice) setMaxPrice(parseInt(urlMaxPrice));
-
-      // Parse comma-separated values from URL
-      const getFilterValues = (paramName: string) => {
-        const param = searchParams.get(paramName);
-        return param ? param.split(",") : [];
-      };
+      if (urlCategory) setSelectedCategory(urlCategory);
 
       setActiveFilters({
-        ring_category: getFilterValues("ring_category"),
-        solitaire_diamond_shape: getFilterValues("solitaire_diamond_shape"),
-        engagement_diamond_shape: getFilterValues("engagement_diamond_shape"),
-        fashion_diamond_shape: getFilterValues("fashion_diamond_shape"),
-        earring_category: getFilterValues("earring_category"),
-        studs_diamond_shape: getFilterValues("studs_diamond_shape"),
-        hoops_diamond_shape: getFilterValues("hoops_diamond_shape"),
-        drop_diamond_shape: getFilterValues("drop_diamond_shape"),
-        fashion_earring_diamond_shape: getFilterValues(
-          "fashion_earring_diamond_shape"
-        ),
-        earring_length: getFilterValues("earring_length"),
-        pendant_category: getFilterValues("pendant_category"),
-        solitaire_pendant_diamond_shape: getFilterValues(
-          "solitaire_pendant_diamond_shape"
-        ),
-        fashion_pendant_diamond_shape: getFilterValues(
-          "fashion_pendant_diamond_shape"
-        ),
-        halo_pendant_diamond_shape: getFilterValues(
-          "halo_pendant_diamond_shape"
-        ),
-        bracelet_category: getFilterValues("bracelet_category"),
-        tennis_bracelet_diamond_shape: getFilterValues(
-          "tennis_bracelet_diamond_shape"
-        ),
-        style: getFilterValues("style"),
+        category: urlCategory || "",
         min_price: urlMinPrice || "0",
-        max_price: urlMaxPrice || "500000",
+        max_price: urlMaxPrice || "25000",
       });
       setUrlParamsInitialized(true);
     } else {
@@ -900,10 +831,15 @@ export default function JewelleryPage({
       // Always send price range to ensure consistency
       url.searchParams.set("range", `${minPrice}-${maxPrice}`);
 
+      // Add category filter if selected
+      if (selectedCategory) {
+        url.searchParams.set("category", selectedCategory);
+      }
+
       url.searchParams.set("page", page.toString());
       url.searchParams.set("limit", "20");
 
-      console.log(`🔍 [FRONTEND] Fetching products with minPrice: ${minPrice}, maxPrice: ${maxPrice}`);
+      console.log(`🔍 [FRONTEND] Fetching products with minPrice: ${minPrice}, maxPrice: ${maxPrice}, category: ${selectedCategory || 'all'}`);
       console.log(`🔍 [FRONTEND] Full URL:`, url.toString());
 
       const response = await fetch(url.toString());
@@ -939,14 +875,65 @@ export default function JewelleryPage({
   };
 
   useEffect(() => {
+    let active = true;
+
     // Only fetch after URL params have been initialized to avoid race condition
     if (urlParamsInitialized) {
-      console.log(`🚀 [FRONTEND] Triggering fetch with minPrice: ${minPrice}, maxPrice: ${maxPrice}`);
-      fetchProducts(1);
+      console.log(`🚀 [FRONTEND] Triggering fetch with minPrice: ${minPrice}, maxPrice: ${maxPrice}, category: ${selectedCategory || 'all'}`);
+
+      const fetchWithGuard = async () => {
+        try {
+          if (!active) return;
+          setLoading(true);
+
+          // Build URL with price range parameters
+          const url = new URL("/api/gifting", window.location.origin);
+          url.searchParams.set("range", `${minPrice}-${maxPrice}`);
+
+          if (selectedCategory) {
+            url.searchParams.set("category", selectedCategory);
+          }
+
+          url.searchParams.set("page", "1"); // Always reset to page 1 on filter change
+          url.searchParams.set("limit", "20");
+
+          const response = await fetch(url.toString());
+          const data = await response.json();
+
+          if (!active) return;
+
+          if (data.success) {
+            let productsFromApi = [];
+            if (Array.isArray(data.products)) {
+              productsFromApi = data.products;
+            } else if (Array.isArray(data.data)) {
+              productsFromApi = data.data;
+            } else if (data.data && Array.isArray(data.data.products)) {
+              productsFromApi = data.data.products;
+            }
+            setApiProducts(productsFromApi);
+            if (data.pagination) setPagination(data.pagination);
+          } else {
+            setError("Failed to fetch products");
+            setApiProducts([]);
+          }
+        } catch (err) {
+          if (active) {
+            console.error("Error fetching products:", err);
+            setError("Failed to connect to API");
+          }
+        } finally {
+          if (active) setLoading(false);
+        }
+      };
+
+      fetchWithGuard();
     } else {
       console.log(`⏸️ [FRONTEND] Skipping fetch - waiting for URL params to initialize`);
     }
-  }, [minPrice, maxPrice, urlParamsInitialized]);
+
+    return () => { active = false; };
+  }, [minPrice, maxPrice, selectedCategory, urlParamsInitialized]);
 
   const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Math.min(Number(e.target.value), maxPrice - 1000);
@@ -985,6 +972,7 @@ export default function JewelleryPage({
     }),
   ];
 
+  // Client-side filtering logic as requested
   // Since we're filtering on the backend, use allProducts directly
   const filteredProducts = allProducts;
 
@@ -1000,17 +988,7 @@ export default function JewelleryPage({
             <h2 id="jewellery-heading" className="eng-title">
               Gifting Collection ({filteredProducts.length})
             </h2>
-            <div className="eng-actions">
-              <label>
-                Sort by:{" "}
-                <select className="eng-sort" aria-label="Sort products">
-                  <option>Best Seller</option>
-                  <option>Price: Low to High</option>
-                  <option>Price: High to Low</option>
-                  <option>Newest</option>
-                </select>
-              </label>
-            </div>
+
           </div>
 
           {/* Mobile filter bar */}
@@ -1043,9 +1021,8 @@ export default function JewelleryPage({
           </div>
 
           <section className="eng-layout mt-5">
-            {/* Desktop sidebar */}
             <aside
-              className="eng-filters"
+              className="eng-filters sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto"
               aria-label="Filters"
               role="complementary"
             >
@@ -1058,14 +1035,92 @@ export default function JewelleryPage({
                   Clear All
                 </button>
               </div>
-              <JewelleryFilterSidebar
-                minPrice={minPrice}
-                maxPrice={maxPrice}
-                onMinChange={handleMinChange}
-                onMaxChange={handleMaxChange}
-                activeFilters={activeFilters}
-                updateUrlFilters={updateUrlFilters}
-              />
+
+              {/* Price Filters */}
+              <div className="mb-6 border-b pb-6">
+                <h3 className="font-semibold text-gray-900 mb-4">Price</h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => {
+                      setMinPrice(0);
+                      setMaxPrice(25000);
+                      setActiveFilters(prev => ({ ...prev, min_price: "0", max_price: "25000" }));
+                      const params = new URLSearchParams(searchParams);
+                      params.set("min_price", "0");
+                      params.set("max_price", "25000");
+                      setSearchParams(params, { replace: true });
+                    }}
+                    className={`w-full text-left flex items-center gap-3 px-2 py-1 rounded transition-colors ${minPrice === 0 && maxPrice === 25000
+                      ? "text-teal-600 font-medium"
+                      : "text-gray-600 hover:text-teal-500"
+                      }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${minPrice === 0 && maxPrice === 25000 ? "border-teal-600" : "border-gray-300"
+                      }`}>
+                      {minPrice === 0 && maxPrice === 25000 && (
+                        <div className="w-2 h-2 rounded-full bg-teal-600" />
+                      )}
+                    </div>
+                    Under ₹25,000
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setMinPrice(25000);
+                      setMaxPrice(50000);
+                      setActiveFilters(prev => ({ ...prev, min_price: "25000", max_price: "50000" }));
+                      const params = new URLSearchParams(searchParams);
+                      params.set("min_price", "25000");
+                      params.set("max_price", "50000");
+                      setSearchParams(params, { replace: true });
+                    }}
+                    className={`w-full text-left flex items-center gap-3 px-2 py-1 rounded transition-colors ${minPrice === 25000 && maxPrice === 50000
+                      ? "text-teal-600 font-medium"
+                      : "text-gray-600 hover:text-teal-500"
+                      }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${minPrice === 25000 && maxPrice === 50000 ? "border-teal-600" : "border-gray-300"
+                      }`}>
+                      {minPrice === 25000 && maxPrice === 50000 && (
+                        <div className="w-2 h-2 rounded-full bg-teal-600" />
+                      )}
+                    </div>
+                    ₹25,000 - ₹50,000
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Filters */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900 mb-4">Category</h3>
+                {["Rings", "Earrings", "Pendants", "Bracelets"].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      const newCategory = selectedCategory === cat.toLowerCase() ? "" : cat.toLowerCase();
+                      setSelectedCategory(newCategory);
+
+                      // Update URL params
+                      const params = new URLSearchParams(searchParams);
+                      if (newCategory) {
+                        params.set("category", newCategory);
+                      } else {
+                        params.delete("category");
+                      }
+                      setSearchParams(params, { replace: true });
+                    }}
+                    className={`w-full text-left flex items-center justify-between px-2 py-2 rounded-lg transition-all ${selectedCategory === cat.toLowerCase()
+                      ? "bg-teal-50 text-teal-700 font-medium"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                  >
+                    {cat}
+                    {selectedCategory === cat.toLowerCase() && (
+                      <span className="text-teal-600">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </aside>
 
             {/* Products */}
@@ -1259,15 +1314,96 @@ export default function JewelleryPage({
                 <X size={16} />
               </button>
             </div>
-            <div style={{ padding: "8px 0" }}>
-              <JewelleryFilterSidebar
-                minPrice={minPrice}
-                maxPrice={maxPrice}
-                onMinChange={handleMinChange}
-                onMaxChange={handleMaxChange}
-                activeFilters={activeFilters}
-                updateUrlFilters={updateUrlFilters}
-              />
+            <div style={{ padding: "16px" }} className="overflow-y-auto h-full pb-20">
+
+              {/* Price Filters Mobile */}
+              <div className="mb-6 border-b border-gray-100 pb-6">
+                <h3 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide">Price</h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => {
+                      setMinPrice(0);
+                      setMaxPrice(25000);
+                      setActiveFilters(prev => ({ ...prev, min_price: "0", max_price: "25000" }));
+                      const params = new URLSearchParams(searchParams);
+                      params.set("min_price", "0");
+                      params.set("max_price", "25000");
+                      setSearchParams(params, { replace: true });
+                      setMobileFiltersOpen(false);
+                    }}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg transition-colors border ${minPrice === 0 && maxPrice === 25000
+                      ? "bg-teal-50 border-teal-200 text-teal-700 font-medium"
+                      : "bg-gray-50 border-gray-100 text-gray-600"
+                      }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center bg-white ${minPrice === 0 && maxPrice === 25000 ? "border-teal-600" : "border-gray-300"
+                      }`}>
+                      {minPrice === 0 && maxPrice === 25000 && (
+                        <div className="w-2 h-2 rounded-full bg-teal-600" />
+                      )}
+                    </div>
+                    Under ₹25,000
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setMinPrice(25000);
+                      setMaxPrice(50000);
+                      setActiveFilters(prev => ({ ...prev, min_price: "25000", max_price: "50000" }));
+                      const params = new URLSearchParams(searchParams);
+                      params.set("min_price", "25000");
+                      params.set("max_price", "50000");
+                      setSearchParams(params, { replace: true });
+                      setMobileFiltersOpen(false);
+                    }}
+                    className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg transition-colors border ${minPrice === 25000 && maxPrice === 50000
+                      ? "bg-teal-50 border-teal-200 text-teal-700 font-medium"
+                      : "bg-gray-50 border-gray-100 text-gray-600"
+                      }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center bg-white ${minPrice === 25000 && maxPrice === 50000 ? "border-teal-600" : "border-gray-300"
+                      }`}>
+                      {minPrice === 25000 && maxPrice === 50000 && (
+                        <div className="w-2 h-2 rounded-full bg-teal-600" />
+                      )}
+                    </div>
+                    ₹25,000 - ₹50,000
+                  </button>
+                </div>
+              </div>
+
+              {/* Category Filters for Mobile */}
+              <div className="space-y-3 pb-safe">
+                <h3 className="font-semibold text-gray-900 mb-4 text-sm uppercase tracking-wide">Category</h3>
+                {["Rings", "Earrings", "Pendants", "Bracelets"].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      const newCategory = selectedCategory === cat.toLowerCase() ? "" : cat.toLowerCase();
+                      setSelectedCategory(newCategory);
+
+                      // Update URL params
+                      const params = new URLSearchParams(searchParams);
+                      if (newCategory) {
+                        params.set("category", newCategory);
+                      } else {
+                        params.delete("category");
+                      }
+                      setSearchParams(params, { replace: true });
+                      setMobileFiltersOpen(false); // Close drawer after selection
+                    }}
+                    className={`w-full text-left flex items-center justify-between px-4 py-3 rounded-lg border transition-all ${selectedCategory === cat.toLowerCase()
+                      ? "bg-teal-50 border-teal-500 text-teal-700 font-medium"
+                      : "bg-white border-gray-200 text-gray-700 active:bg-gray-50"
+                      }`}
+                  >
+                    {cat}
+                    {selectedCategory === cat.toLowerCase() && (
+                      <span className="text-teal-600 font-bold">✓</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
           </aside>
         </div>

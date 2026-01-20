@@ -56,12 +56,14 @@ export const getGiftingProducts = async (req: Request, res: Response) => {
     // 1. ?minPrice=0&maxPrice=25000
     // 2. ?range=0-25000
     // 3. ?0-25000 (as a query key)
-    const { minPrice, maxPrice, range } = req.query;
+    // 4. ?category=rings (for category filtering)
+    const { minPrice, maxPrice, range, category } = req.query;
 
     console.log(`📥 [GIFTING] Received query params:`, {
       minPrice,
       maxPrice,
       range,
+      category,
       allParams: req.query
     });
 
@@ -110,10 +112,28 @@ export const getGiftingProducts = async (req: Request, res: Response) => {
 
     console.log(`🗄️ [GIFTING] Using collections: variants2, products2`);
 
-    // Build aggregation pipeline to get all products
+    // Build match criteria for category filter
+    const matchCriteria: any = {};
+    if (category && typeof category === 'string') {
+      // Normalize category (singularize for better matching)
+      let term = category.toLowerCase();
+      if (term.endsWith('s')) term = term.slice(0, -1);
+
+      // Use regex with word boundaries to avoid partial matches
+      // ie. "ring" will NOT match "earring"
+      const regexPattern = `\\b${term}s?\\b`;
+
+      matchCriteria.$or = [
+        { title: { $regex: regexPattern, $options: 'i' } },
+        { category: { $regex: regexPattern, $options: 'i' } }
+      ];
+      console.log(`🏷️ [GIFTING] Filtering by strict keyword: "${term}" (regex: ${regexPattern})`);
+    }
+
+    // Build aggregation pipeline to get products
     const pipeline: any[] = [
-      // Match all variants (no category filter for gifting - show all categories)
-      { $match: {} },
+      // Match variants by category if specified
+      { $match: matchCriteria },
 
       // Project only needed fields early
       {
