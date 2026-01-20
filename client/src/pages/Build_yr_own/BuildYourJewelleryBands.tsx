@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+import PdfPopup from "@/components/PdfPopup";
 
 // Map color codes to display info (handles both single and combination colors)
 const getColorDisplayInfo = (
@@ -241,7 +242,7 @@ const diamondShapes = {
     { name: "Princess", img: "/DIAMOND_SHAPES_WEBP/princess.png" },
     { name: "Emerald", img: "/DIAMOND_SHAPES_WEBP/emerald.png" },
     { name: "Asscher", img: "/DIAMOND_SHAPES_WEBP/asscher.png" },
-    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.png" },
+    { name: "Radiant", img: "/DIAMOND_SHAPES_WEBP/radient.jpg" },
     { name: "Cushion", img: "/DIAMOND_SHAPES_WEBP/cushion.png" },
     { name: "Oval", img: "/DIAMOND_SHAPES_WEBP/oval.png" },
     { name: "Pear", img: "/DIAMOND_SHAPES_WEBP/pear.png" },
@@ -595,6 +596,8 @@ const ProductDetail = () => {
   } | null>(null);
   const [isUploadingEngraving, setIsUploadingEngraving] = useState(false);
   const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
+
+  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -963,9 +966,14 @@ const ProductDetail = () => {
 
   const getAvailableGoldKarats = useCallback(() => {
     if (!selectedStyleData?.productDetails?.goldKarats) {
-      return ["14kt", "18kt", "22kt"]; // Fallback
+      return ["18kt", "14kt", "9kt"]; // Fallback - descending order
     }
-    return selectedStyleData.productDetails.goldKarats;
+    // Sort gold karats in descending order (18kt, 14kt, 9kt)
+    return [...selectedStyleData.productDetails.goldKarats].sort((a, b) => {
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      return numB - numA;
+    });
   }, [selectedStyleData?.productDetails?.goldKarats]);
 
   const getAvailableDiamondShapes = useCallback(() => {
@@ -985,9 +993,12 @@ const ProductDetail = () => {
 
   const getAvailableDiamondSizes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
-      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
     }
-    return selectedStyleData.productDetails.diamondSize;
+    // Sort diamond sizes in ascending order (small to big)
+    return [...selectedStyleData.productDetails.diamondSize].sort(
+      (a, b) => parseFloat(a) - parseFloat(b),
+    );
   }, [selectedStyleData?.productDetails?.diamondSize]);
 
   // Engraving upload helpers (mirror ProductDetail behavior)
@@ -1469,7 +1480,7 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div className="flex-1 w-full min-w-0">
-                  <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
+                  <div className="relative aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {is3DModel(
                       thumbnailImages[selectedImage],
                       selectedImage,
@@ -1492,7 +1503,7 @@ const ProductDetail = () => {
 
                     <Button
                       onClick={() => setSelectedStyleCategory("CHANNEL SET")}
-                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold"
+                      className="absolute hidden sm:block bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold z-10"
                     >
                       RESET
                     </Button>
@@ -1758,9 +1769,12 @@ const ProductDetail = () => {
                         </div>
                       )}
                     </button>
-                    <span className="text-[#328F94] underline text-xs md:text-sm">
+                    <button
+                      onClick={() => setIsPdfPopupOpen(true)}
+                      className="text-[#328F94] underline"
+                    >
                       Stone Guide
-                    </span>
+                    </button>
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -2084,7 +2098,8 @@ const ProductDetail = () => {
                 {/* Metal Color - Same responsive pattern as ProductDetail */}
                 <div className="w-full">
                   <h3 className="mb-3 text-sm md:text-base">
-                    Metal Color: {selectedMetalColor}
+                    Metal Color:{" "}
+                    <span className="text-[#8D8A91]">{selectedMetalColor}</span>
                   </h3>
 
                   {/* Desktop View - 7 columns, 2 rows */}
@@ -2453,6 +2468,16 @@ const ProductDetail = () => {
                           </span>
                         </div>
 
+                        {selectedGoldKarat && (
+                          <div className="flex justify-between py-2 border-b border-[#328F94]">
+                            <span className="text-muted-foreground">
+                              Metal Purity
+                            </span>
+                            <span className="font-medium">
+                              {selectedGoldKarat}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Type

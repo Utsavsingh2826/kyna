@@ -2434,15 +2434,12 @@ const ProductDetail = () => {
                           marginBottom: "16px",
                           fontSize: "14px",
                         }}
-                        className="w-fit pt-0 pb-0 pl-4 pr-4 rounded-full mb-4"
+                        className="w-fit pt-1 pb-1 pl-4 pr-4 rounded-full mb-4"
                       >
-                        <p style={{ marginBottom: "4px" }}>
-                          Pricing {productData.chainOption}
-                        </p>
-                        {/* <p style={{ marginBottom: "0" }}>
-                          <strong>Chain Length:</strong>{" "}
+                        <p style={{ marginBottom: "0" }}>
+                          Pricing {productData.chainOption} | Chain Length:{" "}
                           {productData.chainLengthInches} inches
-                        </p> */}
+                        </p>
                       </div>
                     )}
                 </div>
@@ -3170,6 +3167,34 @@ const ProductDetail = () => {
                             {productData.modelSku}
                           </span>
                         </div>
+                        {productData.category === "PENDANTS" && (
+                          <>
+                            {productData.chainOption && (
+                              <div className="flex justify-between py-2 border-b border-[#328F94]">
+                                <span className="text-muted-foreground">
+                                  With Chain
+                                </span>
+                                <span className="font-medium">
+                                  {productData.chainOption
+                                    .toLowerCase()
+                                    .includes("with chain")
+                                    ? "Yes"
+                                    : "No"}
+                                </span>
+                              </div>
+                            )}
+                            {productData.chainLengthInches && (
+                              <div className="flex justify-between py-2 border-b border-[#328F94]">
+                                <span className="text-muted-foreground">
+                                  Chain Length
+                                </span>
+                                <span className="font-medium">
+                                  {productData.chainLengthInches} inches
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        )}
                         {category === "rings" && (
                           <div className="flex justify-between py-2 border-b border-[#328F94]">
                             <span className="text-muted-foreground">
@@ -3177,6 +3202,16 @@ const ProductDetail = () => {
                             </span>
                             <span className="font-medium">
                               {selectedSize || "Not Selected"}
+                            </span>
+                          </div>
+                        )}
+                        {selectedGoldKarat && (
+                          <div className="flex justify-between py-2 border-b border-[#328F94]">
+                            <span className="text-muted-foreground">
+                              Metal Purity
+                            </span>
+                            <span className="font-medium">
+                              {getKaratDisplayLabel(selectedGoldKarat)}
                             </span>
                           </div>
                         )}

@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+import PdfPopup from "@/components/PdfPopup";
 
 // Map color codes to display info (handles both single and combination colors)
 const getColorDisplayInfo = (
@@ -147,6 +148,8 @@ interface ProductModelResponse {
   variantImages: string[];
   availableColors?: string[];
   netWeightGrams?: number;
+  chainOption?: string;
+  chainLengthInches?: number;
 }
 
 interface SubStyle {
@@ -290,6 +293,7 @@ const ProductDetail = () => {
   const [selectedMetalType, setSelectedMetalType] = useState("GOLD");
   const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
   const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
+  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -704,9 +708,12 @@ const ProductDetail = () => {
 
   const getAvailableDiamondSizes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
-      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
     }
-    return selectedStyleData.productDetails.diamondSize;
+    // Sort diamond sizes in ascending order (small to big)
+    return [...selectedStyleData.productDetails.diamondSize].sort(
+      (a, b) => parseFloat(a) - parseFloat(b),
+    );
   }, [selectedStyleData?.productDetails?.diamondSize]);
 
   // Ref for metal types scroll container
@@ -715,7 +722,7 @@ const ProductDetail = () => {
   // Function to get available karats based on selected metal type
   const getAvailableKarats = useCallback(() => {
     if (!selectedStyleData?.productDetails?.goldKarats) {
-      return ["18kt", "14kt", "9kt"]; // Fallback for gold
+      return ["18kt", "14kt", "9kt"]; // Fallback for gold - descending order
     }
 
     const goldKarats = selectedStyleData.productDetails.goldKarats;
@@ -726,7 +733,14 @@ const ProductDetail = () => {
       return ["950"]; // Platinum should display 950
     } else {
       // For GOLD, show gold karats but filter out 925/950 which are silver/platinum
-      return goldKarats.filter((karat) => !["925", "950"].includes(karat));
+      // Sort in descending order (18kt, 14kt, 9kt)
+      return goldKarats
+        .filter((karat) => !["925", "950"].includes(karat))
+        .sort((a, b) => {
+          const numA = parseInt(a);
+          const numB = parseInt(b);
+          return numB - numA;
+        });
     }
   }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
 
@@ -1197,9 +1211,12 @@ const ProductDetail = () => {
                         </div>
                       )}
                     </button>
-                    <span className="text-[#328F94] underline text-xs md:text-sm">
+                    <button
+                      onClick={() => setIsPdfPopupOpen(true)}
+                      className="text-[#328F94] underline"
+                    >
                       Stone Guide
-                    </span>
+                    </button>
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1569,6 +1586,33 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
+                {selectedStyleData?.productDetails?.chainOption && (
+                  <>
+                    <div
+                      style={{
+                        backgroundColor: "#EDF8F1",
+                        color: "#328F94",
+                        padding: "12px 16px",
+                        marginBottom: "16px",
+                        fontSize: "14px",
+                      }}
+                      className="w-fit pt-1 pb-1 pl-4 pr-4 rounded-full mb-4"
+                    >
+                      <p style={{ marginBottom: "0" }}>
+                        Pricing {selectedStyleData.productDetails.chainOption}
+                        {selectedStyleData.productDetails.chainLengthInches !=
+                          null && (
+                          <>
+                            {" | "}Chain Length:{" "}
+                            {selectedStyleData.productDetails.chainLengthInches}{" "}
+                            inches
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </>
+                )}
+
                 {/* Estimated Ship Date */}
                 <div className="text-sm">
                   <div className="text-muted-foreground">
@@ -1830,6 +1874,60 @@ const ProductDetail = () => {
                           </span>
                         </div>
 
+                        {selectedStyleData?.productDetails?.chainOption && (
+                          <>
+                            <div className="flex justify-between py-2 border-b border-[#328F94]">
+                              <span className="text-muted-foreground">
+                                With Chain
+                              </span>
+                              <span className="font-medium">
+                                {selectedStyleData.productDetails.chainOption
+                                  .toLowerCase()
+                                  .includes("with chain")
+                                  ? "Yes"
+                                  : "No"}
+                              </span>
+                            </div>
+                            <div
+                              style={{
+                                backgroundColor: "#EDF8F1",
+                                color: "#328F94",
+                                padding: "12px 16px",
+                                marginBottom: "16px",
+                                fontSize: "14px",
+                              }}
+                              className="w-fit pt-1 pb-1 pl-4 pr-4 rounded-full mb-4"
+                            >
+                              <p style={{ marginBottom: "0" }}>
+                                Pricing{" "}
+                                {selectedStyleData.productDetails.chainOption} |
+                                Chain Length:{" "}
+                                {
+                                  selectedStyleData.productDetails
+                                    .chainLengthInches
+                                }{" "}
+                                inches
+                              </p>
+                            </div>
+                          </>
+                        )}
+
+                        {selectedStyleData?.productDetails
+                          ?.chainLengthInches && (
+                          <div className="flex justify-between py-2 border-b border-[#328F94]">
+                            <span className="text-muted-foreground">
+                              Chain Length
+                            </span>
+                            <span className="font-medium">
+                              {
+                                selectedStyleData.productDetails
+                                  .chainLengthInches
+                              }{" "}
+                              inches
+                            </span>
+                          </div>
+                        )}
+
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Pendant Style
@@ -1839,6 +1937,16 @@ const ProductDetail = () => {
                           </span>
                         </div>
 
+                        {selectedGoldKarat && (
+                          <div className="flex justify-between py-2 border-b border-[#328F94]">
+                            <span className="text-muted-foreground">
+                              Metal Purity
+                            </span>
+                            <span className="font-medium">
+                              {selectedGoldKarat}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Type
@@ -2087,6 +2195,12 @@ const ProductDetail = () => {
           </div>
         )}
       </main>
+      <PdfPopup
+        isOpen={isPdfPopupOpen}
+        onClose={() => setIsPdfPopupOpen(false)}
+        pdfUrl="/Stone_Guide.pdf"
+        title="Quality & Certification"
+      />
     </div>
   );
 };

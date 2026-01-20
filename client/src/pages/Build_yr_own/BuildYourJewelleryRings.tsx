@@ -34,7 +34,8 @@ import {
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
-import { X } from "lucide-react";
+import PdfPopup from "@/components/PdfPopup";
+import { toast } from "sonner";
 
 // Map color codes to display info (handles both single and combination colors)
 const getColorDisplayInfo = (
@@ -692,6 +693,7 @@ const ProductDetail = () => {
   const [isUploadingEngraving, setIsUploadingEngraving] = useState(false);
   const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
   const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
+  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -1059,9 +1061,14 @@ const ProductDetail = () => {
 
   const getAvailableGoldKarats = useCallback(() => {
     if (!selectedStyleData?.productDetails?.goldKarats) {
-      return ["14kt", "18kt", "22kt"]; // Fallback
+      return ["18kt", "14kt", "9kt"]; // Fallback - descending order
     }
-    return selectedStyleData.productDetails.goldKarats;
+    // Sort gold karats in descending order (18kt, 14kt, 9kt)
+    return [...selectedStyleData.productDetails.goldKarats].sort((a, b) => {
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      return numB - numA;
+    });
   }, [selectedStyleData?.productDetails?.goldKarats]);
 
   const getAvailableDiamondShapes = useCallback(() => {
@@ -1081,9 +1088,12 @@ const ProductDetail = () => {
 
   const getAvailableDiamondSizes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
-      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
     }
-    return selectedStyleData.productDetails.diamondSize;
+    // Sort diamond sizes in ascending order (small to big)
+    return [...selectedStyleData.productDetails.diamondSize].sort(
+      (a, b) => parseFloat(a) - parseFloat(b),
+    );
   }, [selectedStyleData?.productDetails?.diamondSize]);
 
   // Engraving upload helpers (mirror ProductDetail behavior)
@@ -1153,13 +1163,13 @@ const ProductDetail = () => {
 
   const handleAddToCart = useCallback(async () => {
     if (!isAuthenticated) {
-      alert("Please log in to add items to cart");
+      toast.error("Please log in to add items to cart");
       navigate("/login");
       return;
     }
 
     if (!selectedSize) {
-      alert("Please select a ring size");
+      toast.error("Please select a ring size");
       return;
     }
 
@@ -1172,7 +1182,7 @@ const ProductDetail = () => {
       derivedProductId;
 
     if (!productId || !variantSku) {
-      alert("Please select a product variant");
+      toast.error("Please select a product variant");
       return;
     }
 
@@ -1181,7 +1191,7 @@ const ProductDetail = () => {
     if (hasEngraving && savedEngravingData) {
       cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
       if (!cloudinaryEngravingUrl) {
-        alert("Failed to upload engraving image. Please try again.");
+        toast.error("Failed to upload engraving image. Please try again.");
         return;
       }
     }
@@ -1216,10 +1226,10 @@ const ProductDetail = () => {
 
     try {
       await dispatch(addToCart(productId as string, 1, variantData));
-      alert("Product added to cart successfully!");
+      toast.success("Product added to cart successfully!");
     } catch (err) {
       console.error("Error adding to cart:", err);
-      alert("Failed to add product to cart");
+      toast.error("Failed to add product to cart");
     }
   }, [
     isAuthenticated,
@@ -1244,18 +1254,18 @@ const ProductDetail = () => {
 
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
-      alert("Please log in to purchase");
+      toast.error("Please log in to purchase");
       navigate("/login");
       return;
     }
 
     if (!selectedDiamondSize) {
-      alert("Please select a diamond size");
+      toast.error("Please select a diamond size");
       return;
     }
 
     if (!selectedSize) {
-      alert("Please select a ring size");
+      toast.error("Please select a ring size");
       return;
     }
 
@@ -1268,7 +1278,7 @@ const ProductDetail = () => {
       derivedProductId;
 
     if (!productId || !variantSku) {
-      alert("Please select a product variant");
+      toast.error("Please select a product variant");
       return;
     }
 
@@ -1278,7 +1288,7 @@ const ProductDetail = () => {
       cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
       setIsUploadingEngraving(false);
       if (!cloudinaryEngravingUrl) {
-        alert("Failed to upload engraving image. Please try again.");
+        toast.error("Failed to upload engraving image. Please try again.");
         return;
       }
     }
@@ -1854,9 +1864,12 @@ const ProductDetail = () => {
                         </div>
                       )}
                     </button>
-                    <span className="text-[#328F94] underline text-xs md:text-sm">
+                    <button
+                      onClick={() => setIsPdfPopupOpen(true)}
+                      className="text-[#328F94] underline"
+                    >
                       Stone Guide
-                    </span>
+                    </button>
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -2180,7 +2193,11 @@ const ProductDetail = () => {
                 {/* Metal Color - Same responsive pattern as ProductDetail */}
                 <div className="w-full">
                   <h3 className="mb-3 text-sm md:text-base">
-                    Metal Color: {selectedMetalColor}
+                    Metal Color:
+                    <span className="text-[#8D8A91]">
+                      {" "}
+                      {selectedMetalColor}
+                    </span>
                   </h3>
 
                   {/* Desktop View - 7 columns, 2 rows */}
@@ -2197,7 +2214,7 @@ const ProductDetail = () => {
                             setSelectedMetalColor(colorInfo.name);
                             setSelectedColorCode(code);
                           }}
-                          className={`w-10 h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                          className={`w-10 h-10 flex justify-center items-center rounded-full border-2 transition-all hover:scale-105 ${
                             selectedColorCode === code
                               ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                               : "border-neutral-300 hover:border-neutral-400"
@@ -2240,7 +2257,7 @@ const ProductDetail = () => {
                               setSelectedMetalColor(colorInfo.name);
                               setSelectedColorCode(code);
                             }}
-                            className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                            className={`w-8 h-8 flex justify-center items-center sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
                               selectedColorCode === code
                                 ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                                 : "border-neutral-300 hover:border-neutral-400"
@@ -2251,7 +2268,7 @@ const ProductDetail = () => {
                               <img
                                 src={colorInfo.img}
                                 alt={colorInfo.name}
-                                className="w-4 h-4 sm:w-8 sm:h-8 object-cover rounded-full"
+                                className="w-5 h-5 sm:w-8 sm:h-8 object-cover rounded-full"
                               />
                             ) : (
                               <img
@@ -2551,6 +2568,16 @@ const ProductDetail = () => {
                           </span>
                         </div>
 
+                        {selectedGoldKarat && (
+                          <div className="flex justify-between py-2 border-b border-[#328F94]">
+                            <span className="text-muted-foreground">
+                              Metal Purity
+                            </span>
+                            <span className="font-medium">
+                              {selectedGoldKarat}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Metal Type
@@ -2775,6 +2802,12 @@ const ProductDetail = () => {
       <RingSizeGuidePopup
         isOpen={isRingSizePopupOpen}
         onClose={() => setIsRingSizePopupOpen(false)}
+      />
+      <PdfPopup
+        isOpen={isPdfPopupOpen}
+        onClose={() => setIsPdfPopupOpen(false)}
+        pdfUrl="/Stone_Guide.pdf"
+        title="Quality & Certification"
       />
     </div>
   );
