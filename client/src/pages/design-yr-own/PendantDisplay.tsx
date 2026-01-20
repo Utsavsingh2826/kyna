@@ -26,6 +26,7 @@ import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 import EngravingPage from "../Engrave";
 import CustomizationPaymentForm from "@/components/CustomizationPaymentForm";
+import PdfPopup from "@/components/PdfPopup";
 
 const steps = [
   { number: 1, title: "Inspiration Upload", active: true },
@@ -179,6 +180,7 @@ export default function RingBuilder() {
   const navigate = useNavigate();
   const [selectedEngravingImage, setSelectedEngravingImage] =
     useState<string>("/newring.jpg");
+  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
   const [showEngravingPopup, setShowEngravingPopup] = useState(false);
   const metalTypesRef = useRef<HTMLDivElement>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
@@ -1544,6 +1546,16 @@ export default function RingBuilder() {
               </Select>
             </div>
 
+            {/* Necklace Size Guide */}
+            <Button
+              variant="link"
+              size="sm"
+              className="text-[#328F94] p-0 mt-1"
+              onClick={() => setIsPdfPopupOpen(true)}
+            >
+              Necklace Size Guide
+            </Button>
+
             {/* Add Engraving - Updated with Popup */}
             <div className="bg-[#328F94]/5 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -2806,6 +2818,12 @@ export default function RingBuilder() {
           onSave={handleEngravingSaved}
         />
       )}
+      <PdfPopup
+        isOpen={isPdfPopupOpen}
+        onClose={() => setIsPdfPopupOpen(false)}
+        pdfUrl="/Necklace_size.pdf"
+        title="Quality & Certification"
+      />
     </div>
   );
 }
