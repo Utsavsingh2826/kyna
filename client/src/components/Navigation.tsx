@@ -46,9 +46,8 @@ const Navigation: React.FC = () => {
             <div className="relative group">
               <Link
                 to="/rings"
-                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                  isActive("/rings") ? "bg-[#68C5C0] text-white" : ""
-                }`}
+                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${isActive("/rings") ? "bg-[#68C5C0] text-white" : ""
+                  }`}
               >
                 RINGS
               </Link>
@@ -79,9 +78,8 @@ const Navigation: React.FC = () => {
             <div className="relative group">
               <Link
                 to="/earrings"
-                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                  isActive("/earrings") ? "bg-[#68C5C0] text-white" : ""
-                }`}
+                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${isActive("/earrings") ? "bg-[#68C5C0] text-white" : ""
+                  }`}
               >
                 EARRINGS
               </Link>
@@ -124,9 +122,8 @@ const Navigation: React.FC = () => {
             <div className="relative group">
               <Link
                 to="/pendants"
-                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                  isActive("/pendants") ? "bg-[#68C5C0] text-white" : ""
-                }`}
+                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${isActive("/pendants") ? "bg-[#68C5C0] text-white" : ""
+                  }`}
               >
                 PENDANTS
               </Link>
@@ -211,9 +208,8 @@ const Navigation: React.FC = () => {
             </div> */}
             <div className="relative group">
               <div
-                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                  isActive("/") ? "bg-[#68C5C0] text-white" : ""
-                }`}
+                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${isActive("/") ? "bg-[#68C5C0] text-white" : ""
+                  }`}
               >
                 JEWELLERY
               </div>
@@ -252,9 +248,8 @@ const Navigation: React.FC = () => {
             {/* ENGRAVING */}
             <Link
               to="/engravings"
-              className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                isActive("/engravings") ? "bg-[#68C5C0] text-white" : ""
-              }`}
+              className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${isActive("/engravings") ? "bg-[#68C5C0] text-white" : ""
+                }`}
             >
               ENGRAVING
             </Link>
@@ -263,9 +258,8 @@ const Navigation: React.FC = () => {
             <div className="relative group hidden md:block">
               <div
                 // to="/design-your-own"
-                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                  isActive("/design-your-own") ? "bg-[#68C5C0] text-white" : ""
-                }`}
+                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${isActive("/design-your-own") ? "bg-[#68C5C0] text-white" : ""
+                  }`}
               >
                 DESIGN YOUR OWN
               </div>
@@ -276,11 +270,10 @@ const Navigation: React.FC = () => {
                     <Button
                       variant={activeTab === "upload" ? "default" : "outline"}
                       size="sm"
-                      className={`flex-1 ${
-                        activeTab === "upload"
+                      className={`flex-1 ${activeTab === "upload"
                           ? "bg-[#68C5C0] hover:bg-[#68C5C0]/90 text-white border-[#68C5C0]"
                           : ""
-                      }`}
+                        }`}
                       onClick={() => setActiveTab("upload")}
                     >
                       Upload Your Design
@@ -288,11 +281,10 @@ const Navigation: React.FC = () => {
                     <Button
                       variant={activeTab === "build" ? "default" : "outline"}
                       size="sm"
-                      className={`flex-1 ${
-                        activeTab === "build"
+                      className={`flex-1 ${activeTab === "build"
                           ? "bg-[#68C5C0] hover:bg-[#68C5C0]/90 text-white border-[#68C5C0]"
                           : "hover:bg-[#68C5C0]/10 hover:border-[#68C5C0] hover:text-[#68C5C0]"
-                      }`}
+                        }`}
                       onClick={() => setActiveTab("build")}
                     >
                       Build Your Jewellery
@@ -462,17 +454,16 @@ const Navigation: React.FC = () => {
             <div className="relative group">
               <Link
                 to="/gifting"
-                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                  isActive("/gifting") ? "bg-[#68C5C0] text-white" : ""
-                }`}
+                className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${isActive("/gifting") ? "bg-[#68C5C0] text-white" : ""
+                  }`}
               >
                 GIFTING
               </Link>
               <div className="absolute top-full left-0 bg-white shadow-lg border rounded-md w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-2">
                   {[
-                    ["0-25000", "Under 25,000/-"],
-                    ["25000-50000", "Rs. 25,000/- to 50,000/-"],
+                    ["?min_price=0&max_price=25000", "Under 25,000/-"],
+                    ["?min_price=25000&max_price=50000", "Rs. 25,000/- to 50,000/-"],
                     ["gift-card", "Gift Card"],
                   ].map(([path, label]) => (
                     <Link
@@ -489,9 +480,8 @@ const Navigation: React.FC = () => {
             {/* ABOUT */}
             <Link
               to="/about"
-              className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                isActive("/about") ? "bg-[#68C5C0] text-white" : ""
-              }`}
+              className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${isActive("/about") ? "bg-[#68C5C0] text-white" : ""
+                }`}
             >
               ABOUT
             </Link>
