@@ -492,8 +492,8 @@ export default function RingBuilder() {
     const diamondType =
       diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
 
-    // Define all possible options with their display names and values
-    const allOptions = [
+    // Define options for Natural Diamonds
+    const naturalOptions = [
       { display: "D-IF", value: "DIF" },
       { display: "EF-VVS", value: "EFVVS" },
       { display: "EF-VS", value: "EFVS" },
@@ -501,32 +501,34 @@ export default function RingBuilder() {
       { display: "GH-SI", value: "GHSI" },
     ];
 
+    // Define options for Lab Grown Diamonds
+    const labGrownOptions = [
+      { display: "DE-IF", value: "DEIF" },
+      { display: "EF-VVS", value: "EFVVS" },
+      { display: "EF-VS", value: "EFVS" },
+    ];
+
     if (diamondType === "Natural") {
-      // Natural diamonds: All clarities available for Gold and Platinum
+      // Natural diamonds: All clarities available for Gold and Platinum only
       if (metal === "Gold" || metal === "Platinum") {
-        return allOptions;
+        return naturalOptions;
       }
       // Natural diamonds not available in Silver
       return [];
     } else if (diamondType === "Lab Grown") {
       // Lab Grown diamonds
       if (metal === "Gold" || metal === "Platinum") {
-        // Only DIF, EFVVS, EFVS available for Gold and Platinum
-        return allOptions.filter(
-          (opt) =>
-            opt.value === "DIF" ||
-            opt.value === "EFVVS" ||
-            opt.value === "EFVS",
-        );
+        // DEIF, EFVVS, EFVS available for Gold and Platinum
+        return labGrownOptions;
       } else if (metal === "Silver") {
-        // Only EFVVS and EFVS available for Silver
-        return allOptions.filter(
+        // Only EFVVS and EFVS available for Silver (NO DEIF)
+        return labGrownOptions.filter(
           (opt) => opt.value === "EFVVS" || opt.value === "EFVS",
         );
       }
     }
 
-    return allOptions;
+    return naturalOptions;
   };
 
   // Auto-set metal color to White Gold for Platinum and Silver
@@ -826,10 +828,11 @@ export default function RingBuilder() {
 
             {/* File Upload Area with Drag and Drop */}
             <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${isDragging
-                ? "border-[#328F94] bg-[#328F94]/5 scale-[1.02]"
-                : "border-[#ABA7AF] hover:border-[#328F94] hover:bg-[#328F94]/5"
-                }`}
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
+                isDragging
+                  ? "border-[#328F94] bg-[#328F94]/5 scale-[1.02]"
+                  : "border-[#ABA7AF] hover:border-[#328F94] hover:bg-[#328F94]/5"
+              }`}
               onDragEnter={handleDragEnter}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -838,18 +841,21 @@ export default function RingBuilder() {
             >
               <div className="space-y-4">
                 <div
-                  className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center transition-colors ${isDragging ? "bg-[#328F94]/20" : "bg-[#328F94]/10"
-                    }`}
+                  className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center transition-colors ${
+                    isDragging ? "bg-[#328F94]/20" : "bg-[#328F94]/10"
+                  }`}
                 >
                   <Upload
-                    className={`w-6 h-6 transition-colors ${isDragging ? "text-[#328F94]" : "text-[#328F94]"
-                      }`}
+                    className={`w-6 h-6 transition-colors ${
+                      isDragging ? "text-[#328F94]" : "text-[#328F94]"
+                    }`}
                   />
                 </div>
                 <div>
                   <p
-                    className={`font-medium transition-colors ${isDragging ? "text-[#328F94]" : "text-gray-900"
-                      }`}
+                    className={`font-medium transition-colors ${
+                      isDragging ? "text-[#328F94]" : "text-gray-900"
+                    }`}
                   >
                     {isDragging ? "Drop files here" : "Drag & Drop file here"}
                   </p>
@@ -1059,16 +1065,18 @@ export default function RingBuilder() {
             {/* Selected Images */}
             <div>
               <div
-                className={`flex items-center justify-between mb-4 ${formData.sameAsImage ? "text-gray-400" : ""
-                  }`}
+                className={`flex items-center justify-between mb-4 ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
               >
                 <h3 className="font-medium">Selected Images</h3>
                 <Button
                   variant="link"
                   onClick={() => setCurrentStep(1)}
                   size="sm"
-                  className={`text-[#328F94] ${formData.sameAsImage ? "text-[#328F94]" : ""
-                    }`}
+                  className={`text-[#328F94] ${
+                    formData.sameAsImage ? "text-[#328F94]" : ""
+                  }`}
                 >
                   Change Image
                 </Button>
@@ -1082,8 +1090,9 @@ export default function RingBuilder() {
                       className="w-24 h-24 object-cover rounded-lg border"
                     />
                     <button
-                      className={`absolute top-1 right-1 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center ${formData.sameAsImage ? "pointer-events-none" : ""
-                        }`}
+                      className={`absolute top-1 right-1 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center ${
+                        formData.sameAsImage ? "pointer-events-none" : ""
+                      }`}
                     >
                       <Edit className="w-3 h-3" />
                     </button>
@@ -1095,8 +1104,9 @@ export default function RingBuilder() {
             {/* Diamond Shape Selection */}
             <div>
               <h3
-                className={`font-medium mb-4 ${formData.sameAsImage ? "text-gray-400" : ""
-                  }`}
+                className={`font-medium mb-4 ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
               >
                 Select Diamond Shape <span className="text-red-500">*</span> :{" "}
                 {formData.diamondShape}
@@ -1107,8 +1117,9 @@ export default function RingBuilder() {
                 )}
               </h3>
               <div
-                className={`grid grid-cols-5 gap-2 ${formData.sameAsImage ? "pointer-events-none opacity-50" : ""
-                  }`}
+                className={`grid grid-cols-5 gap-2 ${
+                  formData.sameAsImage ? "pointer-events-none opacity-50" : ""
+                }`}
               >
                 {diamondShapes.map((shape) => (
                   <button
@@ -1125,10 +1136,11 @@ export default function RingBuilder() {
                         });
                       }
                     }}
-                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${formData.diamondShape === shape.name
-                      ? "bg-[#328F94]/20"
-                      : ""
-                      }`}
+                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${
+                      formData.diamondShape === shape.name
+                        ? "bg-[#328F94]/20"
+                        : ""
+                    }`}
                   >
                     <span className="text-2xl mb-1">{shape.icon}</span>
                   </button>
@@ -1139,8 +1151,9 @@ export default function RingBuilder() {
             {/* Diamond Specification */}
             <div>
               <h3
-                className={`font-medium mb-4 ${formData.sameAsImage ? "text-gray-400" : ""
-                  }`}
+                className={`font-medium mb-4 ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
               >
                 Select Diamond Specification
               </h3>
@@ -1239,10 +1252,11 @@ export default function RingBuilder() {
                       diamondOrigin: "Natural Diamond",
                     })
                   }
-                  className={`p-2 rounded-full border-2 transition-all ${formData.diamondOrigin === "Natural Diamond"
+                  className={`p-2 rounded-full border-2 transition-all ${
+                    formData.diamondOrigin === "Natural Diamond"
                       ? "border-[#328F94] bg-[#328F94]/5"
                       : "border-gray-200 hover:border-[#328F94]/50"
-                    }`}
+                  }`}
                 >
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-sm font-medium">Natural diamond</span>
@@ -1255,10 +1269,11 @@ export default function RingBuilder() {
                       diamondOrigin: "Lab Grown Diamond",
                     })
                   }
-                  className={`p-2 rounded-full border-2 transition-all ${formData.diamondOrigin === "Lab Grown Diamond"
+                  className={`p-2 rounded-full border-2 transition-all ${
+                    formData.diamondOrigin === "Lab Grown Diamond"
                       ? "border-[#328F94] bg-[#328F94]/5"
                       : "border-gray-200 hover:border-[#328F94]/50"
-                    }`}
+                  }`}
                 >
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-sm font-medium">
@@ -1355,10 +1370,11 @@ export default function RingBuilder() {
                               metal: formData.metal,
                             });
                           }}
-                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${formData.goldKarat === karat
-                            ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                            : "border-neutral-600 text-neutral-600"
-                            }`}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === karat
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
                         >
                           {karat}
                         </button>
@@ -1374,10 +1390,11 @@ export default function RingBuilder() {
                               metal: formData.metal,
                             });
                           }}
-                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${formData.goldKarat === purity
-                            ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                            : "border-neutral-600 text-neutral-600"
-                            }`}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === purity
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
                         >
                           {purity}
                         </button>
@@ -1393,10 +1410,11 @@ export default function RingBuilder() {
                               metal: formData.metal,
                             });
                           }}
-                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${formData.goldKarat === purity
-                            ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                            : "border-neutral-600 text-neutral-600"
-                            }`}
+                          className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                            formData.goldKarat === purity
+                              ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                              : "border-neutral-600 text-neutral-600"
+                          }`}
                         >
                           {purity}
                         </button>
@@ -1423,8 +1441,9 @@ export default function RingBuilder() {
             {/* Metal Color */}
             <div>
               <label
-                className={`text-sm text-muted-foreground ${formData.sameAsImage ? "text-gray-400" : ""
-                  }`}
+                className={`text-sm text-muted-foreground ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
               >
                 Metal Color:{" "}
                 {metalTypesRef.current ? ` ${formData.metalColor}` : ""}{" "}
@@ -1478,15 +1497,15 @@ export default function RingBuilder() {
                   )}
                   {(formData.metal === "Platinum" ||
                     formData.metal === "Silver") && (
-                      <SelectItem value="White Gold">
-                        <img
-                          src="/colors/white.png"
-                          alt="White Gold"
-                          className="inline-block h-6 w-6 mr-2 mb-1"
-                        />
-                        White Gold
-                      </SelectItem>
-                    )}
+                    <SelectItem value="White Gold">
+                      <img
+                        src="/colors/white.png"
+                        alt="White Gold"
+                        className="inline-block h-6 w-6 mr-2 mb-1"
+                      />
+                      White Gold
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -1564,10 +1583,11 @@ export default function RingBuilder() {
                     setSelectedEngravingImage("/newring.jpg");
                     setShowEngravingPopup(true);
                   }}
-                  className={`w-full text-sm py-2 transition-all ${engravingDone
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-[#328F94] text-white hover:bg-[#328F94]/90"
-                    }`}
+                  className={`w-full text-sm py-2 transition-all ${
+                    engravingDone
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-[#328F94] text-white hover:bg-[#328F94]/90"
+                  }`}
                   disabled={engravingDone}
                 >
                   {engravingDone ? "Engraving Already Done" : "Add Engraving"}
@@ -1893,14 +1913,15 @@ export default function RingBuilder() {
                       />
                       {serviceabilityMessage && (
                         <div
-                          className={`text-xs mt-1 ${serviceabilityStatus === "serviceable"
+                          className={`text-xs mt-1 ${
+                            serviceabilityStatus === "serviceable"
                               ? "text-green-600"
                               : serviceabilityStatus === "not-serviceable"
                                 ? "text-red-600"
                                 : serviceabilityStatus === "checking"
                                   ? "text-blue-600"
                                   : "text-gray-600"
-                            }`}
+                          }`}
                         >
                           {serviceabilityMessage}
                         </div>
@@ -2066,26 +2087,29 @@ export default function RingBuilder() {
         <div key={step.number} className="flex items-center">
           <div className="flex flex-col items-center">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step.number <= currentStep
-                ? "bg-[#328F94] text-white"
-                : "bg-muted text-muted-foreground"
-                }`}
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                step.number <= currentStep
+                  ? "bg-[#328F94] text-white"
+                  : "bg-muted text-muted-foreground"
+              }`}
             >
               {step.number}
             </div>
             <span
-              className={`text-xs mt-2 text-center max-w-20 ${step.number <= currentStep
-                ? "text-[#328F94] font-medium"
-                : "text-muted-foreground"
-                }`}
+              className={`text-xs mt-2 text-center max-w-20 ${
+                step.number <= currentStep
+                  ? "text-[#328F94] font-medium"
+                  : "text-muted-foreground"
+              }`}
             >
               {step.title}
             </span>
           </div>
           {index < steps.length - 1 && (
             <div
-              className={`w-16 h-1 mb-6 mx-4 ${step.number < currentStep ? "bg-[#328F94]" : "bg-gray-300"
-                }`}
+              className={`w-16 h-1 mb-6 mx-4 ${
+                step.number < currentStep ? "bg-[#328F94]" : "bg-gray-300"
+              }`}
             />
           )}
         </div>
@@ -2357,10 +2381,10 @@ export default function RingBuilder() {
       //   alert('⚠️ Failed to fetch estimated delivery date. Customization request will be created without EDD.');
       // }
       const eddResult: { estimated_delivery?: string; estimated_day?: string } =
-      {
-        estimated_delivery: "2025-10-24",
-        estimated_day: "monday",
-      };
+        {
+          estimated_delivery: "2025-10-24",
+          estimated_day: "monday",
+        };
 
       // Prepare customization request data for payment
       const customizationRequestData = {
@@ -2387,10 +2411,10 @@ export default function RingBuilder() {
         ringSize: formData.ringSize,
         engraving: formData.engraving
           ? {
-            text: formData.engraving,
-            font: "Classic",
-            position: "Inside",
-          }
+              text: formData.engraving,
+              font: "Classic",
+              position: "Inside",
+            }
           : undefined,
         specialInstructions:
           formData.specialInstructions || formData.modificationRequest,
@@ -2681,8 +2705,9 @@ export default function RingBuilder() {
         setCurrentStep(3);
 
         const eddInfo = eddResult?.estimated_delivery
-          ? `EDD: ${eddResult.estimated_delivery} (${eddResult.estimated_day || "N/A"
-          })`
+          ? `EDD: ${eddResult.estimated_delivery} (${
+              eddResult.estimated_day || "N/A"
+            })`
           : "No EDD";
 
         toast.success(

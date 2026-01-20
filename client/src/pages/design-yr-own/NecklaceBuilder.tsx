@@ -372,6 +372,39 @@ export default function RingBuilder() {
     return allSizes;
   };
 
+  // Function to get available color/clarity combinations based on diamond origin and metal
+  const getAvailableColorClarity = () => {
+    const { diamondOrigin, metal } = formData;
+    const diamondType =
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
+
+    // Define options for Natural Diamonds
+    const naturalOptions = ["D-IF", "EF-VVS", "EF-VS", "GH-VS", "GH-SI"];
+
+    // Define options for Lab Grown Diamonds
+    const labGrownOptions = ["DE-IF", "EF-VVS", "EF-VS"];
+
+    if (diamondType === "Natural") {
+      // Natural diamonds: All clarities available for Gold and Platinum only
+      if (metal === "Gold" || metal === "Platinum") {
+        return naturalOptions;
+      }
+      // Natural diamonds not available in Silver
+      return [];
+    } else if (diamondType === "Lab Grown") {
+      // Lab Grown diamonds
+      if (metal === "Gold" || metal === "Platinum") {
+        // DE-IF, EF-VVS, EF-VS available for Gold and Platinum
+        return labGrownOptions;
+      } else if (metal === "Silver") {
+        // Only EF-VVS and EF-VS available for Silver (NO DE-IF)
+        return ["EF-VVS", "EF-VS"];
+      }
+    }
+
+    return naturalOptions;
+  };
+
   // Reset diamond size when metal or diamond origin changes if current selection is invalid
   useEffect(() => {
     const availableSizes = getAvailableDiamondSizes();
@@ -380,6 +413,17 @@ export default function RingBuilder() {
     if (!currentSizeValid) {
       const defaultSize = availableSizes[0] || "0.1 Carat";
       setFormData((prev) => ({ ...prev, diamondSize: defaultSize }));
+    }
+  }, [formData.metal, formData.diamondOrigin]);
+
+  // Reset color/clarity when metal or diamond origin changes if current selection is invalid
+  useEffect(() => {
+    const availableOptions = getAvailableColorClarity();
+    const currentIsValid = availableOptions.includes(formData.diamondColor);
+
+    if (!currentIsValid && availableOptions.length > 0) {
+      const defaultClarity = availableOptions[0];
+      setFormData((prev) => ({ ...prev, diamondColor: defaultClarity }));
     }
   }, [formData.metal, formData.diamondOrigin]);
 
@@ -1171,11 +1215,18 @@ export default function RingBuilder() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="D-FL">D-FL</SelectItem>
-                      <SelectItem value="E-VVS1">E-VVS1</SelectItem>
-                      <SelectItem value="F-VVS2">F-VVS2</SelectItem>
+                      {getAvailableColorClarity().map((clarity) => (
+                        <SelectItem key={clarity} value={clarity}>
+                          {clarity}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
+                  {getAvailableColorClarity().length === 0 && (
+                    <p className="text-xs text-red-500 mt-1">
+                      Not available for selected metal type
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

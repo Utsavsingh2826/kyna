@@ -362,28 +362,31 @@ export default function EarringBuilder() {
     const diamondType =
       diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
 
-    // Define all possible options with their display names
-    const allOptions = ["D-IF", "EF-VVS", "EF-VS", "GH-VS", "GH-SI"];
+    // Define options for Natural Diamonds
+    const naturalOptions = ["D-IF", "EF-VVS", "EF-VS", "GH-VS", "GH-SI"];
+
+    // Define options for Lab Grown Diamonds
+    const labGrownOptions = ["DE-IF", "EF-VVS", "EF-VS"];
 
     if (diamondType === "Natural") {
-      // Natural diamonds: All clarities available for Gold and Platinum
+      // Natural diamonds: All clarities available for Gold and Platinum only
       if (metalType === "Gold" || metalType === "Platinum") {
-        return allOptions;
+        return naturalOptions;
       }
       // Natural diamonds not available in Silver
       return [];
     } else if (diamondType === "Lab Grown") {
       // Lab Grown diamonds
       if (metalType === "Gold" || metalType === "Platinum") {
-        // Only D-IF, EF-VVS, EF-VS available for Gold and Platinum
-        return ["D-IF", "EF-VVS", "EF-VS"];
+        // DE-IF, EF-VVS, EF-VS available for Gold and Platinum
+        return labGrownOptions;
       } else if (metalType === "Silver") {
-        // Only EF-VVS and EF-VS available for Silver
+        // Only EF-VVS and EF-VS available for Silver (NO DE-IF)
         return ["EF-VVS", "EF-VS"];
       }
     }
 
-    return allOptions;
+    return naturalOptions;
   };
 
   // Reset color/clarity when metal or diamond origin changes if current selection is invalid
