@@ -591,7 +591,7 @@ const ProductDetail = () => {
         Math.round(parseFloat(selectedDiamondSize) * 100),
       );
 
-      const karat = selectedGoldKarat.replace("kt", "");
+      const karat = selectedGoldKarat.replace(/kt/i, "");
 
       const originCode =
         selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
@@ -1875,41 +1875,18 @@ const ProductDetail = () => {
                         </div>
 
                         {selectedStyleData?.productDetails?.chainOption && (
-                          <>
-                            <div className="flex justify-between py-2 border-b border-[#328F94]">
-                              <span className="text-muted-foreground">
-                                With Chain
-                              </span>
-                              <span className="font-medium">
-                                {selectedStyleData.productDetails.chainOption
-                                  .toLowerCase()
-                                  .includes("with chain")
-                                  ? "Yes"
-                                  : "No"}
-                              </span>
-                            </div>
-                            <div
-                              style={{
-                                backgroundColor: "#EDF8F1",
-                                color: "#328F94",
-                                padding: "12px 16px",
-                                marginBottom: "16px",
-                                fontSize: "14px",
-                              }}
-                              className="w-fit pt-1 pb-1 pl-4 pr-4 rounded-full mb-4"
-                            >
-                              <p style={{ marginBottom: "0" }}>
-                                Pricing{" "}
-                                {selectedStyleData.productDetails.chainOption} |
-                                Chain Length:{" "}
-                                {
-                                  selectedStyleData.productDetails
-                                    .chainLengthInches
-                                }{" "}
-                                inches
-                              </p>
-                            </div>
-                          </>
+                          <div className="flex justify-between py-2 border-b border-[#328F94]">
+                            <span className="text-muted-foreground">
+                              With Chain
+                            </span>
+                            <span className="font-medium">
+                              {selectedStyleData.productDetails.chainOption
+                                .toLowerCase()
+                                .includes("with chain")
+                                ? "Yes"
+                                : "No"}
+                            </span>
+                          </div>
                         )}
 
                         {selectedStyleData?.productDetails
@@ -2045,39 +2022,27 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
+                            Diamond Shape
+                          </span>
+                          <span className="font-medium">
+                            {selectedDiamondShape || "-"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
                             Diamond Color & Clarity
                           </span>
-                          <span className="font-medium">14K White Gold</span>
+                          <span className="font-medium">
+                            {selectedColorClarity || "-"}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Total Diamond Weight (Approx carats)
                           </span>
-                          <span className="font-medium">8.60</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstone Origin
+                          <span className="font-medium">
+                            {selectedDiamondSize || "-"}
                           </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstone Color
-                          </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstone Clarity
-                          </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Total Gemstone Weight (Approx carats)
-                          </span>
-                          <span className="font-medium">Oval</span>
                         </div>
                       </div>
                     </div>

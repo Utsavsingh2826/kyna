@@ -486,6 +486,13 @@ export default function RingBuilder() {
     return allSizes;
   };
 
+  //   Added getAvailableColorClarity() function that returns clarity options based on:
+
+  // Natural Diamonds + Gold/Platinum: D-IF, EF-VVS, EF-VS, GH-VS, GH-SI
+  // Lab Grown + Gold/Platinum: DE-IF, EF-VVS, EF-VS
+  // Lab Grown + Silver: EF-VVS, EF-VS (no DE-IF)
+  // Natural Diamonds + Silver: Not available (empty array)
+
   // Function to get available color/clarity combinations based on diamond origin and metal
   const getAvailableColorClarity = () => {
     const { diamondOrigin, metal } = formData;

@@ -993,7 +993,7 @@ const ProductDetail = () => {
 
     const caratCode = String(Math.round(parseFloat(selectedDiamondSize) * 100));
 
-    const karat = selectedGoldKarat.replace("kt", "");
+    const karat = selectedGoldKarat.replace(/kt/i, "");
 
     const originCode =
       selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
@@ -2676,39 +2676,27 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
+                            Diamond Shape
+                          </span>
+                          <span className="font-medium">
+                            {selectedDiamondShape || "-"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
                             Diamond Color & Clarity
                           </span>
-                          <span className="font-medium">14K White Gold</span>
+                          <span className="font-medium">
+                            {selectedColorClarity || "-"}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Total Diamond Weight (Approx carats)
+                            Total Diamond Size (Approx carats)
                           </span>
-                          <span className="font-medium">8.60</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstone Origin
+                          <span className="font-medium">
+                            {selectedDiamondSize || "-"}
                           </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstone Color
-                          </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstone Clarity
-                          </span>
-                          <span className="font-medium">11.86</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Total Gemstone Weight (Approx carats)
-                          </span>
-                          <span className="font-medium">Oval</span>
                         </div>
                       </div>
                     </div>
@@ -2721,46 +2709,57 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            SKU Number
-                          </span>
-                          <span className="font-medium">
-                            {selectedStyleData?.productDetails
-                              ?.firstVariantSku ||
-                              derivedProductId ||
-                              "-"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
                             Gold/Silver/Platinum Value
                           </span>
-                          <span className="font-medium">Rs </span>
+                          <span className="font-medium">
+                            ₹{" "}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.metalCost?.toFixed(
+                              2,
+                            ) || "0.00"}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Diamond Value
                           </span>
-                          <span className="font-medium">Rs.</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gemstones Value
+                          <span className="font-medium">
+                            ₹{" "}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.diamondCost?.toFixed(
+                              2,
+                            ) || "0.00"}
                           </span>
-                          <span className="font-medium">Rs.</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Making Charges
                           </span>
-                          <span className="font-medium">Rs.</span>
+                          <span className="font-medium">
+                            ₹{" "}
+                            {(
+                              (selectedStyleData?.productDetails?.priceBreakdown
+                                ?.labourCost || 0) +
+                              (selectedStyleData?.productDetails?.priceBreakdown
+                                ?.expense || 0)
+                            ).toFixed(2)}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
-                          <span className="font-medium">Rs.</span>
+                          <span className="font-medium">
+                            ₹{" "}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.gstAmount?.toFixed(
+                              2,
+                            ) || "0.00"}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
-                          <span>Rs.</span>
+                          <span>
+                            ₹{" "}
+                            {selectedStyleData?.productDetails?.priceBreakdown?.totalWithGst?.toFixed(
+                              2,
+                            ) || "0.00"}
+                          </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">

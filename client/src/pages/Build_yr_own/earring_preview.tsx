@@ -25,7 +25,7 @@ import {
 } from "@/store/slices/wishlistSlice";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
-import Engrave from "./Engrave";
+import Engrave from "../Engrave";
 import {
   Accordion,
   AccordionContent,
@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 // import { Checkbox } from "@/components/ui/checkbox";
-// import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
+import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
 import BraceletSizeGuidePopup from "@/components/BraceletSizeGuidePopup";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
@@ -834,9 +834,7 @@ const ProductDetail = () => {
 
       let karatCode = "18";
       if (selectedMetalType === "GOLD") {
-        karatCode = selectedGoldKarat.includes("kt")
-          ? selectedGoldKarat.replace("kt", "")
-          : selectedGoldKarat;
+        karatCode = selectedGoldKarat.replace(/kt/i, "");
       } else {
         karatCode = metalCodeMap[selectedMetalType];
       }
@@ -861,9 +859,7 @@ const ProductDetail = () => {
     };
 
     if (selectedMetalType === "GOLD") {
-      karatCode = selectedGoldKarat.includes("kt")
-        ? selectedGoldKarat.replace("kt", "")
-        : selectedGoldKarat;
+      karatCode = selectedGoldKarat.replace(/kt/i, "");
     } else {
       karatCode = metalCodeMap[selectedMetalType];
     }
