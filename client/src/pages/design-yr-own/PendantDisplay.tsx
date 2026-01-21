@@ -241,7 +241,7 @@ export default function RingBuilder() {
     description: "",
     diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
-    diamondSize: "0.5 Carat",
+    diamondSize: "Center Stone",
     diamondColor: "D-FL",
     diamondClarity: "Center Stone",
     metal: "Gold",
@@ -752,6 +752,19 @@ export default function RingBuilder() {
     if (targetStep === 3) {
       // Ensure step1 requirements are met first
       if (!validateForStep(2)) return false;
+      // dont allow diamond size center stone
+      if (formData.diamondSize === "Center Stone") {
+        toast.error("Please select a diamond size other than Center Stone.");
+        return false;
+      }
+      // if no diamond clarity options available, dont go next step
+      const availableColorClarity = getAvailableColorClarity();
+      if (availableColorClarity.length === 0) {
+        toast.error(
+          "The selected combination of diamond origin and metal does not have available color/clarity options. Please adjust your selections.",
+        );
+        return false;
+      }
 
       const customizationFields: Array<keyof typeof formData> = [
         "diamondOrigin",

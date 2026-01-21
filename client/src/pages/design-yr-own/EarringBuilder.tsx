@@ -221,7 +221,7 @@ export default function EarringBuilder() {
     description: "",
     diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
-    diamondSize: "0.5 Carat",
+    diamondSize: "Center Stone",
     diamondColor: "D-IF",
     priority: "normal",
     metalType: "Gold",

@@ -253,7 +253,7 @@ export default function RingBuilder() {
     modificationRequest: "",
     description: "",
     diamondShape: "Round",
-    diamondSize: "0.5 Carat",
+    diamondSize: "Center Stone",
     diamondColor: "D-IF",
     diamondClarity: "Center Stone",
     diamondOrigin: "Natural Diamond",
@@ -758,6 +758,13 @@ export default function RingBuilder() {
     if (targetStep === 3) {
       // Ensure step1 requirements are met first
       if (!validateForStep(2)) return false;
+      // Check if selected diamond clarity is valid and not "Center Stone"
+      if (formData.diamondClarity === "Center Stone") {
+        toast.error(
+          "Please select a diamond clarity option before proceeding.",
+        );
+        return false;
+      }
 
       // Check if diamond size is "Center Stone"
       if (formData.diamondSize === "Center Stone") {

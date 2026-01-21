@@ -242,7 +242,7 @@ export default function RingBuilder() {
     description: "",
     diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
-    diamondSize: "0.1 Carat",
+    diamondSize: "Center Stone",
     diamondColor: "D-FL",
     diamondClarity: "Center Stone",
     metal: "Gold",
@@ -317,6 +317,7 @@ export default function RingBuilder() {
 
     // Define all possible necklace size options (same as pendant)
     const allSizes = [
+      "Center Stone",
       "0.1 Carat",
       "0.15 Carat",
       "0.2 Carat",
@@ -701,6 +702,14 @@ export default function RingBuilder() {
     if (targetStep === 3) {
       // Ensure step1 requirements are met first
       if (!validateForStep(2)) return false;
+
+      // Check if diamond size is "Center Stone"
+      if (formData.diamondSize === "Center Stone") {
+        toast.error(
+          "Please select a specific diamond carat to proceed. 'Center Stone' is not a valid selection.",
+        );
+        return false;
+      }
 
       // Check if diamond clarity options are available for current metal/origin
       const availableClarity = getAvailableColorClarity();
@@ -1273,7 +1282,7 @@ export default function RingBuilder() {
                       diamondOrigin: "Natural Diamond",
                     })
                   }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
+                  className={`p-2 rounded-full border-2 transition-all ${
                     formData.diamondOrigin === "Natural Diamond"
                       ? "border-[#328F94] bg-[#328F94]/5"
                       : "border-gray-200 hover:border-[#328F94]/50"
@@ -1288,7 +1297,7 @@ export default function RingBuilder() {
                       diamondOrigin: "Lab Grown Diamond",
                     })
                   }
-                  className={`p-2 rounded-2xl border-2 transition-all ${
+                  className={`p-2 rounded-full border-2 transition-all ${
                     formData.diamondOrigin === "Lab Grown Diamond"
                       ? "border-[#328F94] bg-[#328F94]/5"
                       : "border-gray-200 hover:border-[#328F94]/50"
