@@ -1492,9 +1492,9 @@ export default function RingBuilder() {
                   <SelectValue placeholder="Select Size" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="5">5 inches</SelectItem>
-                  <SelectItem value="6">6 inches</SelectItem>
-                  <SelectItem value="7">7 inches</SelectItem>
+                  <SelectItem value="5">6 inches</SelectItem>
+                  <SelectItem value="6">7 inches</SelectItem>
+                  <SelectItem value="7">8 inches</SelectItem>
                 </SelectContent>
               </Select>
               <Button
