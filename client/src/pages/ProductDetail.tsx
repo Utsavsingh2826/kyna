@@ -257,12 +257,12 @@ const ProductDetail = () => {
   const [shareUrl, setShareUrl] = useState("");
   const [shareMessage, setShareMessage] = useState("");
 
-  const handleShare = async (platform: 'whatsapp' | 'email' | 'copy') => {
+  const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     // Construct the correct URL for the current variant
     const currentUrl = window.location.href;
     const productName = productData?.title || "Check out this product";
 
-    if (platform === 'copy') {
+    if (platform === "copy") {
       try {
         await navigator.clipboard.writeText(currentUrl);
         toast.success("Link copied to clipboard!");
@@ -274,20 +274,43 @@ const ProductDetail = () => {
 
     const message = `I found this beautiful piece at Kyna Jewels and thought of you! 💎\n\n${productName}\n\nCheck it out here: ${currentUrl}\n\nKyna Jewels is the best online jewellery business for premium designs!`;
 
-    if (platform === 'whatsapp') {
+    if (platform === "whatsapp") {
       const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
       window.open(url, "_blank");
-    } else if (platform === 'email') {
+    } else if (platform === "email") {
       setShareUrl(currentUrl);
-      setShareMessage(`I found this beautiful piece at Kyna Jewels and thought of you! 💎\n\nCheck out the ${productName} here. Kyna Jewels is the best online jewellery business for premium designs!`);
+      setShareMessage(
+        `I found this beautiful piece at Kyna Jewels and thought of you! 💎\n\nCheck out the ${productName} here. Kyna Jewels is the best online jewellery business for premium designs!`,
+      );
       setShareModalOpen(true);
     }
   };
 
   const socialLinks = [
-    { icon: "/Jan/Vector.png", label: "WhatsApp", action: () => handleShare('whatsapp'), height: "h-5", width: "w-5", isImage: true },
-    { icon: Mail, label: "Email", action: () => handleShare('email'), height: "h-5", width: "w-5", isImage: false },
-    { icon: Share2, label: "Copy Link", action: () => handleShare('copy'), height: "h-5", width: "w-5", isImage: false },
+    {
+      icon: "/Jan/Vector.png",
+      label: "WhatsApp",
+      action: () => handleShare("whatsapp"),
+      height: "h-5",
+      width: "w-5",
+      isImage: true,
+    },
+    {
+      icon: Mail,
+      label: "Email",
+      action: () => handleShare("email"),
+      height: "h-5",
+      width: "w-5",
+      isImage: false,
+    },
+    {
+      icon: Share2,
+      label: "Copy Link",
+      action: () => handleShare("copy"),
+      height: "h-5",
+      width: "w-5",
+      isImage: false,
+    },
   ];
 
   const [isBraceletSizePopupOpen, setIsBraceletSizePopupOpen] = useState(false);
@@ -677,8 +700,8 @@ const ProductDetail = () => {
           const variantId = params.get("variantId");
           const modelUrl = variantId
             ? `/api/products/model/${id}?variantId=${encodeURIComponent(
-              variantId,
-            )}&metalColor=${params.get("metalColor") || "WG"}`
+                variantId,
+              )}&metalColor=${params.get("metalColor") || "WG"}`
             : `/api/products/model/${id}`;
           response = await fetch(modelUrl);
           if (!response.ok) {
@@ -884,7 +907,7 @@ const ProductDetail = () => {
     document.body.appendChild(script);
 
     // Do not remove script/container on cleanup — keep preload alive
-    return () => { };
+    return () => {};
   }, [productData]);
 
   // Separate useEffect to handle URL parameter changes for metal color
@@ -1046,9 +1069,9 @@ const ProductDetail = () => {
 
       const caratCode = selectedDiamondSize
         ? String(Math.round(parseFloat(selectedDiamondSize) * 100)).padStart(
-          2,
-          "0",
-        )
+            2,
+            "0",
+          )
         : "30";
 
       return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}`;
@@ -1473,12 +1496,12 @@ const ProductDetail = () => {
                 : null,
           engraving:
             hasEngraving &&
-              (engravingText || engravingMotifPath || engravingImageUrl)
+            (engravingText || engravingMotifPath || engravingImageUrl)
               ? {
-                text: engravingText || undefined,
-                motif: engravingMotifPath || undefined,
-                imageUrl: engravingImageUrl || undefined,
-              }
+                  text: engravingText || undefined,
+                  motif: engravingMotifPath || undefined,
+                  imageUrl: engravingImageUrl || undefined,
+                }
               : undefined,
         }),
       );
@@ -2001,8 +2024,6 @@ const ProductDetail = () => {
     );
   };
 
-
-
   // Handle diamond origin selection with silver metal validation
   const handleDiamondOriginSelect = (origin: string) => {
     // Check if trying to select natural diamond with silver metal
@@ -2062,7 +2083,6 @@ const ProductDetail = () => {
         if (preloadContainer && pre.canvas.parentElement !== preloadContainer) {
           try {
             preloadContainer.appendChild(pre.canvas);
-
           } catch (err) {
             // ignore
           }
@@ -2158,10 +2178,11 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
-                          ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                          : "border-neutral-200 hover:border-neutral-300"
-                          }`}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
+                          selectedImage === index
+                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                            : "border-neutral-200 hover:border-neutral-300"
+                        }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2198,7 +2219,8 @@ const ProductDetail = () => {
                             className="w-full h-full object-cover"
                             onError={() => {
                               console.error(
-                                `Failed to load desktop thumbnail ${index + 1
+                                `Failed to load desktop thumbnail ${
+                                  index + 1
                                 }:`,
                                 image,
                               );
@@ -2224,8 +2246,9 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div
-                  className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${isUpdating ? "opacity-50" : "opacity-100"
-                    }`}
+                  className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${
+                    isUpdating ? "opacity-50" : "opacity-100"
+                  }`}
                 >
                   {/* use the fetched images only */}
                   {(() => {
@@ -2298,9 +2321,11 @@ const ProductDetail = () => {
                     onClick={handleWishlistToggle}
                     disabled={wishlistLoading}
                     aria-pressed={isInWishlist}
-                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${isInWishlist ? "text-red-500" : "text-gray-600"
-                      } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
-                      }`}
+                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${
+                      isInWishlist ? "text-red-500" : "text-gray-600"
+                    } ${
+                      wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
+                    }`}
                   >
                     <Heart
                       size={20}
@@ -2330,10 +2355,11 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
-                          ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                          : "border-neutral-200 hover:border-neutral-300"
-                          }`}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
+                          selectedImage === index
+                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                            : "border-neutral-200 hover:border-neutral-300"
+                        }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full flex justify-center items-center bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2374,11 +2400,11 @@ const ProductDetail = () => {
                                 image,
                               );
                             }}
-                          // onLoad={() => {
-                          //   console.log(
-                          //     `Loaded mobile thumbnail ${index + 1}`
-                          //   );
-                          // }}
+                            // onLoad={() => {
+                            //   console.log(
+                            //     `Loaded mobile thumbnail ${index + 1}`
+                            //   );
+                            // }}
                           />
                         )}
                       </button>
@@ -2451,8 +2477,9 @@ const ProductDetail = () => {
                     Diamond Origin{" "}
                     <button
                       type="button"
-                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
-                        }`}
+                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${
+                        showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
+                      }`}
                       onClick={() => setShowTooltip((prev) => !prev)}
                     >
                       i{/* Tooltip: appears on click */}
@@ -2491,12 +2518,13 @@ const ProductDetail = () => {
                           key={origin}
                           onClick={() => handleDiamondOriginSelect(origin)}
                           disabled={isDisabled}
-                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${isDisabled
-                            ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
-                            : selectedDiamondOrigin === origin
-                              ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
-                              : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
-                            }`}
+                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${
+                            isDisabled
+                              ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
+                              : selectedDiamondOrigin === origin
+                                ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
+                                : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
+                          }`}
                         >
                           {origin}
                           {isDisabled && (
@@ -2541,10 +2569,11 @@ const ProductDetail = () => {
                                 setSelectedDiamondShape(newShape);
                               }}
                               className={`group relative w-[50px] h-[50px] border rounded-lg p-1 
-          ${selectedDiamondShape === shape.name.toUpperCase()
-                                  ? "border-primary bg-primary/5"
-                                  : "border-neutral-300"
-                                }`}
+          ${
+            selectedDiamondShape === shape.name.toUpperCase()
+              ? "border-primary bg-primary/5"
+              : "border-neutral-300"
+          }`}
                             >
                               {/* FIXED: remove full flex-center, add controlled padding */}
                               <div className="w-full h-full flex items-end justify-center">
@@ -2628,7 +2657,7 @@ const ProductDetail = () => {
 
                       const clarityOptions =
                         productData.diamondOptions?.[diamondType]?.[
-                        metalTypeKey
+                          metalTypeKey
                         ] || [];
 
                       // Map the clarity options to match the format used in the product
@@ -2723,11 +2752,12 @@ const ProductDetail = () => {
                                 const newKarat = normalizeKarat(karat);
                                 setSelectedGoldKarat(newKarat);
                               }}
-                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${normalizeKarat(selectedGoldKarat) ===
+                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
+                                normalizeKarat(selectedGoldKarat) ===
                                 normalizeKarat(karat)
-                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                                : "border-neutral-600 text-neutral-600"
-                                }`}
+                                  ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                                  : "border-neutral-600 text-neutral-600"
+                              }`}
                             >
                               {getKaratDisplayLabel(karat)}
                             </button>
@@ -2764,10 +2794,11 @@ const ProductDetail = () => {
                         <button
                           key={code}
                           onClick={() => updateMetalColor(code)}
-                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${selectedColorCode === code
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/30"
-                            : "border-neutral-300 hover:border-[#328F94]"
-                            } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
+                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${
+                            selectedColorCode === code
+                              ? "border-[#328F94] ring-2 ring-[#328F94]/30"
+                              : "border-neutral-300 hover:border-[#328F94]"
+                          } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
                           title={colorInfo.name}
                         >
                           {isCombination ? (
@@ -2797,11 +2828,12 @@ const ProductDetail = () => {
                     (productData?.finishing?.length ?? 0) > 0) && (
                     <div className="my-6">
                       <div
-                        className={`grid ${(productData?.bandwidth?.length ?? 0) > 0 &&
+                        className={`grid ${
+                          (productData?.bandwidth?.length ?? 0) > 0 &&
                           (productData?.finishing?.length ?? 0) > 0
-                          ? "grid-cols-2"
-                          : "grid-cols-1"
-                          } gap-4`}
+                            ? "grid-cols-2"
+                            : "grid-cols-1"
+                        } gap-4`}
                       >
                         {/* Bandwidth Selection */}
                         {(productData?.bandwidth?.length ?? 0) > 0 && (
@@ -2814,11 +2846,12 @@ const ProductDetail = () => {
                               onValueChange={setSelectedBandwidth}
                             >
                               <SelectTrigger
-                                className={`text-sm border-neutral-300 ${(productData?.bandwidth?.length ?? 0) > 0 &&
+                                className={`text-sm border-neutral-300 ${
+                                  (productData?.bandwidth?.length ?? 0) > 0 &&
                                   (productData?.finishing?.length ?? 0) > 0
-                                  ? "w-full"
-                                  : "w-1/2"
-                                  }`}
+                                    ? "w-full"
+                                    : "w-1/2"
+                                }`}
                               >
                                 <SelectValue placeholder="Select Width" />
                               </SelectTrigger>
@@ -2844,11 +2877,12 @@ const ProductDetail = () => {
                               onValueChange={setSelectedFinishing}
                             >
                               <SelectTrigger
-                                className={`${(productData?.bandwidth?.length ?? 0) > 0 &&
+                                className={`${
+                                  (productData?.bandwidth?.length ?? 0) > 0 &&
                                   (productData?.finishing?.length ?? 0) > 0
-                                  ? "w-full"
-                                  : "w-1/2"
-                                  } border-neutral-300`}
+                                    ? "w-full"
+                                    : "w-1/2"
+                                } border-neutral-300`}
                               >
                                 <SelectValue placeholder="Select Finish" />
                               </SelectTrigger>
@@ -3054,15 +3088,28 @@ const ProductDetail = () => {
                   </Button>
                 </div>
 
-                {/* Trust Badges */}
-                <div className="flex items-center gap-4">
+                {/* Certification Logos */}
+                <div className="flex items-center gap-4 justify-start">
                   <img
-                    className="w-8 h-8"
-                    src="/Hallmarks/BIS.png"
-                    alt="Hallmark"
+                    src="/Hallmarks/GIA.png"
+                    className="h-20 w-20 object-contain"
+                    alt="GIA Certification"
                   />
-                  <img className="w-8 h-8" src="/Hallmarks/IGI.png" alt="IGI" />
-                  <img className="w-8 h-8" src="/Hallmarks/SGL.png" alt="SGA" />
+                  <img
+                    src="/Hallmarks/IGI.png"
+                    alt="IGI Certification"
+                    className="h-14 w-14 object-contain"
+                  />
+                  <img
+                    src="/Hallmarks/SGL.png"
+                    alt="SGL Certification"
+                    className="h-20 w-20 object-contain"
+                  />
+                  <img
+                    src="/Hallmarks/BIS.png"
+                    alt="BIS Hallmark"
+                    className="h-14 w-14 object-contain"
+                  />
                 </div>
 
                 {/* Share Options */}
@@ -3077,7 +3124,11 @@ const ProductDetail = () => {
                         onClick={link.action}
                       >
                         {link.isImage ? (
-                          <img src={link.icon as string} alt={link.label} className={`${link.height} ${link.width}`} />
+                          <img
+                            src={link.icon as string}
+                            alt={link.label}
+                            className={`${link.height} ${link.width}`}
+                          />
                         ) : (
                           // @ts-ignore
                           <link.icon size={14} />
@@ -3258,21 +3309,26 @@ const ProductDetail = () => {
                           </p>
                         </div>
                         {/* Certification Logos */}
-                        <div className="flex items-center gap-4 justify-start md:justify-end">
+                        <div className="flex items-center gap-4 justify-start md:justify-center">
                           <img
-                            src="/Hallmarks/BIS.png"
-                            alt="BIS Hallmark"
-                            className="h-16 w-16 object-contain"
+                            src="/Hallmarks/GIA.png"
+                            className="h-20 w-20 object-contain"
+                            alt="GIA Certification"
                           />
                           <img
                             src="/Hallmarks/IGI.png"
                             alt="IGI Certification"
-                            className="h-16 w-16 object-contain"
+                            className="h-14 w-14 object-contain"
                           />
                           <img
                             src="/Hallmarks/SGL.png"
                             alt="SGL Certification"
-                            className="h-16 w-16 object-contain"
+                            className="h-20 w-20 object-contain"
+                          />
+                          <img
+                            src="/Hallmarks/BIS.png"
+                            alt="BIS Hallmark"
+                            className="h-14 w-14 object-contain"
                           />
                         </div>
                       </div>

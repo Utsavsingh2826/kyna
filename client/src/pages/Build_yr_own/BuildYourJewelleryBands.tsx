@@ -2386,23 +2386,27 @@ const ProductDetail = () => {
                     Add To Cart
                   </Button>
                 </div>
-
-                {/* Trust Badges - Center on mobile */}
-                <div className="flex items-center justify-center md:justify-start gap-4">
+                {/* Certification Logos */}
+                <div className="flex items-center gap-4 justify-start">
                   <img
-                    className="w-6 h-6 md:w-8 md:h-8"
-                    src="/Hallmarks/BIS.png"
-                    alt="Hallmark"
+                    src="/Hallmarks/GIA.png"
+                    className="h-20 w-20 object-contain"
+                    alt="GIA Certification"
                   />
                   <img
-                    className="w-6 h-6 md:w-8 md:h-8"
                     src="/Hallmarks/IGI.png"
-                    alt="IGI"
+                    alt="IGI Certification"
+                    className="h-14 w-14 object-contain"
                   />
                   <img
-                    className="w-6 h-6 md:w-8 md:h-8"
                     src="/Hallmarks/SGL.png"
-                    alt="SGA"
+                    alt="SGL Certification"
+                    className="h-20 w-20 object-contain"
+                  />
+                  <img
+                    src="/Hallmarks/BIS.png"
+                    alt="BIS Hallmark"
+                    className="h-14 w-14 object-contain"
                   />
                 </div>
 
@@ -2544,23 +2548,27 @@ const ProductDetail = () => {
                             may not reflect exact true color and/or scale.
                           </p>
                         </div>
-
                         {/* Certification Logos */}
-                        <div className="flex items-center gap-4 justify-start md:justify-end">
+                        <div className="flex items-center gap-4 justify-start md:justify-center">
                           <img
-                            src="/Hallmarks/BIS.png"
-                            alt="BIS Hallmark"
-                            className="h-16 w-16 object-contain"
+                            src="/Hallmarks/GIA.png"
+                            className="h-20 w-20 object-contain"
+                            alt="GIA Certification"
                           />
                           <img
                             src="/Hallmarks/IGI.png"
                             alt="IGI Certification"
-                            className="h-16 w-16 object-contain"
+                            className="h-14 w-14 object-contain"
                           />
                           <img
                             src="/Hallmarks/SGL.png"
                             alt="SGL Certification"
-                            className="h-16 w-16 object-contain"
+                            className="h-20 w-20 object-contain"
+                          />
+                          <img
+                            src="/Hallmarks/BIS.png"
+                            alt="BIS Hallmark"
+                            className="h-14 w-14 object-contain"
                           />
                         </div>
                       </div>
