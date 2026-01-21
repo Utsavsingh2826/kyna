@@ -67,7 +67,7 @@ export default function AboutPage() {
             Jewellery That Celebrates You
           </motion.h1>
           <motion.p
-            className="text-lg md:text-2xl max-w-3xl mx-auto px-4 italic font-light"
+            className="text-sm md:text-lg max-w-3xl mx-auto px-4 font-light"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5, duration: 0.8 }}
@@ -112,7 +112,7 @@ export default function AboutPage() {
                 className="rounded-3xl w-full max-w-md object-cover mb-6"
               />
               {/* Quote below image */}
-              <p className="text-center text-muted-foreground text-lg md:text-xl italic mb-2">
+              <p className="text-center text-muted-foreground text-md md:text-lg italic mb-2">
                 “We started Kyna to redefine jewelry by blending timeless
                 craftsmanship with modern elegance, creating pieces that
                 celebrate individuality and tell unique stories.”
@@ -137,7 +137,7 @@ export default function AboutPage() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
                   Personalized Guidance with Kyna Mentors{" "}
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -174,7 +174,7 @@ export default function AboutPage() {
               </div>
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
                   Community Engagement with Kyna Ambassadors
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -200,7 +200,7 @@ export default function AboutPage() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-4xl md:text-5xl lg:text-6xl text-foreground leading-tight">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
                   Timeless Pieces for Your Cherished Memories{" "}
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -238,15 +238,15 @@ export default function AboutPage() {
                 />
               </div>
               <div className="space-y-8 lg:order-2">
-                <h2 className="text-4xl text-[#1A141F] md:text-5xl font-semibold ">
+                <h2 className="text-3xl text-[#1A141F] md:text-4xl font-semibold ">
                   WE'RE HERE FOR YOU
                 </h2>
 
                 <div className="space-y-6">
-                  <h3 className="text-2xl text-foreground">
+                  <h3 className="text-1xl text-foreground">
                     Virtual Appointment
                   </h3>
-                  <p className="text-[#1A1A1A99] text-lg leading-relaxed">
+                  <p className="text-[#1A1A1A99] text-sm leading-relaxed">
                     Appointments are relaxed, joyful, and tailored to you.
                     Whether it's a milestone moment or an everyday luxury, we're
                     here to help you start your stack, find your fit, and design
@@ -255,7 +255,7 @@ export default function AboutPage() {
 
                   <hr className="border-gray-300 my-4" />
 
-                  <p className="text-[#1A1A1A99] font-medium">
+                  <p className="text-[#1A1A1A99] font-small leading-relaxed">
                     From the comfort of your own home
                   </p>
                 </div>

@@ -294,6 +294,7 @@ const ProductDetail = () => {
   const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
   const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
   const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
+  const [isNecklaceSizePopupOpen, setIsNecklaceSizePopupOpen] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -1586,6 +1587,16 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
+                {/* Necklace Size Guide */}
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="text-[#328F94] p-0 mt-1"
+                  onClick={() => setIsNecklaceSizePopupOpen(true)}
+                >
+                  Necklace Size Guide
+                </Button>
+
                 {selectedStyleData?.productDetails?.chainOption && (
                   <>
                     <div
@@ -2165,6 +2176,12 @@ const ProductDetail = () => {
         onClose={() => setIsPdfPopupOpen(false)}
         pdfUrl="/Stone_Guide.pdf"
         title="Quality & Certification"
+      />
+      <PdfPopup
+        pdfUrl="/Necklace_size.pdf"
+        title="Necklace Size Guide"
+        isOpen={isNecklaceSizePopupOpen}
+        onClose={() => setIsNecklaceSizePopupOpen(false)}
       />
     </div>
   );

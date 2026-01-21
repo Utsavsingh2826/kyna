@@ -225,7 +225,7 @@ export default function EarringBuilder() {
     diamondColor: "D-IF",
     priority: "normal",
     metalType: "Gold",
-    metalColor: "Yellow Gold",
+    metalColor: "Yellow",
     backingType: "",
     goldKarat: "18KT",
     engraving: "",
@@ -349,10 +349,10 @@ export default function EarringBuilder() {
     setUploadedImages(uploadedImages.filter((_, i) => i !== index));
   };
 
-  // Auto-set metal color to White Gold for Platinum and Silver
+  // Auto-set metal color to White  for Platinum and Silver
   useEffect(() => {
     if (formData.metalType === "Platinum" || formData.metalType === "Silver") {
-      setFormData((prev) => ({ ...prev, metalColor: "White Gold" }));
+      setFormData((prev) => ({ ...prev, metalColor: "White" }));
     }
   }, [formData.metalType]);
 
@@ -388,6 +388,66 @@ export default function EarringBuilder() {
 
     return naturalOptions;
   };
+
+  // Function to get available diamond sizes based on diamond origin and metal
+  const getAvailableDiamondSizes = () => {
+    const { diamondOrigin, metalType } = formData;
+    const diamondType =
+      diamondOrigin === "Natural Diamond" ? "Natural" : "Lab Grown";
+
+    // Define all possible sizes
+    const allSizes = [
+      "Center Stone",
+      "0.3 Carat",
+      "0.5 Carat",
+      "0.7 Carat",
+      "1 Carat",
+      "1.5 Carat",
+      "2 Carat",
+      "3 Carat",
+      "4 Carat",
+      "5 Carat",
+    ];
+
+    if (diamondType === "Natural") {
+      // Natural diamonds: max 1 Carat for all metals
+      return allSizes.filter((size) => {
+        if (size === "Center Stone") return true;
+        const caratValue = parseFloat(size);
+        return caratValue <= 1;
+      });
+    } else if (diamondType === "Lab Grown") {
+      // Lab Grown diamonds
+      if (metalType === "Silver") {
+        // Lab Grown + Silver: max 2 Carat
+        return allSizes.filter((size) => {
+          if (size === "Center Stone") return true;
+          const caratValue = parseFloat(size);
+          return caratValue <= 2;
+        });
+      } else {
+        // Lab Grown + Gold/Platinum: all sizes available
+        return allSizes;
+      }
+    }
+
+    return allSizes;
+  };
+
+  // Reset diamond size when metal or diamond origin changes if current selection is invalid
+  useEffect(() => {
+    const availableSizes = getAvailableDiamondSizes();
+    const currentSizeValid = availableSizes.includes(formData.diamondSize);
+
+    if (!currentSizeValid) {
+      // Prefer non-"Center Stone" options, but fall back if necessary
+      const defaultSize =
+        availableSizes.find((size) => size !== "Center Stone") ||
+        availableSizes[0] ||
+        "0.5 Carat";
+      setFormData((prev) => ({ ...prev, diamondSize: defaultSize }));
+    }
+  }, [formData.metalType, formData.diamondOrigin]);
 
   // Reset color/clarity when metal or diamond origin changes if current selection is invalid
   useEffect(() => {
@@ -553,6 +613,31 @@ export default function EarringBuilder() {
       // Ensure step1 requirements are met first
       if (!validateForStep(2)) return false;
 
+      // Check if diamond size is "Center Stone"
+      if (formData.diamondSize === "Center Stone") {
+        toast.error(
+          "Please select a specific diamond size to proceed. 'Center Stone' is not a valid selection.",
+        );
+        return false;
+      }
+
+      // Check if diamond clarity options are available for current metal/origin
+      const availableClarity = getAvailableColorClarity();
+      if (availableClarity.length === 0) {
+        toast.error(
+          "Diamond clarity is not available for the selected metal type and diamond origin combination. Please select a different metal or diamond origin.",
+        );
+        return false;
+      }
+
+      // Check if selected clarity is valid
+      if (!availableClarity.includes(formData.diamondColor)) {
+        toast.error(
+          "The selected diamond clarity is not available for your current selection. Please choose a valid option.",
+        );
+        return false;
+      }
+
       const customizationFields: Array<keyof typeof formData> = [
         "diamondOrigin",
         "diamondShape",
@@ -626,7 +711,7 @@ export default function EarringBuilder() {
           <div className="space-y-6">
             <div className="mb-8">
               <h1 className="text-3xl text-[#1A141F] font-bold mb-4">
-                Upload Image Or Share Link
+                Upload Image
               </h1>
               <div className="space-y-2 text-sm text-muted-foreground">
                 <p>• At least 2 images should be added.</p>
@@ -919,9 +1004,7 @@ export default function EarringBuilder() {
                 }`}
               >
                 Select Diamond Shape <span className="text-red-500">*</span> :{" "}
-                <span className="text-gray-400 font-light">
-                  {formData.diamondShape}
-                </span>
+                {formData.diamondShape}
                 {formData.sameAsImage && (
                   <span className="text-xs text-gray-500 ml-2">
                     (Same as Image)
@@ -933,47 +1016,50 @@ export default function EarringBuilder() {
                   formData.sameAsImage ? "pointer-events-none opacity-50" : ""
                 }`}
               >
-                {formData.sameAsImage ? (
-                  <div className="col-span-5 p-4 rounded-lg bg-gray-50 border border-neutral-200 text-sm text-gray-600">
-                    Same as Image
-                  </div>
-                ) : (
-                  diamondShapes.map((shape) => (
-                    <button
-                      key={shape.name}
-                      onClick={() => {
-                        if (!formData.sameAsImage) {
-                          setFormData({
-                            ...formData,
-                            diamondShape: shape.name,
-                          });
+                {diamondShapes.map((shape) => (
+                  <button
+                    key={shape.name}
+                    onClick={() => {
+                      if (!formData.sameAsImage) {
+                        setFormData({
+                          ...formData,
+                          diamondShape: shape.name,
+                        });
 
-                          console.log("💎 Diamond Shape Selected:", {
-                            diamondShape: shape.name,
-                            userId: formData.userId,
-                            sameAsImage: formData.sameAsImage,
-                            customizationDisabled: formData.sameAsImage,
-                          });
-                        }
-                      }}
-                      className={`aspect-square  rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${
-                        formData.diamondShape === shape.name
-                          ? "bg-[#328F94]/20"
-                          : ""
-                      }`}
-                    >
-                      <span className="text-2xl mb-1">{shape.icon}</span>
-                      {/* <span>{shape.name}</span> */}
-                    </button>
-                  ))
-                )}
+                        console.log("💎 Diamond Shape Selected:", {
+                          diamondShape: shape.name,
+                          userId: formData.userId,
+                          sameAsImage: formData.sameAsImage,
+                          customizationDisabled: formData.sameAsImage,
+                        });
+                      }
+                    }}
+                    className={`aspect-square rounded-2xl flex flex-col items-center justify-center p-2 text-xs ${
+                      formData.diamondShape === shape.name
+                        ? "bg-[#328F94]/20"
+                        : ""
+                    }`}
+                  >
+                    <span className="text-2xl mb-1">{shape.icon}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Diamond Specification */}
             <div>
-              <h3 className="font-medium mb-4">Select Diamond Specification</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <h3
+                className={`font-medium mb-4 ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
+              >
+                Select Diamond Specification
+              </h3>
+              <div
+                className={`grid grid-cols-2 gap-4 ${
+                  formData.sameAsImage ? "pointer-events-none opacity-50" : ""
+                }`}
+              >
                 <div>
                   <label className="text-sm text-muted-foreground">
                     Diamond Size <span className="text-red-500">*</span>
@@ -983,14 +1069,17 @@ export default function EarringBuilder() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, diamondSize: value })
                     }
+                    disabled={formData.sameAsImage}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="0.5 Carat">0.5 Carat</SelectItem>
-                      <SelectItem value="1 Carat">1 Carat</SelectItem>
-                      <SelectItem value="1.5 Carat">1.5 Carat</SelectItem>
+                      {getAvailableDiamondSizes().map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {size}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1004,6 +1093,7 @@ export default function EarringBuilder() {
                     onValueChange={(value) =>
                       setFormData({ ...formData, diamondColor: value })
                     }
+                    disabled={formData.sameAsImage}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -1037,10 +1127,18 @@ export default function EarringBuilder() {
 
             {/* Diamond Origin */}
             <div>
-              <label className="text-sm text-muted-foreground">
+              <label
+                className={`text-sm text-muted-foreground ${
+                  formData.sameAsImage ? "text-gray-400" : ""
+                }`}
+              >
                 Diamond Origin <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-2 gap-3 mt-2">
+              <div
+                className={`grid grid-cols-2 gap-3 mt-2 ${
+                  formData.sameAsImage ? "pointer-events-none opacity-50" : ""
+                }`}
+              >
                 <button
                   onClick={() =>
                     setFormData({
@@ -1048,6 +1146,7 @@ export default function EarringBuilder() {
                       diamondOrigin: "Natural Diamond",
                     })
                   }
+                  disabled={formData.sameAsImage}
                   className={`p-2 rounded-full border-2 transition-all ${
                     formData.diamondOrigin === "Natural Diamond"
                       ? "border-[#328F94] bg-[#328F94]/5"
@@ -1063,6 +1162,7 @@ export default function EarringBuilder() {
                       diamondOrigin: "Lab Grown Diamond",
                     })
                   }
+                  disabled={formData.sameAsImage}
                   className={`p-2 rounded-full border-2 transition-all ${
                     formData.diamondOrigin === "Lab Grown Diamond"
                       ? "border-[#328F94] bg-[#328F94]/5"
@@ -1259,41 +1359,41 @@ export default function EarringBuilder() {
                 <SelectContent className="bg-white">
                   {formData.metalType === "Gold" && (
                     <>
-                      <SelectItem value="Yellow Gold" className="gap-">
+                      <SelectItem value="Yellow" className="gap-">
                         <img
                           src="/colors/gold.png"
-                          alt="Yellow Gold"
+                          alt="Yellow"
                           className="inline-block h-6 w-6 mr-2 mb-1"
                         />
-                        Yellow Gold{" "}
+                        Yellow{" "}
                       </SelectItem>
-                      <SelectItem value="White Gold">
+                      <SelectItem value="White">
                         <img
                           src="/colors/white.png"
-                          alt="White Gold"
+                          alt="White"
                           className="inline-block h-6 w-6 mr-2 mb-1"
                         />
-                        White Gold
+                        White
                       </SelectItem>
-                      <SelectItem value="Rose Gold">
+                      <SelectItem value="Rose">
                         <img
                           src="/colors/rosegold.png"
-                          alt="Rose Gold"
+                          alt="Rose"
                           className="inline-block h-6 w-6 mr-2 mb-1"
                         />
-                        Rose Gold
+                        Rose
                       </SelectItem>
                     </>
                   )}
                   {(formData.metalType === "Platinum" ||
                     formData.metalType === "Silver") && (
-                    <SelectItem value="White Gold">
+                    <SelectItem value="White">
                       <img
                         src="/colors/white.png"
-                        alt="White Gold"
+                        alt="White"
                         className="inline-block h-6 w-6 mr-2 mb-1"
                       />
-                      White Gold
+                      White
                     </SelectItem>
                   )}
                 </SelectContent>
@@ -1333,7 +1433,7 @@ export default function EarringBuilder() {
       {showPaymentForm && customizationData && authUser ? (
         <CustomizationPaymentForm
           customizationData={customizationData}
-          amount={1800}
+          amount={1770}
           userInfo={{
             userId: authUser.id || "",
             firstName: authUser.firstName || formData.firstName,
@@ -1452,6 +1552,14 @@ export default function EarringBuilder() {
                         {formData.metalColor}
                       </div>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">
+                      Diamond Origin:
+                    </span>
+                    <span className="text-sm text-[#328F94]">
+                      {formData.diamondOrigin}
+                    </span>
                   </div>
                   {formData.engraving && (
                     <div className="flex items-center gap-3">
@@ -1649,7 +1757,7 @@ export default function EarringBuilder() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Value</span>
-                    <span>₹6500</span>
+                    <span>₹1500</span>
                   </div>
                   <div className="flex justify-between">
                     <span>GST</span>
@@ -1658,7 +1766,7 @@ export default function EarringBuilder() {
                   <div className="border-t pt-2 mt-2">
                     <div className="flex justify-between font-medium">
                       <span>Total</span>
-                      <span>₹7,670</span>
+                      <span>₹1,770</span>
                     </div>
                   </div>
                 </div>
@@ -1698,7 +1806,7 @@ export default function EarringBuilder() {
                     Need Assistance? <span className="underline">Chat Now</span>
                   </a>{" "}
                   &nbsp;or&nbsp;
-                  <a href="tel:+918235567890" className="hover:underline">
+                  <a href="tel:+918928610682" className="hover:underline">
                     call <span className="underline">+91 8235567890</span>
                   </a>
                 </div>

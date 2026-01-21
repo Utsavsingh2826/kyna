@@ -851,6 +851,21 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     updatePriceFilter("max_price", maxPriceUI.toString());
   };
 
+  // Handlers for manual input changes
+  const handleMinInputChange = (value: number) => {
+    console.log("🔵 MIN INPUT CHANGED - Calling API with:", value);
+    setMinPriceUI(value);
+    setMinPrice(value);
+    updatePriceFilter("min_price", value.toString());
+  };
+
+  const handleMaxInputChange = (value: number) => {
+    console.log("🔶 MAX INPUT CHANGED - Calling API with:", value);
+    setMaxPriceUI(value);
+    setMaxPrice(value);
+    updatePriceFilter("max_price", value.toString());
+  };
+
   // Clear all filters
   const clearAllFilters = useCallback(() => {
     setSearchParams(new URLSearchParams());
@@ -2346,6 +2361,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2369,6 +2386,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               ringCategory="Engagement Rings"
               diamondShapeFilterKey="engagement_diamond_shape"
             />
+            <div className="eng-sublist pt-2">
+              <p className="eng-label-muted">STYLE</p>
+              {renderEngagementRingStyles("Engagement Rings")}
+            </div>
             <p className="eng-label-muted">PRICE</p>
             <PriceRangeSlider
               minPrice={minPriceUI}
@@ -2377,11 +2398,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
-            <div className="eng-sublist pt-2">
-              <p className="eng-label-muted">STYLE</p>
-              {renderEngagementRingStyles("Engagement Rings")}
-            </div>
           </FilterGroup>
 
           {/* Mens Rings */}
@@ -2408,6 +2427,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2441,11 +2462,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
-          {/* Men's Rings */}
-          {/* <FilterGroup title="Men's Rings" isSubGroup={true}>
+          {/* Men's Rings
+          <FilterGroup title="Men's Rings" isSubGroup={true}>
             <p className="eng-label-muted">DIAMOND SHAPE</p>
             <EnhancedDiamondShapeSelector
               selectedShapes={activeFilters.mens_diamond_shape}
@@ -2556,6 +2579,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2583,6 +2608,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2654,6 +2681,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2696,6 +2725,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2730,6 +2761,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
         </FilterGroup>
@@ -2770,6 +2803,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2812,6 +2847,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2847,6 +2884,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
 
@@ -2882,6 +2921,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               onMaxChange={handleMaxChange}
               onMinRelease={handleMinRelease}
               onMaxRelease={handleMaxRelease}
+              onMinInputChange={handleMinInputChange}
+              onMaxInputChange={handleMaxInputChange}
             />
           </FilterGroup>
         </FilterGroup>
@@ -3109,9 +3150,32 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               </div>
             )}
 
+            {/* No Products State */}
+            {!loading && !error && products.length === 0 && (
+              <div className="col-span-full flex justify-center items-center py-16">
+                <div className="text-center max-w-md">
+                  <div className="text-gray-400 text-6xl mb-4">🔍</div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-2">
+                    No Products Found
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    We couldn't find any products matching your filters. Try
+                    adjusting your search criteria.
+                  </p>
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-6 py-3 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Products */}
             {!loading &&
               !error &&
+              products.length > 0 &&
               products.map((p) => {
                 // Detect metal color from product image
                 const detectedMetalColor =
