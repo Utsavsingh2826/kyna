@@ -16,7 +16,7 @@ import WhatsAppButton from "./components/WhatsAppButton";
 import HomePage from "./pages/HomePage";
 import ProductsPage from "./pages/ProductsPage";
 import AboutPage from "./pages/AboutPage";
-import Engraving from "./pages/Engravings";
+
 import LoginPage from "./pages/LoginPage";
 import SignUpPage from "./pages/SignUpPage";
 import EmailVerificationPage from "./pages/EmailVerificationPage";
@@ -62,6 +62,7 @@ import BuildYourJewelleryBands from "./pages/Build_yr_own/BuildYourJewelleryBand
 import BuildYourJewelleryEarrings from "./pages/Build_yr_own/BuildYourJewelleryEarings";
 import BuildYourJewelleryRings from "./pages/Build_yr_own/BuildYourJewelleryRings";
 import TrackOrderPage from "./pages/TrackOrderPage";
+import SharedWishlistPage from "./pages/SharedWishlistPage";
 import Giftings from "./pages/Gifting/Giftings";
 import CustomerReviewsPage from "./pages/CustomerReviewsPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
@@ -116,7 +117,7 @@ function MainLayout({ children }: { children: React.ReactNode }) {
           <Navigation />
         </>
       )}
-      
+
       {children}
 
       {!hideLayout && (
@@ -169,6 +170,10 @@ function App() {
                 <WishlistPage />
               </PrivateRoute>
             }
+          />
+          <Route
+            path="/shared-wishlist/:shareId"
+            element={<SharedWishlistPage />}
           />
           <Route
             path="/login"
@@ -246,7 +251,7 @@ function App() {
           <Route path="/cancellation-refund" element={<CancellationRefund />} />
           <Route
             path="/engrave-your-ring"
-            element={<EngravingPage onClose={() => {}} />}
+            element={<EngravingPage onClose={() => { }} />}
           />
           <Route path="/Bracelet-education" element={<BangelsEducations />} />
           <Route path="/RingSize-Education" element={<RingSizeEducation />} />

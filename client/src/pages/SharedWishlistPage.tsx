@@ -1,0 +1,231 @@
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Heart } from "lucide-react";
+import { apiService } from "@/services/api";
+import type { WishlistEntry } from "@/store/slices/wishlistSlice";
+
+interface SharedWishlistData {
+    owner: {
+        firstName: string;
+        lastName: string;
+        displayName: string;
+    };
+    wishlist: WishlistEntry[];
+    count: number;
+    shareId: string;
+    expiresAt: string;
+}
+
+const SharedWishlistPage = () => {
+    const { shareId } = useParams<{ shareId: string }>();
+    const [data, setData] = useState<SharedWishlistData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [activeTab, setActiveTab] = useState("all");
+
+    useEffect(() => {
+        const fetchSharedWishlist = async () => {
+            if (!shareId) return;
+
+            try {
+                setLoading(true);
+                const response = await apiService.getSharedWishlist(shareId);
+                if (response.success && response.data) {
+                    setData(response.data as SharedWishlistData);
+                } else {
+                    setError(response.message || "Failed to load shared wishlist");
+                }
+            } catch (err) {
+                setError("An error occurred while loading the wishlist");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSharedWishlist();
+    }, [shareId]);
+
+    const formatCategoryLabel = (label: string) => {
+        if (label === "all") return "View All";
+        return label
+            .split("-")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+    };
+
+    const buildProductUrl = (item: WishlistEntry) => {
+        const slug = item.categorySlug || "rings";
+        const sku = item.modelSku || item.productId;
+        const params = new URLSearchParams();
+        if (item.variantSku) {
+            params.set("variantId", item.variantSku);
+        }
+        if (item.metalColorCode) {
+            params.set("metalColor", item.metalColorCode);
+        }
+        const query = params.toString();
+        return `/product/${slug}/${sku}${query ? `?${query}` : ""}`;
+    };
+
+    const getFilteredWishlist = () => {
+        if (!data) return [];
+        const wishlist = data.wishlist;
+        if (activeTab === "all") return wishlist;
+        const tabValue = activeTab.toLowerCase();
+        return wishlist.filter((item) => {
+            const categoryLabel = (item.category || "").toLowerCase();
+            const slug = (item.categorySlug || "").toLowerCase();
+            return categoryLabel.includes(tabValue) || slug.includes(tabValue);
+        });
+    };
+
+    const getCategoryCounts = () => {
+        if (!data) return { all: 0 };
+        const wishlist = data.wishlist;
+        const counts: { [key: string]: number } = { all: wishlist.length };
+
+        wishlist.forEach((item) => {
+            const category = item.category || item.categorySlug || "Other";
+            counts[category] = (counts[category] || 0) + 1;
+        });
+
+        return counts;
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading shared wishlist...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !data) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="text-red-600 mb-4">{error || "Wishlist not found"}</p>
+                    <Link to="/">
+                        <Button className="bg-teal-600 hover:bg-teal-700">
+                            Go Home
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    const categoryCounts = getCategoryCounts();
+    const filteredWishlist = getFilteredWishlist();
+    const ownerName = data.owner.displayName || data.owner.firstName;
+
+    return (
+        <div className="min-h-screen bg-gray-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-8">
+                    <div>
+                        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                            {ownerName}'s Wish List
+                        </h1>
+                        <p className="text-gray-600">
+                            {data.wishlist.length} item{data.wishlist.length !== 1 ? "s" : ""} in wishlist
+                        </p>
+                    </div>
+                </div>
+
+                {/* Navigation Tabs */}
+                <div className="border-b border-gray-200 mb-8">
+                    <nav className="-mb-px flex space-x-8">
+                        {Object.entries(categoryCounts).map(([category, count]) => (
+                            <button
+                                key={category}
+                                onClick={() => setActiveTab(category)}
+                                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === category
+                                    ? "border-teal-500 text-teal-600"
+                                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    }`}
+                            >
+                                {formatCategoryLabel(category)} ({count})
+                            </button>
+                        ))}
+                    </nav>
+                </div>
+
+                {/* Wishlist Items */}
+                {filteredWishlist.length === 0 ? (
+                    <div className="text-center py-12">
+                        <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">
+                            {activeTab === "all"
+                                ? "This wishlist is empty"
+                                : `No ${formatCategoryLabel(activeTab)} items in this wishlist`}
+                        </h3>
+                        <Link to="/">
+                            <Button className="bg-teal-600 hover:bg-teal-700">
+                                Start Shopping
+                            </Button>
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filteredWishlist.map((item) => (
+                            <div
+                                key={item._id}
+                                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
+                            >
+                                <div className="relative">
+                                    <img
+                                        src={item.image || "/placeholder.png"}
+                                        alt={item.title}
+                                        className="w-full h-64 object-cover rounded-t-lg"
+                                    />
+                                    {/* Removed absolute "Remove" button */}
+                                </div>
+
+                                <div className="p-4 flex flex-col flex-grow">
+                                    <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 min-h-[3rem]">
+                                        {item.title}
+                                    </h3>
+
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center space-x-2">
+                                            <span className="text-2xl font-bold text-gray-900">
+                                                {typeof item.price === "number"
+                                                    ? `₹${item.price.toLocaleString("en-IN")}`
+                                                    : "Price on request"}
+                                            </span>
+                                        </div>
+                                        {item.rating && (
+                                            <div className="flex items-center text-sm text-gray-500">
+                                                <span>★</span>
+                                                <span className="ml-1">{item.rating.score}</span>
+                                                <span className="ml-1">({item.rating.reviews})</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-auto">
+                                        <div className="flex gap-2 mb-2">
+                                            <Link to={buildProductUrl(item)} className="flex-1">
+                                                <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                                                    Show Details
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default SharedWishlistPage;

@@ -431,6 +431,19 @@ class ApiService {
     });
   }
 
+  // Wishlist Share methods
+  async generateShareLink() {
+    return this.makeRequest("/wishlist-share/generate", {
+      method: "POST",
+    });
+  }
+
+  async getSharedWishlist(shareId: string) {
+    return this.makeRequest(`/wishlist-share/${shareId}`, {
+      method: "GET",
+    });
+  }
+
   // Address management methods
   async getUserAddresses() {
     return this.makeRequest("/address/addresses", {

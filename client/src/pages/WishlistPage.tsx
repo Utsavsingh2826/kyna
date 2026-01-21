@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { apiService } from "@/services/api";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Heart, MailIcon } from "lucide-react";
@@ -86,35 +87,35 @@ const WishlistPage = () => {
   const categoryCounts = getCategoryCounts();
   const filteredWishlist = getFilteredWishlist();
 
-  const handleWhatsAppShare = () => {
-    const baseUrl = window.location.origin;
+  const handleShare = async (platform: 'whatsapp' | 'email') => {
+    try {
+      // 1. Generate the share link
+      const response = await apiService.generateShareLink();
 
-    const productLinks = wishlist
-      .map(
-        (item, index) => `• ${item.title}: ${baseUrl}${buildProductUrl(item)}`,
-      )
-      .join("\n");
+      if (response.success && response.data) {
+        const shareData = response.data as { shareUrl: string };
+        const shareUrl = shareData.shareUrl;
 
-    const message = `Please check out my wishlist on Kyna Jewels \n\n${productLinks}`;
+        const message = `Check out my wishlist on Kyna Jewels! 💎\n\n${shareUrl}`;
 
-    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank");
+        if (platform === 'whatsapp') {
+          const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+          window.open(url, "_blank");
+        } else {
+          const subject = "My Wishlist from Kyna Jewels";
+          window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+        }
+      } else {
+        toast.error("Failed to generate share link");
+      }
+    } catch (error) {
+      console.error("Share error:", error);
+      toast.error("Failed to share wishlist");
+    }
   };
 
-  const handleEmailShare = () => {
-    const baseUrl = window.location.origin;
-
-    const productLinks = wishlist
-      .map((item) => `${item.title}: ${baseUrl}${buildProductUrl(item)}`)
-      .join("\n");
-
-    const subject = "My Wishlist from Kyna Jewels";
-    const body = `Please check out my wishlist on Kyna Jewels 💍\n\n${productLinks}`;
-
-    window.location.href = `mailto:?subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(body)}`;
-  };
+  const handleWhatsAppShare = () => handleShare('whatsapp');
+  const handleEmailShare = () => handleShare('email');
 
   if (loading) {
     return (
@@ -207,8 +208,8 @@ const WishlistPage = () => {
                 key={category}
                 onClick={() => setActiveTab(category)}
                 className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === category
-                    ? "border-teal-500 text-teal-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-teal-500 text-teal-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
               >
                 {formatCategoryLabel(category)} ({count})

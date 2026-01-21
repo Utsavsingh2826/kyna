@@ -23,13 +23,15 @@ export const generateShareLink = async (req: AuthRequest, res: Response) => {
       expiresAt: { $gt: new Date() }
     });
 
+    const baseUrl = process.env.FRONTEND_URL || 'https://kynajewels.com';
+
     if (existingShare) {
       return res.json({
         success: true,
         message: 'Share link retrieved successfully',
         data: {
           shareId: existingShare.shareId,
-          shareUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/shared-wishlist/${existingShare.shareId}`,
+          shareUrl: `${baseUrl}/shared-wishlist/${existingShare.shareId}`,
           expiresAt: existingShare.expiresAt
         }
       });
@@ -37,7 +39,7 @@ export const generateShareLink = async (req: AuthRequest, res: Response) => {
 
     // Generate a unique share ID
     const shareId = `wish_${userId.toString().slice(-6)}_${Date.now().toString(36)}`;
-    
+
     // Create new share link
     const wishlistShare = new WishlistShare({
       shareId,
@@ -52,7 +54,7 @@ export const generateShareLink = async (req: AuthRequest, res: Response) => {
       message: 'Share link generated successfully',
       data: {
         shareId: wishlistShare.shareId,
-        shareUrl: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/shared-wishlist/${wishlistShare.shareId}`,
+        shareUrl: `${baseUrl}/shared-wishlist/${wishlistShare.shareId}`,
         expiresAt: wishlistShare.expiresAt
       }
     });
@@ -92,15 +94,42 @@ export const getSharedWishlist = async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get the user and their wishlist
-    const user = await User.findById(wishlistShare.userId).populate('wishlist');
-    
+    // Get the user details
+    const user = await User.findById(wishlistShare.userId).select('firstName lastName displayName');
+
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User for this wishlist not found'
       });
     }
+
+    // Fetch wishlist items from WishlistItem collection
+    const WishlistItem = (await import('../models/wishlistItemModel')).default;
+    const items = await WishlistItem.find({ user: user._id }).sort({ createdAt: -1 });
+
+    // Normalize items to match the structure expected by the frontend
+    // We rely on snapshot data here to avoid duplicating the complex catalog logic
+    const normalizedItems = items.map(item => ({
+      _id: item._id,
+      productId: item.productId,
+      modelSku: item.modelSku,
+      category: item.category,
+      categorySlug: item.categorySlug,
+      title: item.titleSnapshot || 'Product',
+      price: item.priceSnapshot || null,
+      image: item.imageSnapshot || null,
+      rating: item.ratingSnapshot ? {
+        score: item.ratingSnapshot.score,
+        reviews: item.ratingSnapshot.reviews
+      } : null,
+      variantSku: item.variantSku,
+      metalColorName: item.metalColorName,
+      metalColorCode: item.metalColorCode,
+      engraving: item.engraving,
+      isEngraving: item.isEngraving,
+      addedAt: item.createdAt
+    }));
 
     res.json({
       success: true,
@@ -111,8 +140,8 @@ export const getSharedWishlist = async (req: AuthRequest, res: Response) => {
           lastName: user.lastName,
           displayName: user.displayName || `${user.firstName} ${user.lastName}`
         },
-        wishlist: user.wishlist,
-        count: user.wishlist.length,
+        wishlist: normalizedItems,
+        count: normalizedItems.length,
         shareId: wishlistShare.shareId,
         expiresAt: wishlistShare.expiresAt
       }
