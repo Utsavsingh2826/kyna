@@ -47,6 +47,7 @@ import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
 import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
 import BraceletSizeGuidePopup from "@/components/BraceletSizeGuidePopup";
+import { ShareEmailModal } from "@/components/ShareEmailModal";
 import "@/styles/image-loading.css"; // Ensure CSS for blur/skeleton is included
 
 // Product interface for API data
@@ -251,6 +252,44 @@ const ProductDetail = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
+  /* State for share modal */
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
+
+  const handleShare = async (platform: 'whatsapp' | 'email' | 'copy') => {
+    // Construct the correct URL for the current variant
+    const currentUrl = window.location.href;
+    const productName = productData?.title || "Check out this product";
+
+    if (platform === 'copy') {
+      try {
+        await navigator.clipboard.writeText(currentUrl);
+        toast.success("Link copied to clipboard!");
+      } catch (err) {
+        toast.error("Failed to copy link");
+      }
+      return;
+    }
+
+    const message = `I found this beautiful piece at Kyna Jewels and thought of you! 💎\n\n${productName}\n\nCheck it out here: ${currentUrl}\n\nKyna Jewels is the best online jewellery business for premium designs!`;
+
+    if (platform === 'whatsapp') {
+      const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(url, "_blank");
+    } else if (platform === 'email') {
+      setShareUrl(currentUrl);
+      setShareMessage(`I found this beautiful piece at Kyna Jewels and thought of you! 💎\n\nCheck out the ${productName} here. Kyna Jewels is the best online jewellery business for premium designs!`);
+      setShareModalOpen(true);
+    }
+  };
+
+  const socialLinks = [
+    { icon: "/Jan/Vector.png", label: "WhatsApp", action: () => handleShare('whatsapp'), height: "h-5", width: "w-5", isImage: true },
+    { icon: Mail, label: "Email", action: () => handleShare('email'), height: "h-5", width: "w-5", isImage: false },
+    { icon: Share2, label: "Copy Link", action: () => handleShare('copy'), height: "h-5", width: "w-5", isImage: false },
+  ];
+
   const [isBraceletSizePopupOpen, setIsBraceletSizePopupOpen] = useState(false);
 
   // Track the last valid state for reverting when variant not found
@@ -638,8 +677,8 @@ const ProductDetail = () => {
           const variantId = params.get("variantId");
           const modelUrl = variantId
             ? `/api/products/model/${id}?variantId=${encodeURIComponent(
-                variantId,
-              )}&metalColor=${params.get("metalColor") || "WG"}`
+              variantId,
+            )}&metalColor=${params.get("metalColor") || "WG"}`
             : `/api/products/model/${id}`;
           response = await fetch(modelUrl);
           if (!response.ok) {
@@ -845,7 +884,7 @@ const ProductDetail = () => {
     document.body.appendChild(script);
 
     // Do not remove script/container on cleanup — keep preload alive
-    return () => {};
+    return () => { };
   }, [productData]);
 
   // Separate useEffect to handle URL parameter changes for metal color
@@ -1007,9 +1046,9 @@ const ProductDetail = () => {
 
       const caratCode = selectedDiamondSize
         ? String(Math.round(parseFloat(selectedDiamondSize) * 100)).padStart(
-            2,
-            "0",
-          )
+          2,
+          "0",
+        )
         : "30";
 
       return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}`;
@@ -1434,12 +1473,12 @@ const ProductDetail = () => {
                 : null,
           engraving:
             hasEngraving &&
-            (engravingText || engravingMotifPath || engravingImageUrl)
+              (engravingText || engravingMotifPath || engravingImageUrl)
               ? {
-                  text: engravingText || undefined,
-                  motif: engravingMotifPath || undefined,
-                  imageUrl: engravingImageUrl || undefined,
-                }
+                text: engravingText || undefined,
+                motif: engravingMotifPath || undefined,
+                imageUrl: engravingImageUrl || undefined,
+              }
               : undefined,
         }),
       );
@@ -1962,50 +2001,7 @@ const ProductDetail = () => {
     );
   };
 
-  // Share functionality
-  const getCurrentUrl = () => {
-    const currentUrl = new URL(window.location.href);
-    return currentUrl.href;
-  };
 
-  const handleEmailShare = () => {
-    const url = getCurrentUrl();
-    const subject = encodeURIComponent(
-      `Check out this jewelry: ${productData?.title || "Product"}`,
-    );
-    const body = encodeURIComponent(
-      `I thought you might be interested in this jewelry piece:\n\n${
-        productData?.title || "Product"
-      }\n\nView it here: ${url}`,
-    );
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=enquires@kynajewels.com&su=${subject}&body=${body}`;
-    window.open(gmailUrl, "_blank");
-  };
-
-  const handleWhatsAppShare = () => {
-    const url = getCurrentUrl();
-    const message = encodeURIComponent(`I am looking for more details ${url}`);
-    const whatsappUrl = `https://wa.me/918928610682?text=${message}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
-  const handleCopyLink = async () => {
-    const url = getCurrentUrl();
-    try {
-      await navigator.clipboard.writeText(url);
-      // You could add a toast notification here if you have one
-      toast.success("Link copied to clipboard");
-    } catch (err) {
-      // Fallback for older browsers
-      const textArea = document.createElement("textarea");
-      textArea.value = url;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textArea);
-      console.log("Link copied to clipboard (fallback)");
-    }
-  };
 
   // Handle diamond origin selection with silver metal validation
   const handleDiamondOriginSelect = (origin: string) => {
@@ -2066,6 +2062,7 @@ const ProductDetail = () => {
         if (preloadContainer && pre.canvas.parentElement !== preloadContainer) {
           try {
             preloadContainer.appendChild(pre.canvas);
+
           } catch (err) {
             // ignore
           }
@@ -2108,6 +2105,12 @@ const ProductDetail = () => {
           productData?.variantImages?.[0] ||
           "https://cdn.kynajewels.com/RENDERING%20PHOTOS/SRAER/ENG1-10/ENG1-CUS-100-WG-GP.web"
         }
+      />
+      <ShareEmailModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        defaultMessage={shareMessage}
+        shareUrl={shareUrl}
       />
       <main className="min-h-screen max-w-6xl bg-background">
         {/* Breadcrumb */}
@@ -2155,11 +2158,10 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
+                          ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                          : "border-neutral-200 hover:border-neutral-300"
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2196,8 +2198,7 @@ const ProductDetail = () => {
                             className="w-full h-full object-cover"
                             onError={() => {
                               console.error(
-                                `Failed to load desktop thumbnail ${
-                                  index + 1
+                                `Failed to load desktop thumbnail ${index + 1
                                 }:`,
                                 image,
                               );
@@ -2223,9 +2224,8 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div
-                  className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${
-                    isUpdating ? "opacity-50" : "opacity-100"
-                  }`}
+                  className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${isUpdating ? "opacity-50" : "opacity-100"
+                    }`}
                 >
                   {/* use the fetched images only */}
                   {(() => {
@@ -2298,11 +2298,9 @@ const ProductDetail = () => {
                     onClick={handleWishlistToggle}
                     disabled={wishlistLoading}
                     aria-pressed={isInWishlist}
-                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${
-                      isInWishlist ? "text-red-500" : "text-gray-600"
-                    } ${
-                      wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
-                    }`}
+                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${isInWishlist ? "text-red-500" : "text-gray-600"
+                      } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
+                      }`}
                   >
                     <Heart
                       size={20}
@@ -2332,11 +2330,10 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
+                          ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                          : "border-neutral-200 hover:border-neutral-300"
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full flex justify-center items-center bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2377,11 +2374,11 @@ const ProductDetail = () => {
                                 image,
                               );
                             }}
-                            // onLoad={() => {
-                            //   console.log(
-                            //     `Loaded mobile thumbnail ${index + 1}`
-                            //   );
-                            // }}
+                          // onLoad={() => {
+                          //   console.log(
+                          //     `Loaded mobile thumbnail ${index + 1}`
+                          //   );
+                          // }}
                           />
                         )}
                       </button>
@@ -2454,9 +2451,8 @@ const ProductDetail = () => {
                     Diamond Origin{" "}
                     <button
                       type="button"
-                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${
-                        showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
-                      }`}
+                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
+                        }`}
                       onClick={() => setShowTooltip((prev) => !prev)}
                     >
                       i{/* Tooltip: appears on click */}
@@ -2495,13 +2491,12 @@ const ProductDetail = () => {
                           key={origin}
                           onClick={() => handleDiamondOriginSelect(origin)}
                           disabled={isDisabled}
-                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${
-                            isDisabled
-                              ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
-                              : selectedDiamondOrigin === origin
-                                ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
-                                : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
-                          }`}
+                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${isDisabled
+                            ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
+                            : selectedDiamondOrigin === origin
+                              ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
+                              : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
+                            }`}
                         >
                           {origin}
                           {isDisabled && (
@@ -2546,11 +2541,10 @@ const ProductDetail = () => {
                                 setSelectedDiamondShape(newShape);
                               }}
                               className={`group relative w-[50px] h-[50px] border rounded-lg p-1 
-          ${
-            selectedDiamondShape === shape.name.toUpperCase()
-              ? "border-primary bg-primary/5"
-              : "border-neutral-300"
-          }`}
+          ${selectedDiamondShape === shape.name.toUpperCase()
+                                  ? "border-primary bg-primary/5"
+                                  : "border-neutral-300"
+                                }`}
                             >
                               {/* FIXED: remove full flex-center, add controlled padding */}
                               <div className="w-full h-full flex items-end justify-center">
@@ -2634,7 +2628,7 @@ const ProductDetail = () => {
 
                       const clarityOptions =
                         productData.diamondOptions?.[diamondType]?.[
-                          metalTypeKey
+                        metalTypeKey
                         ] || [];
 
                       // Map the clarity options to match the format used in the product
@@ -2729,12 +2723,11 @@ const ProductDetail = () => {
                                 const newKarat = normalizeKarat(karat);
                                 setSelectedGoldKarat(newKarat);
                               }}
-                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
-                                normalizeKarat(selectedGoldKarat) ===
+                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${normalizeKarat(selectedGoldKarat) ===
                                 normalizeKarat(karat)
-                                  ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                                  : "border-neutral-600 text-neutral-600"
-                              }`}
+                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
+                                : "border-neutral-600 text-neutral-600"
+                                }`}
                             >
                               {getKaratDisplayLabel(karat)}
                             </button>
@@ -2771,11 +2764,10 @@ const ProductDetail = () => {
                         <button
                           key={code}
                           onClick={() => updateMetalColor(code)}
-                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${
-                            selectedColorCode === code
-                              ? "border-[#328F94] ring-2 ring-[#328F94]/30"
-                              : "border-neutral-300 hover:border-[#328F94]"
-                          } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
+                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${selectedColorCode === code
+                            ? "border-[#328F94] ring-2 ring-[#328F94]/30"
+                            : "border-neutral-300 hover:border-[#328F94]"
+                            } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
                           title={colorInfo.name}
                         >
                           {isCombination ? (
@@ -2805,12 +2797,11 @@ const ProductDetail = () => {
                     (productData?.finishing?.length ?? 0) > 0) && (
                     <div className="my-6">
                       <div
-                        className={`grid ${
-                          (productData?.bandwidth?.length ?? 0) > 0 &&
+                        className={`grid ${(productData?.bandwidth?.length ?? 0) > 0 &&
                           (productData?.finishing?.length ?? 0) > 0
-                            ? "grid-cols-2"
-                            : "grid-cols-1"
-                        } gap-4`}
+                          ? "grid-cols-2"
+                          : "grid-cols-1"
+                          } gap-4`}
                       >
                         {/* Bandwidth Selection */}
                         {(productData?.bandwidth?.length ?? 0) > 0 && (
@@ -2823,12 +2814,11 @@ const ProductDetail = () => {
                               onValueChange={setSelectedBandwidth}
                             >
                               <SelectTrigger
-                                className={`text-sm border-neutral-300 ${
-                                  (productData?.bandwidth?.length ?? 0) > 0 &&
+                                className={`text-sm border-neutral-300 ${(productData?.bandwidth?.length ?? 0) > 0 &&
                                   (productData?.finishing?.length ?? 0) > 0
-                                    ? "w-full"
-                                    : "w-1/2"
-                                }`}
+                                  ? "w-full"
+                                  : "w-1/2"
+                                  }`}
                               >
                                 <SelectValue placeholder="Select Width" />
                               </SelectTrigger>
@@ -2854,12 +2844,11 @@ const ProductDetail = () => {
                               onValueChange={setSelectedFinishing}
                             >
                               <SelectTrigger
-                                className={`${
-                                  (productData?.bandwidth?.length ?? 0) > 0 &&
+                                className={`${(productData?.bandwidth?.length ?? 0) > 0 &&
                                   (productData?.finishing?.length ?? 0) > 0
-                                    ? "w-full"
-                                    : "w-1/2"
-                                } border-neutral-300`}
+                                  ? "w-full"
+                                  : "w-1/2"
+                                  } border-neutral-300`}
                               >
                                 <SelectValue placeholder="Select Finish" />
                               </SelectTrigger>
@@ -3080,30 +3069,22 @@ const ProductDetail = () => {
                 <div className="mt-3">
                   {/* <h3 className="font-medium mb-3 text-sm">Share</h3> */}
                   <div className="flex flex-row flex-nowrap text-[#328F94] gap-3">
-                    <Button
-                      size="sm"
-                      className="flex items-center gap-2 text-xs"
-                      onClick={handleEmailShare}
-                    >
-                      <Mail size={14} />
-                      Email
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="flex items-center gap-2 text-xs"
-                      onClick={handleWhatsAppShare}
-                    >
-                      <MessageCircle size={14} />
-                      WhatsApp
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="flex items-center gap-2 text-xs"
-                      onClick={handleCopyLink}
-                    >
-                      <Share2 size={14} />
-                      Copy Link
-                    </Button>
+                    {socialLinks.map((link, index) => (
+                      <Button
+                        key={index}
+                        size="sm"
+                        className="flex items-center gap-2 text-xs"
+                        onClick={link.action}
+                      >
+                        {link.isImage ? (
+                          <img src={link.icon as string} alt={link.label} className={`${link.height} ${link.width}`} />
+                        ) : (
+                          // @ts-ignore
+                          <link.icon size={14} />
+                        )}
+                        {link.label}
+                      </Button>
+                    ))}
                   </div>
                 </div>
               </div>

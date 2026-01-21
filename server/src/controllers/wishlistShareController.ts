@@ -156,6 +156,67 @@ export const getSharedWishlist = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Rate limit map: IP -> timestamp of last email
+const emailRateLimit = new Map<string, number>();
+
+// Share via email
+export const shareViaEmail = async (req: AuthRequest, res: Response) => {
+  try {
+    const { emails, message, url } = req.body;
+    const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+
+    // Rate limiting: 1 req per minute per IP to prevent spam
+    const lastRequest = emailRateLimit.get(clientIp as string);
+    const now = Date.now();
+    if (lastRequest && now - lastRequest < 60000) {
+      return res.status(429).json({
+        success: false,
+        message: 'Please wait a minute before sending another email.'
+      });
+    }
+    emailRateLimit.set(clientIp as string, now);
+
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid emails are required'
+      });
+    }
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        message: 'Share URL is required'
+      });
+    }
+
+    // Replace localhost with kynajewels.com if found (useful during development/local testing)
+    const sanitizedUrl = url.replace(/localhost:\d+/g, 'kynajewels.com').replace(/http:\/\/kynajewels.com/g, 'https://kynajewels.com');
+
+    // Dynamic import to avoid circular dependency issues if any
+    const { sendShareEmail } = await import('../services/emailService');
+
+    // Send emails in parallel
+    await Promise.all(
+      emails.map((email: string) =>
+        sendShareEmail(email, message || 'Check this out on Kyna Jewels', sanitizedUrl)
+      )
+    );
+
+    res.json({
+      success: true,
+      message: 'Emails sent successfully'
+    });
+
+  } catch (error) {
+    console.error('Share via email error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send emails'
+    });
+  }
+};
+
 // Revoke share link
 export const revokeShareLink = async (req: AuthRequest, res: Response) => {
   try {

@@ -14,6 +14,7 @@ import {
   selectWishlistLoading,
 } from "@/store/slices/wishlistSlice";
 import type { WishlistEntry } from "@/store/slices/wishlistSlice";
+import { ShareEmailModal } from "@/components/ShareEmailModal";
 
 const WishlistPage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -87,6 +88,11 @@ const WishlistPage = () => {
   const categoryCounts = getCategoryCounts();
   const filteredWishlist = getFilteredWishlist();
 
+  /* State for share modal */
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
+
   const handleShare = async (platform: 'whatsapp' | 'email') => {
     try {
       // 1. Generate the share link
@@ -94,16 +100,17 @@ const WishlistPage = () => {
 
       if (response.success && response.data) {
         const shareData = response.data as { shareUrl: string };
-        const shareUrl = shareData.shareUrl;
-
-        const message = `Check out my wishlist on Kyna Jewels! 💎\n\n${shareUrl}`;
+        const generatedUrl = shareData.shareUrl;
+        const message = `I've put together a wishlist of my favorite pieces at Kyna Jewels! 💎\n\nTake a look here: ${generatedUrl}\n\nKyna Jewels is the best online jewellery business with stunning premium collections.`;
 
         if (platform === 'whatsapp') {
           const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
           window.open(url, "_blank");
         } else {
-          const subject = "My Wishlist from Kyna Jewels";
-          window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+          // Open email modal instead of mailto
+          setShareUrl(generatedUrl);
+          setShareMessage(`I've put together a wishlist of my favorite pieces at Kyna Jewels! 💎\n\nTake a look and let me know what you think. Kyna Jewels is the best online jewellery business with stunning premium collections!`);
+          setShareModalOpen(true);
         }
       } else {
         toast.error("Failed to generate share link");
@@ -166,6 +173,12 @@ const WishlistPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ShareEmailModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        defaultMessage={shareMessage}
+        shareUrl={shareUrl}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex justify-between items-start mb-8">

@@ -444,6 +444,13 @@ class ApiService {
     });
   }
 
+  async shareViaEmail(payload: { emails: string[]; message: string; url: string }) {
+    return this.makeRequest("/wishlist-share/email", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
   // Address management methods
   async getUserAddresses() {
     return this.makeRequest("/address/addresses", {
