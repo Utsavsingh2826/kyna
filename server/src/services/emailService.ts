@@ -102,9 +102,24 @@ export const sendResetSuccessEmail = async (email: string) => {
   }
 };
 // Send share email
-export const sendShareEmail = async (email: string, message: string, url: string) => {
+export const sendShareEmail = async (email: string, message: string, url: string, senderName?: string) => {
   try {
     const transporter = createTransporter();
+
+    // Quotes for jewelry
+    const quotes = [
+      "Jewelry has the power to be the one little thing that makes you feel unique.",
+      "Every piece of jewelry tells a story.",
+      "Diamonds are a girl's best friend, and jewelry is the spice of life.",
+      "Gold is the sun's reflection on Earth.",
+      "Elegance is not standing out, but being remembered."
+    ];
+    const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+
+    const title = url.includes('wishlist') ? 'Discover Wishlist' : 'Discover the Collection';
+    const headerText = senderName
+      ? `${senderName} shared their favorites with you!`
+      : "Someone shared something beautiful with you!";
 
     // Premium HTML template for sharing
     const html = `
@@ -117,18 +132,22 @@ export const sendShareEmail = async (email: string, message: string, url: string
 
         <!-- Content -->
         <div style="padding: 40px 30px; background-color: #ffffff;">
-          <h2 style="color: #1f2937; margin-top: 0; font-size: 20px; font-weight: 600;">You've Received a Special Recommendation!</h2>
+          <h2 style="color: #1f2937; margin-top: 0; font-size: 18px; font-weight: 600; text-align: center;">${headerText}</h2>
           
           <div style="margin: 25px 0; padding: 20px; background-color: #f0fdfa; border-left: 4px solid #0d9488; border-radius: 4px;">
             <p style="font-size: 16px; line-height: 1.6; color: #374151; margin: 0;">"${message.replace(/\n/g, '<br/>')}"</p>
           </div>
 
+          <div style="text-align: center; margin: 30px 0; padding: 15px; border-top: 1px solid #f3f4f6; border-bottom: 1px solid #f3f4f6; font-style: italic; color: #6b7280;">
+            <p style="margin: 0; font-size: 14px;">"${randomQuote}"</p>
+          </div>
+
           <p style="font-size: 15px; color: #4b5563; line-height: 1.6;">
-            We invite you to explore this hand-picked selection from our collection. At Kyna Jewels, we take pride in being <strong>the best online destination for premium jewellery</strong>, offering pieces that celebrate your unique story.
+            We invite you to explore this hand-picked selection from our collection. At Kyna Jewels, we take pride in being <strong>the best online destination for premium jewellery</strong>.
           </p>
 
           <div style="text-align: center; margin: 35px 0;">
-            <a href="${url}" style="background-color: #0d9488; color: #ffffff; padding: 14px 35px; text-decoration: none; border-radius: 50px; font-weight: 600; display: inline-block; transition: background-color 0.3s ease; box-shadow: 0 2px 10px rgba(13, 148, 136, 0.3);">Discover the Collection</a>
+            <a href="${url}" style="background-color: #0d9488; color: #ffffff; padding: 14px 35px; text-decoration: none; border-radius: 50px; font-weight: 600; display: inline-block; transition: background-color 0.3s ease; box-shadow: 0 2px 10px rgba(13, 148, 136, 0.3);">${title}</a>
           </div>
 
           <div style="text-align: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid #f3f4f6;">
@@ -140,7 +159,6 @@ export const sendShareEmail = async (email: string, message: string, url: string
         <!-- Footer -->
         <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #f0f0f0;">
           <p style="font-size: 11px; color: #9ca3af; margin: 0;">&copy; ${new Date().getFullYear()} Kyna Jewels. All rights reserved.</p>
-          <p style="font-size: 11px; color: #9ca3af; margin: 5px 0 0 0;">This email was sent via a secure sharing feature on our website.</p>
         </div>
       </div>
     `;
@@ -148,7 +166,7 @@ export const sendShareEmail = async (email: string, message: string, url: string
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
       to: email,
-      subject: 'Something beautiful from Kyna Jewels just for you',
+      subject: senderName ? `${senderName} shared a wishlist with you from Kyna Jewels` : 'Something beautiful from Kyna Jewels just for you',
       html,
     };
 

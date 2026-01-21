@@ -196,10 +196,19 @@ export const shareViaEmail = async (req: AuthRequest, res: Response) => {
     // Dynamic import to avoid circular dependency issues if any
     const { sendShareEmail } = await import('../services/emailService');
 
+    // Get sender name if authenticated
+    let senderName = '';
+    if (req.user?._id) {
+      const user = await User.findById(req.user._id);
+      if (user) {
+        senderName = user.displayName || `${user.firstName} ${user.lastName}`;
+      }
+    }
+
     // Send emails in parallel
     await Promise.all(
       emails.map((email: string) =>
-        sendShareEmail(email, message || 'Check this out on Kyna Jewels', sanitizedUrl)
+        sendShareEmail(email, message || 'Check this out on Kyna Jewels', sanitizedUrl, senderName)
       )
     );
 
