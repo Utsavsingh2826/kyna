@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ChevronUp,
   ChevronDown,
@@ -587,6 +587,16 @@ const ProductDetail = () => {
   const [engravingText, setEngravingText] = useState("");
   const [engravingImageUrl, setEngravingImageUrl] = useState("");
   const [engravingMotifPath, setEngravingMotifPath] = useState("");
+  const formattedDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 25);
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
+
   // Add states for diamond size and gold karat
   const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
   const [savedEngravingData, setSavedEngravingData] = useState<{
@@ -2362,7 +2372,10 @@ const ProductDetail = () => {
                 )}
 
                 {/* Estimated Ship Date */}
-                <div className="text-sm">
+                <div className="my-6 text-sm">
+                  <div className="font-medium">
+                    Estimated Ship Date: {formattedDate}
+                  </div>
                   <div className="text-muted-foreground">
                     Free Shipping | Free Returns
                   </div>
@@ -2508,7 +2521,9 @@ const ProductDetail = () => {
                           <div className="flex justify-between text-sm py-1">
                             <span>Net Weight:</span>
                             <span>
-                              {selectedStyleData.productDetails.netWeightGrams}{" "}
+                              {selectedStyleData.productDetails.netWeightGrams.toFixed(
+                                2,
+                              )}{" "}
                               g
                             </span>
                           </div>
@@ -2638,9 +2653,13 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             ₹{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.metalCost?.toFixed(
-                              2,
-                            ) || "0.00"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.metalCost
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.metalCost,
+                                ).toLocaleString()
+                              : "0"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2649,9 +2668,13 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             ₹{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.diamondCost?.toFixed(
-                              2,
-                            ) || "0.00"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.diamondCost
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.diamondCost,
+                                ).toLocaleString()
+                              : "0"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2660,30 +2683,38 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             ₹{" "}
-                            {(
+                            {Math.round(
                               (selectedStyleData?.productDetails?.priceBreakdown
                                 ?.labourCost || 0) +
-                              (selectedStyleData?.productDetails?.priceBreakdown
-                                ?.expense || 0)
-                            ).toFixed(2)}
+                                (selectedStyleData?.productDetails
+                                  ?.priceBreakdown?.expense || 0),
+                            ).toLocaleString()}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
                             ₹{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.gstAmount?.toFixed(
-                              2,
-                            ) || "0.00"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.gstAmount
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.gstAmount,
+                                ).toLocaleString()
+                              : "0"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
                           <span>
                             ₹{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.totalWithGst?.toFixed(
-                              2,
-                            ) || "0.00"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.totalWithGst
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.totalWithGst,
+                                ).toLocaleString()
+                              : "0"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">

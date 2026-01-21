@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   ChevronUp,
@@ -288,6 +288,15 @@ const ProductDetail = () => {
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
   const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
+  const formattedDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 25);
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
 
   // Add missing state variables for pendants builder
   const [selectedMetalType, setSelectedMetalType] = useState("GOLD");
@@ -1625,7 +1634,10 @@ const ProductDetail = () => {
                 )}
 
                 {/* Estimated Ship Date */}
-                <div className="text-sm">
+                <div className="my-6 text-sm">
+                  <div className="font-medium">
+                    Estimated Ship Date: {formattedDate}
+                  </div>
                   <div className="text-muted-foreground">
                     Free Shipping | Free Returns
                   </div>
@@ -1960,7 +1972,9 @@ const ProductDetail = () => {
                           <div className="flex justify-between text-sm py-1">
                             <span>Net Weight:</span>
                             <span>
-                              {selectedStyleData.productDetails.netWeightGrams}{" "}
+                              {selectedStyleData.productDetails.netWeightGrams.toFixed(
+                                2,
+                              )}{" "}
                               g
                             </span>
                           </div>
@@ -2076,23 +2090,17 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            SKU Number
-                          </span>
-                          <span className="font-medium">
-                            {selectedStyleData?.productDetails
-                              ?.firstVariantSku ||
-                              derivedProductId ||
-                              "-"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gold/Silver/Platinum Value
+                            {`${selectedMetalType} Value`}
                           </span>
                           <span className="font-medium">
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.metalCost?.toLocaleString() ||
-                              "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.metalCost
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.metalCost,
+                                ).toLocaleString()
+                              : "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2101,8 +2109,13 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.diamondCost?.toLocaleString() ||
-                              "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.diamondCost
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.diamondCost,
+                                ).toLocaleString()
+                              : "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2117,24 +2130,39 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.labourCost?.toLocaleString() ||
-                              "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.labourCost
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.labourCost,
+                                ).toLocaleString()
+                              : "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.gstAmount?.toLocaleString() ||
-                              "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.gstAmount
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.gstAmount,
+                                ).toLocaleString()
+                              : "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
                           <span>
                             Rs{" "}
-                            {selectedStyleData?.productDetails?.priceBreakdown?.totalWithGst?.toLocaleString() ||
-                              "-"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.totalWithGst
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.totalWithGst,
+                                ).toLocaleString()
+                              : "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">

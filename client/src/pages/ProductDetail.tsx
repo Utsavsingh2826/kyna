@@ -219,6 +219,16 @@ const ProductDetail = () => {
     (state: RootState) => state.cart,
   );
 
+  const formattedDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 25);
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
+
   const [productData, setProductData] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -3058,7 +3068,7 @@ const ProductDetail = () => {
                 {/* Estimated Ship Date */}
                 <div className="my-6 text-sm">
                   <div className="font-medium">
-                    Estimated Ship Date: {sampleProduct.estimatedShipDate}
+                    Estimated Ship Date: {formattedDate}
                   </div>
                   <div className="text-muted-foreground">
                     Free Shipping | Free Returns
@@ -3270,7 +3280,9 @@ const ProductDetail = () => {
                         {productData.netWeightGrams && (
                           <div className="flex justify-between text-sm py-1">
                             <span>Net Weight:</span>
-                            <span>{productData.netWeightGrams} g</span>
+                            <span>
+                              {productData.netWeightGrams.toFixed(2)} g
+                            </span>
                           </div>
                         )}
 
@@ -3383,7 +3395,9 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs.{" "}
-                            {productData.priceBreakdown.metalCost.toLocaleString()}
+                            {Math.round(
+                              productData.priceBreakdown.metalCost,
+                            ).toLocaleString()}
                             /-
                           </span>
                         </div>
@@ -3393,9 +3407,9 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs.{" "}
-                            {(
+                            {Math.round(
                               productData.priceBreakdown.diamondCost +
-                              productData.priceBreakdown.expense
+                                productData.priceBreakdown.expense,
                             ).toLocaleString()}
                             /-
                           </span>
@@ -3406,9 +3420,9 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             Rs.{" "}
-                            {(
+                            {Math.round(
                               productData.priceBreakdown.labourCost *
-                              (productData.netWeightGrams || 1)
+                                (productData.netWeightGrams || 1),
                             ).toLocaleString()}
                             /-
                           </span>
@@ -3417,7 +3431,9 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
                             Rs.{" "}
-                            {productData.priceBreakdown.gstAmount.toLocaleString()}
+                            {Math.round(
+                              productData.priceBreakdown.gstAmount,
+                            ).toLocaleString()}
                             /-
                           </span>
                         </div>
@@ -3425,7 +3441,9 @@ const ProductDetail = () => {
                           <span>Total</span>
                           <span>
                             Rs.{" "}
-                            {productData.priceBreakdown.totalWithGst.toLocaleString()}
+                            {Math.round(
+                              productData.priceBreakdown.totalWithGst,
+                            ).toLocaleString()}
                             /-
                           </span>
                         </div>

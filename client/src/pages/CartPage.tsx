@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
@@ -33,6 +33,15 @@ const CartPage = () => {
   const [appliedReferral, setAppliedReferral] = useState<any>(null);
 
   const [showTermsError, setShowTermsError] = useState(false);
+  const formattedDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 25);
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, []);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -892,7 +901,15 @@ const CartPage = () => {
             {/* Shipping & Returns Information */}
             <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
               <div className="space-y-2 md:space-y-3 text-xs md:text-sm text-gray-600">
-                <p>Free Shipping | Free Returns</p>
+                {/* Estimated Ship Date */}
+                <div className=" text-sm">
+                  <div className="font-medium">
+                    Estimated Ship Date: {formattedDate}
+                  </div>
+                  <div className="text-muted-foreground">
+                    Free Shipping | Free Returns
+                  </div>
+                </div>
 
                 <div className="flex items-center space-x-2 md:space-x-4 mt-3 md:mt-4">
                   <div className="flex items-center gap-2 md:gap-4">
