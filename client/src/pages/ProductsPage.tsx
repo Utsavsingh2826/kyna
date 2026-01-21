@@ -792,6 +792,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       currentParams.delete(filterType);
     }
 
+    // Reset to page 1 when filters change
+    currentParams.delete("page");
+
     setSearchParams(currentParams);
 
     // Update local state
@@ -816,6 +819,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     } else {
       currentParams.delete(type);
     }
+
+    // Reset to page 1 when price filters change
+    currentParams.delete("page");
 
     setSearchParams(currentParams);
 
@@ -928,24 +934,66 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
   // Ref to track if it's the first load
   const isFirstLoadRef = useRef(true);
+  const lastFetchedPageRef = useRef<number>(1);
+  const lastFetchedFiltersRef = useRef<string>("");
 
   // Single useEffect to fetch products - triggers on category or filter changes
   useEffect(() => {
-    // No debounce on first load or category change for instant response
+    // Get page from URL params, default to 1
+    const pageFromUrl = parseInt(searchParams.get("page") || "1", 10);
+    const validPage = isNaN(pageFromUrl) || pageFromUrl < 1 ? 1 : pageFromUrl;
+
+    // Create a filter signature to detect filter changes
+    const filterSignature = JSON.stringify({
+      activeFilters,
+      minPrice,
+      maxPrice,
+      category,
+    });
+
+    // Check if filters changed (not just page number)
+    const filtersChanged = filterSignature !== lastFetchedFiltersRef.current;
+
     if (isFirstLoadRef.current) {
       isFirstLoadRef.current = false;
-      fetchProducts(1);
+      lastFetchedPageRef.current = validPage;
+      lastFetchedFiltersRef.current = filterSignature;
+      fetchProducts(validPage);
       return;
     }
 
-    // No additional debounce - price handlers already debounce at 300ms
-    // Other filters don't need debouncing as they're discrete clicks
-    fetchProducts(1);
+    // If filters changed, fetch from page 1 or specified page
+    if (filtersChanged) {
+      lastFetchedPageRef.current = validPage;
+      lastFetchedFiltersRef.current = filterSignature;
+      fetchProducts(validPage);
+    }
+    // Note: searchParams is intentionally NOT in dependencies to avoid infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchProducts]);
+
+  // Separate effect to handle ONLY page number changes from pagination buttons
+  useEffect(() => {
+    const pageParam = searchParams.get("page");
+    if (!pageParam) return; // No page param, skip
+
+    const pageFromUrl = parseInt(pageParam, 10);
+    const validPage = isNaN(pageFromUrl) || pageFromUrl < 1 ? 1 : pageFromUrl;
+
+    // Only fetch if page actually changed and it's not the first load
+    if (!isFirstLoadRef.current && validPage !== lastFetchedPageRef.current) {
+      lastFetchedPageRef.current = validPage;
+      fetchProducts(validPage);
+    }
+    // Only depend on the page parameter value, not the whole searchParams object
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.get("page")]);
 
   // Reset first load flag and clear price filters when category changes
   useEffect(() => {
     isFirstLoadRef.current = true;
+    lastFetchedPageRef.current = 1;
+    lastFetchedFiltersRef.current = "";
 
     // CRITICAL: Cancel any in-flight API requests
     if (abortControllerRef.current) {
@@ -1086,22 +1134,52 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     const existingValues = existingParam ? existingParam.split(",") : [];
 
     if (isOpen) {
-      // When opening a group, add it to the category parameter
-      if (!existingValues.includes(groupName)) {
-        existingValues.push(groupName);
-        currentParams.set(categoryParam, existingValues.join(","));
-        console.log(
-          `✅ Added ${groupName} to ${categoryParam}:`,
-          existingValues,
-        );
-        setSearchParams(currentParams);
-
-        // Update local state
-        setActiveFilters((prev) => ({
-          ...prev,
-          [categoryParam]: existingValues,
-        }));
+      // When opening a group, ONLY set this group (close all others in the category)
+      // Clear all shape filters for ALL groups in this category
+      if (category === "rings") {
+        currentParams.delete("solitaire_diamond_shape");
+        currentParams.delete("engagement_diamond_shape");
+        currentParams.delete("mens_diamond_shape");
+        currentParams.delete("fashion_diamond_shape");
+        currentParams.delete("category2"); // Clear engagement ring styles
+      } else if (category === "pendants") {
+        currentParams.delete("solitaire_pendant_diamond_shape");
+        currentParams.delete("fashion_pendant_diamond_shape");
+        currentParams.delete("halo_pendant_diamond_shape");
+      } else if (category === "bracelets") {
+        currentParams.delete("tennis_bracelet_diamond_shape");
+        currentParams.delete("fashion_bracelet_diamond_shape");
       }
+
+      // Set ONLY the current group
+      currentParams.set(categoryParam, groupName);
+      // Reset to page 1 when filters change
+      currentParams.delete("page");
+      console.log(`✅ Set ${groupName} as ONLY active ${categoryParam}`);
+      setSearchParams(currentParams);
+
+      // Update local state - clear all shape filters and set only current category
+      setActiveFilters((prev) => ({
+        ...prev,
+        [categoryParam]: [groupName],
+        // Clear all shape filters for this category
+        ...(category === "rings" && {
+          solitaire_diamond_shape: [],
+          engagement_diamond_shape: [],
+          mens_diamond_shape: [],
+          fashion_diamond_shape: [],
+          category2: "",
+        }),
+        ...(category === "pendants" && {
+          solitaire_pendant_diamond_shape: [],
+          fashion_pendant_diamond_shape: [],
+          halo_pendant_diamond_shape: [],
+        }),
+        ...(category === "bracelets" && {
+          tennis_bracelet_diamond_shape: [],
+          fashion_bracelet_diamond_shape: [],
+        }),
+      }));
     } else {
       // When closing a group, remove it from the category parameter
       const index = existingValues.indexOf(groupName);
@@ -1399,159 +1477,80 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       );
       const mappedValue = mapEarringGroupToCategory1(groupTitle);
       const currentParams = new URLSearchParams(searchParams);
-      const existingCategory1 = currentParams.get("category1");
-      const values = existingCategory1 ? existingCategory1.split(",") : [];
 
       if (isOpen) {
-        // When opening a group, add it to category1
-        if (!values.includes(mappedValue)) {
-          values.push(mappedValue);
-          currentParams.set("category1", values.join(","));
-          console.log(`✅ Added ${mappedValue} to category1:`, values);
-          if (!currentParams.has("category2"))
-            currentParams.set("category2", "");
-          if (!currentParams.has("category3"))
-            currentParams.set("category3", "");
+        // When opening a group, ONLY set this group (close all others)
+        // Clear all shape filters for ALL earring subcategories
+        currentParams.delete("studs_diamond_shape");
+        currentParams.delete("hoops_diamond_shape");
+        currentParams.delete("drop_diamond_shape");
+        currentParams.delete("fashion_earring_diamond_shape");
+        currentParams.delete("halo_earring_diamond_shape");
+        currentParams.delete("centerStoneShape");
+        currentParams.delete("category2"); // Clear styles/lengths
+        currentParams.delete("earring_length");
+
+        // Set ONLY the current group
+        currentParams.set("category1", mappedValue);
+        currentParams.set("category2", "");
+        currentParams.set("category3", "");
+        // Reset to page 1 when filters change
+        currentParams.delete("page");
+        console.log(`✅ Set ${mappedValue} as ONLY active category1`);
+        setSearchParams(currentParams);
+
+        setActiveFilters((prev) => ({
+          ...prev,
+          category1: mappedValue,
+          category2: "",
+          category3: "",
+          centerStoneShape: "",
+          // Clear all earring shape filters
+          studs_diamond_shape: [],
+          hoops_diamond_shape: [],
+          drop_diamond_shape: [],
+          fashion_earring_diamond_shape: [],
+          halo_earring_diamond_shape: [],
+          earring_length: [],
+        }));
+      } else {
+        // When closing, only clear if this is the currently open section
+        const currentCategory1 = currentParams.get("category1");
+        if (currentCategory1 === mappedValue) {
+          // This section is currently open, so close it
+          currentParams.delete("category1");
+          currentParams.delete("category2");
+          currentParams.delete("category3");
+          currentParams.delete("centerStoneShape");
+          currentParams.delete("studs_diamond_shape");
+          currentParams.delete("hoops_diamond_shape");
+          currentParams.delete("drop_diamond_shape");
+          currentParams.delete("fashion_earring_diamond_shape");
+          currentParams.delete("halo_earring_diamond_shape");
+          currentParams.delete("earring_length");
+          // Reset to page 1 when filters change
+          currentParams.delete("page");
+          console.log(
+            `🗑️ Closed ${groupTitle} and cleared all earring filters`,
+          );
+
           setSearchParams(currentParams);
 
           setActiveFilters((prev) => ({
             ...prev,
-            category1: values.join(","),
+            category1: "",
+            category2: "",
+            category3: "",
+            centerStoneShape: "",
+            studs_diamond_shape: [],
+            hoops_diamond_shape: [],
+            drop_diamond_shape: [],
+            fashion_earring_diamond_shape: [],
+            halo_earring_diamond_shape: [],
+            earring_length: [],
           }));
         }
-      } else {
-        // When closing a group, remove it from category1 and clear associated filters
-        const index = values.indexOf(mappedValue);
-        if (index > -1) {
-          values.splice(index, 1);
-          console.log(`❌ Removed ${mappedValue} from category1:`, values);
-
-          // Update or delete category1
-          if (values.length > 0) {
-            currentParams.set("category1", values.join(","));
-          } else {
-            currentParams.delete("category1");
-            console.log(`🗑️ Deleted category1 from URL params`);
-          }
-
-          // Clear the associated shape filter for this earring subcategory
-          let shapeFilterKey = "";
-          if (groupTitle === "Studs") {
-            shapeFilterKey = "studs_diamond_shape";
-          } else if (groupTitle === "Hoops / Huggies") {
-            shapeFilterKey = "hoops_diamond_shape";
-          } else if (groupTitle === "Drop Earrings") {
-            shapeFilterKey = "drop_diamond_shape";
-          } else if (groupTitle === "Fashion Earrings") {
-            shapeFilterKey = "fashion_earring_diamond_shape";
-          } else if (groupTitle === "Halo Earrings") {
-            shapeFilterKey = "halo_earring_diamond_shape";
-          }
-
-          if (shapeFilterKey) {
-            currentParams.delete(shapeFilterKey);
-            console.log(`🗑️ Deleted ${shapeFilterKey} from URL params`);
-
-            // Also update centerStoneShape by removing shapes from this subcategory
-            const shapesToRemove = activeFilters[
-              shapeFilterKey as keyof typeof activeFilters
-            ] as string[];
-            if (shapesToRemove && shapesToRemove.length > 0) {
-              console.log(
-                `🔍 Removing shapes from centerStoneShape:`,
-                shapesToRemove,
-              );
-              const existingShapes =
-                currentParams.get("centerStoneShape") || "";
-              const shapeArray = existingShapes
-                ? existingShapes.split(",")
-                : [];
-
-              // Remove all shapes that belong to this subcategory
-              shapesToRemove.forEach((shape) => {
-                const shapeLower = shape.toLowerCase();
-                const idx = shapeArray.indexOf(shapeLower);
-                if (idx > -1) {
-                  shapeArray.splice(idx, 1);
-                }
-              });
-
-              // Update or delete centerStoneShape
-              if (shapeArray.length > 0) {
-                currentParams.set("centerStoneShape", shapeArray.join(","));
-              } else {
-                currentParams.delete("centerStoneShape");
-                console.log(`🗑️ Deleted centerStoneShape from URL params`);
-              }
-            }
-
-            // Clear the shape filter in state
-            // ALSO clear any other filters that belong to this earring group (category2 + lengths)
-            const existingCategory2 = currentParams.get("category2") || "";
-            const category2Parts = existingCategory2
-              ? existingCategory2.split(",").map((v) => v.trim())
-              : [];
-            const existingLengths = category2Parts.filter((p) =>
-              ["Small", "Medium", "Large"].includes(p),
-            );
-            const existingStyles = category2Parts.filter(
-              (p) => p && !["Small", "Medium", "Large"].includes(p),
-            );
-
-            // Which category2 style values belong to this group?
-            const mapEarringUiStyleToCategory2 = (uiLabel: string) => {
-              if (uiLabel === "Daily Wear Earrings") return "DAILY WEAR";
-              if (uiLabel === "Designer Earrings") return "DESIGNER EARRINGS";
-              return uiLabel;
-            };
-
-            let stylesToRemove: string[] = [];
-            if (groupTitle === "Fashion Earrings") {
-              stylesToRemove = [
-                mapEarringUiStyleToCategory2("Daily Wear Earrings"),
-                mapEarringUiStyleToCategory2("Designer Earrings"),
-              ];
-            }
-            if (groupTitle === "Drop Earrings") {
-              stylesToRemove = ["Classic Solitaire", "Halo Drop Earrings"];
-            }
-
-            // Hoops group owns the earring lengths
-            const shouldClearLengths = groupTitle === "Hoops / Huggies";
-
-            const filteredStyles = existingStyles.filter(
-              (s) => !stylesToRemove.includes(s),
-            );
-            const filteredLengths = shouldClearLengths ? [] : existingLengths;
-            const nextCategory2Parts = [...filteredStyles, ...filteredLengths];
-
-            if (nextCategory2Parts.length > 0) {
-              currentParams.set("category2", nextCategory2Parts.join(","));
-            } else {
-              currentParams.delete("category2");
-            }
-            if (shouldClearLengths) {
-              currentParams.delete("earring_length");
-            }
-
-            setActiveFilters((prev) => ({
-              ...prev,
-              category1: values.join(","),
-              [shapeFilterKey]: [],
-              // Earrings category2 is the source of truth for styles/lengths
-              category2: nextCategory2Parts.join(","),
-              earring_length: shouldClearLengths ? [] : prev.earring_length,
-            }));
-          } else {
-            // Update category1 in state
-            setActiveFilters((prev) => ({
-              ...prev,
-              category1: values.join(","),
-            }));
-          }
-
-          setSearchParams(currentParams);
-        }
+        // If another section is open, do nothing - the opening logic handles closing others
       }
     };
 
@@ -2168,14 +2167,35 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                     // Handle earrings - updates both category-specific array AND centerStoneShape
                     setEarringCenterStoneShape(ringCategory, shape, newChecked);
                   } else {
-                    // Handle other categories with legacy logic
+                    // Handle other categories - update the diamond shape filter
                     updateUrlFilters(diamondShapeFilterKey, shape, newChecked);
-                    // Only add ring_category if diamond shape is being checked and category not already present
-                    if (
-                      newChecked &&
-                      !activeFilters.ring_category.includes(ringCategory)
-                    ) {
-                      updateUrlFilters("ring_category", ringCategory, true);
+
+                    // Add the appropriate category filter based on the current category
+                    if (newChecked) {
+                      if (
+                        category === "rings" &&
+                        !activeFilters.ring_category.includes(ringCategory)
+                      ) {
+                        updateUrlFilters("ring_category", ringCategory, true);
+                      } else if (
+                        category === "pendants" &&
+                        !activeFilters.pendant_category.includes(ringCategory)
+                      ) {
+                        updateUrlFilters(
+                          "pendant_category",
+                          ringCategory,
+                          true,
+                        );
+                      } else if (
+                        category === "bracelets" &&
+                        !activeFilters.bracelet_category.includes(ringCategory)
+                      ) {
+                        updateUrlFilters(
+                          "bracelet_category",
+                          ringCategory,
+                          true,
+                        );
+                      }
                     }
                   }
                 }}
@@ -3300,8 +3320,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           <div className="flex justify-center items-center mt-8 space-x-2">
             <button
               onClick={() => {
+                const newPage = pagination.currentPage - 1;
+                const currentParams = new URLSearchParams(searchParams);
+                currentParams.set("page", newPage.toString());
+                setSearchParams(currentParams);
                 scrollToTop();
-                fetchProducts(pagination.currentPage - 1, 20);
+                fetchProducts(newPage, 20);
               }}
               disabled={pagination.currentPage === 1}
               className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
@@ -3315,8 +3339,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
             <button
               onClick={() => {
+                const newPage = pagination.currentPage + 1;
+                const currentParams = new URLSearchParams(searchParams);
+                currentParams.set("page", newPage.toString());
+                setSearchParams(currentParams);
                 scrollToTop();
-                fetchProducts(pagination.currentPage + 1, 20);
+                fetchProducts(newPage, 20);
               }}
               disabled={pagination.currentPage === pagination.totalPages}
               className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
