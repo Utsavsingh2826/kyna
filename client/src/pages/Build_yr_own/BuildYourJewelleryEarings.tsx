@@ -121,7 +121,13 @@ interface ProductModelResponse {
   metalTypes: string[];
   goldKarats: string[];
   diamondShape: string[];
-  diamondSize: string[];
+  diamondSize:
+    | string[]
+    | {
+        GOLD?: string[];
+        PLATINUM?: string[];
+        SILVER?: string[];
+      };
   diamondColorClarity: string[];
   isEngraving: boolean;
   engravingInfo: {
@@ -1134,11 +1140,27 @@ const ProductDetail = () => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
       return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
     }
-    // Sort diamond sizes in ascending order (small to big)
-    return [...selectedStyleData.productDetails.diamondSize].sort(
-      (a, b) => parseFloat(a) - parseFloat(b),
-    );
-  }, [selectedStyleData?.productDetails?.diamondSize]);
+
+    const diamondSize = selectedStyleData.productDetails.diamondSize;
+
+    // If diamondSize is an object with metal type keys
+    if (typeof diamondSize === "object" && !Array.isArray(diamondSize)) {
+      const metalTypeKey = selectedMetalType || "GOLD";
+      const sizes =
+        (diamondSize as any)[metalTypeKey] || (diamondSize as any)["GOLD"] || [];
+      // Sort diamond sizes in ascending order (small to big)
+      return [...sizes].sort((a: string, b: string) => parseFloat(a) - parseFloat(b));
+    }
+
+    // Fallback for old structure (if diamondSize is still an array)
+    if (Array.isArray(diamondSize)) {
+      return [...diamondSize].sort(
+        (a, b) => parseFloat(a) - parseFloat(b),
+      );
+    }
+
+    return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+  }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
 
   // Engraving upload helpers (mirror ProductDetail behavior)
   const uploadEngravingToBackend = useCallback(
@@ -1482,7 +1504,7 @@ const ProductDetail = () => {
       ) {
         setSelectedDiamondShape(diamondShapes[0].name);
       }
-      if (diamondSizes.length > 0 && selectedDiamondSize === "") {
+      if (diamondSizes.length > 0 && (selectedDiamondSize === "" || !diamondSizes.includes(selectedDiamondSize))) {
         setSelectedDiamondSize(diamondSizes[0]);
       }
       // Initialize clarity from product details
@@ -2070,7 +2092,9 @@ const ProductDetail = () => {
                       Diamond Size:{" "}
                       <span className="text-[#8D8A91]">
                         {selectedDiamondSize ||
-                          selectedStyleData.productDetails.diamondSize[0]}{" "}
+                          (Array.isArray(selectedStyleData?.productDetails?.diamondSize)
+                            ? selectedStyleData?.productDetails?.diamondSize[0]
+                            : selectedStyleData?.productDetails?.diamondSize?.[selectedMetalType as keyof typeof selectedStyleData.productDetails.diamondSize]?.[0])}{" "}
                         carat
                       </span>
                     </h3>

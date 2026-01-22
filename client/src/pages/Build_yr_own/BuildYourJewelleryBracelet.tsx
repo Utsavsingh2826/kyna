@@ -125,7 +125,13 @@ interface ProductModelResponse {
   metalTypes: string[];
   goldKarats: string[];
   diamondShape: string[];
-  diamondSize: string[];
+  diamondSize:
+    | string[]
+    | {
+        GOLD?: string[];
+        PLATINUM?: string[];
+        SILVER?: string[];
+      };
   diamondColorClarity: string[];
   isEngraving: boolean;
   engravingInfo: {
@@ -1124,14 +1130,33 @@ const ProductDetail = () => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
       return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
     }
-    const sizes = selectedStyleData.productDetails.diamondSize;
-    let filteredSizes = sizes;
-    if (selectedDiamondOrigin === "Natural Diamond") {
-      filteredSizes = sizes.filter((size) => parseFloat(size) <= 1);
+
+    const diamondSize = selectedStyleData.productDetails.diamondSize;
+    let baseSizes: string[] = [];
+
+    // If diamondSize is an object with metal type keys
+    if (typeof diamondSize === "object" && !Array.isArray(diamondSize)) {
+      const metalTypeKey = selectedMetalType || "GOLD";
+      baseSizes =
+        (diamondSize as any)[metalTypeKey] || (diamondSize as any)["GOLD"] || [];
+    } else if (Array.isArray(diamondSize)) {
+      baseSizes = diamondSize;
+    } else {
+      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
     }
+
+    let filteredSizes = baseSizes;
+    if (selectedDiamondOrigin === "Natural Diamond") {
+      filteredSizes = baseSizes.filter((size: string) => parseFloat(size) <= 1);
+    }
+
     // Sort diamond sizes in ascending order (small to big)
-    return [...filteredSizes].sort((a, b) => parseFloat(a) - parseFloat(b));
-  }, [selectedStyleData?.productDetails?.diamondSize, selectedDiamondOrigin]);
+    return [...filteredSizes].sort((a: string, b: string) => parseFloat(a) - parseFloat(b));
+  }, [
+    selectedStyleData?.productDetails?.diamondSize,
+    selectedDiamondOrigin,
+    selectedMetalType,
+  ]);
 
   // Engraving upload helpers (mirror ProductDetail behavior)
   const uploadEngravingToBackend = useCallback(
@@ -1487,7 +1512,7 @@ const ProductDetail = () => {
       ) {
         setSelectedDiamondShape(diamondShapes[0].name);
       }
-      if (diamondSizes.length > 0 && selectedDiamondSize === "") {
+      if (diamondSizes.length > 0 && (selectedDiamondSize === "" || !diamondSizes.includes(selectedDiamondSize))) {
         setSelectedDiamondSize(diamondSizes[0]);
       }
       // Initialize clarity from product details

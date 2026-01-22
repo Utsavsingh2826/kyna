@@ -123,7 +123,13 @@ interface ProductModelResponse {
   metalTypes: string[];
   goldKarats: string[];
   diamondShape: string[];
-  diamondSize: string[];
+  diamondSize:
+    | {
+        GOLD?: string[];
+        PLATINUM?: string[];
+        SILVER?: string[];
+      }
+    | string[];
   diamondColorClarity: string[];
   isEngraving: boolean;
   engravingInfo: {
@@ -149,6 +155,8 @@ interface ProductModelResponse {
   variantImages: string[];
   availableColors?: string[];
   netWeightGrams?: number;
+  bandwidth?: string[];
+  finishing?: Array<{ code: string; type: string }>;
 }
 
 interface SubStyle {
@@ -628,6 +636,8 @@ const ProductDetail = () => {
   const [selectedMetalType, setSelectedMetalType] = useState<string>("GOLD");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
+  const [selectedBandwidth, setSelectedBandwidth] = useState("");
+  const [selectedFinishing, setSelectedFinishing] = useState("");
 
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
@@ -1064,7 +1074,19 @@ const ProductDetail = () => {
       "EFVVS";
     const specifications = `${originCode}${clarityToken}`;
 
-    return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+    let variantId = `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+
+    // Add bandwidth if selected (Men's Rings)
+    if (selectedBandwidth) {
+      variantId += `-${selectedBandwidth}`;
+    }
+
+    // Add finishing if selected (Men's Rings)
+    if (selectedFinishing) {
+      variantId += `-${selectedFinishing}`;
+    }
+
+    return variantId;
   };
 
   const refetchUpdatedProduct = async (substyle: SubStyle) => {
@@ -1144,11 +1166,24 @@ const ProductDetail = () => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
       return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
     }
-    // Sort diamond sizes in ascending order (small to big)
-    return [...selectedStyleData.productDetails.diamondSize].sort(
-      (a, b) => parseFloat(a) - parseFloat(b),
-    );
-  }, [selectedStyleData?.productDetails?.diamondSize]);
+
+    const diamondSize = selectedStyleData.productDetails.diamondSize;
+
+    // If diamondSize is an object with metal type keys
+    if (typeof diamondSize === "object" && !Array.isArray(diamondSize)) {
+      const metalTypeKey = selectedMetalType || "GOLD";
+      const sizes = diamondSize[metalTypeKey as keyof typeof diamondSize] || [];
+      // Sort diamond sizes in ascending order (small to big)
+      return [...sizes].sort((a, b) => parseFloat(a) - parseFloat(b));
+    }
+
+    // Fallback for old structure (if diamondSize is still an array)
+    if (Array.isArray(diamondSize)) {
+      return [...diamondSize].sort((a, b) => parseFloat(a) - parseFloat(b));
+    }
+
+    return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+  }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
 
   // Engraving upload helpers (mirror ProductDetail behavior)
   const uploadEngravingToBackend = useCallback(
@@ -1261,6 +1296,8 @@ const ProductDetail = () => {
         diamondSize: selectedDiamondSize,
         diamondOrigin: selectedDiamondOrigin,
         ringSize: selectedSize,
+        bandwidth: selectedBandwidth,
+        finishing: selectedFinishing,
         engraving: engravingText,
         engravingImageUrl:
           cloudinaryEngravingUrl ||
@@ -1295,11 +1332,14 @@ const ProductDetail = () => {
     savedEngravingData,
     generateAndUploadEngravingImage,
     selectedMetalColor,
+    selectedColorCode,
     selectedMetalType,
     selectedGoldKarat,
     selectedDiamondShape,
     selectedDiamondSize,
     selectedDiamondOrigin,
+    selectedBandwidth,
+    selectedFinishing,
     engravingText,
     engravingImageUrl,
     engravingMotifPath,
@@ -1379,6 +1419,8 @@ const ProductDetail = () => {
         diamondSize: selectedDiamondSize,
         diamondOrigin: selectedDiamondOrigin,
         ringSize: selectedSize,
+        bandwidth: selectedBandwidth,
+        finishing: selectedFinishing,
         engraving: engravingText,
         engravingImageUrl:
           cloudinaryEngravingUrl ||
@@ -1422,6 +1464,8 @@ const ProductDetail = () => {
               diamondSize: selectedDiamondSize,
               diamondOrigin: selectedDiamondOrigin,
               ringSize: selectedSize,
+              bandwidth: selectedBandwidth,
+              finishing: selectedFinishing,
               engraving: engravingText,
               engravingImageUrl:
                 cloudinaryEngravingUrl ||
@@ -1447,11 +1491,14 @@ const ProductDetail = () => {
     savedEngravingData,
     generateAndUploadEngravingImage,
     selectedMetalColor,
+    selectedColorCode,
     selectedMetalType,
     selectedGoldKarat,
     selectedDiamondShape,
     selectedDiamondSize,
     selectedDiamondOrigin,
+    selectedBandwidth,
+    selectedFinishing,
     engravingText,
     engravingImageUrl,
     engravingMotifPath,
@@ -1504,7 +1551,7 @@ const ProductDetail = () => {
       ) {
         setSelectedDiamondShape(diamondShapes[0].name);
       }
-      if (diamondSizes.length > 0 && selectedDiamondSize === "") {
+      if (diamondSizes.length > 0 && (selectedDiamondSize === "" || !diamondSizes.includes(selectedDiamondSize))) {
         setSelectedDiamondSize(diamondSizes[0]);
       }
       // Initialize clarity from product details
@@ -1550,6 +1597,8 @@ const ProductDetail = () => {
     selectedMetalType,
     selectedGoldKarat,
     selectedColorClarity,
+    selectedBandwidth,
+    selectedFinishing,
   ]);
 
   return (
@@ -2381,6 +2430,88 @@ const ProductDetail = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Bandwidth and Finishing Selection */}
+                {((selectedStyleData?.productDetails?.bandwidth?.length ?? 0) >
+                  0 ||
+                  (selectedStyleData?.productDetails?.finishing?.length ?? 0) >
+                    0) && (
+                  <div className="my-6">
+                    <div
+                      className={`grid ${
+                        (selectedStyleData?.productDetails?.bandwidth?.length ??
+                          0) > 0 &&
+                        (selectedStyleData?.productDetails?.finishing?.length ??
+                          0) > 0
+                          ? "grid-cols-2"
+                          : "grid-cols-1"
+                      } gap-4`}
+                    >
+                      {/* Bandwidth Selection */}
+                      {(selectedStyleData?.productDetails?.bandwidth?.length ??
+                        0) > 0 && (
+                        <div>
+                          <label className="block text-sm mb-2">
+                            Band Width (mm)
+                          </label>
+                          <Select
+                            value={selectedBandwidth}
+                            onValueChange={(value) => {
+                              setSelectedBandwidth(value);
+                              scrollToImageOnMobile();
+                            }}
+                          >
+                            <SelectTrigger className="text-sm border-neutral-300">
+                              <SelectValue placeholder="Select Width" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {selectedStyleData?.productDetails?.bandwidth?.map(
+                                (width) => (
+                                  <SelectItem key={width} value={width}>
+                                    {width}mm
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {/* Finishing Selection */}
+                      {(selectedStyleData?.productDetails?.finishing?.length ??
+                        0) > 0 && (
+                        <div>
+                          <label className="block text-sm mb-2">
+                            Finish Type
+                          </label>
+                          <Select
+                            value={selectedFinishing}
+                            onValueChange={(value) => {
+                              setSelectedFinishing(value);
+                              scrollToImageOnMobile();
+                            }}
+                          >
+                            <SelectTrigger className="text-sm border-neutral-300">
+                              <SelectValue placeholder="Select Finish" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {selectedStyleData?.productDetails?.finishing?.map(
+                                (finish) => (
+                                  <SelectItem
+                                    key={finish.code}
+                                    value={finish.code}
+                                  >
+                                    {finish.type}
+                                  </SelectItem>
+                                ),
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Ring Size - Full width on mobile */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

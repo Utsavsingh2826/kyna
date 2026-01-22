@@ -8,6 +8,7 @@ import {
   Mail,
   MessageCircle,
   Share2,
+  Play,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import type { RootState, AppDispatch } from "@/store";
@@ -122,7 +123,13 @@ interface ProductModelResponse {
   metalTypes: string[];
   goldKarats: string[];
   diamondShape: string[];
-  diamondSize: string[];
+  diamondSize:
+    | string[]
+    | {
+        GOLD?: string[];
+        PLATINUM?: string[];
+        SILVER?: string[];
+      };
   diamondColorClarity: string[];
   isEngraving: boolean;
   engravingInfo: {
@@ -843,11 +850,27 @@ const ProductDetail = () => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
       return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
     }
-    // Sort diamond sizes in ascending order (small to big)
-    return [...selectedStyleData.productDetails.diamondSize].sort(
-      (a, b) => parseFloat(a) - parseFloat(b),
-    );
-  }, [selectedStyleData?.productDetails?.diamondSize]);
+
+    const diamondSize = selectedStyleData.productDetails.diamondSize;
+
+    // If diamondSize is an object with metal type keys
+    if (typeof diamondSize === "object" && !Array.isArray(diamondSize)) {
+      const metalTypeKey = selectedMetalType || "GOLD";
+      const sizes =
+        (diamondSize as any)[metalTypeKey] || (diamondSize as any)["GOLD"] || [];
+      // Sort diamond sizes in ascending order (small to big)
+      return [...sizes].sort((a: string, b: string) => parseFloat(a) - parseFloat(b));
+    }
+
+    // Fallback for old structure (if diamondSize is still an array)
+    if (Array.isArray(diamondSize)) {
+      return [...diamondSize].sort(
+        (a, b) => parseFloat(a) - parseFloat(b),
+      );
+    }
+
+    return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+  }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
 
   // Ref for metal types scroll container
   const metalTypesRef = useRef<HTMLDivElement>(null);
@@ -895,7 +918,7 @@ const ProductDetail = () => {
       ) {
         setSelectedDiamondShape(diamondShapes[0].name);
       }
-      if (diamondSizes.length > 0 && selectedDiamondSize === "") {
+      if (diamondSizes.length > 0 && (selectedDiamondSize === "" || !diamondSizes.includes(selectedDiamondSize))) {
         setSelectedDiamondSize(diamondSizes[0]);
       }
       if (
@@ -990,6 +1013,23 @@ const ProductDetail = () => {
                               className="w-16 h-16"
                               alt=""
                             />
+                          </div>
+                        ) : isVideo(image) ? (
+                          <div className="relative w-full h-full">
+                            <video
+                              src={image}
+                              className="w-full h-full object-cover"
+                              muted
+                              preload="metadata"
+                            />
+                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                              <div className="bg-white/90 rounded-full p-2">
+                                <Play
+                                  className="w-3 h-3 text-gray-700"
+                                  fill="currentColor"
+                                />
+                              </div>
+                            </div>
                           </div>
                         ) : (
                           <img
@@ -1117,6 +1157,23 @@ const ProductDetail = () => {
                                 className="w-16 h-16"
                                 alt=""
                               />
+                            </div>
+                          ) : isVideo(image) ? (
+                            <div className="relative w-full h-full">
+                              <video
+                                src={image}
+                                className="w-full h-full object-cover"
+                                muted
+                                preload="metadata"
+                              />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                <div className="bg-white/90 rounded-full p-2">
+                                  <Play
+                                    className="w-3 h-3 text-gray-700"
+                                    fill="currentColor"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           ) : (
                             <img
@@ -1490,8 +1547,11 @@ const ProductDetail = () => {
                     <h3 className="mb-3 text-sm md:text-base">
                       Diamond Size:{" "}
                       <span className="text-[#8D8A91]">
-                        {selectedDiamondSize ||
-                          selectedStyleData.productDetails.diamondSize[0]}{" "}
+                       {selectedDiamondSize ||
+  (Array.isArray(selectedStyleData?.productDetails?.diamondSize)
+    ? selectedStyleData?.productDetails?.diamondSize[0]  // It's an array, access [0]
+    : selectedStyleData?.productDetails?.diamondSize?.[selectedMetalType as keyof typeof selectedStyleData.productDetails.diamondSize]?.[0]  // It's an object, access by metal type first
+)}  
                         carat
                       </span>
                     </h3>
