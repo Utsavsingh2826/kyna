@@ -73,10 +73,11 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
       <Star
         key={i}
         size={20}
-        className={`cursor-pointer transition-colors ${i < rating
-          ? "fill-yellow-400 text-yellow-400"
-          : "text-gray-300 hover:text-yellow-400"
-          }`}
+        className={`cursor-pointer transition-colors ${
+          i < rating
+            ? "fill-yellow-400 text-yellow-400"
+            : "text-gray-300 hover:text-yellow-400"
+        }`}
         onClick={interactive ? () => setReviewRating(i + 1) : undefined}
       />
     ));
@@ -88,7 +89,7 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/reviews/product/${encodeURIComponent(productId)}`
+        `/api/reviews/product/${encodeURIComponent(productId)}`,
       );
       const json = await res.json();
       if (json && json.success && Array.isArray(json.data)) {
@@ -148,7 +149,9 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
     const newFiles = validFiles.slice(0, remainingSlots);
 
     if (validFiles.length > remainingSlots) {
-      toast.error(`You can only upload up to 4 images. Only the first ${remainingSlots} valid images were added.`);
+      toast.error(
+        `You can only upload up to 4 images. Only the first ${remainingSlots} valid images were added.`,
+      );
     }
 
     // Add new files to existing files (up to 4 total)
@@ -426,6 +429,12 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
               >
                 {submitting ? "Submitting..." : "Submit Review"}
               </Button>
+              {/* if not given rating show a note */}
+              {!reviewRating && (
+                <p className="text-red-500 text-xs">
+                  Please provide a rating to submit review.
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -510,8 +519,9 @@ const ProductReviews: React.FC<ProductReviewsProps> = ({ productId }) => {
                         className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-90"
                         onClick={() => openImage(reviewIdx, idx, imgSrc)}
                         role="button"
-                        aria-label={`Open image ${idx + 1} of review by ${review.author
-                          }`}
+                        aria-label={`Open image ${idx + 1} of review by ${
+                          review.author
+                        }`}
                       />
                     ))}
                   </div>

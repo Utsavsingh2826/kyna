@@ -51,14 +51,14 @@ const PaymentPage = () => {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
   const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
+    (state: RootState) => state.auth,
   );
   const { cart, loading: cartLoading } = useSelector(
-    (state: RootState) => state.cart
+    (state: RootState) => state.cart,
   );
 
   const [persistentOrderId, setPersistentOrderId] = useState<string | null>(
-    null
+    null,
   );
 
   // Get direct purchase data from navigation state
@@ -119,7 +119,7 @@ const PaymentPage = () => {
           dispatch(updateUser(freshUserData));
           const balance = Math.max(
             0,
-            Number(freshUserData.referralAvailableBalance) || 0
+            Number(freshUserData.referralAvailableBalance) || 0,
           );
           setReferralBalance(balance);
           return;
@@ -151,8 +151,9 @@ const PaymentPage = () => {
 
   const directPurchaseDiamondCost = isDirectPurchase
     ? Number(
-      directPurchaseData?.orderData?.product?.priceBreakdown?.diamondCost ?? 0
-    )
+        directPurchaseData?.orderData?.product?.priceBreakdown?.diamondCost ??
+          0,
+      )
     : 0;
   const cartDiamondSubtotal = !isDirectPurchase
     ? calculateCartDiamondSubtotal(itemsData)
@@ -164,11 +165,11 @@ const PaymentPage = () => {
   const promoDiscount = appliedPromo?.discountValue || 0;
   const maxWalletRedeemable = Math.max(
     0,
-    Math.min(referralBalance, Math.max(totalAmount - promoDiscount, 0))
+    Math.min(referralBalance, Math.max(totalAmount - promoDiscount, 0)),
   );
   const displayedReferralBalance = Math.max(
     0,
-    referralBalance - (walletDiscount || 0)
+    referralBalance - (walletDiscount || 0),
   );
 
   useEffect(() => {
@@ -179,7 +180,7 @@ const PaymentPage = () => {
 
   const subtotalAfterDiscounts = Math.max(
     totalAmount - promoDiscount - walletDiscount,
-    0
+    0,
   );
   const taxAmount = Math.round(subtotalAfterDiscounts * 0.03);
   const payableAmount = subtotalAfterDiscounts + taxAmount;
@@ -200,12 +201,12 @@ const PaymentPage = () => {
 
   const promoSummary = appliedPromo
     ? {
-      code: appliedPromo.code,
-      discountPercent: appliedPromo.discountPercent,
-      discountValue: appliedPromo.discountValue,
-      diamondSubtotal: appliedPromo.diamondSubtotal,
-      appliedOn: appliedPromo.appliedOn || "diamond",
-    }
+        code: appliedPromo.code,
+        discountPercent: appliedPromo.discountPercent,
+        discountValue: appliedPromo.discountValue,
+        diamondSubtotal: appliedPromo.diamondSubtotal,
+        appliedOn: appliedPromo.appliedOn || "diamond",
+      }
     : undefined;
 
   const orderPricingSummary = {
@@ -223,7 +224,7 @@ const PaymentPage = () => {
     orderId: isDirectPurchase
       ? directPurchaseData.orderData.orderId
       : persistentOrderId ||
-      `ORD_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`, // Fallback if persistent ID not ready
+        `ORD_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`, // Fallback if persistent ID not ready
     amount: payableAmount,
     items: itemsData.map((item: any) => ({
       name: item.product?.title || item.product?.name || "Product",
@@ -248,7 +249,7 @@ const PaymentPage = () => {
           ...item.product.images.sub.map((url: string) => ({
             url,
             alt: item.product?.title,
-          }))
+          })),
         );
       }
       return images;
@@ -257,13 +258,14 @@ const PaymentPage = () => {
       jewelryType: "product",
       description: isDirectPurchase
         ? `Direct purchase: ${directPurchaseData.orderData.product.title}`
-        : `Order with ${itemsData.length} items${itemsData.length > 0
-          ? ": " +
-          itemsData
-            .map((item: any) => item.product?.title || "Product")
-            .join(", ")
-          : ""
-        }`,
+        : `Order with ${itemsData.length} items${
+            itemsData.length > 0
+              ? ": " +
+                itemsData
+                  .map((item: any) => item.product?.title || "Product")
+                  .join(", ")
+              : ""
+          }`,
       sku: isDirectPurchase
         ? directPurchaseData.orderData.product.sku
         : undefined,
@@ -273,46 +275,46 @@ const PaymentPage = () => {
       isDirectPurchase,
       directPurchaseData: isDirectPurchase
         ? {
-          product: directPurchaseData.orderData.product,
-          customization: directPurchaseData.orderData.customization,
-        }
+            product: directPurchaseData.orderData.product,
+            customization: directPurchaseData.orderData.customization,
+          }
         : null,
       promo: promoSummary,
       referralWallet:
         walletDiscount > 0
           ? {
-            amountRequested: walletDiscount,
-          }
+              amountRequested: walletDiscount,
+            }
           : undefined,
       pricingSummary: orderPricingSummary,
       // Add cart items data for multi-item orders
       cartItems: !isDirectPurchase
         ? itemsData.map((item: any) => ({
-          productId: item.product?._id,
-          productTitle: item.product?.title,
-          productSku: item.product?.sku || item.product?.modelSku,
-          variantSku: item.variantSku,
-          variantConfig: item.variantConfig,
-          quantity: item.quantity,
-          price: item.price,
-          sellingPrice: item.variantConfig?.sellingPrice || item.price,
-          priceBreakdown: item.variantConfig?.priceBreakdown,
-          metalDetails: {
-            type: item.variantConfig?.metalType,
-            color: item.variantConfig?.metalColor,
-            karat: item.variantConfig?.goldKarat,
-          },
-          diamondDetails: {
-            shape: item.variantConfig?.diamondShape,
-            size: item.variantConfig?.diamondSize,
-            origin: item.variantConfig?.diamondOrigin,
-            color: item.variantConfig?.diamondColor,
-            clarity: item.variantConfig?.diamondClarity,
-          },
-          ringDetails: {
-            size: item.variantConfig?.ringSize || "",
-          },
-        }))
+            productId: item.product?._id,
+            productTitle: item.product?.title,
+            productSku: item.product?.sku || item.product?.modelSku,
+            variantSku: item.variantSku,
+            variantConfig: item.variantConfig,
+            quantity: item.quantity,
+            price: item.price,
+            sellingPrice: item.variantConfig?.sellingPrice || item.price,
+            priceBreakdown: item.variantConfig?.priceBreakdown,
+            metalDetails: {
+              type: item.variantConfig?.metalType,
+              color: item.variantConfig?.metalColor,
+              karat: item.variantConfig?.goldKarat,
+            },
+            diamondDetails: {
+              shape: item.variantConfig?.diamondShape,
+              size: item.variantConfig?.diamondSize,
+              origin: item.variantConfig?.diamondOrigin,
+              color: item.variantConfig?.diamondColor,
+              clarity: item.variantConfig?.diamondClarity,
+            },
+            ringDetails: {
+              size: item.variantConfig?.ringSize || "",
+            },
+          }))
         : null,
     },
   };
@@ -348,7 +350,7 @@ const PaymentPage = () => {
       if (promoContext === "direct") {
         if (!directPurchaseDiamondCost) {
           throw new Error(
-            "Diamond value is unavailable for this product. Promo cannot be applied."
+            "Diamond value is unavailable for this product. Promo cannot be applied.",
           );
         }
         payload.directPurchase = { diamondCost: directPurchaseDiamondCost };
@@ -361,7 +363,7 @@ const PaymentPage = () => {
         setAppliedPromo(promoData);
         setPromoCode("");
         toast.success(
-          `Promo ${promoData.code} applied. You saved ₹${promoData.discountValue}`
+          `Promo ${promoData.code} applied. You saved ₹${promoData.discountValue}`,
         );
       } else {
         const fallbackMessage =
@@ -415,7 +417,7 @@ const PaymentPage = () => {
     setWalletDiscount(maxWalletRedeemable);
     setWalletError("");
     toast.success(
-      `Referral earnings of ₹${maxWalletRedeemable.toLocaleString()} applied`
+      `Referral earnings of ₹${maxWalletRedeemable.toLocaleString()} applied`,
     );
     await fetchReferralBalance();
   };
@@ -582,7 +584,7 @@ const PaymentPage = () => {
         )}
 
         {/* Referral Wallet Section */}
-        <div className="hidden bg-white rounded-lg p-6 mb-8">
+        <div className="bg-white rounded-lg p-6 mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-3">
             Referral Wallet
           </h2>

@@ -385,6 +385,20 @@ const ProductDetail = () => {
   const thumbnailsMobileRef = useRef<HTMLDivElement>(null);
   const metalTypesRef = useRef<HTMLDivElement>(null);
   const mainViewerRef = useRef<HTMLDivElement | null>(null);
+  const imageContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Helper function to scroll to image in mobile/tablet view
+  const scrollToImageOnMobile = () => {
+    // Increase threshold to include more devices and wrap in timeout to ensure state/UI updates finish
+    if (window.innerWidth < 1280 && imageContainerRef.current) {
+      setTimeout(() => {
+        imageContainerRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 150);
+    }
+  };
 
   // Helper function to normalize karat values (handles both 14KT and 14kt formats)
   const normalizeKarat = useCallback((karat: string | number): string => {
@@ -2045,6 +2059,7 @@ const ProductDetail = () => {
     }
 
     setSelectedDiamondOrigin(origin);
+    scrollToImageOnMobile();
     // Price will update automatically via useEffect
   };
 
@@ -2256,6 +2271,8 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div
+                  ref={imageContainerRef}
+                  style={{ scrollMarginTop: "160px" }}
                   className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${
                     isUpdating ? "opacity-50" : "opacity-100"
                   }`}
@@ -2577,6 +2594,7 @@ const ProductDetail = () => {
                               onClick={() => {
                                 const newShape = shape.name.toUpperCase();
                                 setSelectedDiamondShape(newShape);
+                                scrollToImageOnMobile();
                               }}
                               className={`group relative w-[50px] h-[50px] border rounded-lg p-1 
           ${
@@ -2621,6 +2639,7 @@ const ProductDetail = () => {
                           value={selectedDiamondSize}
                           onValueChange={(value) => {
                             setSelectedDiamondSize(value);
+                            scrollToImageOnMobile();
                           }}
                         >
                           <SelectTrigger className="text-sm border-neutral-300">
@@ -2689,6 +2708,7 @@ const ProductDetail = () => {
                           value={selectedColorClarity}
                           onValueChange={(value) => {
                             setSelectedColorClarity(value);
+                            scrollToImageOnMobile();
                           }}
                         >
                           <SelectTrigger className="text-sm border-neutral-300">
@@ -2726,6 +2746,7 @@ const ProductDetail = () => {
                         ) {
                           setSelectedDiamondOrigin("Lab Grown Diamond");
                         }
+                        scrollToImageOnMobile();
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300">
@@ -2761,6 +2782,7 @@ const ProductDetail = () => {
                               onClick={() => {
                                 const newKarat = normalizeKarat(karat);
                                 setSelectedGoldKarat(newKarat);
+                                scrollToImageOnMobile();
                               }}
                               className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
                                 normalizeKarat(selectedGoldKarat) ===
@@ -2803,7 +2825,10 @@ const ProductDetail = () => {
                       return (
                         <button
                           key={code}
-                          onClick={() => updateMetalColor(code)}
+                          onClick={() => {
+                            updateMetalColor(code);
+                            scrollToImageOnMobile();
+                          }}
                           className={`relative flex justify-center items-center rounded-full border-2 transition-all ${
                             selectedColorCode === code
                               ? "border-[#328F94] ring-2 ring-[#328F94]/30"
@@ -2853,7 +2878,10 @@ const ProductDetail = () => {
                             </label>
                             <Select
                               value={selectedBandwidth}
-                              onValueChange={setSelectedBandwidth}
+                              onValueChange={(value) => {
+                                setSelectedBandwidth(value);
+                                scrollToImageOnMobile();
+                              }}
                             >
                               <SelectTrigger
                                 className={`text-sm border-neutral-300 ${
@@ -2884,7 +2912,10 @@ const ProductDetail = () => {
                             </label>
                             <Select
                               value={selectedFinishing}
-                              onValueChange={setSelectedFinishing}
+                              onValueChange={(value) => {
+                                setSelectedFinishing(value);
+                                scrollToImageOnMobile();
+                              }}
                             >
                               <SelectTrigger
                                 className={`${
@@ -2927,7 +2958,10 @@ const ProductDetail = () => {
                         </label>
                         <Select
                           value={selectedSize}
-                          onValueChange={setSelectedSize}
+                          onValueChange={(value) => {
+                            setSelectedSize(value);
+                            scrollToImageOnMobile();
+                          }}
                         >
                           <SelectTrigger className="text-sm border-neutral-300">
                             <SelectValue placeholder="Select" />
@@ -2965,7 +2999,10 @@ const ProductDetail = () => {
                           </label>
                           <Select
                             value={selectedBraceletSize}
-                            onValueChange={setSelectedBraceletSize}
+                            onValueChange={(value) => {
+                              setSelectedBraceletSize(value);
+                              scrollToImageOnMobile();
+                            }}
                           >
                             <SelectTrigger className="text-sm border-neutral-300">
                               <SelectValue placeholder="Select" />
@@ -3125,12 +3162,12 @@ const ProductDetail = () => {
                 {/* Share Options */}
                 <div className="mt-3">
                   {/* <h3 className="font-medium mb-3 text-sm">Share</h3> */}
-                  <div className="flex flex-row flex-nowrap text-[#328F94] gap-3">
+                  <div className="flex flex-row flex-nowrap justify-between text-[#328F94] gap-3">
                     {socialLinks.map((link, index) => (
                       <Button
                         key={index}
                         size="sm"
-                        className="flex items-center gap-2 text-xs"
+                        className="flex items-center w-full gap-2 text-xs"
                         onClick={link.action}
                       >
                         {link.isImage ? (

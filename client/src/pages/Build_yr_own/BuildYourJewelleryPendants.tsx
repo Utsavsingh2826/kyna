@@ -304,7 +304,9 @@ const ProductDetail = () => {
   const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
   const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
   const [isNecklaceSizePopupOpen, setIsNecklaceSizePopupOpen] = useState(false);
-
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useSelector(
@@ -322,6 +324,61 @@ const ProductDetail = () => {
   const [selectedStyleCategory, setSelectedStyleCategory] =
     useState("SOLITAIRE");
   const [selectedRingStyle, setSelectedRingStyle] = useState("");
+
+  const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
+    const currentUrl = window.location.href;
+    const productName = "this beautiful ring";
+
+    if (platform === "copy") {
+      try {
+        await navigator.clipboard.writeText(currentUrl);
+        toast.success("Link copied to clipboard!");
+      } catch (err) {
+        toast.error("Failed to copy link");
+      }
+      return;
+    }
+
+    const message = `I found this beautiful piece at Kyna Jewels and thought of you! 💎\n\n${productName}\n\nCheck it out here: ${currentUrl}\n\nKyna Jewels is the best online jewellery business for premium designs!`;
+
+    if (platform === "whatsapp") {
+      const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+      window.open(url, "_blank");
+    } else if (platform === "email") {
+      setShareUrl(currentUrl);
+      setShareMessage(
+        `I found this beautiful piece at Kyna Jewels and thought of you! 💎\n\nCheck out ${productName} here. Kyna Jewels is the best online jewellery business for premium designs!`,
+      );
+      setShareModalOpen(true);
+    }
+  };
+
+  const socialLinks = [
+    {
+      icon: "/Jan/Vector.png",
+      label: "WhatsApp",
+      action: () => handleShare("whatsapp"),
+      height: "h-5",
+      width: "w-5",
+      isImage: true,
+    },
+    {
+      icon: Mail,
+      label: "Email",
+      action: () => handleShare("email"),
+      height: "h-5",
+      width: "w-5",
+      isImage: false,
+    },
+    {
+      icon: Share2,
+      label: "Copy Link",
+      action: () => handleShare("copy"),
+      height: "h-5",
+      width: "w-5",
+      isImage: false,
+    },
+  ];
 
   // Fetch data from API
   const fetchCategoryData = useCallback(async (categoryName: string) => {
@@ -478,6 +535,19 @@ const ProductDetail = () => {
   const thumbnailsRef = useRef<HTMLDivElement>(null);
   const styleCategoryRef = useRef<HTMLDivElement>(null);
   const ringStylesRef = useRef<HTMLDivElement>(null);
+  const imageContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToImageOnMobile = () => {
+    // Increase threshold to include more devices and wrap in timeout to ensure state/UI updates finish
+    if (window.innerWidth < 1280 && imageContainerRef.current) {
+      setTimeout(() => {
+        imageContainerRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 150);
+    }
+  };
 
   // Thumbnail scroll handlers
   const scrollThumbnailsUp = () => {
@@ -888,7 +958,7 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Main Image */}
-                <div className="flex-1 w-full min-w-0">
+                <div ref={imageContainerRef} style={{ scrollMarginTop: "160px" }} className="flex-1 w-full min-w-0">
                   <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {(() => {
                       const currentImage =
@@ -1237,8 +1307,10 @@ const ProductDetail = () => {
                       <button
                         key={origin}
                         onClick={() => {
-                          if (!isLabGrownVariant)
+                          if (!isLabGrownVariant) {
                             setSelectedDiamondOrigin(origin);
+                            scrollToImageOnMobile();
+                          }
                         }}
                         className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
                           selectedDiamondOrigin === origin
@@ -1270,7 +1342,10 @@ const ProductDetail = () => {
                     {getAvailableDiamondShapes().map((shape) => (
                       <div key={shape.name} className="relative group">
                         <button
-                          onClick={() => setSelectedDiamondShape(shape.name)}
+                          onClick={() => {
+                            setSelectedDiamondShape(shape.name);
+                            scrollToImageOnMobile();
+                          }}
                           className={`w-14 h-14 md:w-16 md:h-16 border rounded-lg overflow-hidden grid place-items-center p-1 transition-all
             ${
               selectedDiamondShape === shape.name
@@ -1313,7 +1388,10 @@ const ProductDetail = () => {
 
                       <Select
                         value={selectedColorClarity}
-                        onValueChange={setSelectedColorClarity}
+                        onValueChange={(value) => {
+                        setSelectedColorClarity(value);
+                        scrollToImageOnMobile();
+                      }}
                       >
                         <SelectTrigger className="w-full text-sm border-neutral-300">
                           <SelectValue placeholder="Select Color & Clarity" />
@@ -1356,9 +1434,10 @@ const ProductDetail = () => {
                     <div className="mb-2 w-1/2">
                       <Select
                         value={selectedDiamondSize}
-                        onValueChange={(value) =>
-                          setSelectedDiamondSize(String(value))
-                        }
+                        onValueChange={(value) => {
+                          setSelectedDiamondSize(String(value));
+                          scrollToImageOnMobile();
+                        }}
                       >
                         <SelectTrigger className="text-sm border-neutral-300">
                           <SelectValue placeholder="Select carat" />
@@ -1408,6 +1487,7 @@ const ProductDetail = () => {
                                   ?.goldKarats || ["18kt", "14kt", "9kt"];
 
                         setSelectedGoldKarat(newKarats[0]);
+                        scrollToImageOnMobile();
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300">
@@ -1458,7 +1538,10 @@ const ProductDetail = () => {
                         {getAvailableKarats().map((karat, index) => (
                           <button
                             key={`${karat}-${index}`}
-                            onClick={() => setSelectedGoldKarat(karat)}
+                            onClick={() => {
+                              setSelectedGoldKarat(karat);
+                              scrollToImageOnMobile();
+                            }}
                             className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
                               selectedGoldKarat === karat
                                 ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
@@ -1506,6 +1589,7 @@ const ProductDetail = () => {
                           onClick={() => {
                             setSelectedMetalColor(colorInfo.name);
                             setSelectedColorCode(code);
+                            scrollToImageOnMobile();
                           }}
                           className={`w-10 h-10 flex justify-center items-center rounded-full border-2 transition-all hover:scale-105 ${
                             selectedColorCode === code
@@ -1549,6 +1633,7 @@ const ProductDetail = () => {
                             onClick={() => {
                               setSelectedMetalColor(colorInfo.name);
                               setSelectedColorCode(code);
+                              scrollToImageOnMobile();
                             }}
                             className={`w-8 h-8 flex justify-center items-center sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
                               selectedColorCode === code
@@ -1847,27 +1932,29 @@ const ProductDetail = () => {
                 <div>
                   <h3 className="font-medium mb-3 text-sm">Share</h3>
                   <div className="grid grid-cols-3 text-[#328F94] gap-2 md:gap-3">
-                    <Button
-                      size="sm"
-                      className="flex items-center justify-center gap-2 text-xs"
-                    >
-                      <Mail size={14} />
-                      Email
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="flex items-center justify-center gap-2 text-xs"
-                    >
-                      <MessageCircle size={14} />
-                      WhatsApp
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="flex items-center justify-center gap-2 text-xs"
-                    >
-                      <Share2 size={14} />
-                      Copy Link
-                    </Button>
+                    {socialLinks.map((link, index) => (
+                      <Button
+                        key={index}
+                        size="sm"
+                        className="flex items-center justify-center gap-2 text-xs"
+                        onClick={link.action}
+                      >
+                        {link.isImage ? (
+                          <img
+                            src={link.icon as string}
+                            alt={link.label}
+                            className={`${link.height} ${link.width}`}
+                          />
+                        ) : (
+                          (() => {
+                            const IconComponent =
+                              link.icon as React.ElementType;
+                            return <IconComponent size={14} />;
+                          })()
+                        )}
+                        {link.label}
+                      </Button>
+                    ))}
                   </div>
                 </div>
               </div>
