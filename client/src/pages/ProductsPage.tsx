@@ -169,6 +169,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       limit: number = 20,
       forceRefresh: boolean = false,
     ) => {
+      // Set loading immediately for pagination UX
+      setLoading(true);
+      setError(null);
+
       try {
         // Generate cache key for current filters
         const cacheKey = generateCacheKey();
@@ -185,11 +189,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
           if (cacheAge < CACHE_DURATION) {
-            console.log(
-              "✨ Using cached products (age: " +
-                Math.round(cacheAge / 1000) +
-                "s)",
-            );
+            // console.log(
+            //   "✨ Using cached products (age: " +
+            //     Math.round(cacheAge / 1000) +
+            //     "s)",
+            // );
             setProducts(cachedData.products);
             if (cachedData.pagination) {
               setPagination(cachedData.pagination);
@@ -201,21 +205,18 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           }
         }
 
-        console.log("🌐 Fetching fresh products from API");
+        // console.log("🌐 Fetching fresh products from API");
         setUsingCache(false);
 
         // Cancel any previous request
         if (abortControllerRef.current) {
           abortControllerRef.current.abort();
-          console.log("🚫 Cancelled previous API request");
+          // console.log("🚫 Cancelled previous API request");
         }
 
         // Create new AbortController for this request
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
-
-        setLoading(true);
-        setError(null);
 
         // Earrings: special endpoint with 4 fields only
         if ((category as string) === "earrings") {
@@ -254,21 +255,26 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             setPagination(paginationData);
             setAppliedFilters(data.appliedFilters || null);
 
-            // Save earrings to Redux cache
-            const cacheKey = generateCacheKey();
-            dispatch(
-              saveCategoryProducts({
-                category,
-                data: {
-                  products: data.products,
-                  pagination: paginationData,
-                  appliedFilters: data.appliedFilters || null,
-                  queryKey: cacheKey,
-                  timestamp: Date.now(),
-                },
-              }),
-            );
-            console.log("💾 Saved earrings to cache with key:", cacheKey);
+            // Save earrings to Redux cache ONLY for page 1
+            if (page === 1) {
+              const cacheKey = generateCacheKey();
+              dispatch(
+                saveCategoryProducts({
+                  category,
+                  data: {
+                    products: data.products,
+                    pagination: paginationData,
+                    appliedFilters: data.appliedFilters || null,
+                    queryKey: cacheKey,
+                    timestamp: Date.now(),
+                  },
+                }),
+              );
+              // console.log(
+              //   "💾 Saved earrings page 1 to cache with key:",
+              //   cacheKey,
+              // );
+            }
           } else {
             throw new Error("API returned success: false");
           }
@@ -565,8 +571,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         };
 
         const filterParams = buildApiFilters();
-        console.log("📡 API Request Params:", filterParams.toString());
-        console.log("📊 Active Filters State:", activeFilters);
+        // console.log("📡 API Request Params:", filterParams.toString());
+        // console.log("📊 Active Filters State:", activeFilters);
         const response = await fetch(
           `/api/products/category/${apiCategory}?${filterParams.toString()}`,
           { signal },
@@ -578,9 +584,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         const data: ApiResponse = await response.json();
 
-        console.log("API Response:", data);
-        console.log("Pagination from API:", data.pagination);
-        console.log("Total from API:", data.total);
+        // console.log("API Response:", data);
+        // console.log("Pagination from API:", data.pagination);
+        // console.log("Total from API:", data.total);
 
         if (data.success) {
           setProducts(data.products);
@@ -591,38 +597,40 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             total: data.total,
           };
           setPagination(paginationData);
-          console.log("Pagination state set to:", paginationData);
+          // console.log("Pagination state set to:", paginationData);
           setAppliedFilters(data.appliedFilters || null);
 
-          // Save to Redux cache
-          const cacheKey = generateCacheKey();
-          dispatch(
-            saveCategoryProducts({
-              category,
-              data: {
-                products: data.products,
-                pagination: paginationData,
-                appliedFilters: data.appliedFilters || null,
-                queryKey: cacheKey,
-                timestamp: Date.now(),
-              },
-            }),
-          );
-          console.log(
-            `💾 Saved ${category} products to cache (${data.products.length} items)`,
-            { category, cacheKey },
-          );
+          // Save to Redux cache ONLY for page 1 (to avoid caching wrong page data)
+          if (page === 1) {
+            const cacheKey = generateCacheKey();
+            dispatch(
+              saveCategoryProducts({
+                category,
+                data: {
+                  products: data.products,
+                  pagination: paginationData,
+                  appliedFilters: data.appliedFilters || null,
+                  queryKey: cacheKey,
+                  timestamp: Date.now(),
+                },
+              }),
+            );
+            // console.log(
+            //   `💾 Saved ${category} page 1 to cache (${data.products.length} items)`,
+            //   { category, cacheKey },
+            // );
+          }
         } else {
           throw new Error("API returned success: false");
         }
       } catch (err) {
         // Ignore abort errors - these are intentional cancellations
         if (err instanceof Error && err.name === "AbortError") {
-          console.log("✅ Request cancelled successfully");
+          // console.log("✅ Request cancelled successfully");
           return;
         }
 
-        console.error("Error fetching products:", err);
+        // console.error("Error fetching products:", err);
         setError(
           err instanceof Error ? err.message : "Failed to fetch products",
         );
@@ -709,16 +717,16 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       );
       const existingEntryId = wishlistKeyMap[entryKey];
 
-      console.log("🔴 Toggle Wishlist:", {
-        modelSku: product.modelSku,
-        productId: product._id,
-        variantSku: product.firstVariantSku,
-        detectedMetalColor,
-        entryKey,
-        existingEntryId,
-        willAdd: !existingEntryId,
-        wishlistKeyMapSize: Object.keys(wishlistKeyMap).length,
-      });
+      // console.log("🔴 Toggle Wishlist:", {
+      //   modelSku: product.modelSku,
+      //   productId: product._id,
+      //   variantSku: product.firstVariantSku,
+      //   detectedMetalColor,
+      //   entryKey,
+      //   existingEntryId,
+      //   willAdd: !existingEntryId,
+      //   wishlistKeyMapSize: Object.keys(wishlistKeyMap).length,
+      // });
 
       if (existingEntryId) {
         dispatch(removeWishlistItemThunk(existingEntryId));
@@ -846,27 +854,27 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
   // Handlers for when user releases the slider (mouseup/touchend)
   const handleMinRelease = () => {
-    console.log("🔵 MIN SLIDER RELEASED - Calling API with:", minPriceUI);
+    // console.log("🔵 MIN SLIDER RELEASED - Calling API with:", minPriceUI);
     setMinPrice(minPriceUI);
     updatePriceFilter("min_price", minPriceUI.toString());
   };
 
   const handleMaxRelease = () => {
-    console.log("🔶 MAX SLIDER RELEASED - Calling API with:", maxPriceUI);
+    // console.log("🔶 MAX SLIDER RELEASED - Calling API with:", maxPriceUI);
     setMaxPrice(maxPriceUI);
     updatePriceFilter("max_price", maxPriceUI.toString());
   };
 
   // Handlers for manual input changes
   const handleMinInputChange = (value: number) => {
-    console.log("🔵 MIN INPUT CHANGED - Calling API with:", value);
+    // console.log("🔵 MIN INPUT CHANGED - Calling API with:", value);
     setMinPriceUI(value);
     setMinPrice(value);
     updatePriceFilter("min_price", value.toString());
   };
 
   const handleMaxInputChange = (value: number) => {
-    console.log("🔶 MAX INPUT CHANGED - Calling API with:", value);
+    // console.log("🔶 MAX INPUT CHANGED - Calling API with:", value);
     setMaxPriceUI(value);
     setMaxPrice(value);
     updatePriceFilter("max_price", value.toString());
@@ -923,7 +931,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       // Cancel any in-flight requests
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
-        console.log("🚫 Cancelled API request on unmount");
+        // console.log("🚫 Cancelled API request on unmount");
       }
       // Clear debounce timer
       if (priceDebounceRef.current) {
@@ -975,19 +983,29 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   // Separate effect to handle ONLY page number changes from pagination buttons
   useEffect(() => {
     const pageParam = searchParams.get("page");
-    if (!pageParam) return; // No page param, skip
-
-    const pageFromUrl = parseInt(pageParam, 10);
+    // If no page param, it means page 1 (default)
+    const pageFromUrl = pageParam ? parseInt(pageParam, 10) : 1;
     const validPage = isNaN(pageFromUrl) || pageFromUrl < 1 ? 1 : pageFromUrl;
+
+    // console.log("📄 Page change detected:", {
+    //   pageParam,
+    //   pageFromUrl,
+    //   validPage,
+    //   lastFetched: lastFetchedPageRef.current,
+    //   isFirstLoad: isFirstLoadRef.current,
+    // });
 
     // Only fetch if page actually changed and it's not the first load
     if (!isFirstLoadRef.current && validPage !== lastFetchedPageRef.current) {
+      // console.log("🚀 Fetching new page:", validPage);
       lastFetchedPageRef.current = validPage;
+      // Set loading state for instant UX feedback (keep existing products visible during load)
+      setLoading(true);
+      // Scroll to top immediately when page changes
+      scrollToTop();
       fetchProducts(validPage);
     }
-    // Only depend on the page parameter value, not the whole searchParams object
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams.get("page")]);
+  }, [searchParams.get("page"), fetchProducts]);
 
   // Reset first load flag and clear price filters when category changes
   useEffect(() => {
@@ -999,7 +1017,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
-      console.log("🚫 Cancelled API request due to category change");
+      // console.log("🚫 Cancelled API request due to category change");
     }
 
     // CRITICAL: Clear any pending price debounce timers to prevent stale requests
@@ -1126,9 +1144,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     categoryParam: string,
     isOpen: boolean,
   ) => {
-    console.log(
-      `🔧 Filter Group Toggle: ${groupName} - ${isOpen ? "OPENING" : "CLOSING"}`,
-    );
+    // console.log(
+    //   `🔧 Filter Group Toggle: ${groupName} - ${isOpen ? "OPENING" : "CLOSING"}`,
+    // );
     const currentParams = new URLSearchParams(searchParams);
     const existingParam = currentParams.get(categoryParam);
     const existingValues = existingParam ? existingParam.split(",") : [];
@@ -1155,7 +1173,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       currentParams.set(categoryParam, groupName);
       // Reset to page 1 when filters change
       currentParams.delete("page");
-      console.log(`✅ Set ${groupName} as ONLY active ${categoryParam}`);
+      // console.log(`✅ Set ${groupName} as ONLY active ${categoryParam}`);
       setSearchParams(currentParams);
 
       // Update local state - clear all shape filters and set only current category
@@ -1185,17 +1203,17 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       const index = existingValues.indexOf(groupName);
       if (index > -1) {
         existingValues.splice(index, 1);
-        console.log(
-          `❌ Removed ${groupName} from ${categoryParam}:`,
-          existingValues,
-        );
+        // console.log(
+        //   `❌ Removed ${groupName} from ${categoryParam}:`,
+        //   existingValues,
+        // );
 
         // Update or delete the category parameter
         if (existingValues.length > 0) {
           currentParams.set(categoryParam, existingValues.join(","));
         } else {
           currentParams.delete(categoryParam);
-          console.log(`🗑️ Deleted ${categoryParam} from URL params`);
+          // console.log(`🗑️ Deleted ${categoryParam} from URL params`);
         }
 
         // Clear associated shape filters based on the group being closed
@@ -1470,11 +1488,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
     // Helper to handle earring group toggle
     const handleEarringGroupToggle = (groupTitle: string, isOpen: boolean) => {
-      console.log(
-        `🎵 Earring Group Toggle: ${groupTitle} - ${
-          isOpen ? "OPENING" : "CLOSING"
-        }`,
-      );
+      // console.log(
+      //   `🎵 Earring Group Toggle: ${groupTitle} - ${
+      //     isOpen ? "OPENING" : "CLOSING"
+      //   }`,
+      // );
       const mappedValue = mapEarringGroupToCategory1(groupTitle);
       const currentParams = new URLSearchParams(searchParams);
 
@@ -1496,7 +1514,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         currentParams.set("category3", "");
         // Reset to page 1 when filters change
         currentParams.delete("page");
-        console.log(`✅ Set ${mappedValue} as ONLY active category1`);
+        // console.log(`✅ Set ${mappedValue} as ONLY active category1`);
         setSearchParams(currentParams);
 
         setActiveFilters((prev) => ({
@@ -1530,9 +1548,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           currentParams.delete("earring_length");
           // Reset to page 1 when filters change
           currentParams.delete("page");
-          console.log(
-            `🗑️ Closed ${groupTitle} and cleared all earring filters`,
-          );
+          // console.log(
+          //   `🗑️ Closed ${groupTitle} and cleared all earring filters`,
+          // );
 
           setSearchParams(currentParams);
 
@@ -3211,22 +3229,22 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 const isWishlisted =
                   wishlistKey && Boolean(wishlistKeyMap[wishlistKey]);
 
-                // Debug logging
-                if (p.modelSku === products[0]?.modelSku) {
-                  console.log("🔍 Product Debug:", {
-                    modelSku: p.modelSku,
-                    productId: p._id,
-                    variantSku: p.firstVariantSku,
-                    detectedMetalColor,
-                    wishlistKey,
-                    isWishlisted,
-                    wishlistKeyMapSize: Object.keys(wishlistKeyMap).length,
-                    wishlistKeyMapEntries: Object.entries(wishlistKeyMap).slice(
-                      0,
-                      5,
-                    ),
-                  });
-                }
+                // // Debug logging
+                // if (p.modelSku === products[0]?.modelSku) {
+                //   console.log("🔍 Product Debug:", {
+                //     modelSku: p.modelSku,
+                //     productId: p._id,
+                //     variantSku: p.firstVariantSku,
+                //     detectedMetalColor,
+                //     wishlistKey,
+                //     isWishlisted,
+                //     wishlistKeyMapSize: Object.keys(wishlistKeyMap).length,
+                //     wishlistKeyMapEntries: Object.entries(wishlistKeyMap).slice(
+                //       0,
+                //       5,
+                //     ),
+                //   });
+                // }
 
                 return (
                   <Link
@@ -3308,12 +3326,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         {/* Pagination */}
         {(() => {
-          console.log("Pagination debug:", {
-            loading,
-            error,
-            totalPages: pagination.totalPages,
-            shouldShow: !loading && !error && pagination.totalPages > 1,
-          });
+          // console.log("Pagination debug:", {
+          //   loading,
+          //   error,
+          //   totalPages: pagination.totalPages,
+          //   shouldShow: !loading && !error && pagination.totalPages > 1,
+          // });
           return null;
         })()}
         {!loading && !error && pagination.totalPages > 1 && (
@@ -3324,8 +3342,6 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 const currentParams = new URLSearchParams(searchParams);
                 currentParams.set("page", newPage.toString());
                 setSearchParams(currentParams);
-                scrollToTop();
-                fetchProducts(newPage, 20);
               }}
               disabled={pagination.currentPage === 1}
               className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
@@ -3343,8 +3359,6 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 const currentParams = new URLSearchParams(searchParams);
                 currentParams.set("page", newPage.toString());
                 setSearchParams(currentParams);
-                scrollToTop();
-                fetchProducts(newPage, 20);
               }}
               disabled={pagination.currentPage === pagination.totalPages}
               className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
