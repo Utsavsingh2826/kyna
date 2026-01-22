@@ -33,8 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StickyTwoColumnLayout } from "@/components/StickyTwoColumnLayout";
-import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
-import PdfPopup from "@/components/PdfPopup";
 import { toast } from "sonner";
 
 // Map color codes to display info (handles both single and combination colors)
@@ -47,7 +45,7 @@ const getColorDisplayInfo = (
     YG: { name: "Yellow Gold", img: "/colors/gold.png" },
     RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
     "3T": { name: "Three Tone", img: "/colors/threetone.png" },
-    BR: { name: "Black Rhodium", img: "/colors/BR.png" },
+    BR: { name: "Black Rhodium", img: "/colors/br.png" },
     SLV: { name: "Silver", img: "/colors/white.png" },
     PT: { name: "Platinum", img: "/colors/white.png" },
   };
@@ -164,63 +162,6 @@ interface SubStyle {
   thumbnailImages?: string[];
 }
 
-interface IjewelViewerProps {
-  modelUrl?: string;
-  className?: string;
-}
-
-const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
-  useEffect(() => {
-    // Create script element to load iJewel viewer SDK
-    const script = document.createElement("script");
-    script.src =
-      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
-    script.async = true;
-
-    script.onload = () => {
-      const container = document.getElementById("ijewel-viewer-container");
-      if (!container) return;
-
-      // Project configuration using dynamic modelUrl from props
-      const project = {
-        modelUrl: modelUrl || "/product_detail/glb.glb", // Fallback to default if no modelUrl provided
-        basePath: "",
-      };
-
-      // Viewer configuration options
-      const viewerOptions = {
-        showCard: false,
-        showUiButtons: false,
-        showLogo: false,
-        showConfigurator: false,
-      };
-      // Initialize the iJewel Viewer on the container element
-      new window.ijewelViewer.Viewer(container, project, viewerOptions);
-    };
-
-    document.body.appendChild(script);
-
-    // Cleanup script on unmount
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, [modelUrl]); // Add modelUrl as dependency
-
-  // Adjust the style of the iJewel Viewer container to make it responsive
-  return (
-    <div
-      id="ijewel-viewer-container"
-      className={className}
-      style={{
-        width: "100%",
-        height: "100%",
-        aspectRatio: window.innerWidth <= 767 ? "1" : "1 / 2", // Use aspect ratio 1 for mobile view
-        maxWidth: window.innerWidth <= 767 ? "100%" : "40vw", // Full width for mobile view
-        maxHeight: window.innerWidth <= 767 ? "auto" : "80vh", // Adjust height for mobile view
-      }}
-    />
-  );
-};
 
 // Hardcoded category mappings
 const categoryMappings: { [key: string]: string } = {
@@ -678,26 +619,16 @@ const sampleProductData = {
 const ProductDetail = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [showEngraveModal, setShowEngraveModal] = useState(false);
-  /* State for share modal */
-  const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState("");
-  const [shareMessage, setShareMessage] = useState("");
   // Engraving state: only one engraving allowed for rings
   const [hasEngraving, setHasEngraving] = useState(false);
   const [engravingText, setEngravingText] = useState("");
   const [engravingImageUrl, setEngravingImageUrl] = useState("");
   const [engravingMotifPath, setEngravingMotifPath] = useState("");
-  // Add states for diamond size and gold karat
-  const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
-  const [savedEngravingData, setSavedEngravingData] = useState<{
-    text: string;
-    motif: string;
-    imageUrl: string;
-  } | null>(null);
-  const [isUploadingEngraving, setIsUploadingEngraving] = useState(false);
-  const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
-  const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
-  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
+
+  /* State for share modal */
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
   const formattedDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 25);
@@ -707,24 +638,10 @@ const ProductDetail = () => {
       year: "numeric",
     });
   }, []);
-  const imageContainerRef = useRef<HTMLDivElement | null>(null);
-  
-    // Helper function to scroll to image in mobile/tablet view
-    const scrollToImageOnMobile = () => {
-      // Increase threshold to include more devices and wrap in timeout to ensure state/UI updates finish
-      if (window.innerWidth < 1280 && imageContainerRef.current) {
-        setTimeout(() => {
-          imageContainerRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }, 150);
-      }
-    };
 
   const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     const currentUrl = window.location.href;
-    const productName = "this beautiful ring";
+    const productName = "this beautiful band";
 
     if (platform === "copy") {
       try {
@@ -776,6 +693,18 @@ const ProductDetail = () => {
       isImage: false,
     },
   ];
+
+  // Add states for diamond size and gold karat
+  const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
+  const [savedEngravingData, setSavedEngravingData] = useState<{
+    text: string;
+    motif: string;
+    imageUrl: string;
+  } | null>(null);
+  const [isUploadingEngraving, setIsUploadingEngraving] = useState(false);
+  const [selectedGoldKarat, setSelectedGoldKarat] = useState<string>("");
+
+  const [isPdfPopupOpen, setIsPdfPopupOpen] = useState(false);
 
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -899,6 +828,24 @@ const ProductDetail = () => {
     currentSubstyles.find((style) => style.name === selectedRingStyle) ||
     currentSubstyles[0];
 
+  // Function to check if image is a 3D model
+  const is3DModel = (imagePath: string, index: number) => {
+    const isGLB = index === 1 && imagePath.endsWith(".glb");
+    return isGLB || imagePath.endsWith(".glb");
+  };
+
+  // Use the thumbnail images from the selected style data
+  const thumbnailImages = selectedStyleData?.thumbnailImages || [
+    "/build_yr_own/sample1.png",
+    "/build_yr_own/sample1.png",
+    "/build_yr_own/sample1.png",
+    "/about/2.jpg",
+    "/build_yr_own/sample1.png",
+    "/build_yr_own/sample1.png",
+    "/build_yr_own/sample1.png",
+    "/build_yr_own/sample1.png",
+  ];
+
   // When selectedColorCode changes for the currently selected style, re-fetch its product details
   useEffect(() => {
     const parent = selectedStyleData?.parentSku;
@@ -956,6 +903,20 @@ const ProductDetail = () => {
   const thumbnailsMobileRef = useRef<HTMLDivElement>(null);
   const styleCategoryRef = useRef<HTMLDivElement>(null);
   const ringStylesRef = useRef<HTMLDivElement>(null);
+  const imageContainerRef = useRef<HTMLDivElement | null>(null);
+  const mainViewerRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToImageOnMobile = () => {
+    // Increase threshold to include more devices and wrap in timeout to ensure state/UI updates finish
+    if (window.innerWidth < 1280 && imageContainerRef.current) {
+      setTimeout(() => {
+        imageContainerRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 150);
+    }
+  };
 
   // Thumbnail scroll handlers
   const scrollThumbnailsUp = () => {
@@ -1032,25 +993,133 @@ const ProductDetail = () => {
     }
   }, [isLabGrownVariant]);
 
+  // ---------- iJewel Preload (Silent) ----------
+  useEffect(() => {
+    if (!thumbnailImages || thumbnailImages.length === 0) return;
+    // Don't re-preload if already loaded for a GLB. 
+    // In builder, we might want to re-preload if style changes, but for now let's follow ProductDetail logic
+    if ((window as any).__ijewelPreloadLoaded) return;
+
+    const glb = thumbnailImages.find((u: any) => typeof u === "string" && u.endsWith(".glb")) || "";
+    if (!glb) return;
+
+    const preloadContainerId = "ijewel-preload";
+    let hidden = document.getElementById(preloadContainerId);
+    if (!hidden) {
+      hidden = document.createElement("div");
+      hidden.id = preloadContainerId;
+      hidden.style.width = "0px";
+      hidden.style.height = "0px";
+      hidden.style.overflow = "hidden";
+      hidden.style.position = "absolute";
+      hidden.style.left = "-9999px";
+      hidden.style.top = "-9999px";
+      document.body.appendChild(hidden);
+    }
+
+    const scriptId = "ijewel-sdk-script";
+    let script = document.getElementById(scriptId) as HTMLScriptElement;
+    if (!script) {
+      script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    const initViewer = () => {
+      try {
+        const container = document.getElementById(preloadContainerId);
+        if (!container || !(window as any).ijewelViewer) return;
+        const project = {
+          modelUrl: glb,
+          basePath: "",
+        };
+        const viewerOptions = {
+          showCard: false,
+          showUiButtons: false,
+          showLogo: true, // Show logo eventually
+          showConfigurator: false,
+        };
+        const pre = new (window as any).ijewelViewer.Viewer(
+          container,
+          project,
+          viewerOptions
+        );
+        (window as any).__ijewelPreloadViewer = pre;
+        (window as any).__ijewelPreloadLoaded = true;
+      } catch (err) {
+        console.warn("iJewel preload failed:", err);
+      }
+    };
+
+    if ((window as any).ijewelViewer) {
+      initViewer();
+    } else {
+      script.onload = initViewer;
+    }
+  }, [thumbnailImages]);
+
+  // Attach preloaded viewer canvas to main viewer container when selected image is 3D
+  useEffect(() => {
+    const currentImage = thumbnailImages[selectedImage] || "";
+    if (!mainViewerRef?.current) return;
+    const main = mainViewerRef.current;
+
+    if (is3DModel(currentImage, selectedImage)) {
+      const pre = (window as any).__ijewelPreloadViewer;
+      if (pre && pre.canvas) {
+        try {
+          main.innerHTML = "";
+          main.appendChild(pre.canvas);
+          return;
+        } catch (err) {
+          console.warn("Error moving preloaded canvas:", err);
+        }
+      }
+
+      // Fallback
+      if ((window as any).ijewelViewer) {
+        try {
+          main.innerHTML = "";
+          new (window as any).ijewelViewer.Viewer(
+            main,
+            { modelUrl: currentImage },
+            {
+              showCard: false,
+              showUiButtons: false,
+              showLogo: true,
+              showConfigurator: false,
+            }
+          );
+        } catch (err) {
+          console.warn("Failed to init ijewel viewer fallback:", err);
+        }
+      }
+    } else {
+      // Move back to preload container
+      const pre = (window as any).__ijewelPreloadViewer;
+      if (pre && pre.canvas) {
+        const preloadContainer = document.getElementById("ijewel-preload");
+        if (preloadContainer && pre.canvas.parentElement !== preloadContainer) {
+          try {
+            preloadContainer.appendChild(pre.canvas);
+          } catch (err) {
+            // ignore
+          }
+        }
+      }
+    }
+  }, [selectedImage, thumbnailImages]);
+
   // Get available metal color codes from API
   const availableColorCodes = selectedStyleData?.productDetails
     ?.availableColors ||
     selectedStyleData?.availableColors || ["WG", "YG", "RG"]; // Fallback to basic colors if not provided
-
+ 
   // Add state for showing more colors on mobile
   const [showAllColors, setShowAllColors] = useState(false);
 
-  // Use the thumbnail images from the selected style data
-  const thumbnailImages = selectedStyleData?.thumbnailImages || [
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/about/2.jpg",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-  ];
 
   const generateVariantId = (substyle: SubStyle) => {
     const modelSku = substyle.parentSku;
@@ -1127,11 +1196,6 @@ const ProductDetail = () => {
     // Removed console log for thumbnail changes
   }, [selectedRingStyle, selectedStyleData?.thumbnailImages]);
 
-  // Function to check if image is a 3D model
-  const is3DModel = (imagePath: string, index: number) => {
-    const isGLB = index === 1 && imagePath.endsWith(".glb");
-    return isGLB || imagePath.endsWith(".glb");
-  };
 
   // Get available options from selected style's product details
   const getAvailableMetalTypes = useCallback(() => {
@@ -1245,13 +1309,13 @@ const ProductDetail = () => {
 
   const handleAddToCart = useCallback(async () => {
     if (!isAuthenticated) {
-      toast.error("Please log in to add items to cart");
+      alert("Please log in to add items to cart");
       navigate("/login");
       return;
     }
 
     if (!selectedSize) {
-      toast.error("Please select a ring size");
+      alert("Please select a ring size");
       return;
     }
 
@@ -1264,7 +1328,7 @@ const ProductDetail = () => {
       derivedProductId;
 
     if (!productId || !variantSku) {
-      toast.error("Please select a product variant");
+      alert("Please select a product variant");
       return;
     }
 
@@ -1273,7 +1337,7 @@ const ProductDetail = () => {
     if (hasEngraving && savedEngravingData) {
       cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
       if (!cloudinaryEngravingUrl) {
-        toast.error("Failed to upload engraving image. Please try again.");
+        alert("Failed to upload engraving image. Please try again.");
         return;
       }
     }
@@ -1308,10 +1372,10 @@ const ProductDetail = () => {
 
     try {
       await dispatch(addToCart(productId as string, 1, variantData));
-      toast.success("Product added to cart successfully!");
+      alert("Product added to cart successfully!");
     } catch (err) {
       console.error("Error adding to cart:", err);
-      toast.error("Failed to add product to cart");
+      alert("Failed to add product to cart");
     }
   }, [
     isAuthenticated,
@@ -1336,18 +1400,18 @@ const ProductDetail = () => {
 
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
-      toast.error("Please log in to purchase");
+      alert("Please log in to purchase");
       navigate("/login");
       return;
     }
 
     if (!selectedDiamondSize) {
-      toast.error("Please select a diamond size");
+      alert("Please select a diamond size");
       return;
     }
 
     if (!selectedSize) {
-      toast.error("Please select a ring size");
+      alert("Please select a ring size");
       return;
     }
 
@@ -1360,7 +1424,7 @@ const ProductDetail = () => {
       derivedProductId;
 
     if (!productId || !variantSku) {
-      toast.error("Please select a product variant");
+      alert("Please select a product variant");
       return;
     }
 
@@ -1370,7 +1434,7 @@ const ProductDetail = () => {
       cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
       setIsUploadingEngraving(false);
       if (!cloudinaryEngravingUrl) {
-        toast.error("Failed to upload engraving image. Please try again.");
+        alert("Failed to upload engraving image. Please try again.");
         return;
       }
     }
@@ -1502,8 +1566,14 @@ const ProductDetail = () => {
     } else if (selectedMetalType === "PLATINUM") {
       return ["PT"]; // Platinum is 950
     } else {
-      // For GOLD, filter out silver/platinum karats
-      return goldKarats.filter((karat) => !["925", "950"].includes(karat));
+      // For GOLD, filter out silver/platinum karats and sort in descending order (18kt, 14kt, 9kt)
+      return goldKarats
+        .filter((karat) => !["925", "950"].includes(karat))
+        .sort((a, b) => {
+          const numA = parseInt(a);
+          const numB = parseInt(b);
+          return numB - numA;
+        });
     }
   }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
 
@@ -1511,7 +1581,7 @@ const ProductDetail = () => {
   useEffect(() => {
     if (selectedStyleData?.productDetails) {
       const metalTypes = getAvailableMetalTypes();
-      const goldKarats = getAvailableGoldKarats();
+
       const diamondShapes = getAvailableDiamondShapes();
       const diamondSizes = getAvailableDiamondSizes();
       const availableKarats = getAvailableKarats();
@@ -1577,9 +1647,9 @@ const ProductDetail = () => {
   return (
     <div style={{ fontFamily: "Poppins" }} className="flex justify-center">
       <SEO
-        title="Build Your Ring - Custom Diamond Ring Builder"
-        description="Design your perfect ring with our custom builder. Choose from premium settings and diamonds."
-        canonical="/build-your-jewellery/Rings"
+        title="Build Your Gents Rings - Custom Diamond Rings Builder"
+        description="Design your perfect gents ring with our custom builder. Choose from premium settings and diamonds."
+        canonical="/build-your-jewellery/Gents-Rings"
       />
       <main className="min-h-screen max-w-6xl bg-background">
         {/* Breadcrumb */}
@@ -1591,7 +1661,7 @@ const ProductDetail = () => {
             <span>›</span>
             <div className="hover:text-foreground">Build Your Jewellery</div>
             <span>›</span>
-            <span className="text-foreground">Solitarie/Engagement Rings</span>
+            <span className="text-foreground">Gents Rings</span>
           </nav>
         </div>
 
@@ -1629,10 +1699,10 @@ const ProductDetail = () => {
                         }`}
                       >
                         {is3DModel(image, index) ? (
-                          <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                          <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
                             <img
                               src="/3D/green.svg"
-                              className="w-10 h-10"
+                              className="w-16 h-16"
                               alt=""
                             />
                           </div>
@@ -1656,16 +1726,26 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Main Image */}
-                <div ref={imageContainerRef} style={{ scrollMarginTop: "160px" }} className="flex-1 w-full min-w-0">
-                  <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
+                <div
+                  ref={imageContainerRef}
+                  style={{ scrollMarginTop: "160px" }}
+                  className="flex-1 w-full min-w-0"
+                >
+                  <div className="relative aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {is3DModel(
                       thumbnailImages[selectedImage],
                       selectedImage,
                     ) ? (
-                      <div className="">
-                        <IjewelViewer
-                          modelUrl={thumbnailImages[selectedImage]}
+                      <div className="w-full h-full object-contain">
+                        <div
+                          ref={mainViewerRef}
+                          id="ijewel-viewer-main"
                           className="w-full h-full object-contain"
+                          style={{
+                            aspectRatio: window.innerWidth <= 767 ? "1" : "1 / 2",
+                            maxWidth: window.innerWidth <= 767 ? "100%" : "40vw",
+                            maxHeight: window.innerWidth <= 767 ? "auto" : "80vh",
+                          }}
                         />
                       </div>
                     ) : (
@@ -1680,7 +1760,7 @@ const ProductDetail = () => {
 
                     <Button
                       onClick={() => setSelectedStyleCategory("CLASSIC")}
-                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold"
+                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold z-10"
                     >
                       RESET
                     </Button>
@@ -1695,7 +1775,7 @@ const ProductDetail = () => {
                       <ChevronLeft className="w-4 h-4 text-gray-600" />
                     </button>
                     <div
-                      ref={thumbnailsDesktopRef}
+                      ref={thumbnailsMobileRef}
                       className="flex gap-2 overflow-x-auto scrollbar-hide flex-1  max-w-[270px] py-1"
                       style={{
                         scrollbarWidth: "none",
@@ -1714,17 +1794,17 @@ const ProductDetail = () => {
                           }`}
                         >
                           {is3DModel(image, index) ? (
-                            <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                            <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
                               <GLBViewer
                                 modelUrl={image}
                                 className="w-full h-full"
                                 isMain={false}
                               />
-                              <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center"><img
+                              <img
                                 src="/3D/green.svg"
-                                className="w-10 h-10 flex"
+                                className="w-16 h-16"
                                 alt=""
-                              /></div>
+                              />
                             </div>
                           ) : (
                             <img
@@ -2290,11 +2370,8 @@ const ProductDetail = () => {
                 {/* Metal Color - Same responsive pattern as ProductDetail */}
                 <div className="w-full">
                   <h3 className="mb-3 text-sm md:text-base">
-                    Metal Color:
-                    <span className="text-[#8D8A91]">
-                      {" "}
-                      {selectedMetalColor}
-                    </span>
+                    Metal Color:{" "}
+                    <span className="text-[#8D8A91]">{selectedMetalColor}</span>
                   </h3>
 
                   {/* Desktop View - 7 columns, 2 rows */}
@@ -2356,7 +2433,7 @@ const ProductDetail = () => {
                               setSelectedColorCode(code);
                               scrollToImageOnMobile();
                             }}
-                            className={`w-8 h-8 flex justify-center items-center sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
+                            className={`w-6 h-6 flex justify-center items-center sm:w-10 sm:h-10 rounded-full border-2 transition-all hover:scale-105 ${
                               selectedColorCode === code
                                 ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                                 : "border-neutral-300 hover:border-neutral-400"
@@ -2367,7 +2444,7 @@ const ProductDetail = () => {
                               <img
                                 src={colorInfo.img}
                                 alt={colorInfo.name}
-                                className="w-5 h-5 sm:w-8 sm:h-8 object-cover rounded-full"
+                                className="w-4 h-4 sm:w-8 sm:h-8 object-cover rounded-full"
                               />
                             ) : (
                               <img
@@ -2428,14 +2505,12 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Ring Size Guide */}
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="text-[#328F94] p-0 mt-1"
-                  onClick={() => setIsRingSizePopupOpen(true)}
+                <Link
+                  to={"/RingSize-Education"}
+                  className="text-sm text-primary font-medium underline block"
                 >
                   Ring Size Guide
-                </Button>
+                </Link>
 
                 {/* Free Engraving */}
                 <div className="flex items-center space-x-2">
@@ -2585,7 +2660,6 @@ const ProductDetail = () => {
                     Add To Cart
                   </Button>
                 </div>
-
                 {/* Certification Logos */}
                 <div className="flex items-center gap-4 justify-start">
                   <img
@@ -2609,31 +2683,34 @@ const ProductDetail = () => {
                     className="h-14 w-14 object-contain"
                   />
                 </div>
+
                 {/* Share Options - Stack on mobile */}
                 <div>
                   <h3 className="font-medium mb-3 text-sm">Share</h3>
                   <div className="grid grid-cols-3 text-[#328F94] gap-2 md:gap-3">
-                    <Button
-                      size="sm"
-                      className="flex items-center justify-center gap-2 text-xs"
-                    >
-                      <Mail size={14} />
-                      Email
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="flex items-center justify-center gap-2 text-xs"
-                    >
-                      <MessageCircle size={14} />
-                      WhatsApp
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="flex items-center justify-center gap-2 text-xs"
-                    >
-                      <Share2 size={14} />
-                      Copy Link
-                    </Button>
+                    {socialLinks.map((link, index) => (
+                      <Button
+                        key={index}
+                        size="sm"
+                        className="flex items-center justify-center gap-2 text-xs"
+                        onClick={link.action}
+                      >
+                        {link.isImage ? (
+                          <img
+                            src={link.icon as string}
+                            alt={link.label}
+                            className={`${link.height} ${link.width}`}
+                          />
+                        ) : (
+                          (() => {
+                            const IconComponent =
+                              link.icon as React.ElementType;
+                            return <IconComponent size={14} />;
+                          })()
+                        )}
+                        {link.label}
+                      </Button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -2749,7 +2826,6 @@ const ProductDetail = () => {
                             may not reflect exact true color and/or scale.
                           </p>
                         </div>
-
                         {/* Certification Logos */}
                         <div className="flex items-center gap-4 justify-start md:justify-center">
                           <img
@@ -2808,7 +2884,7 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Total Diamond Size (Approx carats)
+                            Total Diamond Weight (Approx carats)
                           </span>
                           <span className="font-medium">
                             {selectedDiamondSize || "-"}
@@ -2825,14 +2901,28 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            {`${selectedMetalType} Value`}
+                            SKU Number
+                          </span>
+                          <span className="font-medium">
+                            {selectedStyleData?.productDetails
+                              ?.firstVariantSku ||
+                              derivedProductId ||
+                              "-"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            Gold/Silver/Platinum Value
                           </span>
                           <span className="font-medium">
                             ₹{" "}
-                            {Math.round(
-                              selectedStyleData?.productDetails?.priceBreakdown
-                                ?.metalCost || 0,
-                            ).toLocaleString() || "0"}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.metalCost
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.metalCost,
+                                ).toLocaleString()
+                              : "0"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2841,10 +2931,13 @@ const ProductDetail = () => {
                           </span>
                           <span className="font-medium">
                             ₹{" "}
-                            {Math.round(
-                              selectedStyleData?.productDetails?.priceBreakdown
-                                ?.diamondCost || 0,
-                            ).toLocaleString()}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.diamondCost
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.diamondCost,
+                                ).toLocaleString()
+                              : "0"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2865,20 +2958,26 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">GST</span>
                           <span className="font-medium">
                             ₹{" "}
-                            {Math.round(
-                              selectedStyleData?.productDetails?.priceBreakdown
-                                ?.gstAmount || 0,
-                            ).toLocaleString()}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.gstAmount
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.gstAmount,
+                                ).toLocaleString()
+                              : "0"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94] font-semibold">
                           <span>Total</span>
                           <span>
                             ₹{" "}
-                            {Math.round(
-                              selectedStyleData?.productDetails?.priceBreakdown
-                                ?.totalWithGst || 0,
-                            ).toLocaleString()}
+                            {selectedStyleData?.productDetails?.priceBreakdown
+                              ?.totalWithGst
+                              ? Math.round(
+                                  selectedStyleData.productDetails
+                                    .priceBreakdown.totalWithGst,
+                                ).toLocaleString()
+                              : "0"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2918,16 +3017,6 @@ const ProductDetail = () => {
 
         {/* Engrave Modal Overlay is handled inline where the checkbox opens the Engrave modal (EV-aware). */}
       </main>
-      <RingSizeGuidePopup
-        isOpen={isRingSizePopupOpen}
-        onClose={() => setIsRingSizePopupOpen(false)}
-      />
-      <PdfPopup
-        isOpen={isPdfPopupOpen}
-        onClose={() => setIsPdfPopupOpen(false)}
-        pdfUrl="/Stone_Guide.pdf"
-        title="Quality & Certification"
-      />
     </div>
   );
 };

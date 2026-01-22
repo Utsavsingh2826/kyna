@@ -204,60 +204,6 @@ const diamondShapes = {
   ],
 };
 // iJewel viewer wrapper (uses the remote SDK)
-interface IjewelViewerProps {
-  modelUrl?: string;
-  className?: string;
-}
-
-const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src =
-      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
-    script.async = true;
-
-    script.onload = () => {
-      const container = document.getElementById("ijewel-viewer-container");
-      if (!container) return;
-
-      const project = {
-        modelUrl: modelUrl || "/product_detail/glb.glb",
-        basePath: "",
-      };
-
-      const viewerOptions = {
-        showCard: false,
-        showUiButtons: false,
-        showLogo: false,
-        showConfigurator: false,
-      };
-
-      try {
-        new window.ijewelViewer.Viewer(container, project, viewerOptions);
-      } catch (err) {
-        console.error("iJewel init error:", err);
-      }
-    };
-
-    document.body.appendChild(script);
-
-    return () => {
-      try {
-        document.body.removeChild(script);
-      } catch (err) {
-        // ignore
-      }
-    };
-  }, [modelUrl]);
-
-  return (
-    <div
-      id="ijewel-viewer-container"
-      className={className}
-      style={{ width: "100%", height: "100%" }}
-    />
-  );
-};
 
 // Sample product data for metal types (moved outside component to avoid dependency issues)
 const sampleProductData = {
@@ -747,6 +693,113 @@ const ProductDetail = () => {
     return isGLB || imagePath.endsWith(".glb");
   };
 
+  const mainViewerRef = useRef<HTMLDivElement | null>(null);
+
+  // ---------- iJewel Preload (Silent) ----------
+  useEffect(() => {
+    if (!thumbnailImages || thumbnailImages.length === 0) return;
+    if ((window as any).__ijewelPreloadLoaded) return;
+
+    const currentImage = thumbnailImages[selectedImage];
+    const glb =
+      thumbnailImages.find((u: string) => u?.endsWith(".glb")) ||
+      (is3DModel(currentImage, selectedImage) ? currentImage : "") ||
+      thumbnailImages[1] ||
+      "";
+
+    const preloadContainerId = "ijewel-preload";
+
+    // ensure hidden container exists
+    let hidden = document.getElementById(preloadContainerId);
+    if (!hidden) {
+      hidden = document.createElement("div");
+      hidden.id = preloadContainerId;
+      hidden.style.width = "0px";
+      hidden.style.height = "0px";
+      hidden.style.overflow = "hidden";
+      hidden.style.position = "absolute";
+      hidden.style.left = "-9999px";
+      hidden.style.top = "-9999px";
+      document.body.appendChild(hidden);
+    }
+
+    const script = document.createElement("script");
+    script.src =
+      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
+    script.async = true;
+
+    script.onload = () => {
+      try {
+        const container = document.getElementById(preloadContainerId);
+        if (!container || !(window as any).ijewelViewer) return;
+        const project = {
+          modelUrl: glb || "/product_detail/glb.glb",
+          basePath: "",
+        };
+        const viewerOptions = {
+          showCard: false,
+          showUiButtons: false,
+          showLogo: true,
+          showConfigurator: false,
+        };
+        const pre = new (window as any).ijewelViewer.Viewer(
+          container,
+          project,
+          viewerOptions
+        );
+        (window as any).__ijewelPreloadViewer = pre;
+        (window as any).__ijewelPreloadLoaded = true;
+      } catch (err) {
+        console.warn("iJewel preload failed:", err);
+      }
+    };
+    script.onerror = (e) => {
+      console.warn("Failed to load iJewel script for preload", e);
+    };
+    document.body.appendChild(script);
+
+    return () => {};
+  }, [thumbnailImages]);
+
+  // Attach preloaded viewer canvas to main viewer container when selected image is 3D
+  useEffect(() => {
+    const main = mainViewerRef.current;
+    if (!main) return;
+
+    const currentImage = thumbnailImages[selectedImage];
+
+    if (is3DModel(currentImage, selectedImage)) {
+      const pre = (window as any).__ijewelPreloadViewer;
+      if (pre && pre.canvas) {
+        try {
+          main.innerHTML = "";
+          main.appendChild(pre.canvas);
+          console.log("Moved preloaded canvas to main viewer");
+          return;
+        } catch (err) {
+          console.warn("Error moving preloaded canvas:", err);
+        }
+      }
+
+      // Fallback: regular init if preload not ready
+      main.innerHTML = "";
+      const project = {
+        modelUrl: currentImage,
+        basePath: "",
+      };
+      const viewerOptions = {
+        showCard: false,
+        showUiButtons: false,
+        showLogo: true,
+        showConfigurator: false,
+      };
+
+      if ((window as any).ijewelViewer) {
+        new (window as any).ijewelViewer.Viewer(main, project, viewerOptions);
+      }
+    }
+  }, [selectedImage, thumbnailImages]);
+
   // Function to check if file is a video
   const isVideo = (filePath: string) => {
     return (
@@ -931,10 +984,10 @@ const ProductDetail = () => {
                         }`}
                       >
                         {is3DModel(image, index) ? (
-                          <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                          <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
                             <img
                               src="/3D/green.svg"
-                              className="w-10 h-10"
+                              className="w-16 h-16"
                               alt=""
                             />
                           </div>
@@ -959,7 +1012,7 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div ref={imageContainerRef} style={{ scrollMarginTop: "160px" }} className="flex-1 w-full min-w-0">
-                  <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
+                  <div className="relative aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {(() => {
                       const currentImage =
                         thumbnailImages[selectedImage] ||
@@ -968,12 +1021,21 @@ const ProductDetail = () => {
 
                       if (is3DModel(currentImage, selectedImage)) {
                         return (
-                          <div className="">
-                            <IjewelViewer
-                              modelUrl={currentImage}
-                              className="w-full h-full object-contain"
-                            />
-                          </div>
+                          <div
+                            id="ijewel-viewer-main"
+                            ref={mainViewerRef}
+                            className="w-full h-full"
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              aspectRatio:
+                                window.innerWidth <= 767 ? "1" : "1",
+                              maxWidth:
+                                window.innerWidth <= 767 ? "100%" : "100%",
+                              maxHeight:
+                                window.innerWidth <= 767 ? "auto" : "100%",
+                            }}
+                          />
                         );
                       }
 
@@ -1013,7 +1075,10 @@ const ProductDetail = () => {
                       );
                     })()}
 
-                    <button className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold">
+                    <button
+                      onClick={() => setSelectedStyleCategory("SOLITAIRE")}
+                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold z-10"
+                    >
                       RESET
                     </button>
                   </div>
@@ -1046,10 +1111,10 @@ const ProductDetail = () => {
                           }`}
                         >
                           {is3DModel(image, index) ? (
-                            <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                            <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
                               <img
                                 src="/3D/green.svg"
-                                className="w-10 h-10"
+                                className="w-16 h-16"
                                 alt=""
                               />
                             </div>
