@@ -530,58 +530,57 @@ const PaymentPage = () => {
         </div>
 
         {/* Promo Code Section */}
-        {isDirectPurchase && (
-          <div className="bg-white rounded-lg p-6 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-3">
-              Coupon Code
-            </h2>
-            <p className="text-sm text-gray-500 mb-4">
-              Apply a promo to get additional savings on the diamond value of
-              your order.
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Input
-                placeholder="Enter promo code"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                disabled={promoLoading || !!appliedPromo}
-                className="flex-1"
-              />
+        {/* {isDirectPurchase && ( */}
+        <div className="bg-white rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">
+            Coupon Code
+          </h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Apply a promo to get additional savings on the diamond value of your
+            order.
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Input
+              placeholder="Enter promo code"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              disabled={promoLoading || !!appliedPromo}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleApplyPromo}
+              disabled={promoLoading || !promoCode.trim() || !!appliedPromo}
+              className="bg-[#328F94] hover:bg-[#28777b]"
+            >
+              {promoLoading ? "Applying..." : "Apply Coupon"}
+            </Button>
+          </div>
+          {promoError && (
+            <p className="text-sm text-red-500 mt-2">{promoError}</p>
+          )}
+          {appliedPromo && (
+            <div className="mt-4 flex flex-col gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-semibold">
+                  Promo {appliedPromo.code} applied
+                </p>
+                <p>
+                  Savings: ₹{appliedPromo.discountValue.toLocaleString()} on
+                  diamond value ₹{appliedPromo.diamondSubtotal.toLocaleString()}
+                </p>
+              </div>
               <Button
-                onClick={handleApplyPromo}
-                disabled={promoLoading || !promoCode.trim() || !!appliedPromo}
-                className="bg-[#328F94] hover:bg-[#28777b]"
+                variant="ghost"
+                size="sm"
+                onClick={handleRemovePromo}
+                className="text-red-600 hover:text-red-700"
               >
-                {promoLoading ? "Applying..." : "Apply Coupon"}
+                Remove
               </Button>
             </div>
-            {promoError && (
-              <p className="text-sm text-red-500 mt-2">{promoError}</p>
-            )}
-            {appliedPromo && (
-              <div className="mt-4 flex flex-col gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="font-semibold">
-                    Promo {appliedPromo.code} applied
-                  </p>
-                  <p>
-                    Savings: ₹{appliedPromo.discountValue.toLocaleString()} on
-                    diamond value ₹
-                    {appliedPromo.diamondSubtotal.toLocaleString()}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRemovePromo}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  Remove
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
+        {/* )} */}
 
         {/* Referral Wallet Section */}
         <div className="bg-white rounded-lg p-6 mb-8">
