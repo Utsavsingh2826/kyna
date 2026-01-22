@@ -595,6 +595,10 @@ const ProductDetail = () => {
   const [engravingText, setEngravingText] = useState("");
   const [engravingImageUrl, setEngravingImageUrl] = useState("");
   const [engravingMotifPath, setEngravingMotifPath] = useState("");
+  /* State for share modal */
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
   // Add states for diamond size and gold karat
   const [selectedDiamondSize, setSelectedDiamondSize] = useState<string>("");
   const [savedEngravingData, setSavedEngravingData] = useState<{
@@ -1556,7 +1560,11 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Main Image */}
-                <div ref={imageContainerRef} style={{ scrollMarginTop: "160px" }} className="flex-1 w-full min-w-0">
+                <div
+                  ref={imageContainerRef}
+                  style={{ scrollMarginTop: "160px" }}
+                  className="flex-1 w-full min-w-0"
+                >
                   <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {is3DModel(
                       thumbnailImages[selectedImage],
