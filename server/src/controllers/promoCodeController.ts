@@ -19,6 +19,21 @@ const getDiamondValueFromProduct = (product: any): number => {
     : 0;
 };
 
+const getDiamondValueFromCartItem = (item: any): number => {
+  if (!item) return 0;
+
+  // First, check if the cart item has variant-specific diamond cost
+  if (item.variantConfig?.priceBreakdown?.diamondCost) {
+    const diamondCost = item.variantConfig.priceBreakdown.diamondCost;
+    if (typeof diamondCost === "number" && diamondCost > 0) {
+      return diamondCost;
+    }
+  }
+
+  // Fallback to product-level diamond value
+  return getDiamondValueFromProduct(item.product);
+};
+
 const calculateDiamondSubtotalFromCart = async (userId: string) => {
   const cart = await Cart.findOne({ user: userId }).populate("items.product");
   if (!cart || !cart.items.length) {
@@ -26,7 +41,7 @@ const calculateDiamondSubtotalFromCart = async (userId: string) => {
   }
 
   const diamondSubtotal = cart.items.reduce((sum, item: any) => {
-    const perUnitDiamond = getDiamondValueFromProduct(item.product);
+    const perUnitDiamond = getDiamondValueFromCartItem(item);
     return sum + perUnitDiamond * (item.quantity || 1);
   }, 0);
 

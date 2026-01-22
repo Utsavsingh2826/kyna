@@ -563,6 +563,18 @@ const CartPage = () => {
                                         </span>
                                       </div>
                                     )}
+                                    {variantConfig.priceBreakdown?.diamondCost && (
+                                      <div className="flex items-center">
+                                        <span className="text-gray-600 mr-1">
+                                          Diamond Value:
+                                        </span>
+                                        <span className="font-semibold text-teal-700">
+                                          ₹{variantConfig.priceBreakdown.diamondCost.toLocaleString(
+                                            "en-IN"
+                                          )}
+                                        </span>
+                                      </div>
+                                    )}
                                     {variantConfig.diamondOrigin && (
                                       <div className="flex items-center">
                                         <span className="text-gray-600 mr-1">
