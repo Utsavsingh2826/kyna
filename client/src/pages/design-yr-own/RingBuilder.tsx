@@ -254,7 +254,7 @@ export default function RingBuilder() {
     description: "",
     diamondShape: "Round",
     diamondSize: "Center Stone",
-    diamondColor: "D-IF",
+    diamondColor: "Center Stone",
     diamondClarity: "Center Stone",
     diamondOrigin: "Natural Diamond",
     metal: "Gold",
@@ -501,6 +501,7 @@ export default function RingBuilder() {
 
     // Define options for Natural Diamonds
     const naturalOptions = [
+      { display: "Center Stone", value: "Center Stone" },
       { display: "D-IF", value: "DIF" },
       { display: "EF-VVS", value: "EFVVS" },
       { display: "EF-VS", value: "EFVS" },
@@ -510,6 +511,7 @@ export default function RingBuilder() {
 
     // Define options for Lab Grown Diamonds
     const labGrownOptions = [
+      { display: "Center Stone", value: "Center Stone" },
       { display: "DE-IF", value: "DEIF" },
       { display: "EF-VVS", value: "EFVVS" },
       { display: "EF-VS", value: "EFVS" },
@@ -761,7 +763,7 @@ export default function RingBuilder() {
       // Check if selected diamond clarity is valid and not "Center Stone"
       if (formData.diamondClarity === "Center Stone") {
         toast.error(
-          "Please select a diamond clarity option before proceeding.",
+          "Please select a diamond clarity option/diamond size before proceeding.",
         );
         return false;
       }
@@ -1231,9 +1233,25 @@ export default function RingBuilder() {
                   </label>
                   <Select
                     value={formData.diamondColor}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, diamondColor: value })
-                    }
+                    onValueChange={(value) => {
+                      // Parse combined color-clarity value and update both fields
+                      // Examples: "D-IF", "EF-VVS", "GH-VS" => color: "D", "EF", "GH", clarity: "IF", "VVS", "VS"
+                      if (value === "Center Stone") {
+                        setFormData({
+                          ...formData,
+                          diamondColor: value,
+                          diamondClarity: value,
+                        });
+                      } else {
+                        // Split by hyphen to separate color and clarity
+                        const [color, clarity] = value.split("-");
+                        setFormData({
+                          ...formData,
+                          diamondColor: value, // Keep the display value
+                          diamondClarity: clarity || value, // Set clarity from the parsed value
+                        });
+                      }
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue />
