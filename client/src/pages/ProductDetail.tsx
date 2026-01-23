@@ -63,7 +63,11 @@ interface ProductData {
   metalTypes: string[];
   goldKarats: (string | number)[];
   diamondShape: string[];
-  diamondSize: string[];
+  diamondSize: string[] | {
+    GOLD?: string[];
+    PLATINUM?: string[];
+    SILVER?: string[];
+  };
   diamondColorClarity: string[];
   diamondOptions?: {
     NATURAL?: {
@@ -412,6 +416,20 @@ const ProductDetail = () => {
     return karatStr;
   }, []);
 
+  // Helper function to get available diamond sizes based on metal type
+  const getDiamondSizes = useCallback(() => {
+    if (!productData || !productData.diamondSize) return [];
+
+    if (Array.isArray(productData.diamondSize)) {
+      return productData.diamondSize;
+    }
+
+    // If it's an object, get sizes for the selected metal type
+    const metalType = selectedMetalType || "GOLD";
+    const sizesObj = productData.diamondSize as Record<string, string[]>;
+    return sizesObj[metalType] || sizesObj["GOLD"] || [];
+  }, [productData, selectedMetalType]);
+
   // Helper function to parse karat and set metal type
   const parseKaratAndSetMetalType = useCallback(
     (goldKarat: string, productData: ProductData) => {
@@ -510,12 +528,16 @@ const ProductDetail = () => {
           setSelectedDiamondShape(shapeMap[diamondShape]);
         }
 
+        parseKaratAndSetMetalType(goldKarat, productData);
+
         const caratValue = (parseInt(caratSize) / 100).toString();
-        if (productData.diamondSize.includes(caratValue)) {
+        const availableSizes = Array.isArray(productData.diamondSize)
+          ? productData.diamondSize
+          : ((productData.diamondSize as any)[selectedMetalType] || (productData.diamondSize as any)["GOLD"] || []);
+
+        if (availableSizes.includes(caratValue)) {
           setSelectedDiamondSize(caratValue);
         }
-
-        parseKaratAndSetMetalType(goldKarat, productData);
 
         const diamondOrigin = specifications.startsWith("LG")
           ? "Lab Grown Diamond"
@@ -523,11 +545,9 @@ const ProductDetail = () => {
         setSelectedDiamondOrigin(diamondOrigin);
 
         const clarity = specifications.replace(/^LG|^ND/, "");
-        setSelectedColorClarity((prev) => {
-          if (prev) return prev;
-          if (productData.diamondColorClarity.includes(clarity)) return clarity;
-          return prev;
-        });
+        if (productData.diamondColorClarity.includes(clarity)) {
+          setSelectedColorClarity(clarity);
+        }
       } else if (parts.length === 5) {
         // 5-part format could be:
         // - modelSku-karat-specs-bandwidth-finish (Men's rings: GR25-14-LGEFVS-8-BF)
@@ -562,12 +582,9 @@ const ProductDetail = () => {
           setSelectedDiamondOrigin(diamondOrigin);
 
           const clarity = specifications.replace(/^LG|^ND/, "");
-          setSelectedColorClarity((prev) => {
-            if (prev) return prev;
-            if (productData.diamondColorClarity.includes(clarity))
-              return clarity;
-            return prev;
-          });
+          if (productData.diamondColorClarity.includes(clarity)) {
+            setSelectedColorClarity(clarity);
+          }
 
           // Don't set diamond shape/size for Men's rings
           setSelectedDiamondShape("");
@@ -586,13 +603,17 @@ const ProductDetail = () => {
             console.log("Set diamond shape:", shapeCodeMap[diamondShape]);
           }
 
+          parseKaratAndSetMetalType(goldKarat, productData);
+
           const caratValue = (parseInt(caratSize) / 100).toString();
-          if (productData.diamondSize.includes(caratValue)) {
+          const availableSizes = Array.isArray(productData.diamondSize)
+            ? productData.diamondSize
+            : ((productData.diamondSize as any)[selectedMetalType] || (productData.diamondSize as any)["GOLD"] || []);
+
+          if (availableSizes.includes(caratValue)) {
             setSelectedDiamondSize(caratValue);
             console.log("Set diamond carat size:", caratValue);
           }
-
-          parseKaratAndSetMetalType(goldKarat, productData);
 
           const diamondOrigin = specifications.startsWith("LG")
             ? "Lab Grown Diamond"
@@ -600,12 +621,9 @@ const ProductDetail = () => {
           setSelectedDiamondOrigin(diamondOrigin);
 
           const clarity = specifications.replace(/^LG|^ND/, "");
-          setSelectedColorClarity((prev) => {
-            if (prev) return prev;
-            if (productData.diamondColorClarity.includes(clarity))
-              return clarity;
-            return prev;
-          });
+          if (productData.diamondColorClarity.includes(clarity)) {
+            setSelectedColorClarity(clarity);
+          }
 
           console.log("Set diamond origin:", diamondOrigin);
         }
@@ -649,11 +667,9 @@ const ProductDetail = () => {
         setSelectedDiamondOrigin(diamondOrigin);
 
         const clarity = specifications.replace(/^LG|^ND/, "");
-        setSelectedColorClarity((prev) => {
-          if (prev) return prev;
-          if (productData.diamondColorClarity.includes(clarity)) return clarity;
-          return prev;
-        });
+        if (productData.diamondColorClarity.includes(clarity)) {
+          setSelectedColorClarity(clarity);
+        }
 
         console.log("Set diamond origin:", diamondOrigin);
       } else if (parts.length === 3) {
@@ -676,11 +692,9 @@ const ProductDetail = () => {
         setSelectedDiamondOrigin(diamondOrigin);
 
         const clarity = specifications.replace(/^LG|^ND/, "");
-        setSelectedColorClarity((prev) => {
-          if (prev) return prev;
-          if (productData.diamondColorClarity.includes(clarity)) return clarity;
-          return prev;
-        });
+        if (productData.diamondColorClarity.includes(clarity)) {
+          setSelectedColorClarity(clarity);
+        }
 
         console.log("Set diamond origin:", diamondOrigin);
         console.log("3-part Men's ring format detected");
@@ -692,8 +706,12 @@ const ProductDetail = () => {
         if (productData.diamondShape && productData.diamondShape.length > 0) {
           setSelectedDiamondShape(productData.diamondShape[0]);
         }
-        if (productData.diamondSize && productData.diamondSize.length > 0) {
-          setSelectedDiamondSize(productData.diamondSize[0]);
+        const availableSizes = Array.isArray(productData.diamondSize)
+          ? productData.diamondSize
+          : ((productData.diamondSize as any)[selectedMetalType] || (productData.diamondSize as any)["GOLD"] || []);
+
+        if (availableSizes && availableSizes.length > 0) {
+          setSelectedDiamondSize(availableSizes[0]);
         }
         return;
       }
@@ -789,6 +807,13 @@ const ProductDetail = () => {
           if (data.metalTypes && data.metalTypes.length > 0) {
             setSelectedMetalType(data.metalTypes[0]);
           }
+
+          const availableSizes = Array.isArray(data.diamondSize)
+            ? data.diamondSize
+            : ((data.diamondSize as any)[selectedMetalType || "GOLD"] || (data.diamondSize as any)["GOLD"] || []);
+          if (availableSizes && availableSizes.length > 0) {
+            setSelectedDiamondSize(availableSizes[0]);
+          }
         }
 
         // Set metal color based on URL parameter AFTER variant parsing
@@ -840,28 +865,42 @@ const ProductDetail = () => {
 
   // Reset clarity selection when metal type or diamond origin changes
   useEffect(() => {
-    if (!productData || !productData.diamondOptions) return;
+    if (!productData) return;
 
-    const diamondType =
-      selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
-    const metalTypeKey = selectedMetalType === "PLATINUM" ? "PLATINUM" : "GOLD";
+    // Determine available clarity options based on diamond type and metal type
+    let normalizedClarityOptions: string[] = [];
 
-    const clarityOptions =
-      productData.diamondOptions?.[diamondType]?.[metalTypeKey] || [];
-    const normalizedClarityOptions = clarityOptions.map((option) =>
-      option.replace(/\s+/g, ""),
-    );
+    if (
+      !productData.diamondOptions ||
+      Object.keys(productData.diamondOptions).length === 0
+    ) {
+      // Fallback to diamondColorClarity if diamondOptions is missing/empty
+      normalizedClarityOptions = (productData.diamondColorClarity || []).map(
+        (c) => c.replace(/\s+/g, ""),
+      );
+    } else {
+      const diamondType =
+        selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+      const metalTypeKey =
+        selectedMetalType === "PLATINUM" ? "PLATINUM" : "GOLD";
+
+      const clarityOptions =
+        productData.diamondOptions?.[diamondType]?.[metalTypeKey] || [];
+      normalizedClarityOptions = clarityOptions.map((option) =>
+        option.replace(/\s+/g, ""),
+      );
+    }
 
     // If current selection is not in the new options, reset to first available
     if (
       selectedColorClarity &&
+      normalizedClarityOptions.length > 0 &&
       !normalizedClarityOptions.includes(selectedColorClarity)
     ) {
-      if (normalizedClarityOptions.length > 0) {
-        setSelectedColorClarity(normalizedClarityOptions[0]);
-      } else {
-        setSelectedColorClarity("");
-      }
+      setSelectedColorClarity(normalizedClarityOptions[0]);
+    } else if (normalizedClarityOptions.length > 0 && !selectedColorClarity) {
+      // If no selection yet, pick first available
+      setSelectedColorClarity(normalizedClarityOptions[0]);
     }
   }, [selectedMetalType, selectedDiamondOrigin, productData]);
 
@@ -1436,7 +1475,17 @@ const ProductDetail = () => {
         }
         break;
     }
-  }, [selectedMetalType, productData?.modelSku, navigate]);
+
+    // Check if currently selected diamond size is available in the new metal type
+    const newAvailableSizes = getDiamondSizes();
+    if (
+      selectedDiamondSize &&
+      newAvailableSizes.length > 0 &&
+      !newAvailableSizes.includes(selectedDiamondSize)
+    ) {
+      setSelectedDiamondSize(newAvailableSizes[0]);
+    }
+  }, [selectedMetalType, productData?.modelSku, navigate, getDiamondSizes, selectedDiamondSize]);
 
   // Reset engraving when diamond shape or metal color changes
   useEffect(() => {
@@ -2626,10 +2675,10 @@ const ProductDetail = () => {
                   )}
 
                 <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
-                  {productData.diamondSize.length > 0 &&
+                  {getDiamondSizes().length > 0 &&
                     !(
-                      productData.diamondSize.length === 1 &&
-                      productData.diamondSize[0] === "0"
+                      getDiamondSizes().length === 1 &&
+                      getDiamondSizes()[0] === "0"
                     ) && (
                       <div>
                         <label className="block text-xs mb-2">
@@ -2646,7 +2695,7 @@ const ProductDetail = () => {
                             <SelectValue placeholder="Select" />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
-                            {productData.diamondSize
+                            {getDiamondSizes()
                               .filter((size) => {
                                 // For Natural Diamond, only show sizes <= 1 carat
                                 if (

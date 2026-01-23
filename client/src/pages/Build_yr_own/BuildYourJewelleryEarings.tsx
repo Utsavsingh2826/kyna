@@ -121,7 +121,13 @@ interface ProductModelResponse {
   metalTypes: string[];
   goldKarats: string[];
   diamondShape: string[];
-  diamondSize: string[];
+  diamondSize:
+    | string[]
+    | {
+        GOLD?: string[];
+        PLATINUM?: string[];
+        SILVER?: string[];
+      };
   diamondColorClarity: string[];
   isEngraving: boolean;
   engravingInfo: {
@@ -160,63 +166,6 @@ interface SubStyle {
   thumbnailImages?: string[];
 }
 
-interface IjewelViewerProps {
-  modelUrl?: string;
-  className?: string;
-}
-
-const IjewelViewer: React.FC<IjewelViewerProps> = ({ modelUrl, className }) => {
-  useEffect(() => {
-    // Create script element to load iJewel viewer SDK
-    const script = document.createElement("script");
-    script.src =
-      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
-    script.async = true;
-
-    script.onload = () => {
-      const container = document.getElementById("ijewel-viewer-container");
-      if (!container) return;
-
-      // Project configuration using dynamic modelUrl from props
-      const project = {
-        modelUrl: modelUrl || "/product_detail/glb.glb", // Fallback to default if no modelUrl provided
-        basePath: "",
-      };
-
-      // Viewer configuration options
-      const viewerOptions = {
-        showCard: false,
-        showUiButtons: false,
-        showLogo: false,
-        showConfigurator: false,
-      };
-      // Initialize the iJewel Viewer on the container element
-      new window.ijewelViewer.Viewer(container, project, viewerOptions);
-    };
-
-    document.body.appendChild(script);
-
-    // Cleanup script on unmount
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, [modelUrl]); // Add modelUrl as dependency
-
-  // Adjust the style of the iJewel Viewer container to make it responsive
-  return (
-    <div
-      id="ijewel-viewer-container"
-      className={className}
-      style={{
-        width: "100%",
-        height: "100%",
-        aspectRatio: window.innerWidth <= 767 ? "1" : "1 / 2", // Use aspect ratio 1 for mobile view
-        maxWidth: window.innerWidth <= 767 ? "100%" : "40vw", // Full width for mobile view
-        maxHeight: window.innerWidth <= 767 ? "auto" : "80vh", // Adjust height for mobile view
-      }}
-    />
-  );
-};
 
 // Hardcoded category mappings
 const categoryMappings: { [key: string]: string } = {
@@ -1043,6 +992,115 @@ const ProductDetail = () => {
     return isGLB || imagePath.endsWith(".glb");
   };
 
+  const mainViewerRef = useRef<HTMLDivElement | null>(null);
+
+  // ---------- iJewel Preload (Silent) ----------
+  useEffect(() => {
+    if (!thumbnailImages || thumbnailImages.length === 0) return;
+    if ((window as any).__ijewelPreloadLoaded) return;
+
+    const currentImage = thumbnailImages[selectedImage];
+    const glb =
+      thumbnailImages.find((u: string) => u?.endsWith(".glb")) ||
+      (is3DModel(currentImage, selectedImage) ? currentImage : "") ||
+      thumbnailImages[1] ||
+      "";
+
+    const preloadContainerId = "ijewel-preload";
+
+    // ensure hidden container exists
+    let hidden = document.getElementById(preloadContainerId);
+    if (!hidden) {
+      hidden = document.createElement("div");
+      hidden.id = preloadContainerId;
+      hidden.style.width = "0px";
+      hidden.style.height = "0px";
+      hidden.style.overflow = "hidden";
+      hidden.style.position = "absolute";
+      hidden.style.left = "-9999px";
+      hidden.style.top = "-9999px";
+      document.body.appendChild(hidden);
+    }
+
+    const script = document.createElement("script");
+    script.src =
+      "https://releases.ijewel3d.com/libs/mini-viewer/0.3.20/bundle.iife.js";
+    script.async = true;
+
+    script.onload = () => {
+      try {
+        const container = document.getElementById(preloadContainerId);
+        if (!container || !(window as any).ijewelViewer) return;
+        const project = {
+          modelUrl: glb || "/product_detail/glb.glb",
+          basePath: "",
+        };
+        const viewerOptions = {
+          showCard: false,
+          showUiButtons: false,
+          showLogo: true,
+          showConfigurator: false,
+        };
+        const pre = new (window as any).ijewelViewer.Viewer(
+          container,
+          project,
+          viewerOptions
+        );
+        (window as any).__ijewelPreloadViewer = pre;
+        (window as any).__ijewelPreloadLoaded = true;
+      } catch (err) {
+        console.warn("iJewel preload failed:", err);
+      }
+    };
+    script.onerror = (e) => {
+      console.warn("Failed to load iJewel script for preload", e);
+    };
+    document.body.appendChild(script);
+
+    return () => {};
+  }, [thumbnailImages]);
+
+  // Attach preloaded viewer canvas to main viewer container when selected image is 3D
+  useEffect(() => {
+    const main = mainViewerRef.current;
+    if (!main) return;
+
+    const currentImage = thumbnailImages[selectedImage];
+
+    if (is3DModel(currentImage, selectedImage)) {
+      const pre = (window as any).__ijewelPreloadViewer;
+      if (pre && pre.canvas) {
+        try {
+          main.innerHTML = "";
+          main.appendChild(pre.canvas);
+          console.log("Moved preloaded canvas to main viewer");
+          return;
+        } catch (err) {
+          console.warn("Error moving preloaded canvas:", err);
+        }
+      }
+
+      // Fallback: regular init if preload not ready
+      main.innerHTML = "";
+      const project = {
+        modelUrl: currentImage,
+        basePath: "",
+      };
+      const viewerOptions = {
+        showCard: false,
+        showUiButtons: false,
+        showLogo: true,
+        showConfigurator: false,
+      };
+
+      if ((window as any).ijewelViewer) {
+        new (window as any).ijewelViewer.Viewer(main, project, viewerOptions);
+      }
+    }
+  }, [selectedImage, thumbnailImages]);
+
+  // Removed console log for thumbnail changes
+
   // Get available options from selected style's product details
   const getAvailableMetalTypes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.metalTypes) {
@@ -1082,11 +1140,27 @@ const ProductDetail = () => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
       return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
     }
-    // Sort diamond sizes in ascending order (small to big)
-    return [...selectedStyleData.productDetails.diamondSize].sort(
-      (a, b) => parseFloat(a) - parseFloat(b),
-    );
-  }, [selectedStyleData?.productDetails?.diamondSize]);
+
+    const diamondSize = selectedStyleData.productDetails.diamondSize;
+
+    // If diamondSize is an object with metal type keys
+    if (typeof diamondSize === "object" && !Array.isArray(diamondSize)) {
+      const metalTypeKey = selectedMetalType || "GOLD";
+      const sizes =
+        (diamondSize as any)[metalTypeKey] || (diamondSize as any)["GOLD"] || [];
+      // Sort diamond sizes in ascending order (small to big)
+      return [...sizes].sort((a: string, b: string) => parseFloat(a) - parseFloat(b));
+    }
+
+    // Fallback for old structure (if diamondSize is still an array)
+    if (Array.isArray(diamondSize)) {
+      return [...diamondSize].sort(
+        (a, b) => parseFloat(a) - parseFloat(b),
+      );
+    }
+
+    return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+  }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
 
   // Engraving upload helpers (mirror ProductDetail behavior)
   const uploadEngravingToBackend = useCallback(
@@ -1430,7 +1504,7 @@ const ProductDetail = () => {
       ) {
         setSelectedDiamondShape(diamondShapes[0].name);
       }
-      if (diamondSizes.length > 0 && selectedDiamondSize === "") {
+      if (diamondSizes.length > 0 && (selectedDiamondSize === "" || !diamondSizes.includes(selectedDiamondSize))) {
         setSelectedDiamondSize(diamondSizes[0]);
       }
       // Initialize clarity from product details
@@ -1533,10 +1607,10 @@ const ProductDetail = () => {
                         }`}
                       >
                         {is3DModel(image, index) ? (
-                          <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                          <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
                             <img
                               src="/3D/green.svg"
-                              className="w-10 h-10"
+                              className="w-16 h-16"
                               alt=""
                             />
                           </div>
@@ -1565,17 +1639,23 @@ const ProductDetail = () => {
                   style={{ scrollMarginTop: "160px" }}
                   className="flex-1 w-full min-w-0"
                 >
-                  <div className="aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
+                  <div className="relative aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {is3DModel(
                       thumbnailImages[selectedImage],
                       selectedImage,
                     ) ? (
-                      <div className="">
-                        <IjewelViewer
-                          modelUrl={thumbnailImages[selectedImage]}
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
+                      <div
+                        id="ijewel-viewer-main"
+                        ref={mainViewerRef}
+                        className="w-full h-full"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          aspectRatio: window.innerWidth <= 767 ? "1" : "1 / 1",
+                          maxWidth: window.innerWidth <= 767 ? "100%" : "100%",
+                          maxHeight: window.innerWidth <= 767 ? "auto" : "100%",
+                        }}
+                      />
                     ) : (
                       <img
                         src={
@@ -1588,7 +1668,7 @@ const ProductDetail = () => {
 
                     <Button
                       onClick={() => setSelectedStyleCategory("DANGLE EARINGS")}
-                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold"
+                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold z-10"
                     >
                       RESET
                     </Button>
@@ -1622,7 +1702,7 @@ const ProductDetail = () => {
                           }`}
                         >
                           {is3DModel(image, index) ? (
-                            <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                            <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
                               <GLBViewer
                                 modelUrl={image}
                                 className="w-full h-full"
@@ -1630,7 +1710,7 @@ const ProductDetail = () => {
                               />
                               <img
                                 src="/3D/green.svg"
-                                className="w-10 h-10"
+                                className="w-16 h-16"
                                 alt=""
                               />
                             </div>
@@ -2012,7 +2092,9 @@ const ProductDetail = () => {
                       Diamond Size:{" "}
                       <span className="text-[#8D8A91]">
                         {selectedDiamondSize ||
-                          selectedStyleData.productDetails.diamondSize[0]}{" "}
+                          (Array.isArray(selectedStyleData?.productDetails?.diamondSize)
+                            ? selectedStyleData?.productDetails?.diamondSize[0]
+                            : selectedStyleData?.productDetails?.diamondSize?.[selectedMetalType as keyof typeof selectedStyleData.productDetails.diamondSize]?.[0])}{" "}
                         carat
                       </span>
                     </h3>
