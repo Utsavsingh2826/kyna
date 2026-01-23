@@ -2108,7 +2108,6 @@ const ProductDetail = () => {
     }
 
     setSelectedDiamondOrigin(origin);
-    scrollToImageOnMobile();
     // Price will update automatically via useEffect
   };
 
@@ -2501,10 +2500,10 @@ const ProductDetail = () => {
                 <div>
                   <h1 className="text-2xl my-6 mb-2">{productData.title}</h1>
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="flex items-center gap-1">
+                  {/*  <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                       <span className="text-sm">4.9</span>
-                    </div>
+                    </div> */}
                     {/* <span className="text-primary text-[#328F94] bg-[#328F94]/5 text-sm">
                       {productData.variantCount} Variants
                     </span> */}
@@ -2757,7 +2756,6 @@ const ProductDetail = () => {
                           value={selectedColorClarity}
                           onValueChange={(value) => {
                             setSelectedColorClarity(value);
-                            scrollToImageOnMobile();
                           }}
                         >
                           <SelectTrigger className="text-sm border-neutral-300">
@@ -2795,7 +2793,6 @@ const ProductDetail = () => {
                         ) {
                           setSelectedDiamondOrigin("Lab Grown Diamond");
                         }
-                        scrollToImageOnMobile();
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300">
@@ -2831,7 +2828,6 @@ const ProductDetail = () => {
                               onClick={() => {
                                 const newKarat = normalizeKarat(karat);
                                 setSelectedGoldKarat(newKarat);
-                                scrollToImageOnMobile();
                               }}
                               className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
                                 normalizeKarat(selectedGoldKarat) ===
@@ -3009,7 +3005,6 @@ const ProductDetail = () => {
                           value={selectedSize}
                           onValueChange={(value) => {
                             setSelectedSize(value);
-                            scrollToImageOnMobile();
                           }}
                         >
                           <SelectTrigger className="text-sm border-neutral-300">
@@ -3050,7 +3045,6 @@ const ProductDetail = () => {
                             value={selectedBraceletSize}
                             onValueChange={(value) => {
                               setSelectedBraceletSize(value);
-                              scrollToImageOnMobile();
                             }}
                           >
                             <SelectTrigger className="text-sm border-neutral-300">

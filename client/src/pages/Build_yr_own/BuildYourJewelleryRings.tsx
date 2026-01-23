@@ -2066,7 +2066,6 @@ const ProductDetail = () => {
                         onClick={() => {
                           if (!isLabGrownVariant) {
                             setSelectedDiamondOrigin(origin);
-                            scrollToImageOnMobile();
                           }
                         }}
                         className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
@@ -2227,7 +2226,6 @@ const ProductDetail = () => {
                         value={selectedColorClarity}
                         onValueChange={(value) => {
                           setSelectedColorClarity(value);
-                          scrollToImageOnMobile();
                         }}
                       >
                         <SelectTrigger className="w-full text-sm border-neutral-300">
@@ -2336,7 +2334,6 @@ const ProductDetail = () => {
                               key={`${karat}-${index}`}
                               onClick={() => {
                                 setSelectedGoldKarat(karat);
-                                scrollToImageOnMobile();
                               }}
                               className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
                                 selectedGoldKarat === karat
@@ -2509,7 +2506,6 @@ const ProductDetail = () => {
                       value={selectedSize}
                       onValueChange={(value) => {
                         setSelectedSize(value);
-                        scrollToImageOnMobile();
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300 h-10 md:h-11">
