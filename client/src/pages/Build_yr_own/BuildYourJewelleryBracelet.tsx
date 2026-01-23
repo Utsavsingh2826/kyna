@@ -1801,7 +1801,7 @@ const ProductDetail = () => {
                       </button>
                       <div
                         ref={styleCategoryRef}
-                        className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 sm:w-[200px] md:w-full"
+                        className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
                       >
                         {styleAndDesign.map((category, index) => (
                           <button
@@ -1890,11 +1890,11 @@ const ProductDetail = () => {
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              <div className="w-12 h-12 md:w-44 md:h-32 rounded-lg overflow-hidden bg-gray-100">
+                              <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={style.img}
                                   alt={style.name}
-                                  className="object-cover"
+                                  className="w-full h-full object-cover"
                                   onError={(e) => {
                                     // Fallback image on error
                                     const target = e.target as HTMLImageElement;
@@ -1974,7 +1974,6 @@ const ProductDetail = () => {
                         onClick={() => {
                           if (!isLabGrownVariant) {
                             setSelectedDiamondOrigin(origin);
-                            scrollToImageOnMobile();
                           }
                         }}
                         className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
@@ -2159,6 +2158,7 @@ const ProductDetail = () => {
                                   (k) => !["925", "950"].includes(k),
                                 ) || ["18kt", "14kt", "9kt"];
                         setSelectedGoldKarat(newKarats[0] || "");
+                        scrollToImageOnMobile();
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300">
