@@ -13,7 +13,6 @@ import {
 } from "@/store/slices/cartSlice";
 // import { updateUser } from "@/store/slices/authSlice";
 import apiService from "@/services/api";
-import ReferralPromoSection from "@/components/ReferralPromoSection";
 import { toast } from "sonner";
 // import { Item } from "@radix-ui/react-accordion";
 
@@ -27,10 +26,6 @@ const CartPage = () => {
   // const [setSelectedBillingAddress] = useState("");
   // const [setSelectedShippingAddress] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
-
-  // Promo and referral code states
-  const [appliedPromo, setAppliedPromo] = useState<any>(null);
-  const [appliedReferral, setAppliedReferral] = useState<any>(null);
 
   const [showTermsError, setShowTermsError] = useState(false);
   const formattedDate = useMemo(() => {
@@ -288,11 +283,7 @@ const CartPage = () => {
   }
 
   const subtotal = cart.totalAmount;
-  const promoDiscount = appliedPromo?.discountAmount || 0;
-  const referralDiscount = appliedReferral?.discountAmount || 0;
-  const totalDiscount = promoDiscount + referralDiscount;
-  const tax = Math.round((subtotal - totalDiscount) * 0.03); // 3% GST
-  const total = subtotal - totalDiscount + tax;
+  const total = subtotal;
 
   return (
     <div className="min-h-screen bg-white">
@@ -782,16 +773,6 @@ const CartPage = () => {
 
           {/* Right Column */}
           <div className="space-y-4 md:space-y-6">
-            {/* Promo & Referral Code Section */}
-            <ReferralPromoSection
-              onPromoApplied={setAppliedPromo}
-              onReferralApplied={setAppliedReferral}
-              onPromoRemoved={() => setAppliedPromo(null)}
-              onReferralRemoved={() => setAppliedReferral(null)}
-              appliedPromo={appliedPromo}
-              appliedReferral={appliedReferral}
-            />
-
             {/* Cart Price Details Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
               <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">
@@ -807,42 +788,6 @@ const CartPage = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
                   <span className="font-medium text-green-600">Free</span>
-                </div>
-                {totalDiscount > 0 && (
-                  <>
-                    {appliedPromo && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          Promo Discount ({appliedPromo.code})
-                        </span>
-                        <span className="font-medium text-green-600">
-                          -₹{appliedPromo.discountAmount}
-                        </span>
-                      </div>
-                    )}
-                    {appliedReferral && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">
-                          Referral Bonus ({appliedReferral.code})
-                        </span>
-                        <span className="font-medium text-green-600">
-                          -₹{appliedReferral.discountAmount}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Total Discount</span>
-                      <span className="font-medium text-green-600">
-                        -₹{totalDiscount}
-                      </span>
-                    </div>
-                  </>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="font-medium">
-                    ₹{tax.toLocaleString("en-IN")}
-                  </span>
                 </div>
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex justify-between">
