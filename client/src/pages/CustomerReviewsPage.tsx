@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Star, CheckCircle } from "lucide-react";
 import SEO from "@/components/SEO";
+import StoreLocator from "@/components/StoreLocator";
 
 interface ProductReview {
   _id: string;
@@ -164,8 +165,8 @@ const CustomerReviewsPage: React.FC = () => {
               <button
                 onClick={() => setActiveTab("site")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === "site"
-                    ? "border-black text-black"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
               >
                 Site Reviews
@@ -173,8 +174,8 @@ const CustomerReviewsPage: React.FC = () => {
               <button
                 onClick={() => setActiveTab("product")}
                 className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === "product"
-                    ? "border-black text-black"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-black text-black"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
               >
                 Product Reviews
@@ -320,24 +321,7 @@ const CustomerReviewsPage: React.FC = () => {
           {/* Site Reviews Tab (Google Reviews) */}
           {activeTab === "site" && !loading && (
             <div className="space-y-8">
-              {googleReviews.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-600">
-                    No Google reviews available at the moment.
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    Please check back later or visit our{" "}
-                    <a
-                      href="https://www.google.com/maps"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-teal-600 hover:underline"
-                    >
-                      Google Business Profile
-                    </a>
-                  </p>
-                </div>
-              ) : (
+              {googleReviews.length > 0 && (
                 googleReviews.map((review, idx) => (
                   <div
                     key={idx}
@@ -385,6 +369,7 @@ const CustomerReviewsPage: React.FC = () => {
             </div>
           )}
         </div>
+        <StoreLocator />
       </div>
     </>
   );

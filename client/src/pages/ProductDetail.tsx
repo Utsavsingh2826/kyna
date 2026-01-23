@@ -742,8 +742,8 @@ const ProductDetail = () => {
           const variantId = params.get("variantId");
           const modelUrl = variantId
             ? `/api/products/model/${id}?variantId=${encodeURIComponent(
-                variantId,
-              )}&metalColor=${params.get("metalColor") || "WG"}`
+              variantId,
+            )}&metalColor=${params.get("metalColor") || "WG"}`
             : `/api/products/model/${id}`;
           response = await fetch(modelUrl);
           if (!response.ok) {
@@ -970,7 +970,7 @@ const ProductDetail = () => {
     document.body.appendChild(script);
 
     // Do not remove script/container on cleanup — keep preload alive
-    return () => {};
+    return () => { };
   }, [productData]);
 
   // Separate useEffect to handle URL parameter changes for metal color
@@ -1132,9 +1132,9 @@ const ProductDetail = () => {
 
       const caratCode = selectedDiamondSize
         ? String(Math.round(parseFloat(selectedDiamondSize) * 100)).padStart(
-            2,
-            "0",
-          )
+          2,
+          "0",
+        )
         : "30";
 
       return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}`;
@@ -1569,12 +1569,12 @@ const ProductDetail = () => {
                 : null,
           engraving:
             hasEngraving &&
-            (engravingText || engravingMotifPath || engravingImageUrl)
+              (engravingText || engravingMotifPath || engravingImageUrl)
               ? {
-                  text: engravingText || undefined,
-                  motif: engravingMotifPath || undefined,
-                  imageUrl: engravingImageUrl || undefined,
-                }
+                text: engravingText || undefined,
+                motif: engravingMotifPath || undefined,
+                imageUrl: engravingImageUrl || undefined,
+              }
               : undefined,
         }),
       );
@@ -2251,11 +2251,10 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
                             ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                             : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2292,8 +2291,7 @@ const ProductDetail = () => {
                             className="w-full h-full object-cover"
                             onError={() => {
                               console.error(
-                                `Failed to load desktop thumbnail ${
-                                  index + 1
+                                `Failed to load desktop thumbnail ${index + 1
                                 }:`,
                                 image,
                               );
@@ -2321,9 +2319,8 @@ const ProductDetail = () => {
                 <div
                   ref={imageContainerRef}
                   style={{ scrollMarginTop: "160px" }}
-                  className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${
-                    isUpdating ? "opacity-50" : "opacity-100"
-                  }`}
+                  className={`flex-1 relative aspect-square rounded-lg overflow-hidden transition-opacity duration-300 ${isUpdating ? "opacity-50" : "opacity-100"
+                    }`}
                 >
                   {/* use the fetched images only */}
                   {(() => {
@@ -2396,11 +2393,9 @@ const ProductDetail = () => {
                     onClick={handleWishlistToggle}
                     disabled={wishlistLoading}
                     aria-pressed={isInWishlist}
-                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${
-                      isInWishlist ? "text-red-500" : "text-gray-600"
-                    } ${
-                      wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
-                    }`}
+                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${isInWishlist ? "text-red-500" : "text-gray-600"
+                      } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
+                      }`}
                   >
                     <Heart
                       size={20}
@@ -2430,11 +2425,10 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
                             ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                             : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full flex justify-center items-center bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2475,11 +2469,11 @@ const ProductDetail = () => {
                                 image,
                               );
                             }}
-                            // onLoad={() => {
-                            //   console.log(
-                            //     `Loaded mobile thumbnail ${index + 1}`
-                            //   );
-                            // }}
+                          // onLoad={() => {
+                          //   console.log(
+                          //     `Loaded mobile thumbnail ${index + 1}`
+                          //   );
+                          // }}
                           />
                         )}
                       </button>
@@ -2552,9 +2546,8 @@ const ProductDetail = () => {
                     Diamond Origin{" "}
                     <button
                       type="button"
-                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${
-                        showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
-                      }`}
+                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
+                        }`}
                       onClick={() => setShowTooltip((prev) => !prev)}
                     >
                       i{/* Tooltip: appears on click */}
@@ -2593,13 +2586,12 @@ const ProductDetail = () => {
                           key={origin}
                           onClick={() => handleDiamondOriginSelect(origin)}
                           disabled={isDisabled}
-                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${
-                            isDisabled
+                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${isDisabled
                               ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
                               : selectedDiamondOrigin === origin
                                 ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
                                 : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
-                          }`}
+                            }`}
                         >
                           {origin}
                           {isDisabled && (
@@ -2645,11 +2637,10 @@ const ProductDetail = () => {
                                 scrollToImageOnMobile();
                               }}
                               className={`group relative w-[50px] h-[50px] border rounded-lg p-1 
-          ${
-            selectedDiamondShape === shape.name.toUpperCase()
-              ? "border-primary bg-primary/5"
-              : "border-neutral-300"
-          }`}
+          ${selectedDiamondShape === shape.name.toUpperCase()
+                                  ? "border-primary bg-primary/5"
+                                  : "border-neutral-300"
+                                }`}
                             >
                               {/* FIXED: remove full flex-center, add controlled padding */}
                               <div className="w-full h-full flex items-end justify-center">
@@ -2734,7 +2725,7 @@ const ProductDetail = () => {
 
                       const clarityOptions =
                         productData.diamondOptions?.[diamondType]?.[
-                          metalTypeKey
+                        metalTypeKey
                         ] || [];
 
                       // Map the clarity options to match the format used in the product
@@ -2829,12 +2820,11 @@ const ProductDetail = () => {
                                 const newKarat = normalizeKarat(karat);
                                 setSelectedGoldKarat(newKarat);
                               }}
-                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
-                                normalizeKarat(selectedGoldKarat) ===
-                                normalizeKarat(karat)
+                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${normalizeKarat(selectedGoldKarat) ===
+                                  normalizeKarat(karat)
                                   ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
                                   : "border-neutral-600 text-neutral-600"
-                              }`}
+                                }`}
                             >
                               {getKaratDisplayLabel(karat)}
                             </button>
@@ -2874,11 +2864,10 @@ const ProductDetail = () => {
                             updateMetalColor(code);
                             scrollToImageOnMobile();
                           }}
-                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${
-                            selectedColorCode === code
+                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${selectedColorCode === code
                               ? "border-[#328F94] ring-2 ring-[#328F94]/30"
                               : "border-neutral-300 hover:border-[#328F94]"
-                          } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
+                            } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
                           title={colorInfo.name}
                         >
                           {isCombination ? (
@@ -2908,12 +2897,11 @@ const ProductDetail = () => {
                     (productData?.finishing?.length ?? 0) > 0) && (
                     <div className="my-6">
                       <div
-                        className={`grid ${
-                          (productData?.bandwidth?.length ?? 0) > 0 &&
-                          (productData?.finishing?.length ?? 0) > 0
+                        className={`grid ${(productData?.bandwidth?.length ?? 0) > 0 &&
+                            (productData?.finishing?.length ?? 0) > 0
                             ? "grid-cols-2"
                             : "grid-cols-1"
-                        } gap-4`}
+                          } gap-4`}
                       >
                         {/* Bandwidth Selection */}
                         {(productData?.bandwidth?.length ?? 0) > 0 && (
@@ -2929,12 +2917,11 @@ const ProductDetail = () => {
                               }}
                             >
                               <SelectTrigger
-                                className={`text-sm border-neutral-300 ${
-                                  (productData?.bandwidth?.length ?? 0) > 0 &&
-                                  (productData?.finishing?.length ?? 0) > 0
+                                className={`text-sm border-neutral-300 ${(productData?.bandwidth?.length ?? 0) > 0 &&
+                                    (productData?.finishing?.length ?? 0) > 0
                                     ? "w-full"
                                     : "w-1/2"
-                                }`}
+                                  }`}
                               >
                                 <SelectValue placeholder="Select Width" />
                               </SelectTrigger>
@@ -2963,12 +2950,11 @@ const ProductDetail = () => {
                               }}
                             >
                               <SelectTrigger
-                                className={`${
-                                  (productData?.bandwidth?.length ?? 0) > 0 &&
-                                  (productData?.finishing?.length ?? 0) > 0
+                                className={`${(productData?.bandwidth?.length ?? 0) > 0 &&
+                                    (productData?.finishing?.length ?? 0) > 0
                                     ? "w-full"
                                     : "w-1/2"
-                                } border-neutral-300`}
+                                  } border-neutral-300`}
                               >
                                 <SelectValue placeholder="Select Finish" />
                               </SelectTrigger>
@@ -3489,7 +3475,7 @@ const ProductDetail = () => {
                             Rs.{" "}
                             {Math.round(
                               productData.priceBreakdown.diamondCost +
-                                productData.priceBreakdown.expense,
+                              productData.priceBreakdown.expense,
                             ).toLocaleString()}
                             /-
                           </span>

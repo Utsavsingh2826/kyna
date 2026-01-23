@@ -3248,11 +3248,10 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
                 return (
                   <Link
-                    to={`/product/${category}/${
-                      p.modelSku
-                    }?variantId=${encodeURIComponent(
-                      p.firstVariantSku,
-                    )}&metalColor=${detectedMetalColor}`}
+                    to={`/product/${category}/${p.modelSku
+                      }?variantId=${encodeURIComponent(
+                        p.firstVariantSku,
+                      )}&metalColor=${detectedMetalColor}`}
                     key={`${category}-${p.modelSku}`}
                     className="block"
                   >
@@ -3261,9 +3260,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       aria-label={p.title}
                     >
                       <button
-                        className={`eng-wishlist ${
-                          isWishlisted ? "text-red-500" : ""
-                        } ${wishlistLoading ? "opacity-70" : ""}`}
+                        className={`eng-wishlist ${isWishlisted ? "text-red-500" : ""
+                          } ${wishlistLoading ? "opacity-70" : ""}`}
                         aria-label="Add to wishlist"
                         aria-pressed={Boolean(isWishlisted)}
                         onClick={(e) => handleWishlistToggle(e, p)}
