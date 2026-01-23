@@ -547,8 +547,8 @@ const ProductDetail = () => {
           const variantId = params.get("variantId");
           const modelUrl = variantId
             ? `/api/products/model/${id}?variantId=${encodeURIComponent(
-                variantId
-              )}&metalColor=${params.get("metalColor") || "WG"}`
+              variantId
+            )}&metalColor=${params.get("metalColor") || "WG"}`
             : `/api/products/model/${id}`;
           response = await fetch(modelUrl);
           if (!response.ok) {
@@ -727,7 +727,7 @@ const ProductDetail = () => {
     document.body.appendChild(script);
 
     // Do not remove script/container on cleanup — keep preload alive
-    return () => {};
+    return () => { };
   }, [productData]);
 
   // Separate useEffect to handle URL parameter changes for metal color
@@ -884,9 +884,9 @@ const ProductDetail = () => {
 
       const caratCode = selectedDiamondSize
         ? String(Math.round(parseFloat(selectedDiamondSize) * 100)).padStart(
-            2,
-            "0"
-          )
+          2,
+          "0"
+        )
         : "30";
 
       return `${modelSku}-${shapeCode}-${caratCode}-${karatCode}-${specifications}`;
@@ -1283,16 +1283,16 @@ const ProductDetail = () => {
             typeof productData.sellingPrice === "number"
               ? productData.sellingPrice
               : typeof productData.priceBreakdown?.totalWithGst === "number"
-              ? productData.priceBreakdown.totalWithGst
-              : null,
+                ? productData.priceBreakdown.totalWithGst
+                : null,
           engraving:
             hasEngraving &&
-            (engravingText || engravingMotifPath || engravingImageUrl)
+              (engravingText || engravingMotifPath || engravingImageUrl)
               ? {
-                  text: engravingText || undefined,
-                  motif: engravingMotifPath || undefined,
-                  imageUrl: engravingImageUrl || undefined,
-                }
+                text: engravingText || undefined,
+                motif: engravingMotifPath || undefined,
+                imageUrl: engravingImageUrl || undefined,
+              }
               : undefined,
         })
       );
@@ -1814,8 +1814,7 @@ const ProductDetail = () => {
       `Check out this jewelry: ${productData?.title || "Product"}`
     );
     const body = encodeURIComponent(
-      `I thought you might be interested in this jewelry piece:\n\n${
-        productData?.title || "Product"
+      `I thought you might be interested in this jewelry piece:\n\n${productData?.title || "Product"
       }\n\nView it here: ${url}`
     );
     const gmailUrl = `https://mail.google.com/mail/?view=cm&to=enquires@kynajewels.com&su=${subject}&body=${body}`;
@@ -1991,11 +1990,10 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
                             ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                             : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2027,8 +2025,7 @@ const ProductDetail = () => {
                             className="w-full h-full object-cover"
                             onError={() => {
                               console.error(
-                                `Failed to load desktop thumbnail ${
-                                  index + 1
+                                `Failed to load desktop thumbnail ${index + 1
                                 }:`,
                                 image
                               );
@@ -2054,9 +2051,8 @@ const ProductDetail = () => {
 
                 {/* Main Image */}
                 <div
-                  className={`flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden transition-opacity duration-300 ${
-                    isUpdating ? "opacity-50" : "opacity-100"
-                  }`}
+                  className={`flex-1 relative aspect-square bg-neutral-50 rounded-lg overflow-hidden transition-opacity duration-300 ${isUpdating ? "opacity-50" : "opacity-100"
+                    }`}
                 >
                   {/* use the fetched images only */}
                   {(() => {
@@ -2129,11 +2125,9 @@ const ProductDetail = () => {
                     onClick={handleWishlistToggle}
                     disabled={wishlistLoading}
                     aria-pressed={isInWishlist}
-                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${
-                      isInWishlist ? "text-red-500" : "text-gray-600"
-                    } ${
-                      wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
-                    }`}
+                    className={`absolute top-4 right-4 w-10 h-10 bg-white/80 rounded-full flex items-center justify-center hover:bg-white transition-colors ${isInWishlist ? "text-red-500" : "text-gray-600"
+                      } ${wishlistLoading ? "opacity-70 cursor-not-allowed" : ""
+                      }`}
                   >
                     <Heart
                       size={20}
@@ -2163,11 +2157,10 @@ const ProductDetail = () => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(index)}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${selectedImage === index
                             ? "border-[#328F94] ring-2 ring-[#328F94]/20"
                             : "border-neutral-200 hover:border-neutral-300"
-                        }`}
+                          }`}
                       >
                         {is3DModel(image, index) ? (
                           <div className="relative w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
@@ -2203,11 +2196,11 @@ const ProductDetail = () => {
                                 image
                               );
                             }}
-                            // onLoad={() => {
-                            //   console.log(
-                            //     `Loaded mobile thumbnail ${index + 1}`
-                            //   );
-                            // }}
+                          // onLoad={() => {
+                          //   console.log(
+                          //     `Loaded mobile thumbnail ${index + 1}`
+                          //   );
+                          // }}
                           />
                         )}
                       </button>
@@ -2259,9 +2252,8 @@ const ProductDetail = () => {
                     Diamond Origin{" "}
                     <button
                       type="button"
-                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${
-                        showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
-                      }`}
+                      className={`w-4 h-4 flex items-center justify-center rounded-full transition-colors text-white text-[0.5rem] relative ${showTooltip ? "bg-[#328F94]" : "bg-[#ABA7AF]"
+                        }`}
                       onClick={() => setShowTooltip((prev) => !prev)}
                     >
                       i{/* Tooltip: appears on click */}
@@ -2297,13 +2289,12 @@ const ProductDetail = () => {
                           key={origin}
                           onClick={() => handleDiamondOriginSelect(origin)}
                           disabled={isDisabled}
-                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${
-                            isDisabled
+                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${isDisabled
                               ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
                               : selectedDiamondOrigin === origin
-                              ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
-                              : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
-                          }`}
+                                ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
+                                : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
+                            }`}
                         >
                           {origin}
                           {isDisabled && (
@@ -2348,11 +2339,10 @@ const ProductDetail = () => {
                                 setSelectedDiamondShape(newShape);
                               }}
                               className={`group relative w-[50px] h-[50px] border rounded-lg p-1 
-          ${
-            selectedDiamondShape === shape.name.toUpperCase()
-              ? "border-primary bg-primary/5"
-              : "border-neutral-300"
-          }`}
+          ${selectedDiamondShape === shape.name.toUpperCase()
+                                  ? "border-primary bg-primary/5"
+                                  : "border-neutral-300"
+                                }`}
                             >
                               {/* FIXED: remove full flex-center, add controlled padding */}
                               <div className="w-full h-full flex items-end justify-center">
@@ -2379,80 +2369,80 @@ const ProductDetail = () => {
                 {/* Diamond Size & Color/Clarity - Only show if data is available */}
                 {(productData.diamondSize.length > 0 ||
                   productData.diamondColorClarity.length > 0) && (
-                  <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
-                    {productData.diamondShape.length > 1 && (
-                      <div>
-                        <label className="block text-xs mb-2">
-                          Diamond Size
-                        </label>
-                        <Select
-                          value={selectedDiamondSize}
-                          onValueChange={(value) => {
-                            setSelectedDiamondSize(value);
-                          }}
-                        >
-                          <SelectTrigger className="text-sm border-neutral-300">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {productData.diamondSize
-                              .filter((size) => {
-                                // For Natural Diamond, only show sizes <= 1 carat
-                                if (
-                                  selectedDiamondOrigin === "Natural Diamond"
-                                ) {
-                                  return parseFloat(size) <= 1;
-                                }
-                                // For Lab Grown Diamond, show all sizes
-                                return true;
-                              })
-                              .map((size, index) => (
-                                <SelectItem key={index} value={size}>
-                                  {parseFloat(size).toFixed(2)} Carat
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                    {productData.diamondColorClarity.length > 0 && (
-                      <div>
-                        <label className="block text-xs mb-2">
-                          Color & Clarity
-                        </label>
-                        <Select
-                          value={selectedColorClarity}
-                          onValueChange={(value) => {
-                            setSelectedColorClarity(value);
-                          }}
-                        >
-                          <SelectTrigger className="text-sm border-neutral-300">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
+                    <div className="grid grid-cols-2 pt-0 mt-0 gap-4">
+                      {productData.diamondShape.length > 1 && (
+                        <div>
+                          <label className="block text-xs mb-2">
+                            Diamond Size
+                          </label>
+                          <Select
+                            value={selectedDiamondSize}
+                            onValueChange={(value) => {
+                              setSelectedDiamondSize(value);
+                            }}
+                          >
+                            <SelectTrigger className="text-sm border-neutral-300">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {productData.diamondSize
+                                .filter((size) => {
+                                  // For Natural Diamond, only show sizes <= 1 carat
+                                  if (
+                                    selectedDiamondOrigin === "Natural Diamond"
+                                  ) {
+                                    return parseFloat(size) <= 1;
+                                  }
+                                  // For Lab Grown Diamond, show all sizes
+                                  return true;
+                                })
+                                .map((size, index) => (
+                                  <SelectItem key={index} value={size}>
+                                    {parseFloat(size).toFixed(2)} Carat
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {productData.diamondColorClarity.length > 0 && (
+                        <div>
+                          <label className="block text-xs mb-2">
+                            Color & Clarity
+                          </label>
+                          <Select
+                            value={selectedColorClarity}
+                            onValueChange={(value) => {
+                              setSelectedColorClarity(value);
+                            }}
+                          >
+                            <SelectTrigger className="text-sm border-neutral-300">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
 
-                          <SelectContent className="bg-white">
-                            {productData.diamondColorClarity
-                              .filter((cc) => {
-                                // For Lab Grown Diamond, exclude GHVS and GHSI
-                                if (
-                                  selectedDiamondOrigin === "Lab Grown Diamond"
-                                ) {
-                                  return cc !== "GHVS" && cc !== "GHSI";
-                                }
-                                // For Natural Diamond, show all options
-                                return true;
-                              })
-                              .map((cc, index) => (
-                                <SelectItem key={index} value={cc}>
-                                  {cc}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                )}
+                            <SelectContent className="bg-white">
+                              {productData.diamondColorClarity
+                                .filter((cc) => {
+                                  // For Lab Grown Diamond, exclude GHVS and GHSI
+                                  if (
+                                    selectedDiamondOrigin === "Lab Grown Diamond"
+                                  ) {
+                                    return cc !== "GHVS" && cc !== "GHSI";
+                                  }
+                                  // For Natural Diamond, show all options
+                                  return true;
+                                })
+                                .map((cc, index) => (
+                                  <SelectItem key={index} value={cc}>
+                                    {cc}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                 {/* Metal Type */}
                 <div className="my-6 grid grid-cols-2 gap-4">
@@ -2508,11 +2498,10 @@ const ProductDetail = () => {
                                 const newKarat = karat.toString();
                                 setSelectedGoldKarat(newKarat);
                               }}
-                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${
-                                selectedGoldKarat === karat.toString()
+                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${selectedGoldKarat === karat.toString()
                                   ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
                                   : "border-neutral-600 text-neutral-600"
-                              }`}
+                                }`}
                             >
                               {getKaratDisplayLabel(karat)}
                             </button>
@@ -2549,11 +2538,10 @@ const ProductDetail = () => {
                         <button
                           key={code}
                           onClick={() => updateMetalColor(code)}
-                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${
-                            selectedColorCode === code
+                          className={`relative flex justify-center items-center rounded-full border-2 transition-all ${selectedColorCode === code
                               ? "border-[#328F94] ring-2 ring-[#328F94]/30"
                               : "border-neutral-300 hover:border-[#328F94]"
-                          } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
+                            } ${isCombination ? "w-8 h-8" : "w-8 h-8"}`}
                           title={colorInfo.name}
                         >
                           {isCombination ? (
@@ -2746,8 +2734,8 @@ const ProductDetail = () => {
                     {isUploadingEngraving
                       ? "Uploading Engraving..."
                       : cartLoading
-                      ? "Processing..."
-                      : "Buy Now"}
+                        ? "Processing..."
+                        : "Buy Now"}
                   </Button>
                   <Button
                     onClick={handleAddToCart}
@@ -3106,13 +3094,13 @@ const ProductDetail = () => {
             );
           })()}
       </main>
-      <RingSizeGuidePopup 
-        isOpen={isRingSizePopupOpen} 
-        onClose={() => setIsRingSizePopupOpen(false)} 
+      <RingSizeGuidePopup
+        isOpen={isRingSizePopupOpen}
+        onClose={() => setIsRingSizePopupOpen(false)}
       />
-      <BraceletSizeGuidePopup 
-        isOpen={isBraceletSizePopupOpen} 
-        onClose={() => setIsBraceletSizePopupOpen(false)} 
+      <BraceletSizeGuidePopup
+        isOpen={isBraceletSizePopupOpen}
+        onClose={() => setIsBraceletSizePopupOpen(false)}
       />
     </div>
   );

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import logo from "/logo.png";
-import { Link, redirect } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const benefits = [
   {
