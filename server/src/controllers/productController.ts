@@ -1966,7 +1966,7 @@ export const getProductByModelSku = async (
 
         if (netWeightGrams && !Number.isNaN(metalPricePerGram)) {
           metalCost = metalPricePerGram * netWeightGrams;
-          labourCost = resolvedLabourCost;
+          labourCost = resolvedLabourCost * netWeightGrams;
         } else {
           metalIncomplete = true;
           if (!netWeightGrams)
@@ -1987,8 +1987,8 @@ export const getProductByModelSku = async (
         const totalWithGst = totalBeforeGst + gstAmount;
 
         sellingPrice =
-          !Number.isNaN(totalWithGst) && totalWithGst > 0
-            ? Math.round(totalWithGst)
+          !Number.isNaN(totalBeforeGst) && totalBeforeGst > 0
+            ? Math.round(totalBeforeGst)
             : null;
 
         priceIncomplete =

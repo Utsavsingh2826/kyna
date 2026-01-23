@@ -1564,8 +1564,8 @@ const ProductDetail = () => {
           price:
             typeof productData.sellingPrice === "number"
               ? productData.sellingPrice
-              : typeof productData.priceBreakdown?.totalWithGst === "number"
-                ? productData.priceBreakdown.totalWithGst
+              : typeof productData.priceBreakdown?.totalBeforeGst === "number"
+                ? productData.priceBreakdown.totalBeforeGst
                 : null,
           engraving:
             hasEngraving &&
@@ -3528,7 +3528,7 @@ const ProductDetail = () => {
                           <span>
                             Rs.{" "}
                             {Math.round(
-                              productData.priceBreakdown.totalWithGst,
+                              productData.priceBreakdown.totalBeforeGst,
                             ).toLocaleString()}
                             /-
                           </span>
