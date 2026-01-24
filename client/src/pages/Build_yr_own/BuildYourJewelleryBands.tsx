@@ -765,16 +765,13 @@ const ProductDetail = () => {
   };
 
   // Use the thumbnail images from the selected style data
-  const thumbnailImages = selectedStyleData?.thumbnailImages || [
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/about/2.jpg",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-  ];
+  const thumbnailImages = selectedStyleData?.thumbnailImages || [];
+  
+  // Check if images are still loading (no real thumbnail data yet)
+  const isImagesLoading = loading || !selectedStyleData?.thumbnailImages || selectedStyleData.thumbnailImages.length === 0;
+  
+  // Skeleton placeholder count for loading state
+  const skeletonCount = 4;
 
   // When selectedColorCode changes for the currently selected style, re-fetch its product details
   useEffect(() => {
@@ -1812,35 +1809,44 @@ const ProductDetail = () => {
                       msOverflowStyle: "none",
                     }}
                   >
-                    {thumbnailImages.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setSelectedImage(index);
-                        }}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-200 hover:border-neutral-300"
-                        }`}
-                      >
-                        {is3DModel(image, index) ? (
-                          <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <img
-                              src="/3D/green.svg"
-                              className="w-16 h-16"
-                              alt=""
-                            />
-                          </div>
-                        ) : (
-                          <img
-                            src={image}
-                            alt={`Product ${index + 1}`}
-                            className="w-full h-full object-cover"
+                    {isImagesLoading
+                      ? // Show skeleton placeholders when loading
+                        Array.from({ length: skeletonCount }).map((_, index) => (
+                          <div
+                            key={`skeleton-${index}`}
+                            className="w-16 h-16 rounded-lg overflow-hidden border-2 border-neutral-200 flex-shrink-0 bg-gray-200 animate-pulse"
                           />
-                        )}
-                      </button>
-                    ))}
+                        ))
+                      : // Show actual images when loaded
+                        thumbnailImages.map((image, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              setSelectedImage(index);
+                            }}
+                            className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
+                              selectedImage === index
+                                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                                : "border-neutral-200 hover:border-neutral-300"
+                            }`}
+                          >
+                            {is3DModel(image, index) ? (
+                              <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                                <img
+                                  src="/3D/green.svg"
+                                  className="w-16 h-16"
+                                  alt=""
+                                />
+                              </div>
+                            ) : (
+                              <img
+                                src={image}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </button>
+                        ))}
                   </div>
                   <button
                     onClick={scrollThumbnailsDown}
@@ -1858,7 +1864,12 @@ const ProductDetail = () => {
                   className="flex-1 w-full min-w-0"
                 >
                   <div className="relative aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
-                    {is3DModel(
+                    {isImagesLoading ? (
+                      // Skeleton placeholder for main image
+                      <div className="w-full h-full bg-gray-200 animate-pulse flex items-center justify-center">
+                        <div className="w-16 h-16 bg-gray-300 rounded-full animate-pulse" />
+                      </div>
+                    ) : is3DModel(
                       thumbnailImages[selectedImage],
                       selectedImage,
                     ) ? (
@@ -1909,33 +1920,42 @@ const ProductDetail = () => {
                         scrollBehavior: "smooth",
                       }}
                     >
-                      {thumbnailImages.map((image, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedImage(index)}
-                          className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                            selectedImage === index
-                              ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                              : "border-neutral-200 hover:border-neutral-300"
-                          }`}
-                        >
-                          {is3DModel(image, index) ? (
-                            <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                              <img
-                                src="/3D/green.svg"
-                                className="w-16 h-16"
-                                alt=""
-                              />
-                            </div>
-                          ) : (
-                            <img
-                              src={image}
-                              alt={`Product ${index + 1}`}
-                              className="w-full h-full object-cover"
+                      {isImagesLoading
+                        ? // Show skeleton placeholders when loading
+                          Array.from({ length: skeletonCount }).map((_, index) => (
+                            <div
+                              key={`skeleton-mobile-${index}`}
+                              className="w-16 h-16 rounded-lg overflow-hidden border-2 border-neutral-200 flex-shrink-0 bg-gray-200 animate-pulse"
                             />
-                          )}
-                        </button>
-                      ))}
+                          ))
+                        : // Show actual images when loaded
+                          thumbnailImages.map((image, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedImage(index)}
+                              className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
+                                selectedImage === index
+                                  ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                                  : "border-neutral-200 hover:border-neutral-300"
+                              }`}
+                            >
+                              {is3DModel(image, index) ? (
+                                <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                                  <img
+                                    src="/3D/green.svg"
+                                    className="w-16 h-16"
+                                    alt=""
+                                  />
+                                </div>
+                              ) : (
+                                <img
+                                  src={image}
+                                  alt={`Product ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </button>
+                          ))}
                     </div>
                     <button
                       onClick={scrollThumbnailsRight}
