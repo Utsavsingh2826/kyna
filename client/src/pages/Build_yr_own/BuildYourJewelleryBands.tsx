@@ -1296,6 +1296,22 @@ const ProductDetail = () => {
     return []; // Return empty array as fallback
   }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
 
+  // Get available bandwidth options
+  const getAvailableBandwidth = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.bandwidth) {
+      return [];
+    }
+    return selectedStyleData.productDetails.bandwidth;
+  }, [selectedStyleData?.productDetails?.bandwidth]);
+
+  // Get available finishing options
+  const getAvailableFinishing = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.finishing) {
+      return [];
+    }
+    return selectedStyleData.productDetails.finishing;
+  }, [selectedStyleData?.productDetails?.finishing]);
+
   // Engraving upload helpers (mirror ProductDetail behavior)
   const uploadEngravingToBackend = useCallback(
     async (
@@ -1651,6 +1667,8 @@ const ProductDetail = () => {
       const diamondShapes = getAvailableDiamondShapes();
       const diamondSizes = getAvailableDiamondSizes();
       const availableKarats = getAvailableKarats();
+      const availableBandwidth = getAvailableBandwidth();
+      const availableFinishing = getAvailableFinishing();
 
       // Set default selections from API data
       if (metalTypes.length > 0 && !metalTypes.includes(selectedMetalType)) {
@@ -1692,6 +1710,61 @@ const ProductDetail = () => {
       ) {
         setSelectedGoldKarat(availableKarats[0]);
       }
+
+      // Parse first variant SKU to extract bandwidth and finishing
+      const firstVariantSku = selectedStyleData?.variants?.[0]?.sku;
+      if (firstVariantSku) {
+        const parts = firstVariantSku.split("-");
+        
+        // Handle different SKU formats:
+        // 5-part: GR10-9-LGEFVVS-MF (modelSku-carat-specs-finishing)
+        // 5-part: GR49-14-LGEFVS-4-BF (modelSku-carat-specs-bandwidth-finishing)
+        // Extract bandwidth and finishing from the SKU parts
+        let extractedBandwidth = "";
+        let extractedFinishing = "";
+
+        if (parts.length >= 4) {
+          // Check if last part is finishing (typically 2 chars like MF, BF, etc.)
+          const lastPart = parts[parts.length - 1];
+          if (lastPart && lastPart.length === 2 && /^[A-Z]{2}$/.test(lastPart)) {
+            extractedFinishing = lastPart;
+            
+            // Check if second-to-last part is bandwidth (typically 1-2 digits or letters)
+            const secondLastPart = parts[parts.length - 2];
+            if (secondLastPart && /^[\d.]+$/.test(secondLastPart)) {
+              extractedBandwidth = secondLastPart;
+            }
+          }
+        }
+
+        // Set bandwidth if available and not already set
+        if (extractedBandwidth && availableBandwidth.length > 0 && !selectedBandwidth) {
+          if (availableBandwidth.includes(extractedBandwidth)) {
+            setSelectedBandwidth(extractedBandwidth);
+          } else if (availableBandwidth.length > 0) {
+            setSelectedBandwidth(availableBandwidth[0]);
+          }
+        } else if (availableBandwidth.length > 0 && !selectedBandwidth) {
+          setSelectedBandwidth(availableBandwidth[0]);
+        }
+
+        // Set finishing if available and not already set
+        if (extractedFinishing && availableFinishing.length > 0 && !selectedFinishing) {
+          // Check if finishing code exists in available finishing
+          const finishingMatch = availableFinishing.find(
+            (f) => (typeof f === "string" ? f : f.code) === extractedFinishing
+          );
+          if (finishingMatch) {
+            setSelectedFinishing(typeof finishingMatch === "string" ? finishingMatch : finishingMatch.code);
+          } else if (availableFinishing.length > 0) {
+            const firstFinishing = availableFinishing[0];
+            setSelectedFinishing(typeof firstFinishing === "string" ? firstFinishing : firstFinishing.code);
+          }
+        } else if (availableFinishing.length > 0 && !selectedFinishing) {
+          const firstFinishing = availableFinishing[0];
+          setSelectedFinishing(typeof firstFinishing === "string" ? firstFinishing : firstFinishing.code);
+        }
+      }
     }
   }, [
     selectedStyleData,
@@ -1704,6 +1777,8 @@ const ProductDetail = () => {
     getAvailableDiamondShapes,
     getAvailableDiamondSizes,
     getAvailableKarats,
+    getAvailableBandwidth,
+    getAvailableFinishing,
   ]);
 
   // Initialize lastValidStateRef with the first loaded state
