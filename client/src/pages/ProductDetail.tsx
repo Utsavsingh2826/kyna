@@ -2709,11 +2709,13 @@ const ProductDetail = () => {
                   {(() => {
                     // Get available clarity options based on diamond type and metal type
                     const getAvailableClarityOptions = () => {
-                      if (!productData.diamondOptions) {
-                        // Fallback to old logic if diamondOptions is not available
-                        return productData.diamondColorClarity.filter((cc) => {
-                          return true;
-                        });
+                      // Check if diamondOptions exists and has actual content (not empty object)
+                      const hasDiamondOptions = productData.diamondOptions && 
+                        Object.keys(productData.diamondOptions).length > 0;
+                      
+                      if (!hasDiamondOptions) {
+                        // Fallback to diamondColorClarity if diamondOptions is not available or empty
+                        return productData.diamondColorClarity || [];
                       }
 
                       const diamondType =
@@ -2727,6 +2729,11 @@ const ProductDetail = () => {
                         productData.diamondOptions?.[diamondType]?.[
                         metalTypeKey
                         ] || [];
+
+                      // If no options found in diamondOptions for this type/metal combo, fallback to diamondColorClarity
+                      if (clarityOptions.length === 0) {
+                        return productData.diamondColorClarity || [];
+                      }
 
                       // Map the clarity options to match the format used in the product
                       return clarityOptions.map((option) => {

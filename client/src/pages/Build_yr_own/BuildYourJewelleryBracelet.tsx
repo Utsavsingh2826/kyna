@@ -636,6 +636,18 @@ const ProductDetail = () => {
     [],
   );
 
+  // Track the last valid state for reverting when variant not found
+  const lastValidStateRef = useRef({
+    metalColor: "White Gold",
+    colorCode: "WG",
+    diamondShape: "Oval",
+    diamondSize: "",
+    diamondOrigin: "Natural Diamond",
+    colorClarity: "",
+    goldKarat: "",
+    metalType: "GOLD",
+  });
+
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
     getInitialStyleAndDesign(),
@@ -914,6 +926,11 @@ const ProductDetail = () => {
     const base = variants?.[0]?.sku.split("-");
     if (!base) return null;
 
+    // Validate required selections
+    if (!selectedDiamondSize || !selectedGoldKarat || !selectedDiamondShape) {
+      return null;
+    }
+
     const shapeCodeMap: any = {
       ROUND: "RD",
       OVAL: "OV",
@@ -927,9 +944,12 @@ const ProductDetail = () => {
 
     const shapeCode = shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
 
-    const caratCode = String(Math.round(parseFloat(selectedDiamondSize) * 100));
+    const parsedSize = parseFloat(selectedDiamondSize);
+    if (isNaN(parsedSize)) return null;
+    const caratCode = String(Math.round(parsedSize * 100));
 
     const karat = selectedGoldKarat.replace(/kt/i, "");
+    if (!karat) return null;
 
     const originCode =
       selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
@@ -940,7 +960,17 @@ const ProductDetail = () => {
       "EFVVS";
     const specifications = `${originCode}${clarityToken}`;
 
-    return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+    let variantId = `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+    
+    // Add bracelet size if selected (bracelets have size as last part)
+    if (selectedSize) {
+      // Extract size number from selectedSize (e.g., "6 (16MM)" -> "6")
+      const sizeMatch = selectedSize.match(/^(\d+)/);
+      const sizeCode = sizeMatch ? sizeMatch[1] : selectedSize;
+      variantId += `-${sizeCode}`;
+    }
+
+    return variantId;
   };
 
   const refetchUpdatedProduct = async (substyle: SubStyle) => {
@@ -950,29 +980,70 @@ const ProductDetail = () => {
     // Use selectedColorCode directly
     const metalColor = selectedColorCode;
 
-    const res = await fetch(
-      `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
-    );
-
-    const data: ProductModelResponse = await res.json();
-    if (data.success) {
-      setStyleAndDesign((prev) =>
-        prev.map((cat) => ({
-          ...cat,
-          substyles: cat.substyles.map((s) =>
-            s.parentSku === substyle.parentSku
-              ? {
-                  ...s,
-                  productDetails: data,
-                  price: new Intl.NumberFormat("en-IN").format(
-                    data.sellingPrice,
-                  ),
-                  thumbnailImages: data.variantImages,
-                }
-              : s,
-          ),
-        })),
+    try {
+      const res = await fetch(
+        `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
       );
+
+      const data: ProductModelResponse = await res.json();
+
+      if (!res.ok || !data.success) {
+        toast.error(
+          "This combination is not available. Reverted to previous selection.",
+        );
+        setSelectedMetalColor(lastValidStateRef.current.metalColor);
+        setSelectedColorCode(lastValidStateRef.current.colorCode);
+        setSelectedDiamondShape(lastValidStateRef.current.diamondShape);
+        setSelectedDiamondSize(lastValidStateRef.current.diamondSize);
+        setSelectedDiamondOrigin(lastValidStateRef.current.diamondOrigin);
+        setSelectedColorClarity(lastValidStateRef.current.colorClarity);
+        setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
+        setSelectedMetalType(lastValidStateRef.current.metalType);
+        return;
+      }
+
+      if (data.success) {
+        setStyleAndDesign((prev) =>
+          prev.map((cat) => ({
+            ...cat,
+            substyles: cat.substyles.map((s) =>
+              s.parentSku === substyle.parentSku
+                ? {
+                    ...s,
+                    productDetails: data,
+                    price: new Intl.NumberFormat("en-IN").format(
+                      data.sellingPrice,
+                    ),
+                    thumbnailImages: data.variantImages,
+                  }
+                : s,
+            ),
+          })),
+        );
+
+        lastValidStateRef.current = {
+          metalColor: selectedMetalColor,
+          colorCode: selectedColorCode,
+          diamondShape: selectedDiamondShape,
+          diamondSize: selectedDiamondSize,
+          diamondOrigin: selectedDiamondOrigin,
+          colorClarity: selectedColorClarity,
+          goldKarat: selectedGoldKarat,
+          metalType: selectedMetalType,
+        };
+      }
+    } catch (error) {
+      toast.error(
+        "Failed to load variant. Reverted to previous selection.",
+      );
+      setSelectedMetalColor(lastValidStateRef.current.metalColor);
+      setSelectedColorCode(lastValidStateRef.current.colorCode);
+      setSelectedDiamondShape(lastValidStateRef.current.diamondShape);
+      setSelectedDiamondSize(lastValidStateRef.current.diamondSize);
+      setSelectedDiamondOrigin(lastValidStateRef.current.diamondOrigin);
+      setSelectedColorClarity(lastValidStateRef.current.colorClarity);
+      setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
+      setSelectedMetalType(lastValidStateRef.current.metalType);
     }
   };
 
@@ -1565,8 +1636,48 @@ const ProductDetail = () => {
     selectedStyleData?.productDetails?.diamondColorClarity,
   ]);
 
+  // Initialize lastValidStateRef with the first loaded state
+  const initialStateSetRef = useRef(false);
+  useEffect(() => {
+    if (
+      selectedStyleData?.productDetails &&
+      !initialStateSetRef.current &&
+      selectedMetalColor &&
+      selectedColorCode &&
+      selectedMetalType
+    ) {
+      lastValidStateRef.current = {
+        metalColor: selectedMetalColor,
+        colorCode: selectedColorCode,
+        diamondShape: selectedDiamondShape,
+        diamondSize: selectedDiamondSize,
+        diamondOrigin: selectedDiamondOrigin,
+        colorClarity: selectedColorClarity,
+        goldKarat: selectedGoldKarat,
+        metalType: selectedMetalType,
+      };
+      initialStateSetRef.current = true;
+    }
+  }, [
+    selectedStyleData?.productDetails,
+    selectedMetalColor,
+    selectedColorCode,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedDiamondOrigin,
+    selectedColorClarity,
+    selectedGoldKarat,
+    selectedMetalType,
+  ]);
+
   useEffect(() => {
     if (!selectedStyleData?.parentSku) return;
+    
+    // Don't refetch if required selections are not set yet
+    if (!selectedDiamondSize || !selectedGoldKarat || !selectedDiamondShape || !selectedSize) {
+      return;
+    }
+    
     refetchUpdatedProduct(selectedStyleData);
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1577,6 +1688,7 @@ const ProductDetail = () => {
     selectedMetalType,
     selectedGoldKarat,
     selectedColorClarity,
+    selectedSize,
   ]);
 
   return (
@@ -1966,24 +2078,19 @@ const ProductDetail = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(isLabGrownVariant
-                      ? ["Lab Grown Diamond"]
+                      ? ["Lab Grown Diamond","Natural Diamond"]
                       : ["Natural Diamond", "Lab Grown Diamond"]
                     ).map((origin) => (
                       <button
                         key={origin}
                         onClick={() => {
-                          if (!isLabGrownVariant) {
                             setSelectedDiamondOrigin(origin);
-                          }
+                            scrollToImageOnMobile();
                         }}
                         className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
                           selectedDiamondOrigin === origin
                             ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
                             : "border-neutral-600 text-neutral-600"
-                        } ${
-                          isLabGrownVariant && origin !== "Lab Grown Diamond"
-                            ? "opacity-50 pointer-events-none"
-                            : ""
                         }`}
                       >
                         {origin}
