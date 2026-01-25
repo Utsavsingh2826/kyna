@@ -157,6 +157,7 @@ interface ProductModelResponse {
   netWeightGrams?: number;
   chainOption?: string;
   chainLengthInches?: number;
+  totalDiamondWeight?: number;
 }
 
 interface SubStyle {
@@ -265,6 +266,7 @@ const ProductDetail = () => {
   const { user, isAuthenticated } = useSelector(
     (state: RootState) => state.auth,
   );
+  const [totalDiamondWeight , setTotalDiamondWeight] = useState(0);
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
@@ -422,6 +424,10 @@ const ProductDetail = () => {
             })),
           );
         }
+        // Update total diamond weight if available
+if (data.totalDiamondWeight) {
+  setTotalDiamondWeight(data.totalDiamondWeight);
+}
       } catch (err) {
         console.error("Failed to update substyle product details:", err);
       }
@@ -1555,7 +1561,7 @@ const ProductDetail = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(isLabGrownVariant
-                      ? ["Lab Grown Diamond","Natural Diamond"]
+                      ? ["Natural Diamond", "Lab Grown Diamond"]
                       : ["Natural Diamond", "Lab Grown Diamond"]
                     ).map((origin) => (
                       <button
@@ -2408,11 +2414,23 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Total Diamond Weight (Approx carats)
+                            Total Diamond Weight
                           </span>
                           <span className="font-medium">
-                            {selectedDiamondSize || "-"}
+                            {totalDiamondWeight || "-"}
                           </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            Certification
+                          </span>
+                          <span className="font-medium">IGI/SGL Certified</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            HallMark
+                          </span>
+                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                       </div>
                     </div>
@@ -2499,18 +2517,6 @@ const ProductDetail = () => {
                                 ).toLocaleString()
                               : "-"}
                           </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Certification
-                          </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            HallMark
-                          </span>
-                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                         <div className="py-2">
                           <div className="text-muted-foreground mb-2">

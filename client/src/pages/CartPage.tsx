@@ -858,6 +858,29 @@ const CartPage = () => {
             {/* Shipping & Returns Information */}
             <div className="bg-white border border-gray-200 rounded-lg p-4 md:p-6">
               <div className="space-y-2 md:space-y-3 text-xs md:text-sm text-gray-600">
+                {/* Certification Logos */}
+                <div className="flex items-center gap-4 justify-start">
+                  <img
+                    src="/Hallmarks/GIA.png"
+                    className="h-20 w-20 object-contain"
+                    alt="GIA Certification"
+                  />
+                  <img
+                    src="/Hallmarks/IGI.png"
+                    alt="IGI Certification"
+                    className="h-14 w-14 object-contain"
+                  />
+                  <img
+                    src="/Hallmarks/SGL.png"
+                    alt="SGL Certification"
+                    className="h-20 w-20 object-contain"
+                  />
+                  <img
+                    src="/Hallmarks/BIS.png"
+                    alt="BIS Hallmark"
+                    className="h-14 w-14 object-contain"
+                  />
+                </div>
                 {/* Estimated Ship Date */}
                 <div className=" text-sm">
                   <div className="font-medium">
@@ -865,26 +888,6 @@ const CartPage = () => {
                   </div>
                   <div className="text-muted-foreground">
                     Free Shipping | Free Returns
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2 md:space-x-4 mt-3 md:mt-4">
-                  <div className="flex items-center gap-2 md:gap-4">
-                    <img
-                      className="w-6 h-6 md:w-8 md:h-8"
-                      src="/Hallmarks/BIS.png"
-                      alt="Hallmark"
-                    />
-                    <img
-                      className="w-6 h-6 md:w-8 md:h-8"
-                      src="/Hallmarks/IGI.png"
-                      alt="IGI"
-                    />
-                    <img
-                      className="w-6 h-6 md:w-8 md:h-8"
-                      src="/Hallmarks/SGL.png"
-                      alt="SGA"
-                    />
                   </div>
                 </div>
               </div>

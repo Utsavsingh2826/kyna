@@ -157,6 +157,7 @@ interface ProductModelResponse {
   variantImages: string[];
   availableColors?: string[];
   netWeightGrams?: number;
+  totalDiamondWeight?: number;
 }
 
 interface SubStyle {
@@ -553,6 +554,8 @@ const ProductDetail = () => {
     });
   }, []);
 
+  const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
+
   const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     const currentUrl = window.location.href;
     const productName = "this beautiful bracelet";
@@ -737,6 +740,10 @@ const ProductDetail = () => {
             })),
           );
         }
+        // Update total diamond weight if available
+if (data.totalDiamondWeight) {
+  setTotalDiamondWeight(data.totalDiamondWeight);
+}
       } catch (err) {
         console.error("Failed to update substyle product details:", err);
       }
@@ -2098,7 +2105,7 @@ const ProductDetail = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(isLabGrownVariant
-                      ? ["Lab Grown Diamond","Natural Diamond"]
+                      ? ["Natural Diamond","Lab Grown Diamond"]
                       : ["Natural Diamond", "Lab Grown Diamond"]
                     ).map((origin) => (
                       <button
@@ -2511,7 +2518,7 @@ const ProductDetail = () => {
                 {/* Bracelet Size - Full width on mobile */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm mb-2">Bracelet Size</label>
+                    <label className="block text-sm mb-2">Bracelet Size (inches)</label>
                     <Select
                       value={selectedSize}
                       onValueChange={(value) => {
@@ -2524,7 +2531,7 @@ const ProductDetail = () => {
                       <SelectContent className="bg-white">
                         {braceletSizes.map((size: number) => (
                           <SelectItem key={size} value={size.toString()}>
-                            Size {size}
+                            {size} inches
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2779,7 +2786,7 @@ const ProductDetail = () => {
                             Bracelet Size
                           </span>
                           <span className="font-medium">
-                            {selectedSize || "Not Selected"}
+                            {selectedSize ? `${selectedSize} inches` : "Not Selected"}
                           </span>
                         </div>
                         {selectedGoldKarat && (
@@ -2805,7 +2812,7 @@ const ProductDetail = () => {
                             Metal Color
                           </span>
                           <span className="font-medium">
-                            {selectedMetalColor}
+                            {selectedMetalColor || "Not Selected"}
                           </span>
                         </div>
                         {selectedStyleData?.productDetails?.netWeightGrams && (
@@ -2913,11 +2920,23 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Total Diamond Weight (Approx carats)
+                            Total Diamond Weight
                           </span>
                           <span className="font-medium">
-                            {selectedDiamondSize || "-"}
+                            {totalDiamondWeight || "-"}
                           </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            Certification
+                          </span>
+                          <span className="font-medium">IGI/SGL Certified</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            HallMark
+                          </span>
+                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                       </div>
                     </div>
@@ -2930,18 +2949,7 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            SKU Number
-                          </span>
-                          <span className="font-medium">
-                            {selectedStyleData?.productDetails
-                              ?.firstVariantSku ||
-                              derivedProductId ||
-                              "-"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gold/Silver/Platinum Value
+                            {selectedMetalType} Value
                           </span>
                           <span className="font-medium">
                             ₹{" "}
@@ -3008,18 +3016,6 @@ const ProductDetail = () => {
                                 ).toLocaleString()
                               : "0"}
                           </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Certification
-                          </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            HallMark
-                          </span>
-                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                         <div className="py-2">
                           <div className="text-muted-foreground mb-2">
