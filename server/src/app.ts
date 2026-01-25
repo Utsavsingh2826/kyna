@@ -464,16 +464,16 @@ const PORT: number = parseInt(process.env.PORT || "5000", 10);
 // Database error handling
 mongoose.connection.on("error", (err) => {
   console.error("❌ MongoDB connection error:", err);
-  process.exit(1);
+  // Don't exit immediately - allow automatic reconnection
 });
 
 mongoose.connection.on("disconnected", () => {
-  console.error("❌ MongoDB disconnected");
-  process.exit(1);
+  console.error("❌ MongoDB disconnected - attempting automatic reconnection...");
+  // Mongoose will attempt to reconnect automatically
 });
 
 mongoose.connection.on("reconnected", () => {
-  console.log("✅ MongoDB reconnected");
+  console.log("✅ MongoDB reconnected successfully");
 });
 
 // Graceful shutdown handling
@@ -491,12 +491,23 @@ process.on("SIGTERM", async () => {
   process.exit(0);
 });
 
-// MongoDB connection
-// MongoDB connection
+// MongoDB connection with retry and pooling options
 mongoose
-  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels")
+  .connect(process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels", {
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    retryWrites: true,
+    retryReads: true,
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    connectTimeoutMS: 30000,
+    maxIdleTimeMS: 45000,
+    waitQueueTimeoutMS: 10000,
+    heartbeatFrequencyMS: 10000,
+    keepAlive: true,
+  })
   .then(() => {
-    console.log("✅ MongoDB connected");
+    console.log("✅ MongoDB connected with pooling enabled");
 
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
@@ -506,7 +517,11 @@ mongoose
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
     console.error("Please check your MONGO_URI in .env file");
-    process.exit(1);
+    // Don't exit - let it retry
+    console.log("Retrying connection in 5 seconds...");
+    setTimeout(() => {
+      mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels");
+    }, 5000);
   });
 
 export default app;
