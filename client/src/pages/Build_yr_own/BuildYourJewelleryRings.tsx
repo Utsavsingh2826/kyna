@@ -757,7 +757,7 @@ const ProductDetail = () => {
 
   // Default to first category
   const [selectedStyleCategory, setSelectedStyleCategory] = useState("CLASSIC");
-  const [selectedRingStyle, setSelectedRingStyle] = useState("");
+  const [selectedParentSku, setSelectedParentSku] = useState("");
 
   // Fetch data from API
   const fetchCategoryData = useCallback(async (categoryName: string) => {
@@ -795,8 +795,8 @@ const ProductDetail = () => {
         );
 
         // Set first style as selected if none selected
-        if (!selectedRingStyle && mappedSubstyles.length > 0) {
-          setSelectedRingStyle(mappedSubstyles[0].name);
+        if (!selectedParentSku && mappedSubstyles.length > 0) {
+          setSelectedParentSku(mappedSubstyles[0].parentSku || "");
         }
       }
     } catch (err) {
@@ -901,7 +901,7 @@ const ProductDetail = () => {
   );
   const currentSubstyles = currentCategory?.substyles || [];
   const selectedStyleData =
-    currentSubstyles.find((style) => style.name === selectedRingStyle) ||
+    currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
   // Function to check if image is a 3D model
@@ -921,25 +921,34 @@ const ProductDetail = () => {
 
   // When selectedColorCode changes for the currently selected style, re-fetch its product details
   useEffect(() => {
-    const parent = selectedStyleData?.parentSku;
-    const variantSku = selectedStyleData?.variants?.[0]?.sku;
-    if (parent && variantSku) {
-      updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
+    try {
+      if (!selectedStyleData) return;
+      const parent = selectedStyleData?.parentSku;
+      const variantSku = selectedStyleData?.variants?.[0]?.sku;
+      if (parent && variantSku && typeof updateSubstyleProductDetails === "function") {
+        updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
+      }
+    } catch (err) {
+      console.error("Error in colorCode useEffect:", err);
     }
   }, [
     selectedColorCode,
     selectedStyleData?.parentSku,
     selectedStyleData?.variants,
-    updateSubstyleProductDetails,
   ]);
 
   // Load data for current category
   useEffect(() => {
-    const currentCategory = styleAndDesign.find(
-      (cat) => cat.name === selectedStyleCategory,
-    );
-    if (currentCategory && !currentCategory.isLoaded) {
-      fetchCategoryData(selectedStyleCategory);
+    try {
+      if (!selectedStyleCategory || typeof fetchCategoryData !== "function") return;
+      const currentCategory = styleAndDesign.find(
+        (cat) => cat.name === selectedStyleCategory,
+      );
+      if (currentCategory && !currentCategory.isLoaded) {
+        fetchCategoryData(selectedStyleCategory);
+      }
+    } catch (err) {
+      console.error("Error in category load useEffect:", err);
     }
   }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
 
@@ -1394,7 +1403,7 @@ const ProductDetail = () => {
   // Log when thumbnail images change
   useEffect(() => {
     // Removed console log for thumbnail changes
-  }, [selectedRingStyle, selectedStyleData?.thumbnailImages]);
+  }, [selectedParentSku, selectedStyleData?.thumbnailImages]);
 
 
   // Get available options from selected style's product details
@@ -2134,8 +2143,8 @@ const ProductDetail = () => {
                               } else {
                                 // If already loaded, select first substyle
                                 if (category.substyles.length > 0) {
-                                  setSelectedRingStyle(
-                                    category.substyles[0].name,
+                                  setSelectedParentSku(
+                                    category.substyles[0].parentSku || "",
                                   );
                                 }
                               }
@@ -2199,18 +2208,22 @@ const ProductDetail = () => {
                             <button
                               key={`${style.name}-${index}`}
                               onClick={() => {
-                                setSelectedRingStyle(style.name);
+                                setSelectedParentSku(style.parentSku || "");
                                 setSelectedImage(0); // Reset to first image when style changes
                                 // Fetch variant data for the selected style
-                                if (style.parentSku && style.variants?.[0]?.sku) {
+                                if (
+                                  style.parentSku &&
+                                  style.variants?.[0]?.sku
+                                ) {
                                   updateSubstyleProductDetails(
                                     style.parentSku,
                                     style.variants[0].sku,
-                                    selectedColorCode
+                                    selectedColorCode,
                                   );
                                 }
                               }}
-                              className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${selectedRingStyle === style.name
+                              className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
+                                selectedParentSku === style.parentSku
                                   ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                                 }`}
@@ -2868,7 +2881,7 @@ const ProductDetail = () => {
                               // Pass EV image to Engrave component
                               evImage || undefined
                             }
-                            jewelryType={selectedRingStyle}
+                            jewelryType={selectedStyleData?.name || ""}
                           />
                         );
                       })()}

@@ -377,7 +377,7 @@ const ProductDetail = () => {
   // Default to first category
   const [selectedStyleCategory, setSelectedStyleCategory] =
     useState("DANGLE EARINGS");
-  const [selectedRingStyle, setSelectedRingStyle] = useState("");
+  const [selectedParentSku, setSelectedParentSku] = useState("");
 
   // Fetch data from API
   const fetchCategoryData = useCallback(async (categoryName: string) => {
@@ -415,8 +415,8 @@ const ProductDetail = () => {
         );
 
         // Set first style as selected if none selected
-        if (!selectedRingStyle && mappedSubstyles.length > 0) {
-          setSelectedRingStyle(mappedSubstyles[0].name);
+        if (!selectedParentSku && mappedSubstyles.length > 0) {
+          setSelectedParentSku(mappedSubstyles[0].parentSku || "");
         }
       }
     } catch (err) {
@@ -454,6 +454,64 @@ const ProductDetail = () => {
               ),
             })),
           );
+
+          // Parse the chosen variant SKU to sync UI state with API data
+          const chosenVariant = data.chosenVariantSku;
+          if (chosenVariant) {
+            const parts = chosenVariant.split('-');
+            if (parts.length >= 2) {
+              const shapeCode = parts[1]; // e.g., "CUS" from "ER324-CUS-100-14-LGEFVS"
+              
+              // Map shape codes back to display names
+              const codeToShapeMap: Record<string, string> = {
+                "RD": "Round",
+                "OV": "Oval", 
+                "PRN": "Princess",
+                "EM": "Emerald",
+                "MQ": "Marquise",
+                "PRS": "Pear",
+                "HRT": "Heart",
+                "CUS": "Cushion"
+              };
+              
+              const shapeName = codeToShapeMap[shapeCode];
+              if (shapeName && shapeName !== selectedDiamondShape) {
+                setSelectedDiamondShape(shapeName);
+              }
+
+              // Parse other variant details if needed
+              if (parts.length >= 3) {
+                const caratCode = parts[2]; // e.g., "100" = 1.00 carat
+                const caratValue = (parseInt(caratCode) / 100).toString();
+                if (caratValue !== selectedDiamondSize) {
+                  setSelectedDiamondSize(caratValue);
+                }
+              }
+
+              if (parts.length >= 4) {
+                const goldKarat = parts[3] + "kt"; // e.g., "14" -> "14kt"
+                if (goldKarat !== selectedGoldKarat) {
+                  setSelectedGoldKarat(goldKarat);
+                }
+              }
+
+              // Parse lab grown and clarity from the last part
+              if (parts.length >= 5) {
+                const specifications = parts[4]; // e.g., "LGEFVS"
+                if (specifications.startsWith('LG') && selectedDiamondOrigin !== "Lab Grown Diamond") {
+                  setSelectedDiamondOrigin("Lab Grown Diamond");
+                } else if (specifications.startsWith('ND') && selectedDiamondOrigin !== "Natural Diamond") {
+                  setSelectedDiamondOrigin("Natural Diamond");
+                }
+                
+                // Extract clarity (everything after LG or ND)
+                const clarity = specifications.replace(/^(LG|ND)/, '');
+                if (clarity && clarity !== selectedColorClarity) {
+                  setSelectedColorClarity(clarity);
+                }
+              }
+            }
+          }
         }
         // Update total diamond weight if available
 if (data.totalDiamondWeight) {
@@ -472,7 +530,7 @@ if (data.totalDiamondWeight) {
   );
   const currentSubstyles = currentCategory?.substyles || [];
   const selectedStyleData =
-    currentSubstyles.find((style) => style.name === selectedRingStyle) ||
+    currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
   // When selectedColorCode changes for the currently selected style, re-fetch its product details
@@ -776,7 +834,7 @@ if (data.totalDiamondWeight) {
   // Log when thumbnail images change
   useEffect(() => {
     // Removed console log for thumbnail changes
-  }, [selectedRingStyle, selectedStyleData?.thumbnailImages]);
+  }, [selectedParentSku, selectedStyleData?.thumbnailImages]);
 
   // Function to check if image is a 3D model
   const is3DModel = (imagePath: string, index: number) => {
@@ -1643,8 +1701,8 @@ if (data.totalDiamondWeight) {
                               } else {
                                 // If already loaded, select first substyle
                                 if (category.substyles.length > 0) {
-                                  setSelectedRingStyle(
-                                    category.substyles[0].name,
+                                  setSelectedParentSku(
+                                    category.substyles[0].parentSku || "",
                                   );
                                 }
                               }
@@ -1709,11 +1767,11 @@ if (data.totalDiamondWeight) {
                             <button
                               key={`${style.name}-${index}`}
                               onClick={() => {
-                                setSelectedRingStyle(style.name);
+                                setSelectedParentSku(style.parentSku || "");
                                 setSelectedImage(0); // Reset to first image when style changes
                               }}
                               className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
-                                selectedRingStyle === style.name
+                                selectedParentSku === style.parentSku
                                   ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
@@ -2377,7 +2435,7 @@ if (data.totalDiamondWeight) {
                               // Pass EV image to Engrave component
                               evImage || undefined
                             }
-                            jewelryType={selectedRingStyle}
+                            jewelryType={selectedStyleData?.name || ""}
                           />
                         );
                       })()}

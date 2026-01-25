@@ -214,299 +214,6 @@ const diamondShapes = {
 
 const braceletSizes = [6, 7, 8];
 
-const GLBViewer = ({
-  modelUrl,
-  className,
-  isMain = false,
-}: {
-  modelUrl: string;
-  className?: string;
-  isMain?: boolean;
-}) => {
-  const mountRef = useRef<HTMLDivElement | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const modelRef = useRef<THREE.Group | null>(null);
-  const animationIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!mountRef.current) return;
-
-    const initThreeJS = () => {
-      if (!mountRef.current) return;
-
-      // Scene setup
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf5f5f5);
-      sceneRef.current = scene;
-
-      // Camera setup
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        mountRef.current.clientWidth / mountRef.current.clientHeight,
-        0.1,
-        1000,
-      );
-      camera.position.set(0, 0, 5);
-
-      // Renderer setup
-      const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true,
-      });
-      renderer.setSize(
-        mountRef.current.clientWidth,
-        mountRef.current.clientHeight,
-      );
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      mountRef.current.appendChild(renderer.domElement);
-      rendererRef.current = renderer;
-
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(10, 10, 5);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-
-      const pointLight = new THREE.PointLight(0xffffff, 0.3);
-      pointLight.position.set(-10, -10, -5);
-      scene.add(pointLight);
-
-      let diamond: THREE.Mesh | null = null;
-
-      function createPlaceholderModel() {
-        const group = new THREE.Group();
-
-        // Ring band
-        const ringGeometry = new THREE.TorusGeometry(1.2, 0.15, 8, 32);
-        const ringMaterial = new THREE.MeshStandardMaterial({
-          color: 0xffd700,
-          metalness: 0.9,
-          roughness: 0.1,
-        });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.castShadow = true;
-        group.add(ring);
-
-        // Center diamond (simplified)
-        const diamondGeometry = new THREE.OctahedronGeometry(0.3);
-        const diamondMaterial = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.9,
-          roughness: 0,
-          metalness: 0,
-          reflectivity: 1,
-          clearcoat: 1,
-          clearcoatRoughness: 0,
-        });
-        diamond = new THREE.Mesh(diamondGeometry, diamondMaterial);
-        diamond.position.y = 0.2;
-        diamond.castShadow = true;
-        group.add(diamond);
-
-        // Small accent diamonds
-        for (let i = 0; i < 8; i++) {
-          const angle = (i / 8) * Math.PI * 2;
-          const smallDiamondGeometry = new THREE.OctahedronGeometry(0.08);
-          const smallDiamond = new THREE.Mesh(
-            smallDiamondGeometry,
-            diamondMaterial,
-          );
-          smallDiamond.position.set(
-            Math.cos(angle) * 1.3,
-            0.1,
-            Math.sin(angle) * 1.3,
-          );
-          smallDiamond.scale.set(0.7, 0.7, 0.7);
-          group.add(smallDiamond);
-        }
-
-        scene.add(group);
-        modelRef.current = group;
-      }
-
-      // Load GLB Model
-      if (modelUrl && modelUrl.endsWith(".glb")) {
-        const loader = new GLTFLoader();
-
-        // Setup DRACO loader for compressed models
-        const dracoLoader = new DRACOLoader();
-        // Use CDN for DRACO decoder files
-        dracoLoader.setDecoderPath(
-          "https://www.gstatic.com/draco/versioned/decoders/1.5.6/",
-        );
-        dracoLoader.preload();
-        loader.setDRACOLoader(dracoLoader);
-
-        loader.load(
-          modelUrl,
-          (gltf) => {
-            const model = gltf.scene;
-
-            // Clear any existing models
-            if (modelRef.current) {
-              scene.remove(modelRef.current);
-            }
-
-            // Auto-scale the model to fit the scene
-            const box = new THREE.Box3().setFromObject(model);
-            const size = box.getSize(new THREE.Vector3()).length();
-            const center = box.getCenter(new THREE.Vector3());
-
-            // Scale the model to fit in the view
-            const scale = isMain ? 2 / size : 1.6 / size;
-            model.scale.setScalar(scale);
-
-            // Center the model
-            model.position.copy(center).multiplyScalar(-scale);
-
-            scene.add(model);
-            modelRef.current = model;
-
-            // Dispose of the DRACO loader after use
-            dracoLoader.dispose();
-          },
-          // (progress) => {},
-          (error) => {
-            console.error("Error loading GLB model:", modelUrl, error);
-
-            dracoLoader.dispose();
-            createPlaceholderModel();
-          },
-        );
-      } else {
-        createPlaceholderModel();
-      }
-
-      // Controls for main viewer (mouse interaction)
-      let isDragging = false;
-      let previousMousePosition = { x: 0, y: 0 };
-
-      const handleMouseDown = (event: MouseEvent) => {
-        if (!isMain) return;
-        isDragging = true;
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-        renderer.domElement.style.cursor = "grabbing";
-      };
-
-      const handleMouseMove = (event: MouseEvent) => {
-        if (!isDragging || !isMain || !modelRef.current) return;
-
-        const deltaMove = {
-          x: event.clientX - previousMousePosition.x,
-          y: event.clientY - previousMousePosition.y,
-        };
-
-        const deltaRotationQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(deltaMove.y * 0.01, deltaMove.x * 0.01, 0, "XYZ"),
-        );
-
-        modelRef.current.quaternion.multiplyQuaternions(
-          deltaRotationQuaternion,
-          modelRef.current.quaternion,
-        );
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-      };
-
-      const handleMouseUp = () => {
-        isDragging = false;
-        if (rendererRef.current) {
-          rendererRef.current.domElement.style.cursor = isMain
-            ? "grab"
-            : "pointer";
-        }
-      };
-
-      const handleWheel = (event: WheelEvent) => {
-        if (!isMain) return;
-        event.preventDefault();
-        camera.position.z += event.deltaY * 0.01;
-        camera.position.z = Math.max(2, Math.min(10, camera.position.z));
-      };
-
-      if (isMain) {
-        renderer.domElement.style.cursor = "grab";
-        renderer.domElement.addEventListener("mousedown", handleMouseDown);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
-        renderer.domElement.addEventListener("wheel", handleWheel);
-      }
-
-      // Animation loop
-      const animate = () => {
-        animationIdRef.current = requestAnimationFrame(animate);
-
-        // Auto-rotate for thumbnail
-        if (!isMain && modelRef.current) {
-          modelRef.current.rotation.y += 0.01;
-        }
-
-        // Sparkle effect for diamond
-        if (diamond) {
-          diamond.rotation.y += 0.02;
-        }
-
-        renderer.render(scene, camera);
-      };
-      animate();
-
-      // Handle resize
-      const handleResize = () => {
-        if (!mountRef.current || !camera || !renderer) return;
-        camera.aspect =
-          mountRef.current.clientWidth / mountRef.current.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(
-          mountRef.current.clientWidth,
-          mountRef.current.clientHeight,
-        );
-      };
-
-      window.addEventListener("resize", handleResize);
-
-      // Store cleanup functions
-      const cleanup = () => {
-        if (animationIdRef.current) {
-          cancelAnimationFrame(animationIdRef.current);
-        }
-        if (isMain) {
-          renderer.domElement.removeEventListener("mousedown", handleMouseDown);
-          window.removeEventListener("mousemove", handleMouseMove);
-          window.removeEventListener("mouseup", handleMouseUp);
-          renderer.domElement.removeEventListener("wheel", handleWheel);
-        }
-        window.removeEventListener("resize", handleResize);
-        if (
-          mountRef.current &&
-          renderer.domElement &&
-          mountRef.current.contains(renderer.domElement)
-        ) {
-          mountRef.current.removeChild(renderer.domElement);
-        }
-        renderer.dispose();
-      };
-
-      return cleanup;
-    };
-
-    const cleanup = initThreeJS();
-
-    // Cleanup on unmount
-    return () => {
-      if (cleanup) {
-        cleanup();
-      }
-    };
-  }, [modelUrl, isMain]);
-
-  return <div ref={mountRef} className={className} />;
-};
-
 // Sample product data for metal types (moved outside component to avoid dependency issues)
 const sampleProductData = {
   metalTypes: [
@@ -625,7 +332,7 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
-  const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
+  const [selectedDiamondShape, setSelectedDiamondShape] = useState("Round");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
   const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code
   const [selectedMetalType, setSelectedMetalType] = useState<string>("GOLD");
@@ -643,7 +350,7 @@ const ProductDetail = () => {
   const lastValidStateRef = useRef({
     metalColor: "White Gold",
     colorCode: "WG",
-    diamondShape: "Oval",
+    diamondShape: "Round",
     diamondSize: "",
     diamondOrigin: "Natural Diamond",
     colorClarity: "",
@@ -661,7 +368,7 @@ const ProductDetail = () => {
   // Default to first category
   const [selectedStyleCategory, setSelectedStyleCategory] =
     useState("PAPPER CLIP");
-  const [selectedRingStyle, setSelectedRingStyle] = useState("");
+  const [selectedParentSku, setSelectedParentSku] = useState("");
 
   // Fetch data from API
   const fetchCategoryData = useCallback(async (categoryName: string) => {
@@ -699,8 +406,8 @@ const ProductDetail = () => {
         );
 
         // Set first style as selected if none selected
-        if (!selectedRingStyle && mappedSubstyles.length > 0) {
-          setSelectedRingStyle(mappedSubstyles[0].name);
+        if (!selectedParentSku && mappedSubstyles.length > 0) {
+          setSelectedParentSku(mappedSubstyles[0].parentSku || "");
         }
       }
     } catch (err) {
@@ -739,6 +446,72 @@ const ProductDetail = () => {
               ),
             })),
           );
+
+          // Parse the chosen variant SKU to sync UI state with API data
+          const chosenVariant = data.chosenVariantSku;
+          if (chosenVariant) {
+            const parts = chosenVariant.split('-');
+            if (parts.length >= 2) {
+              const shapeCode = parts[1]; // e.g., "RD" from "BR1-RD-1-14-LGEFVS-6"
+              
+              // Map shape codes back to display names
+              const codeToShapeMap: Record<string, string> = {
+                "RD": "Round",
+                "OV": "Oval", 
+                "PRN": "Princess",
+                "EM": "Emerald",
+                "MQ": "Marquise",
+                "PRS": "Pear",
+                "HRT": "Heart",
+                "CUS": "Cushion"
+              };
+              
+              const shapeName = codeToShapeMap[shapeCode];
+              if (shapeName && shapeName !== selectedDiamondShape) {
+                setSelectedDiamondShape(shapeName);
+              }
+
+              // Parse other variant details if needed
+              if (parts.length >= 3) {
+                const caratCode = parts[2]; // e.g., "1" = 1.0 carat
+                const caratValue = parseFloat(caratCode).toString();
+                if (caratValue !== selectedDiamondSize) {
+                  setSelectedDiamondSize(caratValue);
+                }
+              }
+
+              if (parts.length >= 4) {
+                const goldKarat = parts[3] + "kt"; // e.g., "14" -> "14kt"
+                if (goldKarat !== selectedGoldKarat) {
+                  setSelectedGoldKarat(goldKarat);
+                }
+              }
+
+              // Parse lab grown and clarity from the specifications part
+              if (parts.length >= 5) {
+                const specifications = parts[4]; // e.g., "LGEFVS"
+                if (specifications.startsWith('LG') && selectedDiamondOrigin !== "Lab Grown Diamond") {
+                  setSelectedDiamondOrigin("Lab Grown Diamond");
+                } else if (specifications.startsWith('ND') && selectedDiamondOrigin !== "Natural Diamond") {
+                  setSelectedDiamondOrigin("Natural Diamond");
+                }
+                
+                // Extract clarity (everything after LG or ND)
+                const clarity = specifications.replace(/^(LG|ND)/, '');
+                if (clarity && clarity !== selectedColorClarity) {
+                  setSelectedColorClarity(clarity);
+                }
+              }
+
+              // Parse bracelet size from the last part (if present)
+              if (parts.length >= 6) {
+                const sizeCode = parts[5]; // e.g., "6" from "BR1-RD-1-14-LGEFVS-6"
+                if (sizeCode !== selectedSize) {
+                  setSelectedSize(sizeCode);
+                }
+              }
+            }
+          }
         }
         // Update total diamond weight if available
 if (data.totalDiamondWeight) {
@@ -757,30 +530,39 @@ if (data.totalDiamondWeight) {
   );
   const currentSubstyles = currentCategory?.substyles || [];
   const selectedStyleData =
-    currentSubstyles.find((style) => style.name === selectedRingStyle) ||
+    currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
   // When selectedColorCode changes for the currently selected style, re-fetch its product details
   useEffect(() => {
-    const parent = selectedStyleData?.parentSku;
-    const variantSku = selectedStyleData?.variants?.[0]?.sku;
-    if (parent && variantSku) {
-      updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
+    try {
+      if (!selectedStyleData) return;
+      const parent = selectedStyleData?.parentSku;
+      const variantSku = selectedStyleData?.variants?.[0]?.sku;
+      if (parent && variantSku && typeof updateSubstyleProductDetails === "function") {
+        updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
+      }
+    } catch (err) {
+      console.error("Error in colorCode useEffect:", err);
     }
   }, [
     selectedColorCode,
     selectedStyleData?.parentSku,
     selectedStyleData?.variants,
-    updateSubstyleProductDetails,
   ]);
 
   // Load data for current category
   useEffect(() => {
-    const currentCategory = styleAndDesign.find(
-      (cat) => cat.name === selectedStyleCategory,
-    );
-    if (currentCategory && !currentCategory.isLoaded) {
-      fetchCategoryData(selectedStyleCategory);
+    try {
+      if (!selectedStyleCategory || typeof fetchCategoryData !== "function") return;
+      const currentCategory = styleAndDesign.find(
+        (cat) => cat.name === selectedStyleCategory,
+      );
+      if (currentCategory && !currentCategory.isLoaded) {
+        fetchCategoryData(selectedStyleCategory);
+      }
+    } catch (err) {
+      console.error("Error in category load useEffect:", err);
     }
   }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
 
@@ -949,8 +731,12 @@ if (data.totalDiamondWeight) {
     const shapeCode = shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
 
     const parsedSize = parseFloat(selectedDiamondSize);
-    if (isNaN(parsedSize)) return null;
-    const caratCode = String(Math.round(parsedSize * 100));
+    if (isNaN(parsedSize) || parsedSize <= 0) return null;
+    // For bracelets: if carat is whole number (1.0, 2.0), use as-is
+    // If fractional (0.15, 1.25), multiply by 100: 0.15 -> 15, 1.25 -> 125
+    const caratCode = parsedSize >= 1 && parsedSize % 1 === 0 
+      ? String(Math.round(parsedSize))  // Keep whole numbers as-is: 1.0 -> "1"
+      : String(Math.round(parsedSize * 100));  // Multiply fractionals: 0.15 -> "15"
 
     const karat = selectedGoldKarat.replace(/kt/i, "");
     if (!karat) return null;
@@ -1164,7 +950,9 @@ if (data.totalDiamondWeight) {
     }
   }, [selectedImage, thumbnailImages]);
 
-  // Removed console log for thumbnail changes
+  useEffect(() => {
+    // Removed console log for thumbnail changes
+  }, [selectedParentSku, selectedStyleData?.thumbnailImages]);
 
   // Get available options from selected style's product details
   const getAvailableMetalTypes = useCallback(() => {
@@ -1954,8 +1742,8 @@ if (data.totalDiamondWeight) {
                               } else {
                                 // If already loaded, select first substyle
                                 if (category.substyles.length > 0) {
-                                  setSelectedRingStyle(
-                                    category.substyles[0].name,
+                                  setSelectedParentSku(
+                                    category.substyles[0].parentSku || "",
                                   );
                                 }
                               }
@@ -2020,11 +1808,11 @@ if (data.totalDiamondWeight) {
                             <button
                               key={`${style.name}-${index}`}
                               onClick={() => {
-                                setSelectedRingStyle(style.name);
+                                setSelectedParentSku(style.parentSku || "");
                                 setSelectedImage(0); // Reset to first image when style changes
                               }}
                               className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
-                                selectedRingStyle === style.name
+                                selectedParentSku === style.parentSku
                                   ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
@@ -2549,7 +2337,7 @@ if (data.totalDiamondWeight) {
                 </Button>
 
                 {/* Free Engraving */}
-                <div className="flex items-center space-x-2">
+                <div className="hidden items-center space-x-2">
                   <input
                     type="checkbox"
                     id="engraving"
@@ -2660,7 +2448,7 @@ if (data.totalDiamondWeight) {
                               // Pass EV image to Engrave component
                               evImage || undefined
                             }
-                            jewelryType={selectedRingStyle}
+                            jewelryType={selectedStyleCategory}
                           />
                         );
                       })()}

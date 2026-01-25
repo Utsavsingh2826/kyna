@@ -75,7 +75,7 @@ const getColorDisplayInfo = (
         case "RG":
           return "Rose Gold";
         case "BR":
-          return "Brown";
+          return "Black Rhodium";
         default:
           return c;
       }
@@ -290,7 +290,7 @@ const ProductDetail = () => {
   // Default to first category
   const [selectedStyleCategory, setSelectedStyleCategory] =
     useState("SOLITAIRE");
-  const [selectedRingStyle, setSelectedRingStyle] = useState("");
+  const [selectedParentSku, setSelectedParentSku] = useState("");
 
   const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     const currentUrl = window.location.href;
@@ -383,8 +383,8 @@ const ProductDetail = () => {
         );
 
         // auto-select first style
-        if (!selectedRingStyle && mappedSubstyles.length > 0) {
-          setSelectedRingStyle(mappedSubstyles[0].name);
+        if (!selectedParentSku && mappedSubstyles.length > 0) {
+          setSelectedParentSku(mappedSubstyles[0].parentSku || "");
         }
       }
     } catch (err) {
@@ -441,7 +441,7 @@ if (data.totalDiamondWeight) {
   );
   const currentSubstyles = currentCategory?.substyles || [];
   const selectedStyleData =
-    currentSubstyles.find((style) => style.name === selectedRingStyle) ||
+    currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
   // When selectedColorCode changes for the currently selected style, re-fetch its product details
@@ -763,7 +763,7 @@ if (data.totalDiamondWeight) {
   // Log when thumbnail images change
   useEffect(() => {
     // Removed console log for thumbnail changes
-  }, [selectedRingStyle, selectedStyleData?.thumbnailImages]);
+  }, [selectedParentSku, selectedStyleData?.thumbnailImages]);
 
   // Function to check if image is a 3D model
   const is3DModel = (imagePath: string, index: number) => {
@@ -1405,14 +1405,14 @@ if (data.totalDiamondWeight) {
                                     ),
                                   );
                                   if (fallbackSubstyles.length > 0) {
-                                    setSelectedRingStyle(
-                                      fallbackSubstyles[0].name,
+                                    setSelectedParentSku(
+                                      fallbackSubstyles[0].parentSku || "",
                                     );
                                   }
                                 }
                               } else if (category.substyles.length > 0) {
-                                setSelectedRingStyle(
-                                  category.substyles[0].name,
+                                setSelectedParentSku(
+                                  category.substyles[0].parentSku || "",
                                 );
                               }
                             }}
@@ -1476,11 +1476,11 @@ if (data.totalDiamondWeight) {
                             <button
                               key={`${style.name}-${index}`}
                               onClick={() => {
-                                setSelectedRingStyle(style.name);
+                                setSelectedParentSku(style.parentSku || "");
                                 setSelectedImage(0); // Reset to first image when style changes
                               }}
                               className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
-                                selectedRingStyle === style.name
+                                selectedParentSku === style.parentSku
                                   ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
@@ -2273,7 +2273,7 @@ if (data.totalDiamondWeight) {
                             </span>
                           </div>
                         )}
-
+{/* 
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Pendant Style
@@ -2281,7 +2281,7 @@ if (data.totalDiamondWeight) {
                           <span className="font-medium">
                             {selectedRingStyle || "Not Selected"}
                           </span>
-                        </div>
+                        </div> */}
 
                         {selectedGoldKarat && (
                           <div className="flex justify-between py-2 border-b border-[#328F94]">
