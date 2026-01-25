@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { loginSucceeded } from "../store/slices/authSlice";
@@ -16,6 +16,7 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -46,6 +47,13 @@ const LoginPage: React.FC = () => {
           setAccessToken(response.data.token);
         }
 
+        // Check if there's a 'from' location in the state, and store it before navigation
+        const from = (location.state as any)?.from;
+        if (from) {
+          // Store the redirect path in localStorage
+          localStorage.setItem("redirectAfterLogin", from);
+        }
+
         // Dispatch login success action with token and user data
         dispatch(
           loginSucceeded({
@@ -57,13 +65,22 @@ const LoginPage: React.FC = () => {
         console.log("Login successful. User payload:", response.data?.user || null);
         console.log("Redux auth state should be updated now");
 
-        // Navigate to profile page
-        navigate("/profile", {
-          state: {
-            userData: response.data?.user,
-            name: response.data?.user?.firstName,
-          },
-        });
+        // Use a small delay to ensure the PublicRoute component re-evaluates with new auth state
+        setTimeout(() => {
+          const redirectPath = localStorage.getItem("redirectAfterLogin");
+          if (redirectPath) {
+            localStorage.removeItem("redirectAfterLogin");
+            navigate(redirectPath);
+          } else {
+            // Navigate to profile page as default
+            navigate("/profile", {
+              state: {
+                userData: response.data?.user,
+                name: response.data?.user?.firstName,
+              },
+            });
+          }
+        }, 100);
       } else {
         if (response.data?.requiresVerification) {
           toast.info(

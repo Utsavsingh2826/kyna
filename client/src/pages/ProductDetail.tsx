@@ -1869,7 +1869,11 @@ const ProductDetail = () => {
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
       toast.error("Please log in to purchase");
-      navigate("/login");
+      // Store full pathname + search params for redirect after login
+      const fullPath = location.pathname + location.search;
+      navigate("/login", {
+        state: { from: fullPath },
+      });
       return;
     }
 
