@@ -157,6 +157,7 @@ interface ProductModelResponse {
   variantImages: string[];
   availableColors?: string[];
   netWeightGrams?: number;
+  totalDiamondWeight?: number;
 }
 
 interface SubStyle {
@@ -733,6 +734,7 @@ const ProductDetail = () => {
   const [selectedMetalType, setSelectedMetalType] = useState<string>("GOLD");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
+  const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
@@ -856,6 +858,11 @@ const ProductDetail = () => {
               ),
             })),
           );
+
+          // Update total diamond weight if available
+          if (data.totalDiamondWeight) {
+            setTotalDiamondWeight(data.totalDiamondWeight);
+          }
 
           // Update last valid state since this variant exists
           lastValidStateRef.current = {
@@ -1266,10 +1273,22 @@ const ProductDetail = () => {
     }
     const caratCode = String(Math.round(parsedSize * 100));
 
-    const karat = selectedGoldKarat.replace(/kt/i, "");
-    if (!karat) {
-      console.warn("Invalid gold karat:", selectedGoldKarat);
-      return null;
+    // Determine metal code based on metal type
+    let metalCode = selectedGoldKarat;
+    
+    if (selectedMetalType === "GOLD") {
+      // For gold, extract just the number from "18kt", "14kt", "9kt"
+      metalCode = selectedGoldKarat.replace(/kt/i, "");
+      if (!metalCode) {
+        console.warn("Invalid gold karat:", selectedGoldKarat);
+        return null;
+      }
+    } else if (selectedMetalType === "SILVER") {
+      // For silver, use "SLV" directly
+      metalCode = "SLV";
+    } else if (selectedMetalType === "PLATINUM") {
+      // For platinum, use "PT" directly
+      metalCode = "PT";
     }
 
     const originCode =
@@ -1281,7 +1300,7 @@ const ProductDetail = () => {
       "EFVVS";
     const specifications = `${originCode}${clarityToken}`;
 
-    return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+    return `${modelSku}-${shapeCode}-${caratCode}-${metalCode}-${specifications}`;
   };
 
   const refetchUpdatedProduct = async (substyle: SubStyle) => {
@@ -2182,6 +2201,14 @@ const ProductDetail = () => {
                               onClick={() => {
                                 setSelectedRingStyle(style.name);
                                 setSelectedImage(0); // Reset to first image when style changes
+                                // Fetch variant data for the selected style
+                                if (style.parentSku && style.variants?.[0]?.sku) {
+                                  updateSubstyleProductDetails(
+                                    style.parentSku,
+                                    style.variants[0].sku,
+                                    selectedColorCode
+                                  );
+                                }
                               }}
                               className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${selectedRingStyle === style.name
                                   ? "border-[#328F94] bg-[#328F94]/5 shadow-sm"
@@ -2263,7 +2290,7 @@ const ProductDetail = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(isLabGrownVariant
-                      ? ["Lab Grown Diamond","Natural Diamond"]
+                      ? ["Natural Diamond", "Lab Grown Diamond"]
                       : ["Natural Diamond", "Lab Grown Diamond"]
                     ).map((origin) => (
                       <button
@@ -2462,16 +2489,20 @@ const ProductDetail = () => {
                       value={selectedMetalType}
                       onValueChange={(value) => {
                         setSelectedMetalType(value);
-                        // Reset karat selection when metal type changes
-                        const newKarats =
-                          value === "SILVER"
-                            ? ["SLV"]
-                            : value === "PLATINUM"
-                              ? ["PT"]
-                              : selectedStyleData?.productDetails?.goldKarats?.filter(
-                                (k) => !["925", "950"].includes(k),
-                              ) || ["18kt", "14kt", "9kt"];
-                        setSelectedGoldKarat(newKarats[0] || "");
+                        // Set appropriate karat/purity based on metal type
+                        let newKarat = "";
+                        if (value === "SILVER") {
+                          newKarat = "SLV";
+                        } else if (value === "PLATINUM") {
+                          newKarat = "PT";
+                        } else {
+                          // For GOLD, use available karats from product details or defaults
+                          const availableKarats = selectedStyleData?.productDetails?.goldKarats?.filter(
+                            (k) => !["925", "950"].includes(k),
+                          ) || ["18kt", "14kt", "9kt"];
+                          newKarat = availableKarats[0] || "18kt";
+                        }
+                        setSelectedGoldKarat(newKarat);
                         scrollToImageOnMobile();
                       }}
                     >
@@ -3096,11 +3127,21 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Total Diamond Weight (Approx carats)
+                            Total Diamond Weight
                           </span>
-                          <span className="font-medium">
-                            {selectedDiamondSize || "-"}
+                          <span className="font-medium">{totalDiamondWeight}</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            Certification
                           </span>
+                          <span className="font-medium">IGI/SGL Certified</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            HallMark
+                          </span>
+                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                       </div>
                     </div>
@@ -3113,18 +3154,7 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            SKU Number
-                          </span>
-                          <span className="font-medium">
-                            {selectedStyleData?.productDetails
-                              ?.firstVariantSku ||
-                              derivedProductId ||
-                              "-"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gold/Silver/Platinum Value
+                            {selectedMetalType} Value
                           </span>
                           <span className="font-medium">
                             ₹{" "}
@@ -3191,18 +3221,6 @@ const ProductDetail = () => {
                               ).toLocaleString()
                               : "0"}
                           </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Certification
-                          </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            HallMark
-                          </span>
-                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                         <div className="py-2">
                           <div className="text-muted-foreground mb-2">

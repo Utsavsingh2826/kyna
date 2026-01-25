@@ -46,7 +46,7 @@ const getColorDisplayInfo = (
     YG: { name: "Yellow Gold", img: "/colors/gold.png" },
     RG: { name: "Rose Gold", img: "/colors/rosegold.png" },
     "3T": { name: "Three Tone", img: "/colors/threetone.png" },
-    BR: { name: "Black Rhodium", img: "/colors/BR.png" },
+    BR: { name: "Black Rhodium", img: "/colors/br.png" },
     SLV: { name: "Silver", img: "/colors/white.png" },
     PT: { name: "Platinum", img: "/colors/white.png" },
   };
@@ -153,6 +153,7 @@ interface ProductModelResponse {
   variantImages: string[];
   availableColors?: string[];
   netWeightGrams?: number;
+  totalDiamondWeight?: number;
 }
 
 interface SubStyle {
@@ -226,299 +227,6 @@ const diamondShapes = {
   ],
 };
 
-const GLBViewer = ({
-  modelUrl,
-  className,
-  isMain = false,
-}: {
-  modelUrl: string;
-  className?: string;
-  isMain?: boolean;
-}) => {
-  const mountRef = useRef<HTMLDivElement | null>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const modelRef = useRef<THREE.Group | null>(null);
-  const animationIdRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!mountRef.current) return;
-
-    const initThreeJS = () => {
-      if (!mountRef.current) return;
-
-      // Scene setup
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xf5f5f5);
-      sceneRef.current = scene;
-
-      // Camera setup
-      const camera = new THREE.PerspectiveCamera(
-        75,
-        mountRef.current.clientWidth / mountRef.current.clientHeight,
-        0.1,
-        1000,
-      );
-      camera.position.set(0, 0, 5);
-
-      // Renderer setup
-      const renderer = new THREE.WebGLRenderer({
-        antialias: true,
-        alpha: true,
-      });
-      renderer.setSize(
-        mountRef.current.clientWidth,
-        mountRef.current.clientHeight,
-      );
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      mountRef.current.appendChild(renderer.domElement);
-      rendererRef.current = renderer;
-
-      // Lighting
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(10, 10, 5);
-      directionalLight.castShadow = true;
-      scene.add(directionalLight);
-
-      const pointLight = new THREE.PointLight(0xffffff, 0.3);
-      pointLight.position.set(-10, -10, -5);
-      scene.add(pointLight);
-
-      let diamond: THREE.Mesh | null = null;
-
-      function createPlaceholderModel() {
-        const group = new THREE.Group();
-
-        // Ring band
-        const ringGeometry = new THREE.TorusGeometry(1.2, 0.15, 8, 32);
-        const ringMaterial = new THREE.MeshStandardMaterial({
-          color: 0xffd700,
-          metalness: 0.9,
-          roughness: 0.1,
-        });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.castShadow = true;
-        group.add(ring);
-
-        // Center diamond (simplified)
-        const diamondGeometry = new THREE.OctahedronGeometry(0.3);
-        const diamondMaterial = new THREE.MeshPhysicalMaterial({
-          color: 0xffffff,
-          transparent: true,
-          opacity: 0.9,
-          roughness: 0,
-          metalness: 0,
-          reflectivity: 1,
-          clearcoat: 1,
-          clearcoatRoughness: 0,
-        });
-        diamond = new THREE.Mesh(diamondGeometry, diamondMaterial);
-        diamond.position.y = 0.2;
-        diamond.castShadow = true;
-        group.add(diamond);
-
-        // Small accent diamonds
-        for (let i = 0; i < 8; i++) {
-          const angle = (i / 8) * Math.PI * 2;
-          const smallDiamondGeometry = new THREE.OctahedronGeometry(0.08);
-          const smallDiamond = new THREE.Mesh(
-            smallDiamondGeometry,
-            diamondMaterial,
-          );
-          smallDiamond.position.set(
-            Math.cos(angle) * 1.3,
-            0.1,
-            Math.sin(angle) * 1.3,
-          );
-          smallDiamond.scale.set(0.7, 0.7, 0.7);
-          group.add(smallDiamond);
-        }
-
-        scene.add(group);
-        modelRef.current = group;
-      }
-
-      // Load GLB Model
-      if (modelUrl && modelUrl.endsWith(".glb")) {
-        const loader = new GLTFLoader();
-
-        // Setup DRACO loader for compressed models
-        const dracoLoader = new DRACOLoader();
-        // Use CDN for DRACO decoder files
-        dracoLoader.setDecoderPath(
-          "https://www.gstatic.com/draco/versioned/decoders/1.5.6/",
-        );
-        dracoLoader.preload();
-        loader.setDRACOLoader(dracoLoader);
-
-        loader.load(
-          modelUrl,
-          (gltf) => {
-            const model = gltf.scene;
-
-            // Clear any existing models
-            if (modelRef.current) {
-              scene.remove(modelRef.current);
-            }
-
-            // Auto-scale the model to fit the scene
-            const box = new THREE.Box3().setFromObject(model);
-            const size = box.getSize(new THREE.Vector3()).length();
-            const center = box.getCenter(new THREE.Vector3());
-
-            // Scale the model to fit in the view
-            const scale = isMain ? 2 / size : 1.6 / size;
-            model.scale.setScalar(scale);
-
-            // Center the model
-            model.position.copy(center).multiplyScalar(-scale);
-
-            scene.add(model);
-            modelRef.current = model;
-
-            // Dispose of the DRACO loader after use
-            dracoLoader.dispose();
-          },
-          // (progress) => {},
-          (error) => {
-            console.error("Error loading GLB model:", modelUrl, error);
-
-            dracoLoader.dispose();
-            createPlaceholderModel();
-          },
-        );
-      } else {
-        createPlaceholderModel();
-      }
-
-      // Controls for main viewer (mouse interaction)
-      let isDragging = false;
-      let previousMousePosition = { x: 0, y: 0 };
-
-      const handleMouseDown = (event: MouseEvent) => {
-        if (!isMain) return;
-        isDragging = true;
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-        renderer.domElement.style.cursor = "grabbing";
-      };
-
-      const handleMouseMove = (event: MouseEvent) => {
-        if (!isDragging || !isMain || !modelRef.current) return;
-
-        const deltaMove = {
-          x: event.clientX - previousMousePosition.x,
-          y: event.clientY - previousMousePosition.y,
-        };
-
-        const deltaRotationQuaternion = new THREE.Quaternion().setFromEuler(
-          new THREE.Euler(deltaMove.y * 0.01, deltaMove.x * 0.01, 0, "XYZ"),
-        );
-
-        modelRef.current.quaternion.multiplyQuaternions(
-          deltaRotationQuaternion,
-          modelRef.current.quaternion,
-        );
-        previousMousePosition = { x: event.clientX, y: event.clientY };
-      };
-
-      const handleMouseUp = () => {
-        isDragging = false;
-        if (rendererRef.current) {
-          rendererRef.current.domElement.style.cursor = isMain
-            ? "grab"
-            : "pointer";
-        }
-      };
-
-      const handleWheel = (event: WheelEvent) => {
-        if (!isMain) return;
-        event.preventDefault();
-        camera.position.z += event.deltaY * 0.01;
-        camera.position.z = Math.max(2, Math.min(10, camera.position.z));
-      };
-
-      if (isMain) {
-        renderer.domElement.style.cursor = "grab";
-        renderer.domElement.addEventListener("mousedown", handleMouseDown);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseup", handleMouseUp);
-        renderer.domElement.addEventListener("wheel", handleWheel);
-      }
-
-      // Animation loop
-      const animate = () => {
-        animationIdRef.current = requestAnimationFrame(animate);
-
-        // Auto-rotate for thumbnail
-        if (!isMain && modelRef.current) {
-          modelRef.current.rotation.y += 0.01;
-        }
-
-        // Sparkle effect for diamond
-        if (diamond) {
-          diamond.rotation.y += 0.02;
-        }
-
-        renderer.render(scene, camera);
-      };
-      animate();
-
-      // Handle resize
-      const handleResize = () => {
-        if (!mountRef.current || !camera || !renderer) return;
-        camera.aspect =
-          mountRef.current.clientWidth / mountRef.current.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(
-          mountRef.current.clientWidth,
-          mountRef.current.clientHeight,
-        );
-      };
-
-      window.addEventListener("resize", handleResize);
-
-      // Store cleanup functions
-      const cleanup = () => {
-        if (animationIdRef.current) {
-          cancelAnimationFrame(animationIdRef.current);
-        }
-        if (isMain) {
-          renderer.domElement.removeEventListener("mousedown", handleMouseDown);
-          window.removeEventListener("mousemove", handleMouseMove);
-          window.removeEventListener("mouseup", handleMouseUp);
-          renderer.domElement.removeEventListener("wheel", handleWheel);
-        }
-        window.removeEventListener("resize", handleResize);
-        if (
-          mountRef.current &&
-          renderer.domElement &&
-          mountRef.current.contains(renderer.domElement)
-        ) {
-          mountRef.current.removeChild(renderer.domElement);
-        }
-        renderer.dispose();
-      };
-
-      return cleanup;
-    };
-
-    const cleanup = initThreeJS();
-
-    // Cleanup on unmount
-    return () => {
-      if (cleanup) {
-        cleanup();
-      }
-    };
-  }, [modelUrl, isMain]);
-
-  return <div ref={mountRef} className={className} />;
-};
-
 // Sample product data for metal types (moved outside component to avoid dependency issues)
 const sampleProductData = {
   metalTypes: [
@@ -564,6 +272,8 @@ const ProductDetail = () => {
       year: "numeric",
     });
   }, []);
+
+  const [totalDiamondWeight , setTotalDiamondWeight] = useState(0);
 
   const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     const currentUrl = window.location.href;
@@ -745,6 +455,10 @@ const ProductDetail = () => {
             })),
           );
         }
+        // Update total diamond weight if available
+if (data.totalDiamondWeight) {
+  setTotalDiamondWeight(data.totalDiamondWeight);
+}
       } catch (err) {
         console.error("Failed to update substyle product details:", err);
       }
@@ -2080,7 +1794,7 @@ const ProductDetail = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(isLabGrownVariant
-                      ? ["Lab Grown Diamond","Natural Diamond"]
+                      ? ["Natural Diamond","Lab Grown Diamond"]
                       : ["Natural Diamond", "Lab Grown Diamond"]
                     ).map((origin) => (
                       <button
@@ -2916,11 +2630,23 @@ const ProductDetail = () => {
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            Total Diamond Weight (Approx carats)
+                            Total Diamond Weight
                           </span>
                           <span className="font-medium">
-                            {selectedDiamondSize || "-"}
+                            {totalDiamondWeight || "-"}
                           </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            Certification
+                          </span>
+                          <span className="font-medium">IGI/SGL Certified</span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            HallMark
+                          </span>
+                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                       </div>
                     </div>
@@ -2933,18 +2659,7 @@ const ProductDetail = () => {
                       <div className="space-y-3 text-sm">
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
-                            SKU Number
-                          </span>
-                          <span className="font-medium">
-                            {selectedStyleData?.productDetails
-                              ?.firstVariantSku ||
-                              derivedProductId ||
-                              "-"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Gold/Silver/Platinum Value
+                            {selectedMetalType} Value
                           </span>
                           <span className="font-medium">
                             ₹{" "}
@@ -3011,18 +2726,6 @@ const ProductDetail = () => {
                                 ).toLocaleString()
                               : "0"}
                           </span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            Certification
-                          </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
-                        </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
-                          <span className="text-muted-foreground">
-                            HallMark
-                          </span>
-                          <span className="font-medium">BIS HALLMARK</span>
                         </div>
                         <div className="py-2">
                           <div className="text-muted-foreground mb-2">

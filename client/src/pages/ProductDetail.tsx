@@ -104,6 +104,7 @@ interface ProductData {
   availableColors?: string[];
   bandwidth?: string[];
   finishing?: Array<{ code: string; type: string }>;
+   totalDiamondWeight?: number;
 }
 
 // Map color codes to display info (handles both single and combination colors)
@@ -266,6 +267,7 @@ const ProductDetail = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
+  const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
   /* State for share modal */
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
@@ -776,6 +778,11 @@ const ProductDetail = () => {
           // This sets the general metal type, keeping for metal color selection
         }
 
+        //set total diamond weight
+        if (data.totalDiamondWeight) {
+          setTotalDiamondWeight(data.totalDiamondWeight);
+        }
+
         // Set initial diamond shape if available
         if (data.diamondShape && data.diamondShape.length > 0) {
           setSelectedDiamondShape(String(data.diamondShape[0]));
@@ -1080,8 +1087,10 @@ const ProductDetail = () => {
         karatCode = normalizedKarat.includes("kt")
           ? normalizedKarat.replace("kt", "")
           : normalizedKarat;
-      } else {
-        karatCode = metalCodeMap[selectedMetalType];
+      } else if (selectedMetalType === "PLATINUM") {
+        karatCode = "PT";
+      } else if (selectedMetalType === "SILVER") {
+        karatCode = "SLV";
       }
 
       // If both shape and carat are empty, use 4-part format: modelSku-karat-specs-size
@@ -1097,19 +1106,19 @@ const ProductDetail = () => {
 
     let karatCode = "18";
 
-    const metalCodeMap: { [key: string]: string } = {
-      GOLD: "",
-      PLATINUM: "PT",
-      SILVER: "SLV",
-    };
-
+    // Determine metal code based on metal type
     if (selectedMetalType === "GOLD") {
+      // For gold, extract just the number from "18kt", "14kt", "9kt"
       const normalizedKarat = normalizeKarat(selectedGoldKarat);
       karatCode = normalizedKarat.includes("kt")
         ? normalizedKarat.replace("kt", "")
         : normalizedKarat;
-    } else {
-      karatCode = metalCodeMap[selectedMetalType];
+    } else if (selectedMetalType === "PLATINUM") {
+      // For platinum, use "PT" directly
+      karatCode = "PT";
+    } else if (selectedMetalType === "SILVER") {
+      // For silver, use "SLV" directly
+      karatCode = "SLV";
     }
 
     const originCode =
@@ -2785,8 +2794,24 @@ const ProductDetail = () => {
                       value={selectedMetalType}
                       onValueChange={(value) => {
                         setSelectedMetalType(value);
-                        // Clear karat selection when metal type changes
-                        setSelectedGoldKarat("");
+                        // Set appropriate karat/purity based on metal type
+                        let newKarat = "";
+                        if (value === "SILVER") {
+                          newKarat = "925";
+                        } else if (value === "PLATINUM") {
+                          newKarat = "950";
+                        } else {
+                          // For GOLD, filter and get first available gold karat
+                          const availableGoldKarats = (productData?.goldKarats || [])
+                            .filter((k) => normalizeKarat(k).includes("kt"))
+                            .sort((a, b) => {
+                              const numA = parseInt(normalizeKarat(a));
+                              const numB = parseInt(normalizeKarat(b));
+                              return numB - numA; // Descending order
+                            });
+                          newKarat = availableGoldKarats.length > 0 ? normalizeKarat(availableGoldKarats[0]) : "18kt";
+                        }
+                        setSelectedGoldKarat(newKarat);
 
                         // Auto-switch to Lab Grown Diamond if Silver is selected and Natural Diamond is currently selected
                         if (
@@ -3444,6 +3469,12 @@ const ProductDetail = () => {
                           <span className="font-medium">
                             {selectedColorClarity}
                           </span>
+                        </div>
+                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                          <span className="text-muted-foreground">
+                            Total Diamond Weight
+                          </span>
+                          <span className="font-medium">{totalDiamondWeight}</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">

@@ -763,7 +763,6 @@ async function processProductsWithBatchedPricing(
           diamondIncomplete = true;
           continue;
         }
-
         const pricingData = pricingMap.get(seq);
         const pricePerCt = pricingData?.price ?? NaN;
 
@@ -970,19 +969,19 @@ export const getProductByModelSku = async (
       if (parts.length < 2) return parsed;
 
       // // Part 1: shape (letters only, typically 2-3 chars like EM, RD, PR)
-      // if (parts[1] && /^[A-Z]{2,4}$/i.test(parts[1])) {
-      //   parsed.shape = parts[1].toUpperCase();
-      // }
+      if (parts[1] && /^[A-Z]{2,4}$/i.test(parts[1])) {
+        parsed.shape = parts[1].toUpperCase();
+      }
 
       // Part 2: size (numeric, could be 10, 15, 20, etc.)
-      // if (parts[2] && /^\d+(\.\d+)?$/.test(parts[2])) {
-      //   parsed.size = parts[2];
-      // }
+      if (parts[2] && /^\d+(\.\d+)?$/.test(parts[2])) {
+        parsed.size = parts[2];
+      }
 
       // Part 3: karat (numeric, like 9, 14, 18)
-      // if (parts[3] && /^\d+$/.test(parts[3])) {
-      //   parsed.karat = parts[3];
-      // }
+      if (parts[3] && /^\d+$/.test(parts[3])) {
+        parsed.karat = parts[3];
+      }
 
       // Part 4: diamond type + clarity (e.g., LGEFVVS, NDGHSI)
       if (parts[4]) {
@@ -1564,12 +1563,23 @@ export const getProductByModelSku = async (
     // ----------------- Parse the chosen variant SKU -----------------
     const parsedSKU = parseSKU(chosenVariantSku!);
     console.debug("[getProductByModelSku] parsedSKU:", parsedSKU);
+    const activeMetal =
+      firstVariantDoc?.metalType
+        ? String(firstVariantDoc.metalType).toUpperCase()
+        : metalTypes.length === 1
+          ? metalTypes[0].toUpperCase()
+          : "GOLD";
+
+    const metalToken =
+      activeMetal === "SILVER" ? "SLV" :
+        activeMetal === "PLATINUM" ? "PT" :
+          parsedSKU.karat; // GOLD
 
     const skuPrefix = [
       parsedSKU.modelSku,
       parsedSKU.shape,
       parsedSKU.size,
-      parsedSKU.karat,
+      metalToken,
     ].filter(Boolean).join("-");
 
 
@@ -1603,13 +1613,38 @@ export const getProductByModelSku = async (
 
           const normalizedClarity = clarity.replace(/\s+/g, ""); // "EF VVS" → "EFVVS"
 
-          const candidateSKU = `${skuPrefix}-${skuDiamondType}${normalizedClarity}`;
+          // const candidateSKU = `${skuPrefix}-${skuDiamondType}${normalizedClarity}`;
 
 
-          if (!candidateSKU) continue;
+          // if (!candidateSKU) continue;
 
-          // Check if this variant actually exists
-          if (!variantSkuSet.has(candidateSKU.toUpperCase())) continue;
+          // // Check if this variant actually exists
+          // if (!variantSkuSet.has(candidateSKU.toUpperCase())) continue;
+
+          for (const sku of variantSkuSet) {
+            if (
+              sku.includes(`-${skuDiamondType}${normalizedClarity}`)
+            ) {
+              const parts = sku.split("-");
+              const metalPart = parts[3]; // 14 | PT | SLV
+
+              let resolvedMetal =
+                metalPart === "SLV" ? "SILVER" :
+                  metalPart === "PT" ? "PLATINUM" :
+                    "GOLD";
+
+              if (!confirmedDiamondOptions[dType]) {
+                confirmedDiamondOptions[dType] = {};
+              }
+
+              if (!confirmedDiamondOptions[dType][resolvedMetal]) {
+                confirmedDiamondOptions[dType][resolvedMetal] = [];
+              }
+
+              confirmedDiamondOptions[dType][resolvedMetal].push(clarity);
+            }
+          }
+
 
           // Only NOW we accept this option
           if (!confirmedDiamondOptions[dType]) {
@@ -1618,8 +1653,7 @@ export const getProductByModelSku = async (
           if (!confirmedDiamondOptions[dType][metal]) {
             confirmedDiamondOptions[dType][metal] = [];
           }
-
-          confirmedDiamondOptions[dType][metal].push(clarity);
+          confirmedDiamondOptions[dType][metal].push(clarity)
         }
       }
     }
@@ -1800,6 +1834,7 @@ export const getProductByModelSku = async (
     const priceIncompleteReasons: string[] = [];
 
     let netWeightGrams: number | null = null;
+    let totalDiamondWeight = 0;
 
     if (firstVariantDoc) {
       try {
@@ -1887,6 +1922,7 @@ export const getProductByModelSku = async (
           }
 
           diamondCost += pricePerCt * cts;
+          totalDiamondWeight += cts;
         }
 
         // Add variant expense to diamond cost
@@ -1966,7 +2002,7 @@ export const getProductByModelSku = async (
 
         if (netWeightGrams && !Number.isNaN(metalPricePerGram)) {
           metalCost = metalPricePerGram * netWeightGrams;
-          labourCost = resolvedLabourCost * netWeightGrams;
+          labourCost = resolvedLabourCost;
         } else {
           metalIncomplete = true;
           if (!netWeightGrams)
@@ -1987,8 +2023,8 @@ export const getProductByModelSku = async (
         const totalWithGst = totalBeforeGst + gstAmount;
 
         sellingPrice =
-          !Number.isNaN(totalBeforeGst) && totalBeforeGst > 0
-            ? Math.round(totalBeforeGst)
+          !Number.isNaN(totalWithGst) && totalWithGst > 0
+            ? Math.round(totalWithGst)
             : null;
 
         priceIncomplete =
@@ -2123,6 +2159,7 @@ export const getProductByModelSku = async (
       variantImages,
       availableColors,
       netWeightGrams,
+      totalDiamondWeight,
     };
 
     return res.status(200).json(response);
