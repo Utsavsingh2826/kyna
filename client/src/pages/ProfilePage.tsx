@@ -18,7 +18,8 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
-import { updateUser } from "@/store/slices/authSlice";
+import { updateUser, logoutSucceeded } from "@/store/slices/authSlice";
+import { clearCart } from "@/store/slices/cartSlice";
 import type { RootState } from "@/store";
 import { Country, State, City } from "country-state-city";
 import apiService from "@/services/api";
@@ -407,6 +408,11 @@ const ProfilePage: React.FC = () => {
     // Clear user data from localStorage
     localStorage.removeItem("user");
     localStorage.removeItem("token");
+    localStorage.removeItem("isAuthenticated");
+
+    // Dispatch logout actions
+    dispatch(logoutSucceeded());
+    dispatch(clearCart());
 
     // Redirect to home page or login page
     window.location.href = "/";

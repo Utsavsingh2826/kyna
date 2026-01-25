@@ -3549,7 +3549,7 @@ const ProductDetail = () => {
                           <span>
                             Rs.{" "}
                             {Math.round(
-                              productData.priceBreakdown.totalBeforeGst,
+                              productData.priceBreakdown.totalWithGst,
                             ).toLocaleString()}
                             /-
                           </span>

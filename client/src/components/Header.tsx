@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/store";
 import { logoutSucceeded } from "@/store/slices/authSlice";
 import { clearAccessToken } from "@/lib/authToken";
+import { clearCart } from "@/store/slices/cartSlice";
 import {
   Menu,
   User,
@@ -98,6 +99,7 @@ export default function Navbar() {
     }
     clearAccessToken();
     dispatch(logoutSucceeded());
+    dispatch(clearCart());
     setIsUserMenuOpen(false);
     navigate("/");
   };

@@ -182,8 +182,7 @@ const PaymentPage = () => {
     totalAmount - promoDiscount - walletDiscount,
     0,
   );
-  const taxAmount = Math.round(subtotalAfterDiscounts * 0.03);
-  const payableAmount = subtotalAfterDiscounts + taxAmount;
+  const payableAmount = subtotalAfterDiscounts;
 
   // Get user info from Redux auth state
   const userInfo = {
@@ -214,7 +213,6 @@ const PaymentPage = () => {
     promoDiscount,
     referralWallet: walletDiscount,
     taxableAmount: subtotalAfterDiscounts,
-    tax: taxAmount,
     payableAmount,
     diamondSubtotal,
   };
@@ -688,10 +686,6 @@ const PaymentPage = () => {
                     <span>-₹{walletDiscount.toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>Tax (3%)</span>
-                  <span>₹{taxAmount.toLocaleString()}</span>
-                </div>
                 <div className="border-t pt-3 mt-3">
                   <div className="flex justify-between font-semibold text-gray-900">
                     <span>Total Payable</span>
