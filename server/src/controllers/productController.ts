@@ -2142,177 +2142,108 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
       .toString()
       .trim()
       .toUpperCase();
+
     if (!stylingName) {
-      return res
-        .status(400)
-        .json({ success: false, message: "stylingName is required" });
+      return res.status(400).json({
+        success: false,
+        message: "stylingName is required",
+      });
     }
 
     const conn = getCatalogConnection();
-    const builderColl = conn.collection("builder");
-    const variantsColl = conn.collection("variants");
+    const variantsColl = conn.collection("variants2");
 
-    // Fetch builder rows for the styling (trimmed)
-    const builderRows = await builderColl
-      .aggregate([
+    // =========================
+    // 1️⃣ Fetch all variants for this builder style
+    // =========================
+    const variants = await variantsColl
+      .find(
         {
-          $addFields: {
-            stylingTrim: { $trim: { input: "$STYLING NAME" } },
-            parentTrim: { $trim: { input: "$PARENT SKU" } },
-            builderViewTrim: { $trim: { input: "$BUILDER VIEW" } },
+          "attributes.BUILDER STYLE NAME": stylingName,
+        },
+        {
+          projection: {
+            variantSku: 1,
+            images: 1,
+            "attributes.PARENT SKU": 1,
+            "attributes.BUILDER STYLE NAME": 1,
           },
         },
-        { $match: { stylingTrim: stylingName } },
-        {
-          $project: {
-            _id: 0,
-            parentSku: "$parentTrim",
-            builderView: "$builderViewTrim",
-            category: "$CATEGORY",
-          },
-        },
-      ])
+      )
       .toArray();
 
-    if (!builderRows.length) {
-      return res.json({ success: true, stylingName, count: 0, entries: [] });
-    }
-
-    const escapeRegExp = (s: string) =>
-      s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-    const STOP_PARTS = new Set(["WG", "RG", "YG"]);
-
-    const entries: Array<{
-      parentSku: string | null;
-      builderView: string;
-      selectedImage: string | null;
-      variants: { sku: string }[];
-    }> = [];
-
-    for (const row of builderRows) {
-      const parentSkuRaw = (row.parentSku || "").toString().trim();
-      const builderViewRaw = (row.builderView || "").toString().trim();
-      if (!builderViewRaw) continue;
-
-      const parentSku = parentSkuRaw.toUpperCase();
-      const builderView = builderViewRaw.toUpperCase();
-
-      // split and trim parts, then stop before any STOP_PARTS (WG, RG, YG)
-      const rawParts = builderView
-        .split("-")
-        .map((p) => p.trim())
-        .filter(Boolean);
-      let parts: string[] = [];
-      for (const p of rawParts) {
-        const pu = p.toUpperCase();
-        if (STOP_PARTS.has(pu)) break;
-        parts.push(pu);
-      }
-      if (parts.length === 0) parts = rawParts.slice();
-
-      // Build prefixRegexStr
-      let prefixRegexStr: string;
-      if (parts.length >= 3) {
-        const p0 = escapeRegExp(parts[0]);
-        const p1 = escapeRegExp(parts[1]);
-        const thirdRaw = parts[2];
-
-        if (/^\d+$/.test(thirdRaw)) {
-          const thirdDigits = thirdRaw.replace(/^0+/, "") || thirdRaw;
-          prefixRegexStr = `^${p0}-${p1}-0*${escapeRegExp(thirdDigits)}`;
-        } else {
-          const firstThree = escapeRegExp(parts.slice(0, 3).join("-"));
-          prefixRegexStr = `^${firstThree}`;
-        }
-      } else if (parts.length > 0) {
-        const joined = escapeRegExp(parts.join("-"));
-        prefixRegexStr = `^${joined}`;
-      } else {
-        prefixRegexStr = `^${escapeRegExp(builderView)}`;
-      }
-
-      // Query clauses
-      const skuClause = { sku: { $regex: prefixRegexStr, $options: "i" } };
-      const modelSkuClause = parentSku
-        ? { modelSku: { $regex: `^${escapeRegExp(parentSku)}`, $options: "i" } }
-        : null;
-
-      // 1) Try modelSku + sku
-      let matchedVariants: any[] = [];
-      if (modelSkuClause) {
-        matchedVariants = await variantsColl
-          .find({ $and: [modelSkuClause, skuClause] })
-          .project({ sku: 1, images: 1 })
-          .toArray();
-      }
-
-      // 2) Fallback: sku-only
-      if (!matchedVariants || matchedVariants.length === 0) {
-        matchedVariants = await variantsColl
-          .find({ sku: skuClause.sku })
-          .project({ sku: 1, images: 1 })
-          .toArray();
-      }
-
-      // 3) Last ditch: contains match on the whole builderView
-      if (!matchedVariants || matchedVariants.length === 0) {
-        matchedVariants = await variantsColl
-          .find({ sku: { $regex: escapeRegExp(builderView), $options: "i" } })
-          .project({ sku: 1, images: 1 })
-          .toArray();
-      }
-
-      // Select image: prefer image whose filename/url contains the original builderView (full)
-      let selectedImage: string | null = null;
-      for (const v of matchedVariants) {
-        const imgs = Array.isArray(v.images) ? v.images : [];
-        if (!imgs.length) continue;
-        for (const img of imgs) {
-          const candidate = (img?.url ?? img?.filename ?? img) as
-            | string
-            | undefined;
-          if (!candidate) continue;
-          const name = candidate.split("/").pop() || candidate;
-          const dot = name.lastIndexOf(".");
-          const basename = dot === -1 ? name : name.slice(0, dot);
-          const candUpper = (
-            candidate +
-            "|" +
-            name +
-            "|" +
-            basename
-          ).toUpperCase();
-          if (candUpper.includes(builderView)) {
-            selectedImage = candidate;
-            break;
-          }
-        }
-        if (selectedImage) break;
-      }
-
-      // Fallback to first available image
-      if (!selectedImage) {
-        const v = matchedVariants.find(
-          (x: any) => Array.isArray(x.images) && x.images.length,
-        );
-        if (v) {
-          const first = v.images[0];
-          selectedImage = (first?.url ?? first?.filename ?? first) || null;
-        }
-      }
-
-      const variantsOut = (matchedVariants || []).map((v: any) => ({
-        sku: v.sku,
-      }));
-
-      entries.push({
-        parentSku: parentSku || null,
-        builderView: builderViewRaw,
-        selectedImage,
-        variants: variantsOut,
+    if (!variants.length) {
+      return res.json({
+        success: true,
+        stylingName,
+        count: 0,
+        entries: [],
       });
     }
+
+    // =========================
+    // 2️⃣ Group by parentSku
+    // =========================
+    const grouped: Record<
+      string,
+      {
+        parentSku: string;
+        builderStyle: string;
+        selectedImage: string | null;
+        variants: { sku: string }[];
+      }
+    > = {};
+
+    for (const v of variants) {
+      const parentSku =
+        v?.attributes?.["PARENT SKU"]?.toString().toUpperCase() || "UNKNOWN";
+
+      if (!grouped[parentSku]) {
+        grouped[parentSku] = {
+          parentSku,
+          builderStyle: stylingName,
+          selectedImage: null,
+          variants: [],
+        };
+      }
+
+      if (v.variantSku) {
+        grouped[parentSku].variants.push({ sku: v.variantSku });
+      }
+
+      // Pick first valid image deterministically
+      if (!grouped[parentSku].selectedImage && Array.isArray(v.images)) {
+        const images = v.images
+          .map((i: any) => i?.url ?? i?.filename ?? i)
+          .filter(Boolean) as string[];
+
+        // helper for case-insensitive matching without mutating URL
+        const hasCode = (url: string, code: string) =>
+          new RegExp(`[-_\/]${code}(\\.|-|_|$)`, "i").test(url);
+
+        // 1️⃣ Prefer GP
+        let selected = images.find((u) => hasCode(u, "GP"));
+
+        // 2️⃣ Fallback to FV
+        if (!selected) {
+          selected = images.find((u) => hasCode(u, "FV"));
+        }
+
+        // 3️⃣ Final fallback
+        if (!selected && images.length) {
+          selected = images[0];
+        }
+
+        grouped[parentSku].selectedImage = selected ?? null;
+      }
+
+
+    }
+
+    // =========================
+    // 3️⃣ Final response
+    // =========================
+    const entries = Object.values(grouped);
 
     return res.json({
       success: true,

@@ -2074,7 +2074,7 @@ export default function RingBuilder() {
                 {/* Assistance Header */}
                 <div className="text-center text-sm text-gray-600 mb-6">
                   <a
-                    href="https://wa.me/918235567890"
+                    href="https://wa.me/918928610682"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-gray-500 hover:underline"
@@ -2083,7 +2083,7 @@ export default function RingBuilder() {
                   </a>{" "}
                   &nbsp;or&nbsp;
                   <a href="tel:+918928610682" className="hover:underline">
-                    call <span className="underline">+91 8235567890</span>
+                    call <span className="underline">+91 8928610682</span>
                   </a>
                 </div>
                 <p className="font-medium text-red-500">

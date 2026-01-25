@@ -266,6 +266,18 @@ const ProductDetail = () => {
     (state: RootState) => state.auth,
   );
 
+  // Track the last valid state for reverting when variant not found
+  const lastValidStateRef = useRef({
+    metalColor: "White Gold",
+    colorCode: "WG",
+    diamondShape: "Oval",
+    diamondSize: "",
+    diamondOrigin: "Natural Diamond",
+    colorClarity: "",
+    goldKarat: "",
+    metalType: "GOLD",
+  });
+
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
     getInitialStyleAndDesign(),
@@ -586,16 +598,13 @@ const ProductDetail = () => {
   const [showAllColors, setShowAllColors] = useState(false);
 
   // Use the thumbnail images from the selected style data
-  const thumbnailImages = selectedStyleData?.thumbnailImages || [
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/about/2.jpg",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-  ];
+  const thumbnailImages = selectedStyleData?.thumbnailImages || [];
+  
+  // Check if images are still loading (no real thumbnail data yet)
+  const isImagesLoading = loading || !selectedStyleData?.thumbnailImages || selectedStyleData.thumbnailImages.length === 0;
+  
+  // Skeleton placeholder count for loading state
+  const skeletonCount = 4;
 
   const generateVariantId = useCallback(
     (substyle: SubStyle) => {
@@ -605,6 +614,11 @@ const ProductDetail = () => {
       // Use first variant if no variant selected
       const base = variants?.[0]?.sku.split("-");
       if (!base) return null;
+
+      // Validate required selections
+      if (!selectedDiamondSize || !selectedGoldKarat || !selectedDiamondShape) {
+        return null;
+      }
 
       const shapeCodeMap: { [key: string]: string } = {
         ROUND: "RD",
@@ -620,11 +634,14 @@ const ProductDetail = () => {
       const shapeCode =
         shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
 
+      const parsedSize = parseFloat(selectedDiamondSize);
+      if (isNaN(parsedSize)) return null;
       const caratCode = String(
-        Math.round(parseFloat(selectedDiamondSize) * 100),
+        Math.round(parsedSize * 100),
       );
 
       const karat = selectedGoldKarat.replace(/kt/i, "");
+      if (!karat) return null;
 
       const originCode =
         selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
@@ -661,32 +678,80 @@ const ProductDetail = () => {
       };
       const metalColor = colorCodeMap[selectedMetalColor] || "WG";
 
-      const res = await fetch(
-        `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
-      );
-
-      const data: ProductModelResponse = await res.json();
-      if (data.success) {
-        setStyleAndDesign((prev) =>
-          prev.map((cat) => ({
-            ...cat,
-            substyles: cat.substyles.map((s) =>
-              s.parentSku === substyle.parentSku
-                ? {
-                    ...s,
-                    productDetails: data,
-                    price: new Intl.NumberFormat("en-IN").format(
-                      data.sellingPrice,
-                    ),
-                    thumbnailImages: data.variantImages,
-                  }
-                : s,
-            ),
-          })),
+      try {
+        const res = await fetch(
+          `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
         );
+
+        const data: ProductModelResponse = await res.json();
+
+        if (
+          !res.ok ||
+          (!data.success &&
+            typeof data === "object" &&
+            "message" in data &&
+            typeof data.message === "string" &&
+            data.message.includes("Variant not found"))
+        ) {
+          toast.error(
+            "This combination is not available. Reverted to previous selection.",
+          );
+          setSelectedMetalColor(lastValidStateRef.current.metalColor);
+          setSelectedColorCode(lastValidStateRef.current.colorCode);
+          setSelectedDiamondShape(lastValidStateRef.current.diamondShape);
+          setSelectedDiamondSize(lastValidStateRef.current.diamondSize);
+          setSelectedDiamondOrigin(lastValidStateRef.current.diamondOrigin);
+          setSelectedColorClarity(lastValidStateRef.current.colorClarity);
+          setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
+          setSelectedMetalType(lastValidStateRef.current.metalType);
+          return;
+        }
+
+        if (data.success) {
+          setStyleAndDesign((prev) =>
+            prev.map((cat) => ({
+              ...cat,
+              substyles: cat.substyles.map((s) =>
+                s.parentSku === substyle.parentSku
+                  ? {
+                      ...s,
+                      productDetails: data,
+                      price: new Intl.NumberFormat("en-IN").format(
+                        data.sellingPrice,
+                      ),
+                      thumbnailImages: data.variantImages,
+                    }
+                  : s,
+              ),
+            })),
+          );
+
+          lastValidStateRef.current = {
+            metalColor: selectedMetalColor,
+            colorCode: selectedColorCode,
+            diamondShape: selectedDiamondShape,
+            diamondSize: selectedDiamondSize,
+            diamondOrigin: selectedDiamondOrigin,
+            colorClarity: selectedColorClarity,
+            goldKarat: selectedGoldKarat,
+            metalType: selectedMetalType,
+          };
+        }
+      } catch (error) {
+        toast.error(
+          "Failed to load variant. Reverted to previous selection.",
+        );
+        setSelectedMetalColor(lastValidStateRef.current.metalColor);
+        setSelectedColorCode(lastValidStateRef.current.colorCode);
+        setSelectedDiamondShape(lastValidStateRef.current.diamondShape);
+        setSelectedDiamondSize(lastValidStateRef.current.diamondSize);
+        setSelectedDiamondOrigin(lastValidStateRef.current.diamondOrigin);
+        setSelectedColorClarity(lastValidStateRef.current.colorClarity);
+        setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
+        setSelectedMetalType(lastValidStateRef.current.metalType);
       }
     },
-    [generateVariantId, selectedMetalColor],
+    [generateVariantId, selectedMetalColor, selectedColorCode, selectedDiamondShape, selectedDiamondSize, selectedDiamondOrigin, selectedColorClarity, selectedGoldKarat, selectedMetalType],
   );
 
   // Log when thumbnail images change
@@ -937,9 +1002,49 @@ const ProductDetail = () => {
     selectedStyleData?.productDetails?.diamondSize,
   ]);
 
+  // Initialize lastValidStateRef with the first loaded state
+  const initialStateSetRef = useRef(false);
+  useEffect(() => {
+    if (
+      selectedStyleData?.productDetails &&
+      !initialStateSetRef.current &&
+      selectedMetalColor &&
+      selectedColorCode &&
+      selectedMetalType
+    ) {
+      lastValidStateRef.current = {
+        metalColor: selectedMetalColor,
+        colorCode: selectedColorCode,
+        diamondShape: selectedDiamondShape,
+        diamondSize: selectedDiamondSize,
+        diamondOrigin: selectedDiamondOrigin,
+        colorClarity: selectedColorClarity,
+        goldKarat: selectedGoldKarat,
+        metalType: selectedMetalType,
+      };
+      initialStateSetRef.current = true;
+    }
+  }, [
+    selectedStyleData?.productDetails,
+    selectedMetalColor,
+    selectedColorCode,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedDiamondOrigin,
+    selectedColorClarity,
+    selectedGoldKarat,
+    selectedMetalType,
+  ]);
+
   // Refetch variant when selection changes - similar to bracelet builder
   useEffect(() => {
     if (!selectedStyleData?.parentSku) return;
+    
+    // Don't refetch if required selections are not set yet
+    if (!selectedDiamondSize || !selectedGoldKarat || !selectedDiamondShape) {
+      return;
+    }
+    
     refetchUpdatedProduct(selectedStyleData);
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -994,52 +1099,61 @@ const ProductDetail = () => {
                       msOverflowStyle: "none",
                     }}
                   >
-                    {thumbnailImages.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setSelectedImage(index);
-                        }}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-200 hover:border-neutral-300"
-                        }`}
-                      >
-                        {is3DModel(image, index) ? (
-                          <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <img
-                              src="/3D/green.svg"
-                              className="w-16 h-16"
-                              alt=""
-                            />
-                          </div>
-                        ) : isVideo(image) ? (
-                          <div className="relative w-full h-full">
-                            <video
-                              src={image}
-                              className="w-full h-full object-cover"
-                              muted
-                              preload="metadata"
-                            />
-                            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                              <div className="bg-white/90 rounded-full p-2">
-                                <Play
-                                  className="w-3 h-3 text-gray-700"
-                                  fill="currentColor"
+                    {isImagesLoading
+                      ? // Show skeleton placeholders when loading
+                        Array.from({ length: skeletonCount }).map((_, index) => (
+                          <div
+                            key={`skeleton-${index}`}
+                            className="w-16 h-16 rounded-lg overflow-hidden border-2 border-neutral-200 flex-shrink-0 bg-gray-200 animate-pulse"
+                          />
+                        ))
+                      : // Show actual images when loaded
+                        thumbnailImages.map((image, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              setSelectedImage(index);
+                            }}
+                            className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
+                              selectedImage === index
+                                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                                : "border-neutral-200 hover:border-neutral-300"
+                            }`}
+                          >
+                            {is3DModel(image, index) ? (
+                              <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                                <img
+                                  src="/3D/green.svg"
+                                  className="w-16 h-16"
+                                  alt=""
                                 />
                               </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <img
-                            src={image}
-                            alt={`Product ${index + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                      </button>
-                    ))}
+                            ) : isVideo(image) ? (
+                              <div className="relative w-full h-full">
+                                <video
+                                  src={image}
+                                  className="w-full h-full object-cover"
+                                  muted
+                                  preload="metadata"
+                                />
+                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                  <div className="bg-white/90 rounded-full p-2">
+                                    <Play
+                                      className="w-3 h-3 text-gray-700"
+                                      fill="currentColor"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <img
+                                src={image}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </button>
+                        ))}
                   </div>
                   <button
                     onClick={scrollThumbnailsDown}
@@ -1054,6 +1168,15 @@ const ProductDetail = () => {
                 <div ref={imageContainerRef} style={{ scrollMarginTop: "160px" }} className="flex-1 w-full min-w-0">
                   <div className="relative aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
                     {(() => {
+                      // Show skeleton placeholder when loading
+                      if (isImagesLoading) {
+                        return (
+                          <div className="w-full h-full bg-gray-200 animate-pulse flex items-center justify-center">
+                            <div className="w-16 h-16 bg-gray-300 rounded-full animate-pulse" />
+                          </div>
+                        );
+                      }
+
                       const currentImage =
                         thumbnailImages[selectedImage] ||
                         thumbnailImages[0] ||
@@ -1140,50 +1263,59 @@ const ProductDetail = () => {
                         scrollBehavior: "smooth",
                       }}
                     >
-                      {thumbnailImages.map((image, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedImage(index)}
-                          className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                            selectedImage === index
-                              ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                              : "border-neutral-200 hover:border-neutral-300"
-                          }`}
-                        >
-                          {is3DModel(image, index) ? (
-                            <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                              <img
-                                src="/3D/green.svg"
-                                className="w-16 h-16"
-                                alt=""
-                              />
-                            </div>
-                          ) : isVideo(image) ? (
-                            <div className="relative w-full h-full">
-                              <video
-                                src={image}
-                                className="w-full h-full object-cover"
-                                muted
-                                preload="metadata"
-                              />
-                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                <div className="bg-white/90 rounded-full p-2">
-                                  <Play
-                                    className="w-3 h-3 text-gray-700"
-                                    fill="currentColor"
+                      {isImagesLoading
+                        ? // Show skeleton placeholders when loading
+                          Array.from({ length: skeletonCount }).map((_, index) => (
+                            <div
+                              key={`skeleton-mobile-${index}`}
+                              className="w-16 h-16 rounded-lg overflow-hidden border-2 border-neutral-200 flex-shrink-0 bg-gray-200 animate-pulse"
+                            />
+                          ))
+                        : // Show actual images when loaded
+                          thumbnailImages.map((image, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedImage(index)}
+                              className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
+                                selectedImage === index
+                                  ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                                  : "border-neutral-200 hover:border-neutral-300"
+                              }`}
+                            >
+                              {is3DModel(image, index) ? (
+                                <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                                  <img
+                                    src="/3D/green.svg"
+                                    className="w-16 h-16"
+                                    alt=""
                                   />
                                 </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <img
-                              src={image}
-                              alt={`Product ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                        </button>
-                      ))}
+                              ) : isVideo(image) ? (
+                                <div className="relative w-full h-full">
+                                  <video
+                                    src={image}
+                                    className="w-full h-full object-cover"
+                                    muted
+                                    preload="metadata"
+                                  />
+                                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                                    <div className="bg-white/90 rounded-full p-2">
+                                      <Play
+                                        className="w-3 h-3 text-gray-700"
+                                        fill="currentColor"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <img
+                                  src={image}
+                                  alt={`Product ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </button>
+                          ))}
                     </div>
                     <button
                       onClick={scrollThumbnailsRight}
@@ -1423,25 +1555,18 @@ const ProductDetail = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(isLabGrownVariant
-                      ? ["Lab Grown Diamond"]
+                      ? ["Lab Grown Diamond","Natural Diamond"]
                       : ["Natural Diamond", "Lab Grown Diamond"]
                     ).map((origin) => (
                       <button
                         key={origin}
                         onClick={() => {
-                          if (!isLabGrownVariant) {
                             setSelectedDiamondOrigin(origin);
-                            scrollToImageOnMobile();
-                          }
                         }}
                         className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
                           selectedDiamondOrigin === origin
                             ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
                             : "border-neutral-600 text-neutral-600"
-                        } ${
-                          isLabGrownVariant && origin !== "Lab Grown Diamond"
-                            ? "opacity-50 pointer-events-none"
-                            : ""
                         }`}
                       >
                         {origin}
@@ -1512,7 +1637,6 @@ const ProductDetail = () => {
                         value={selectedColorClarity}
                         onValueChange={(value) => {
                         setSelectedColorClarity(value);
-                        scrollToImageOnMobile();
                       }}
                       >
                         <SelectTrigger className="w-full text-sm border-neutral-300">
@@ -1665,7 +1789,6 @@ const ProductDetail = () => {
                             key={`${karat}-${index}`}
                             onClick={() => {
                               setSelectedGoldKarat(karat);
-                              scrollToImageOnMobile();
                             }}
                             className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
                               selectedGoldKarat === karat

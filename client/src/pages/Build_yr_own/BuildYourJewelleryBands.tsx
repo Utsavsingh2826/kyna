@@ -639,6 +639,20 @@ const ProductDetail = () => {
   const [selectedBandwidth, setSelectedBandwidth] = useState("");
   const [selectedFinishing, setSelectedFinishing] = useState("");
 
+  // Track the last valid state for reverting when variant not found
+  const lastValidStateRef = useRef({
+    metalColor: "White Gold",
+    colorCode: "WG",
+    diamondShape: "Oval",
+    diamondSize: "",
+    diamondOrigin: "Natural Diamond",
+    colorClarity: "",
+    goldKarat: "",
+    metalType: "GOLD",
+    bandwidth: "",
+    finishing: "",
+  });
+
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
     getInitialStyleAndDesign(),
@@ -751,16 +765,13 @@ const ProductDetail = () => {
   };
 
   // Use the thumbnail images from the selected style data
-  const thumbnailImages = selectedStyleData?.thumbnailImages || [
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/about/2.jpg",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-    "/build_yr_own/sample1.png",
-  ];
+  const thumbnailImages = selectedStyleData?.thumbnailImages || [];
+  
+  // Check if images are still loading (no real thumbnail data yet)
+  const isImagesLoading = loading || !selectedStyleData?.thumbnailImages || selectedStyleData.thumbnailImages.length === 0;
+  
+  // Skeleton placeholder count for loading state
+  const skeletonCount = 4;
 
   // When selectedColorCode changes for the currently selected style, re-fetch its product details
   useEffect(() => {
@@ -1048,6 +1059,13 @@ const ProductDetail = () => {
     const base = variants?.[0]?.sku.split("-");
     if (!base) return null;
 
+    // For bands, only goldKarat is strictly required
+    // Diamond shape and size are optional (3-part format: modelSku-karat-specs)
+    if (!selectedGoldKarat) {
+      console.warn("Missing required karat for variant ID generation");
+      return null;
+    }
+
     const shapeCodeMap: any = {
       ROUND: "RD",
       OVAL: "OV",
@@ -1059,11 +1077,27 @@ const ProductDetail = () => {
       CUSHION: "CUS",
     };
 
-    const shapeCode = shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD";
+    // Only use shape if it's selected
+    const shapeCode = selectedDiamondShape
+      ? shapeCodeMap[selectedDiamondShape.toUpperCase()] || "RD"
+      : null;
 
-    const caratCode = String(Math.round(parseFloat(selectedDiamondSize) * 100));
+    // Only calculate carat code if diamond size is selected
+    let caratCode = null;
+    if (selectedDiamondSize) {
+      const parsedSize = parseFloat(selectedDiamondSize);
+      if (isNaN(parsedSize)) {
+        console.warn("Invalid diamond size:", selectedDiamondSize);
+        return null;
+      }
+      caratCode = String(Math.round(parsedSize * 100));
+    }
 
     const karat = selectedGoldKarat.replace(/kt/i, "");
+    if (!karat) {
+      console.warn("Invalid gold karat:", selectedGoldKarat);
+      return null;
+    }
 
     const originCode =
       selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
@@ -1074,7 +1108,16 @@ const ProductDetail = () => {
       "EFVVS";
     const specifications = `${originCode}${clarityToken}`;
 
-    let variantId = `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+    // Build variant ID based on what's selected
+    let variantId: string;
+    
+    if (shapeCode && caratCode) {
+      // 5-part format with shape and size
+      variantId = `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+    } else {
+      // 3-part format without shape and size (common for men's bands)
+      variantId = `${modelSku}-${karat}-${specifications}`;
+    }
 
     // Add bandwidth if selected (Men's Rings)
     if (selectedBandwidth) {
@@ -1096,29 +1139,85 @@ const ProductDetail = () => {
     // Use selectedColorCode directly
     const metalColor = selectedColorCode;
 
-    const res = await fetch(
-      `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
-    );
-
-    const data: ProductModelResponse = await res.json();
-    if (data.success) {
-      setStyleAndDesign((prev) =>
-        prev.map((cat) => ({
-          ...cat,
-          substyles: cat.substyles.map((s) =>
-            s.parentSku === substyle.parentSku
-              ? {
-                  ...s,
-                  productDetails: data,
-                  price: new Intl.NumberFormat("en-IN").format(
-                    data.sellingPrice,
-                  ),
-                  thumbnailImages: data.variantImages,
-                }
-              : s,
-          ),
-        })),
+    try {
+      const res = await fetch(
+        `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
       );
+
+      const data: ProductModelResponse = await res.json();
+
+      // Check if the response indicates variant not found
+      if (!res.ok || !data.success) {
+        console.warn(
+          "Variant not found, reverting to last valid state:",
+          lastValidStateRef.current,
+        );
+        toast.error(
+          "This combination is not available. Reverted to previous selection.",
+        );
+
+        // Revert to last valid state
+        setSelectedMetalColor(lastValidStateRef.current.metalColor);
+        setSelectedColorCode(lastValidStateRef.current.colorCode);
+        setSelectedDiamondShape(lastValidStateRef.current.diamondShape);
+        setSelectedDiamondSize(lastValidStateRef.current.diamondSize);
+        setSelectedDiamondOrigin(lastValidStateRef.current.diamondOrigin);
+        setSelectedColorClarity(lastValidStateRef.current.colorClarity);
+        setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
+        setSelectedMetalType(lastValidStateRef.current.metalType);
+        setSelectedBandwidth(lastValidStateRef.current.bandwidth);
+        setSelectedFinishing(lastValidStateRef.current.finishing);
+        return;
+      }
+
+      if (data.success) {
+        setStyleAndDesign((prev) =>
+          prev.map((cat) => ({
+            ...cat,
+            substyles: cat.substyles.map((s) =>
+              s.parentSku === substyle.parentSku
+                ? {
+                    ...s,
+                    productDetails: data,
+                    price: new Intl.NumberFormat("en-IN").format(
+                      data.sellingPrice,
+                    ),
+                    thumbnailImages: data.variantImages,
+                  }
+                : s,
+            ),
+          })),
+        );
+
+        // Update last valid state since this variant exists
+        lastValidStateRef.current = {
+          metalColor: selectedMetalColor,
+          colorCode: selectedColorCode,
+          diamondShape: selectedDiamondShape,
+          diamondSize: selectedDiamondSize,
+          diamondOrigin: selectedDiamondOrigin,
+          colorClarity: selectedColorClarity,
+          goldKarat: selectedGoldKarat,
+          metalType: selectedMetalType,
+          bandwidth: selectedBandwidth,
+          finishing: selectedFinishing,
+        };
+      }
+    } catch (error) {
+      console.error("Error refetching product data:", error);
+      toast.error(
+        "Failed to load variant. Reverted to previous selection.",
+      );
+      setSelectedMetalColor(lastValidStateRef.current.metalColor);
+      setSelectedColorCode(lastValidStateRef.current.colorCode);
+      setSelectedDiamondShape(lastValidStateRef.current.diamondShape);
+      setSelectedDiamondSize(lastValidStateRef.current.diamondSize);
+      setSelectedDiamondOrigin(lastValidStateRef.current.diamondOrigin);
+      setSelectedColorClarity(lastValidStateRef.current.colorClarity);
+      setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
+      setSelectedMetalType(lastValidStateRef.current.metalType);
+      setSelectedBandwidth(lastValidStateRef.current.bandwidth);
+      setSelectedFinishing(lastValidStateRef.current.finishing);
     }
   };
 
@@ -1149,7 +1248,11 @@ const ProductDetail = () => {
 
   const getAvailableDiamondShapes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.diamondShape) {
-      return diamondShapes.shapes; // Fallback to hardcoded data
+      return []; // Return empty array if no diamond shape data
+    }
+    // Return empty array if diamondShape is empty array
+    if (selectedStyleData.productDetails.diamondShape.length === 0) {
+      return [];
     }
     // Map API diamond shapes to our shape objects
     return selectedStyleData.productDetails.diamondShape.map((shape) => {
@@ -1164,26 +1267,50 @@ const ProductDetail = () => {
 
   const getAvailableDiamondSizes = useCallback(() => {
     if (!selectedStyleData?.productDetails?.diamondSize) {
-      return ["0.5", "1.0", "1.5", "2.0"]; // Fallback - already in ascending order
+      return []; // Return empty array if no diamond size data
     }
 
     const diamondSize = selectedStyleData.productDetails.diamondSize;
 
     // If diamondSize is an object with metal type keys
     if (typeof diamondSize === "object" && !Array.isArray(diamondSize)) {
+      // Check if object is empty
+      if (Object.keys(diamondSize).length === 0) {
+        return [];
+      }
       const metalTypeKey = selectedMetalType || "GOLD";
       const sizes = diamondSize[metalTypeKey as keyof typeof diamondSize] || [];
       // Sort diamond sizes in ascending order (small to big)
       return [...sizes].sort((a, b) => parseFloat(a) - parseFloat(b));
     }
 
-    // Fallback for old structure (if diamondSize is still an array)
+    // If diamondSize is an array
     if (Array.isArray(diamondSize)) {
+      // Return empty array if array is empty
+      if (diamondSize.length === 0) {
+        return [];
+      }
       return [...diamondSize].sort((a, b) => parseFloat(a) - parseFloat(b));
     }
 
-    return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
+    return []; // Return empty array as fallback
   }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
+
+  // Get available bandwidth options
+  const getAvailableBandwidth = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.bandwidth) {
+      return [];
+    }
+    return selectedStyleData.productDetails.bandwidth;
+  }, [selectedStyleData?.productDetails?.bandwidth]);
+
+  // Get available finishing options
+  const getAvailableFinishing = useCallback(() => {
+    if (!selectedStyleData?.productDetails?.finishing) {
+      return [];
+    }
+    return selectedStyleData.productDetails.finishing;
+  }, [selectedStyleData?.productDetails?.finishing]);
 
   // Engraving upload helpers (mirror ProductDetail behavior)
   const uploadEngravingToBackend = useCallback(
@@ -1252,13 +1379,13 @@ const ProductDetail = () => {
 
   const handleAddToCart = useCallback(async () => {
     if (!isAuthenticated) {
-      alert("Please log in to add items to cart");
+      toast.error("Please log in to add items to cart");
       navigate("/login");
       return;
     }
 
     if (!selectedSize) {
-      alert("Please select a ring size");
+      toast.error("Please select a ring size");
       return;
     }
 
@@ -1271,7 +1398,7 @@ const ProductDetail = () => {
       derivedProductId;
 
     if (!productId || !variantSku) {
-      alert("Please select a product variant");
+      toast.error("Please select a product variant");
       return;
     }
 
@@ -1280,7 +1407,7 @@ const ProductDetail = () => {
     if (hasEngraving && savedEngravingData) {
       cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
       if (!cloudinaryEngravingUrl) {
-        alert("Failed to upload engraving image. Please try again.");
+        toast.error("Failed to upload engraving image. Please try again.");
         return;
       }
     }
@@ -1317,10 +1444,10 @@ const ProductDetail = () => {
 
     try {
       await dispatch(addToCart(productId as string, 1, variantData));
-      alert("Product added to cart successfully!");
+      toast.success("Product added to cart successfully!");
     } catch (err) {
       console.error("Error adding to cart:", err);
-      alert("Failed to add product to cart");
+      toast.error("Failed to add product to cart");
     }
   }, [
     isAuthenticated,
@@ -1348,18 +1475,18 @@ const ProductDetail = () => {
 
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
-      alert("Please log in to purchase");
+      toast.error("Please log in to purchase");
       navigate("/login");
       return;
     }
 
     if (!selectedDiamondSize) {
-      alert("Please select a diamond size");
+      toast.error("Please select a diamond size");
       return;
     }
 
     if (!selectedSize) {
-      alert("Please select a ring size");
+      toast.error("Please select a ring size");
       return;
     }
 
@@ -1372,7 +1499,7 @@ const ProductDetail = () => {
       derivedProductId;
 
     if (!productId || !variantSku) {
-      alert("Please select a product variant");
+      toast.error("Please select a product variant");
       return;
     }
 
@@ -1382,7 +1509,7 @@ const ProductDetail = () => {
       cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
       setIsUploadingEngraving(false);
       if (!cloudinaryEngravingUrl) {
-        alert("Failed to upload engraving image. Please try again.");
+        toast.error("Failed to upload engraving image. Please try again.");
         return;
       }
     }
@@ -1540,19 +1667,31 @@ const ProductDetail = () => {
       const diamondShapes = getAvailableDiamondShapes();
       const diamondSizes = getAvailableDiamondSizes();
       const availableKarats = getAvailableKarats();
+      const availableBandwidth = getAvailableBandwidth();
+      const availableFinishing = getAvailableFinishing();
 
       // Set default selections from API data
       if (metalTypes.length > 0 && !metalTypes.includes(selectedMetalType)) {
         setSelectedMetalType("GOLD"); // Always default to GOLD
       }
-      if (
-        diamondShapes.length > 0 &&
-        !diamondShapes.find((shape) => shape.name === selectedDiamondShape)
-      ) {
-        setSelectedDiamondShape(diamondShapes[0].name);
+      // Only set default shape if shapes are available
+      if (diamondShapes.length > 0) {
+        if (!diamondShapes.find((shape) => shape.name === selectedDiamondShape)) {
+          setSelectedDiamondShape(diamondShapes[0].name);
+        }
+      } else {
+        // Clear shape if no shapes available
+        setSelectedDiamondShape("");
       }
-      if (diamondSizes.length > 0 && (selectedDiamondSize === "" || !diamondSizes.includes(selectedDiamondSize))) {
-        setSelectedDiamondSize(diamondSizes[0]);
+      
+      // Only set default size if sizes are available
+      if (diamondSizes.length > 0) {
+        if (selectedDiamondSize === "" || !diamondSizes.includes(selectedDiamondSize)) {
+          setSelectedDiamondSize(diamondSizes[0]);
+        }
+      } else {
+        // Clear size if no sizes available
+        setSelectedDiamondSize("");
       }
       // Initialize clarity from product details
       const clarities =
@@ -1571,6 +1710,61 @@ const ProductDetail = () => {
       ) {
         setSelectedGoldKarat(availableKarats[0]);
       }
+
+      // Parse first variant SKU to extract bandwidth and finishing
+      const firstVariantSku = selectedStyleData?.variants?.[0]?.sku;
+      if (firstVariantSku) {
+        const parts = firstVariantSku.split("-");
+        
+        // Handle different SKU formats:
+        // 5-part: GR10-9-LGEFVVS-MF (modelSku-carat-specs-finishing)
+        // 5-part: GR49-14-LGEFVS-4-BF (modelSku-carat-specs-bandwidth-finishing)
+        // Extract bandwidth and finishing from the SKU parts
+        let extractedBandwidth = "";
+        let extractedFinishing = "";
+
+        if (parts.length >= 4) {
+          // Check if last part is finishing (typically 2 chars like MF, BF, etc.)
+          const lastPart = parts[parts.length - 1];
+          if (lastPart && lastPart.length === 2 && /^[A-Z]{2}$/.test(lastPart)) {
+            extractedFinishing = lastPart;
+            
+            // Check if second-to-last part is bandwidth (typically 1-2 digits or letters)
+            const secondLastPart = parts[parts.length - 2];
+            if (secondLastPart && /^[\d.]+$/.test(secondLastPart)) {
+              extractedBandwidth = secondLastPart;
+            }
+          }
+        }
+
+        // Set bandwidth if available and not already set
+        if (extractedBandwidth && availableBandwidth.length > 0 && !selectedBandwidth) {
+          if (availableBandwidth.includes(extractedBandwidth)) {
+            setSelectedBandwidth(extractedBandwidth);
+          } else if (availableBandwidth.length > 0) {
+            setSelectedBandwidth(availableBandwidth[0]);
+          }
+        } else if (availableBandwidth.length > 0 && !selectedBandwidth) {
+          setSelectedBandwidth(availableBandwidth[0]);
+        }
+
+        // Set finishing if available and not already set
+        if (extractedFinishing && availableFinishing.length > 0 && !selectedFinishing) {
+          // Check if finishing code exists in available finishing
+          const finishingMatch = availableFinishing.find(
+            (f) => (typeof f === "string" ? f : f.code) === extractedFinishing
+          );
+          if (finishingMatch) {
+            setSelectedFinishing(typeof finishingMatch === "string" ? finishingMatch : finishingMatch.code);
+          } else if (availableFinishing.length > 0) {
+            const firstFinishing = availableFinishing[0];
+            setSelectedFinishing(typeof firstFinishing === "string" ? firstFinishing : firstFinishing.code);
+          }
+        } else if (availableFinishing.length > 0 && !selectedFinishing) {
+          const firstFinishing = availableFinishing[0];
+          setSelectedFinishing(typeof firstFinishing === "string" ? firstFinishing : firstFinishing.code);
+        }
+      }
     }
   }, [
     selectedStyleData,
@@ -1583,10 +1777,57 @@ const ProductDetail = () => {
     getAvailableDiamondShapes,
     getAvailableDiamondSizes,
     getAvailableKarats,
+    getAvailableBandwidth,
+    getAvailableFinishing,
+  ]);
+
+  // Initialize lastValidStateRef with the first loaded state
+  const initialStateSetRef = useRef(false);
+  useEffect(() => {
+    if (
+      selectedStyleData?.productDetails &&
+      !initialStateSetRef.current &&
+      selectedMetalColor &&
+      selectedColorCode &&
+      selectedMetalType
+    ) {
+      lastValidStateRef.current = {
+        metalColor: selectedMetalColor,
+        colorCode: selectedColorCode,
+        diamondShape: selectedDiamondShape,
+        diamondSize: selectedDiamondSize,
+        diamondOrigin: selectedDiamondOrigin,
+        colorClarity: selectedColorClarity,
+        goldKarat: selectedGoldKarat,
+        metalType: selectedMetalType,
+        bandwidth: selectedBandwidth,
+        finishing: selectedFinishing,
+      };
+      initialStateSetRef.current = true;
+    }
+  }, [
+    selectedStyleData?.productDetails,
+    selectedMetalColor,
+    selectedColorCode,
+    selectedDiamondShape,
+    selectedDiamondSize,
+    selectedDiamondOrigin,
+    selectedColorClarity,
+    selectedGoldKarat,
+    selectedMetalType,
+    selectedBandwidth,
+    selectedFinishing,
   ]);
 
   useEffect(() => {
     if (!selectedStyleData?.parentSku) return;
+    
+    // For bands, only karat is strictly required
+    // Diamond shape and size are optional
+    if (!selectedGoldKarat) {
+      return;
+    }
+    
     refetchUpdatedProduct(selectedStyleData);
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -1643,35 +1884,44 @@ const ProductDetail = () => {
                       msOverflowStyle: "none",
                     }}
                   >
-                    {thumbnailImages.map((image, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setSelectedImage(index);
-                        }}
-                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                          selectedImage === index
-                            ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                            : "border-neutral-200 hover:border-neutral-300"
-                        }`}
-                      >
-                        {is3DModel(image, index) ? (
-                          <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                            <img
-                              src="/3D/green.svg"
-                              className="w-16 h-16"
-                              alt=""
-                            />
-                          </div>
-                        ) : (
-                          <img
-                            src={image}
-                            alt={`Product ${index + 1}`}
-                            className="w-full h-full object-cover"
+                    {isImagesLoading
+                      ? // Show skeleton placeholders when loading
+                        Array.from({ length: skeletonCount }).map((_, index) => (
+                          <div
+                            key={`skeleton-${index}`}
+                            className="w-16 h-16 rounded-lg overflow-hidden border-2 border-neutral-200 flex-shrink-0 bg-gray-200 animate-pulse"
                           />
-                        )}
-                      </button>
-                    ))}
+                        ))
+                      : // Show actual images when loaded
+                        thumbnailImages.map((image, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              setSelectedImage(index);
+                            }}
+                            className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
+                              selectedImage === index
+                                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                                : "border-neutral-200 hover:border-neutral-300"
+                            }`}
+                          >
+                            {is3DModel(image, index) ? (
+                              <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                                <img
+                                  src="/3D/green.svg"
+                                  className="w-16 h-16"
+                                  alt=""
+                                />
+                              </div>
+                            ) : (
+                              <img
+                                src={image}
+                                alt={`Product ${index + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+                          </button>
+                        ))}
                   </div>
                   <button
                     onClick={scrollThumbnailsDown}
@@ -1689,7 +1939,12 @@ const ProductDetail = () => {
                   className="flex-1 w-full min-w-0"
                 >
                   <div className="relative aspect-square bg-neutral-50 rounded-lg overflow-hidden mb-4 w-full">
-                    {is3DModel(
+                    {isImagesLoading ? (
+                      // Skeleton placeholder for main image
+                      <div className="w-full h-full bg-gray-200 animate-pulse flex items-center justify-center">
+                        <div className="w-16 h-16 bg-gray-300 rounded-full animate-pulse" />
+                      </div>
+                    ) : is3DModel(
                       thumbnailImages[selectedImage],
                       selectedImage,
                     ) ? (
@@ -1740,33 +1995,42 @@ const ProductDetail = () => {
                         scrollBehavior: "smooth",
                       }}
                     >
-                      {thumbnailImages.map((image, index) => (
-                        <button
-                          key={index}
-                          onClick={() => setSelectedImage(index)}
-                          className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
-                            selectedImage === index
-                              ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                              : "border-neutral-200 hover:border-neutral-300"
-                          }`}
-                        >
-                          {is3DModel(image, index) ? (
-                            <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
-                              <img
-                                src="/3D/green.svg"
-                                className="w-16 h-16"
-                                alt=""
-                              />
-                            </div>
-                          ) : (
-                            <img
-                              src={image}
-                              alt={`Product ${index + 1}`}
-                              className="w-full h-full object-cover"
+                      {isImagesLoading
+                        ? // Show skeleton placeholders when loading
+                          Array.from({ length: skeletonCount }).map((_, index) => (
+                            <div
+                              key={`skeleton-mobile-${index}`}
+                              className="w-16 h-16 rounded-lg overflow-hidden border-2 border-neutral-200 flex-shrink-0 bg-gray-200 animate-pulse"
                             />
-                          )}
-                        </button>
-                      ))}
+                          ))
+                        : // Show actual images when loaded
+                          thumbnailImages.map((image, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedImage(index)}
+                              className={`w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all hover:scale-105 relative ${
+                                selectedImage === index
+                                  ? "border-[#328F94] ring-2 ring-[#328F94]/20"
+                                  : "border-neutral-200 hover:border-neutral-300"
+                              }`}
+                            >
+                              {is3DModel(image, index) ? (
+                                <div className="relative flex justify-center items-center w-full h-full bg-gradient-to-br from-gray-100 to-gray-200">
+                                  <img
+                                    src="/3D/green.svg"
+                                    className="w-16 h-16"
+                                    alt=""
+                                  />
+                                </div>
+                              ) : (
+                                <img
+                                  src={image}
+                                  alt={`Product ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </button>
+                          ))}
                     </div>
                     <button
                       onClick={scrollThumbnailsRight}
@@ -1986,27 +2250,20 @@ const ProductDetail = () => {
                     </button>
                   </h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {(isLabGrownVariant
-                      ? ["Lab Grown Diamond"]
+                      ? ["Lab Grown Diamond","Natural Diamond"]
                       : ["Natural Diamond", "Lab Grown Diamond"]
                     ).map((origin) => (
                       <button
                         key={origin}
                         onClick={() => {
-                          if (!isLabGrownVariant) {
                             setSelectedDiamondOrigin(origin);
-                            scrollToImageOnMobile();
-                          }
                         }}
                         className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
                           selectedDiamondOrigin === origin
                             ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
                             : "border-neutral-600 text-neutral-600"
-                        } ${
-                          isLabGrownVariant && origin !== "Lab Grown Diamond"
-                            ? "opacity-50 pointer-events-none"
-                            : ""
                         }`}
                       >
                         {origin}
@@ -2017,7 +2274,7 @@ const ProductDetail = () => {
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
                 {/* Diamond Shape */}
-                <div className="mb-6">
+               {getAvailableDiamondShapes().length > 0 && ( <div className="mb-6">
                   <h3 className="mb-3 text-sm md:text-base">
                     Diamond Shape:{" "}
                     <span className="text-[#8D8A91]">
@@ -2058,7 +2315,7 @@ const ProductDetail = () => {
                       </div>
                     ))}
                   </div>
-                </div>
+                </div>)}
 
                 {/* Diamond Lab & Clarity */}
                 {/* <div className="grid grid-cols-2 gap-4">
@@ -2096,7 +2353,7 @@ const ProductDetail = () => {
                 </div> */}
 
                 {/* Diamond Size Section */}
-                {selectedStyleData?.productDetails?.diamondSize && (
+                {getAvailableDiamondSizes().length > 0 && (
                   <div className="w-full">
                     <div className="mb-6 w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
@@ -2157,7 +2414,6 @@ const ProductDetail = () => {
                         value={selectedColorClarity}
                         onValueChange={(value) => {
                           setSelectedColorClarity(value);
-                          scrollToImageOnMobile();
                         }}
                       >
                         <SelectTrigger className="w-full text-sm border-neutral-300">
@@ -2266,7 +2522,6 @@ const ProductDetail = () => {
                               key={`${karat}-${index}`}
                               onClick={() => {
                                 setSelectedGoldKarat(karat);
-                                scrollToImageOnMobile();
                               }}
                               className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
                                 selectedGoldKarat === karat
@@ -2521,7 +2776,6 @@ const ProductDetail = () => {
                       value={selectedSize}
                       onValueChange={(value) => {
                         setSelectedSize(value);
-                        scrollToImageOnMobile();
                       }}
                     >
                       <SelectTrigger className="text-sm border-neutral-300 h-10 md:h-11">

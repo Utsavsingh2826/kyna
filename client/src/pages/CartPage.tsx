@@ -291,7 +291,7 @@ const CartPage = () => {
         {/* Assistance Header */}
         <div className="text-right text-sm text-gray-600 mb-6">
           <a
-            href="https://wa.me/918235567890"
+            href="https://wa.me/918928610682"
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#3AAFA9] hover:underline"
@@ -300,7 +300,7 @@ const CartPage = () => {
           </a>{" "}
           &nbsp;or&nbsp;
           <a href="tel:+918928610682" className="hover:underline">
-            call +91 8235567890
+            call +91 8928610682
           </a>
         </div>
 
