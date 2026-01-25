@@ -18,6 +18,8 @@ import type { RootState, AppDispatch } from "@/store";
 import SEO from "@/components/SEO";
 import { Button } from "@/components/ui/button";
 import Engrave from "../Engrave";
+import PdfPopup from "@/components/PdfPopup";
+import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
 import {
   Accordion,
   AccordionContent,
@@ -630,6 +632,8 @@ const ProductDetail = () => {
   const [engravingText, setEngravingText] = useState("");
   const [engravingImageUrl, setEngravingImageUrl] = useState("");
   const [engravingMotifPath, setEngravingMotifPath] = useState("");
+
+    const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
 
   /* State for share modal */
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -2711,13 +2715,15 @@ const ProductDetail = () => {
                   </div>
                 </div>
 
-                {/* Ring Size Guide */}
-                <Link
-                  to={"/RingSize-Education"}
-                  className="text-sm text-primary font-medium underline block"
-                >
-                  Ring Size Guide
-                </Link>
+                 {/* Ring Size Guide */}
+                                    <Button
+                                      variant="link"
+                                      size="sm"
+                                      className="text-[#328F94] hover:underline p-0 mt-1"
+                                      onClick={() => setIsRingSizePopupOpen(true)}
+                                    >
+                                      Ring Size Guide
+                                    </Button>
 
                 {/* Free Engraving */}
                 <div className="flex items-center space-x-2">
@@ -3223,6 +3229,16 @@ const ProductDetail = () => {
 
         {/* Engrave Modal Overlay is handled inline where the checkbox opens the Engrave modal (EV-aware). */}
       </main>
+      <PdfPopup
+              isOpen={isPdfPopupOpen}
+              onClose={() => setIsPdfPopupOpen(false)}
+              pdfUrl="/Stone_Guide.pdf"
+              title="Quality & Certification"
+            />
+            <RingSizeGuidePopup
+        isOpen={isRingSizePopupOpen}
+        onClose={() => setIsRingSizePopupOpen(false)}
+      />
     </div>
   );
 };
