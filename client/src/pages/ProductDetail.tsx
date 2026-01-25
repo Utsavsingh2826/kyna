@@ -1860,7 +1860,9 @@ const ProductDetail = () => {
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
       toast.error("Please log in to purchase");
-      navigate("/login");
+      navigate("/login", {
+        state: { from: location.pathname },
+      });
       return;
     }
 

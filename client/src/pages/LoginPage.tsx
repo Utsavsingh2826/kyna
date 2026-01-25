@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { loginSucceeded } from "../store/slices/authSlice";
@@ -16,6 +16,7 @@ const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,13 +58,19 @@ const LoginPage: React.FC = () => {
         console.log("Login successful. User payload:", response.data?.user || null);
         console.log("Redux auth state should be updated now");
 
-        // Navigate to profile page
-        navigate("/profile", {
-          state: {
-            userData: response.data?.user,
-            name: response.data?.user?.firstName,
-          },
-        });
+        // Check if there's a 'from' location in the state, and navigate back to it
+        const from = (location.state as any)?.from;
+        if (from) {
+          navigate(from);
+        } else {
+          // Navigate to profile page as default
+          navigate("/profile", {
+            state: {
+              userData: response.data?.user,
+              name: response.data?.user?.firstName,
+            },
+          });
+        }
       } else {
         if (response.data?.requiresVerification) {
           toast.info(
