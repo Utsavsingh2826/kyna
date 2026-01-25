@@ -1293,13 +1293,13 @@ const ProductDetail = () => {
 
   const handleAddToCart = useCallback(async () => {
     if (!isAuthenticated) {
-      alert("Please log in to add items to cart");
+      toast.error("Please log in to add items to cart");
       navigate("/login");
       return;
     }
 
     if (!selectedSize) {
-      alert("Please select a bracelet size");
+      toast.error("Please select a bracelet size");
       return;
     }
 
@@ -1312,7 +1312,7 @@ const ProductDetail = () => {
       derivedProductId;
 
     if (!productId || !variantSku) {
-      alert("Please select a product variant");
+      toast.error("Please select a product variant");
       return;
     }
 
@@ -1321,7 +1321,7 @@ const ProductDetail = () => {
     if (hasEngraving && savedEngravingData) {
       cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
       if (!cloudinaryEngravingUrl) {
-        alert("Failed to upload engraving image. Please try again.");
+        toast.error("Failed to upload engraving image. Please try again.");
         return;
       }
     }
@@ -1356,10 +1356,10 @@ const ProductDetail = () => {
 
     try {
       await dispatch(addToCart(productId as string, 1, variantData));
-      alert("Product added to cart successfully!");
+      toast.success("Product added to cart successfully!");
     } catch (err) {
       console.error("Error adding to cart:", err);
-      alert("Failed to add product to cart");
+      toast.error("Failed to add product to cart");
     }
   }, [
     isAuthenticated,
@@ -1384,18 +1384,18 @@ const ProductDetail = () => {
 
   const handleBuyNow = useCallback(async () => {
     if (!isAuthenticated) {
-      alert("Please log in to purchase");
+      toast.error("Please log in to purchase");
       navigate("/login");
       return;
     }
 
     if (!selectedDiamondSize) {
-      alert("Please select a diamond size");
+      toast.error("Please select a diamond size");
       return;
     }
 
     if (!selectedSize) {
-      alert("Please select a bracelet size");
+      toast.error("Please select a bracelet size");
       return;
     }
 
@@ -1408,7 +1408,7 @@ const ProductDetail = () => {
       derivedProductId;
 
     if (!productId || !variantSku) {
-      alert("Please select a product variant");
+      toast.error("Please select a product variant");
       return;
     }
 
@@ -1418,7 +1418,7 @@ const ProductDetail = () => {
       cloudinaryEngravingUrl = await generateAndUploadEngravingImage();
       setIsUploadingEngraving(false);
       if (!cloudinaryEngravingUrl) {
-        alert("Failed to upload engraving image. Please try again.");
+        toast.error("Failed to upload engraving image. Please try again.");
         return;
       }
     }
