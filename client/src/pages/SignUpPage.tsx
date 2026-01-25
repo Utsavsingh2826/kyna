@@ -318,13 +318,14 @@ const SignUpPage: React.FC = () => {
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors"
                     onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={0}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
+                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
+                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                     )}
                   </button>
                 </div>
@@ -355,13 +356,14 @@ const SignUpPage: React.FC = () => {
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    tabIndex={0}
                   >
                     {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400" />
+                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                     ) : (
-                      <Eye className="h-5 w-5 text-gray-400" />
+                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                     )}
                   </button>
                 </div>

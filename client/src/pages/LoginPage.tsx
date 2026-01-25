@@ -72,13 +72,8 @@ const LoginPage: React.FC = () => {
             localStorage.removeItem("redirectAfterLogin");
             navigate(redirectPath);
           } else {
-            // Navigate to profile page as default
-            navigate("/profile", {
-              state: {
-                userData: response.data?.user,
-                name: response.data?.user?.firstName,
-              },
-            });
+            // Navigate to home page as default
+            navigate("/");
           }
         }, 100);
       } else {
@@ -187,13 +182,14 @@ const LoginPage: React.FC = () => {
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-600 transition-colors"
                   onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={0}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
                   )}
                 </button>
               </div>
