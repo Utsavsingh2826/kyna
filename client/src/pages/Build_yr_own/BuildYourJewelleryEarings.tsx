@@ -8,9 +8,6 @@ import {
   MessageCircle,
   Share2,
 } from "lucide-react";
-import * as THREE from "three";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { Link, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { addToCart } from "@/store/slices/cartSlice";
@@ -154,6 +151,7 @@ interface ProductModelResponse {
   availableColors?: string[];
   netWeightGrams?: number;
   totalDiamondWeight?: number;
+  deliveryDays?: number;
 }
 
 interface SubStyle {
@@ -263,15 +261,16 @@ const ProductDetail = () => {
     motif: string;
     imageUrl: string;
   } | null>(null);
+  const [deliveryDays, setDeliveryDays] = useState<number | 25>(25);
   const formattedDate = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() + 25);
+    d.setDate(d.getDate() + deliveryDays);
     return d.toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
     });
-  }, []);
+  }, [deliveryDays]);
 
   const [totalDiamondWeight , setTotalDiamondWeight] = useState(0);
 
@@ -517,6 +516,10 @@ const ProductDetail = () => {
 if (data.totalDiamondWeight) {
   setTotalDiamondWeight(data.totalDiamondWeight);
 }
+if (data.deliveryDays) {
+  setDeliveryDays(data.deliveryDays);
+}
+
       } catch (err) {
         console.error("Failed to update substyle product details:", err);
       }
@@ -1874,8 +1877,8 @@ if (data.totalDiamondWeight) {
                 </div>
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
-                {/* Diamond Shape */}
-                <div className="mb-6">
+                {/* Diamond Shape if more then 1 diamond shapes available */}
+                {getAvailableDiamondShapes().length > 1 && (<div className="mb-6">
                   <h3 className="mb-3 text-sm md:text-base">
                     Diamond Shape:{" "}
                     <span className="text-[#8D8A91]">
@@ -1916,7 +1919,7 @@ if (data.totalDiamondWeight) {
                       </div>
                     ))}
                   </div>
-                </div>
+                </div>)}
 
                 {/* Diamond Lab & Clarity */}
                 {/* <div className="grid grid-cols-2 gap-4">
@@ -1987,7 +1990,8 @@ if (data.totalDiamondWeight) {
                   </div>
                 )} */}
                 {/* Diamond Size Section */}
-                {selectedStyleData?.productDetails?.diamondSize && (
+                <div className="flex items-end gap-4">
+                  {selectedStyleData?.productDetails?.diamondSize && (
                   <div className="w-1/2 mb-6">
                     <h3 className="mb-3 text-sm md:text-base">
                       Diamond Size:{" "}
@@ -2080,6 +2084,7 @@ if (data.totalDiamondWeight) {
                       </Select>
                     </div>
                   )}
+                </div>
 
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
 
@@ -2698,7 +2703,7 @@ if (data.totalDiamondWeight) {
                           <span className="text-muted-foreground">
                             Certification
                           </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
+                          <span className="font-medium">GIA/IGI/SGL Certified</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">

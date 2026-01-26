@@ -1519,6 +1519,12 @@ export const getProductByModelSku = async (
       });
     }
 
+    const deliveryDays =
+      firstVariantDoc?.attributes?.["DELIVERY DAYS"] ??
+      firstVariantDoc?.attributes?.["DELIVERY_DAYS"] ??
+      firstVariantDoc?.attributes?.DELIVERYDAYS ??
+      null;
+
     chosenVariantSku =
       firstVariantDoc.variantSku ??
       (firstVariantDoc._id ? String(firstVariantDoc._id) : null);
@@ -2160,6 +2166,7 @@ export const getProductByModelSku = async (
       availableColors,
       netWeightGrams,
       totalDiamondWeight,
+      deliveryDays
     };
 
     return res.status(200).json(response);

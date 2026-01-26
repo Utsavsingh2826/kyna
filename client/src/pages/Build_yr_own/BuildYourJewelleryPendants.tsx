@@ -158,6 +158,7 @@ interface ProductModelResponse {
   chainOption?: string;
   chainLengthInches?: number;
   totalDiamondWeight?: number;
+  deliveryDays?: number;
 }
 
 interface SubStyle {
@@ -242,15 +243,6 @@ const ProductDetail = () => {
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
   const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
-  const formattedDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 25);
-    return d.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  }, []);
 
   // Add missing state variables for pendants builder
   const [selectedMetalType, setSelectedMetalType] = useState("GOLD");
@@ -267,7 +259,16 @@ const ProductDetail = () => {
     (state: RootState) => state.auth,
   );
   const [totalDiamondWeight , setTotalDiamondWeight] = useState(0);
-
+  const [deliveryDays, setDeliveryDays] = useState<number | 25>(25);
+   const formattedDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + deliveryDays);
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, [deliveryDays]);
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
     metalColor: "White Gold",
@@ -427,6 +428,9 @@ const ProductDetail = () => {
         // Update total diamond weight if available
 if (data.totalDiamondWeight) {
   setTotalDiamondWeight(data.totalDiamondWeight);
+}
+if (data.deliveryDays) {
+  setDeliveryDays(data.deliveryDays);
 }
       } catch (err) {
         console.error("Failed to update substyle product details:", err);
@@ -1581,8 +1585,10 @@ if (data.totalDiamondWeight) {
                   </div>
                 </div>
 
-                {/* Diamond Shape - Mobile Grid Adjustment */}
-                <div className="mb-6">
+                {/* Diamond Shape - Mobile Grid Adjustment & visible only if more than 1 diamond shape */}
+                {selectedStyleData?.productDetails?.diamondShape &&
+                  selectedStyleData.productDetails.diamondShape.length >
+                    1 && ( <div className="mb-6">
                   <h3 className="mb-3 text-sm md:text-base">
                     Diamond Shape:{" "}
                     <span className="text-[#8D8A91]">
@@ -1623,13 +1629,14 @@ if (data.totalDiamondWeight) {
                       </div>
                     ))}
                   </div>
-                </div>
+                </div>)}
 
-                {/* Diamond Color & Clarity Section */}
+               <div className="flex items-end gap-4">
+                 {/* Diamond Color & Clarity Section */}
                 {selectedStyleData?.productDetails?.diamondColorClarity &&
                   selectedStyleData.productDetails.diamondColorClarity.length >
                     0 && (
-                    <div className="w-1/2 mb-6">
+                    <div className="w-1/2 mb-2">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Color & Clarity:{" "}
                         <span className="text-[#8D8A91]">
@@ -1646,7 +1653,7 @@ if (data.totalDiamondWeight) {
                       }}
                       >
                         <SelectTrigger className="w-full text-sm border-neutral-300">
-                          <SelectValue placeholder="Select Color & Clarity" />
+                          <SelectValue placeholder={selectedColorClarity || selectedStyleData.productDetails.diamondColorClarity[0]} />
                         </SelectTrigger>
 
                         <SelectContent className="bg-white">
@@ -1673,7 +1680,7 @@ if (data.totalDiamondWeight) {
 
                 {/* Diamond Size Section */}
                 {selectedStyleData?.productDetails?.diamondSize && (
-                  <div className="w-full">
+                  <div className="w-1/2">
                     <h3 className="mb-3 text-sm md:text-base">
                       Diamond Size:{" "}
                       <span className="text-[#8D8A91]">
@@ -1686,7 +1693,7 @@ if (data.totalDiamondWeight) {
                       </span>
                     </h3>
 
-                    <div className="mb-2 w-1/2">
+                    <div className="mb-2 w-full">
                       <Select
                         value={selectedDiamondSize}
                         onValueChange={(value) => {
@@ -1720,6 +1727,7 @@ if (data.totalDiamondWeight) {
                     </div>
                   </div>
                 )}
+               </div>
 
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
 
@@ -2424,7 +2432,7 @@ if (data.totalDiamondWeight) {
                           <span className="text-muted-foreground">
                             Certification
                           </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
+                          <span className="font-medium">GIA/IGI/SGL Certified</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">

@@ -158,6 +158,7 @@ interface ProductModelResponse {
   availableColors?: string[];
   netWeightGrams?: number;
   totalDiamondWeight?: number;
+  deliveryDays?: number;
 }
 
 interface SubStyle {
@@ -640,16 +641,6 @@ const ProductDetail = () => {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [shareMessage, setShareMessage] = useState("");
-  const formattedDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 25);
-    return d.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  }, []);
-
   const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     const currentUrl = window.location.href;
     const productName = "this beautiful band";
@@ -735,6 +726,16 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
   const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
+  const [deliveryDays, setDeliveryDays] = useState<number | 25>(25);
+   const formattedDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + deliveryDays);
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, [deliveryDays]);
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
@@ -862,6 +863,11 @@ const ProductDetail = () => {
           // Update total diamond weight if available
           if (data.totalDiamondWeight) {
             setTotalDiamondWeight(data.totalDiamondWeight);
+          }
+
+          // Update delivery days if available
+          if (data.deliveryDays) {
+            setDeliveryDays(data.deliveryDays);
           }
 
           // Update last valid state since this variant exists
@@ -2324,8 +2330,9 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
-                {/* Diamond Shape */}
-                <div className="mb-6">
+                {/* Diamond Shape and visble only if more then one diamond visible */}
+                {getAvailableDiamondShapes().length > 1 && (
+                  <div className="mb-6">
                   <h3 className="mb-3 text-sm md:text-base">
                     Diamond Shape:{" "}
                     <span className="text-[#8D8A91]">
@@ -2365,7 +2372,7 @@ const ProductDetail = () => {
                       </div>
                     ))}
                   </div>
-                </div>
+                </div>)}
 
                 {/* Diamond Lab & Clarity */}
                 {/* <div className="grid grid-cols-2 gap-4">
@@ -2402,7 +2409,8 @@ const ProductDetail = () => {
                   </div>
                 </div> */}
 
-                {/* Diamond Size Section */}
+                <div className="flex items-end gap-4">
+                  {/* Diamond Size Section */}
                 {selectedStyleData?.productDetails?.diamondSize && (
                   <div className="w-full">
                     <div className="mb-6 w-1/2">
@@ -2491,6 +2499,7 @@ const ProductDetail = () => {
                       </Select>
                     </div>
                   )}
+                </div>
 
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
 
@@ -2739,6 +2748,9 @@ const ProductDetail = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm mb-2">Ring Size</label>
+                    <span className="text-xs text-gray-500 font-normal ml-1">
+                            Indian size (dimensions in mm)
+                          </span>
                     <Select
                       value={selectedSize}
                       onValueChange={(value) => {
@@ -3148,7 +3160,7 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Certification
                           </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
+                          <span className="font-medium">GIA/IGI/SGL Certified</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">

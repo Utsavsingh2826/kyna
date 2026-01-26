@@ -158,6 +158,7 @@ interface ProductModelResponse {
   bandwidth?: string[];
   finishing?: Array<{ code: string; type: string }>;
   totalDiamondWeight?: number;
+  deliveryDays?: number;
 }
 
 interface SubStyle {
@@ -540,6 +541,7 @@ const ProductDetail = () => {
   const [engravingMotifPath, setEngravingMotifPath] = useState("");
 
   const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
+  const [deliveryDays, setDeliveryDays] = useState<number | 25>(25);
 
   /* State for share modal */
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -547,13 +549,13 @@ const ProductDetail = () => {
   const [shareMessage, setShareMessage] = useState("");
   const formattedDate = useMemo(() => {
     const d = new Date();
-    d.setDate(d.getDate() + 25);
+    d.setDate(d.getDate() + deliveryDays);
     return d.toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
     });
-  }, []);
+  }, [deliveryDays]);
 
   const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     const currentUrl = window.location.href;
@@ -746,6 +748,9 @@ const ProductDetail = () => {
           );
           if (data.totalDiamondWeight) {
             setTotalDiamondWeight(data.totalDiamondWeight);
+          }
+          if (data.deliveryDays) {
+            setDeliveryDays(data.deliveryDays);
           }
         }
       } catch (err) {
@@ -2289,7 +2294,7 @@ const ProductDetail = () => {
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
                 {/* Diamond Shape */}
-               {getAvailableDiamondShapes().length > 0 && ( <div className="mb-6">
+               {getAvailableDiamondShapes().length > 1 && ( <div className="mb-6">
                   <h3 className="mb-3 text-sm md:text-base">
                     Diamond Shape:{" "}
                     <span className="text-[#8D8A91]">

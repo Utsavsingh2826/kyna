@@ -105,6 +105,7 @@ interface ProductData {
   bandwidth?: string[];
   finishing?: Array<{ code: string; type: string }>;
    totalDiamondWeight?: number;
+   deliveryDays?: number;
 }
 
 // Map color codes to display info (handles both single and combination colors)
@@ -224,16 +225,6 @@ const ProductDetail = () => {
     (state: RootState) => state.cart,
   );
 
-  const formattedDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 25);
-    return d.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  }, []);
-
   const [productData, setProductData] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -268,6 +259,7 @@ const ProductDetail = () => {
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isRingSizePopupOpen, setIsRingSizePopupOpen] = useState(false);
   const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
+  const [deliveryDays, setDeliveryDays] = useState<number | 25>(25);
   /* State for share modal */
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
@@ -783,6 +775,11 @@ const ProductDetail = () => {
           setTotalDiamondWeight(data.totalDiamondWeight);
         }
 
+        //set delivery days
+        if (data.deliveryDays) {
+          setDeliveryDays(data.deliveryDays);
+        }
+
         // Set initial diamond shape if available
         if (data.diamondShape && data.diamondShape.length > 0) {
           setSelectedDiamondShape(String(data.diamondShape[0]));
@@ -869,6 +866,16 @@ const ProductDetail = () => {
 
     fetchProductData();
   }, [id, category, parseVariantSku]);
+
+    const formattedDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + deliveryDays);
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, [deliveryDays]);
 
   // Reset clarity selection when metal type or diamond origin changes
   useEffect(() => {

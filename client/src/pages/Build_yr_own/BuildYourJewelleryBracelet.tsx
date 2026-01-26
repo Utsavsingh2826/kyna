@@ -158,6 +158,7 @@ interface ProductModelResponse {
   availableColors?: string[];
   netWeightGrams?: number;
   totalDiamondWeight?: number;
+  deliveryDays?: number;
 }
 
 interface SubStyle {
@@ -251,17 +252,9 @@ const ProductDetail = () => {
     motif: string;
     imageUrl: string;
   } | null>(null);
-  const formattedDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 25);
-    return d.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    });
-  }, []);
 
   const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
+  const [deliveryDays, setDeliveryDays] = useState<number | 25>(25);
 
   const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     const currentUrl = window.location.href;
@@ -418,6 +411,16 @@ const ProductDetail = () => {
     }
   }, []);
 
+  const formattedDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + deliveryDays);
+    return d.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  }, [deliveryDays]);
+
   // Helper to re-fetch product model for a specific substyle and metal color
   const updateSubstyleProductDetails = useCallback(
     async (parentSku: string, variantSku: string, metalColorCode: string) => {
@@ -516,6 +519,9 @@ const ProductDetail = () => {
         // Update total diamond weight if available
 if (data.totalDiamondWeight) {
   setTotalDiamondWeight(data.totalDiamondWeight);
+}
+if (data.deliveryDays) {
+  setDeliveryDays(data.deliveryDays);
 }
       } catch (err) {
         console.error("Failed to update substyle product details:", err);
@@ -1915,8 +1921,8 @@ if (data.totalDiamondWeight) {
                 </div>
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
-                {/* Diamond Shape */}
-                <div className="mb-6">
+                {/* Diamond Shape if more then 1 diamonds available */}
+                {getAvailableDiamondShapes().length > 1 && ( <div className="mb-6">
                   <h3 className="mb-3 text-sm md:text-base">
                     Diamond Shape:{" "}
                     <span className="text-[#8D8A91]">
@@ -1957,7 +1963,7 @@ if (data.totalDiamondWeight) {
                       </div>
                     ))}
                   </div>
-                </div>
+                </div>)}
 
                 {/* Diamond Lab & Clarity */}
                 {/* <div className="grid grid-cols-2 gap-4">
@@ -1994,16 +2000,16 @@ if (data.totalDiamondWeight) {
                   </div>
                 </div> */}
 
-                {/* Diamond Size Section */}
+                <div className="flex items-end gap-4">
+                  {/* Diamond Size Section */}
                 {selectedStyleData?.productDetails?.diamondSize && (
-                  <div className="w-full">
                     <div className="mb-6 w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Size:{" "}
-                        {/* <span className="text-[#8D8A91]">
+                        <span className="text-[#8D8A91]">
                           {selectedDiamondSize || getAvailableDiamondSizes()[0]}{" "}
                           carat
-                        </span> */}
+                        </span>
                       </h3>
 
                       <Select
@@ -2026,7 +2032,6 @@ if (data.totalDiamondWeight) {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
                 )}
 
                 {/* Diamond Color & Clarity Section */}
@@ -2034,9 +2039,9 @@ if (data.totalDiamondWeight) {
                   <div className="w-1/2 mb-6">
                     <h3 className="mb-3 text-sm md:text-base">
                       Diamond Color & Clarity:{" "}
-                      <span className="text-[#8D8A91]">
+                      {/* <span className="text-[#8D8A91]">
                         {selectedColorClarity || filteredColorClarity[0]}
-                      </span>
+                      </span> */}
                     </h3>
 
                     <Select
@@ -2059,6 +2064,7 @@ if (data.totalDiamondWeight) {
                     </Select>
                   </div>
                 )}
+                </div>
 
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
 
@@ -2718,7 +2724,7 @@ if (data.totalDiamondWeight) {
                           <span className="text-muted-foreground">
                             Certification
                           </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
+                          <span className="font-medium">GIA/IGI/SGL Certified</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
