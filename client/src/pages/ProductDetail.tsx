@@ -424,6 +424,60 @@ const ProductDetail = () => {
     return sizesObj[metalType] || sizesObj["GOLD"] || [];
   }, [productData, selectedMetalType]);
 
+  // Helper function to get available clarity options based on diamond origin and metal type
+  const getAvailableClarityOptions = useCallback(() => {
+    if (!productData) return [];
+
+    // Check if diamondOptions exists and has data
+    if (
+      !productData.diamondOptions ||
+      Object.keys(productData.diamondOptions).length === 0
+    ) {
+      // Fallback to diamondColorClarity if diamondOptions is missing/empty
+      return (productData.diamondColorClarity || []).map((c) =>
+        c.replace(/\s+/g, ""),
+      );
+    }
+
+    const diamondType =
+      selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+    const metalTypeKey = selectedMetalType || "GOLD";
+
+    // Get clarity options with proper typing
+    const clarityOptions: string[] = 
+      (productData.diamondOptions as any)?.[diamondType]?.[metalTypeKey] || [];
+    
+    // Return the clarity options with spaces removed for consistency
+    return clarityOptions.map((option: string) => option.replace(/\s+/g, ""));
+  }, [productData, selectedDiamondOrigin, selectedMetalType]);
+
+  // Parameterized version for use during SKU parsing when state variables might not be set yet
+  // const getAvailableClarityOptionsForParsing = useCallback((
+  //   diamondOrigin: string,
+  //   metalType: string,
+  //   productDataParam: ProductData
+  // ) => {
+  //   // Check if diamondOptions exists and has data
+  //   if (
+  //     !productDataParam.diamondOptions ||
+  //     Object.keys(productDataParam.diamondOptions).length === 0
+  //   ) {
+  //     // Fallback to diamondColorClarity if diamondOptions is missing/empty
+  //     return (productDataParam.diamondColorClarity || []).map((c) =>
+  //       c.replace(/\s+/g, ""),
+  //     );
+  //   }
+
+  //   const diamondType = diamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+  //   const metalTypeKey = metalType || "GOLD";
+
+  //   const clarityOptions =
+  //     productDataParam.diamondOptions?.[diamondType]?.[metalTypeKey] || [];
+    
+  //   // Return the clarity options with spaces removed for consistency
+  //   return clarityOptions.map((option) => option.replace(/\s+/g, ""));
+  // }, []);
+
   // Helper function to parse karat and set metal type
   const parseKaratAndSetMetalType = useCallback(
     (goldKarat: string, productData: ProductData) => {
@@ -881,29 +935,7 @@ const ProductDetail = () => {
   useEffect(() => {
     if (!productData) return;
 
-    // Determine available clarity options based on diamond type and metal type
-    let normalizedClarityOptions: string[] = [];
-
-    if (
-      !productData.diamondOptions ||
-      Object.keys(productData.diamondOptions).length === 0
-    ) {
-      // Fallback to diamondColorClarity if diamondOptions is missing/empty
-      normalizedClarityOptions = (productData.diamondColorClarity || []).map(
-        (c) => c.replace(/\s+/g, ""),
-      );
-    } else {
-      const diamondType =
-        selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
-      const metalTypeKey =
-        selectedMetalType === "PLATINUM" ? "PLATINUM" : "GOLD";
-
-      const clarityOptions =
-        productData.diamondOptions?.[diamondType]?.[metalTypeKey] || [];
-      normalizedClarityOptions = clarityOptions.map((option) =>
-        option.replace(/\s+/g, ""),
-      );
-    }
+    const normalizedClarityOptions = getAvailableClarityOptions();
 
     // If current selection is not in the new options, reset to first available
     if (
@@ -916,7 +948,7 @@ const ProductDetail = () => {
       // If no selection yet, pick first available
       setSelectedColorClarity(normalizedClarityOptions[0]);
     }
-  }, [selectedMetalType, selectedDiamondOrigin, productData]);
+  }, [selectedMetalType, selectedDiamondOrigin, productData, getAvailableClarityOptions]);
 
   // ---------- iJewel Preload (Silent) ----------
   useEffect(() => {
@@ -2727,43 +2759,8 @@ const ProductDetail = () => {
                       </div>
                     )}
                   {(() => {
-                    // Get available clarity options based on diamond type and metal type
-                    const getAvailableClarityOptions = () => {
-                      // Check if diamondOptions exists and has actual content (not empty object)
-                      const hasDiamondOptions = productData.diamondOptions && 
-                        Object.keys(productData.diamondOptions).length > 0;
-                      
-                      if (!hasDiamondOptions) {
-                        // Fallback to diamondColorClarity if diamondOptions is not available or empty
-                        return productData.diamondColorClarity || [];
-                      }
-
-                      const diamondType =
-                        selectedDiamondOrigin === "Lab Grown Diamond"
-                          ? "LAB"
-                          : "NATURAL";
-                      const metalTypeKey =
-                        selectedMetalType === "PLATINUM" ? "PLATINUM" : "GOLD";
-
-                      const clarityOptions =
-                        productData.diamondOptions?.[diamondType]?.[
-                        metalTypeKey
-                        ] || [];
-
-                      // If no options found in diamondOptions for this type/metal combo, fallback to diamondColorClarity
-                      if (clarityOptions.length === 0) {
-                        return productData.diamondColorClarity || [];
-                      }
-
-                      // Map the clarity options to match the format used in the product
-                      return clarityOptions.map((option) => {
-                        // Convert "EF VVS" to "EFVVS", "D IF" to "DIF", "DE IF" to "DEIF", etc.
-                        return option.replace(/\s+/g, "");
-                      });
-                    };
-
-                    const availableClarityOptions =
-                      getAvailableClarityOptions();
+                    // Get available clarity options based on diamond type and metal type using the helper function
+                    const availableClarityOptions = getAvailableClarityOptions();
 
                     return availableClarityOptions.length > 0 ? (
                       <div>
