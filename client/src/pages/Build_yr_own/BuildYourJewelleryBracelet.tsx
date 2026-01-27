@@ -351,6 +351,9 @@ const ProductDetail = () => {
     metalType: "GOLD",
   });
 
+  // Track the last parsed parent SKU to prevent re-parsing
+  const lastParsedParentSkuRef = useRef<string>("");
+
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
     getInitialStyleAndDesign(),
@@ -539,13 +542,14 @@ if (data.deliveryDays) {
     currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
-  // When selectedColorCode changes for the currently selected style, re-fetch its product details
+  // When selectedColorCode or selectedParentSku changes for the currently selected style, re-fetch its product details
   useEffect(() => {
     try {
       if (!selectedStyleData) return;
       const parent = selectedStyleData?.parentSku;
       const variantSku = selectedStyleData?.variants?.[0]?.sku;
       if (parent && variantSku && typeof updateSubstyleProductDetails === "function") {
+        console.log("Refetching product for parent SKU:", parent);
         updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
       }
     } catch (err) {
@@ -553,8 +557,10 @@ if (data.deliveryDays) {
     }
   }, [
     selectedColorCode,
+    selectedParentSku,
     selectedStyleData?.parentSku,
     selectedStyleData?.variants,
+    updateSubstyleProductDetails,
   ]);
 
   // Load data for current category
@@ -571,6 +577,83 @@ if (data.deliveryDays) {
       console.error("Error in category load useEffect:", err);
     }
   }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
+
+  // Parse first variant SKU when parent SKU changes to set all fields
+  useEffect(() => {
+    if (!selectedParentSku || !selectedStyleData?.variants?.[0]?.sku) return;
+
+    // Skip if we already parsed this parent SKU
+    if (lastParsedParentSkuRef.current === selectedParentSku) return;
+
+    console.log("Parsing first variant for new parent SKU:", selectedParentSku);
+    lastParsedParentSkuRef.current = selectedParentSku;
+
+    const firstVariantSku = selectedStyleData.variants[0].sku;
+    console.log("First variant SKU:", firstVariantSku);
+    const parts = firstVariantSku.split('-');
+    
+    // Expected format: BR19-RD-1-14-LGEFVS-6
+    // parts[0] = BR19 (model)
+    // parts[1] = RD (shape)
+    // parts[2] = 1 (size in cents, 1 = 0.01 carat)
+    // parts[3] = 14 (karat, 14kt)
+    // parts[4] = LGEFVS (origin + clarity)
+    // parts[5] = 6 (mm - bracelet length)
+
+    if (parts.length >= 5) {
+      // Parse shape
+      const shapeCode = parts[1];
+      const shapeMap: Record<string, string> = {
+        "RD": "Round",
+        "OV": "Oval",
+        "PRN": "Princess",
+        "EM": "Emerald",
+        "MQ": "Marquise",
+        "PRS": "Pear",
+        "HRT": "Heart",
+        "CUS": "Cushion",
+        "AS": "Asscher",
+        "RAD": "Radiant"
+      };
+      const shapeName = shapeMap[shapeCode] || "Round";
+      console.log("Setting shape:", shapeName);
+      setSelectedDiamondShape(shapeName);
+
+      // Parse size (convert from cents to carats)
+      const sizeInCents = parseInt(parts[2]);
+      const sizeInCarats = (sizeInCents / 100).toFixed(2);
+      console.log("Setting size:", sizeInCarats);
+      setSelectedDiamondSize(sizeInCarats);
+
+      // Parse karat
+      const karat = parts[3] + "kt";
+      console.log("Setting karat:", karat);
+      setSelectedGoldKarat(karat);
+
+      // Parse origin and clarity
+      const specifications = parts[4];
+      if (specifications.startsWith('LG')) {
+        console.log("Setting origin: Lab Grown Diamond");
+        setSelectedDiamondOrigin("Lab Grown Diamond");
+        const clarity = specifications.substring(2); // Remove "LG"
+        // Try to match with spaces (e.g., "EFVS" -> "EF VS")
+        const clarityWithSpaces = clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
+        console.log("Setting clarity:", clarityWithSpaces);
+        setSelectedColorClarity(clarityWithSpaces);
+      } else if (specifications.startsWith('ND')) {
+        console.log("Setting origin: Natural Diamond");
+        setSelectedDiamondOrigin("Natural Diamond");
+        const clarity = specifications.substring(2); // Remove "ND"
+        const clarityWithSpaces = clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
+        console.log("Setting clarity:", clarityWithSpaces);
+        setSelectedColorClarity(clarityWithSpaces);
+      }
+
+      // Metal type defaults to GOLD
+      console.log("Setting metal type: GOLD");
+      setSelectedMetalType("GOLD");
+    }
+  }, [selectedParentSku, selectedStyleData?.variants]);
 
   // Add fallback for categories without API endpoints
   // const getFallbackSubstyles = (categoryName: string): SubStyle[] => {

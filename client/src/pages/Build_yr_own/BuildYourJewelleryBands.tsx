@@ -2917,7 +2917,7 @@ const ProductDetail = () => {
                 </Link>
 
                 {/* Free Engraving */}
-                <div className="flex items-center space-x-2">
+                <div className={`${selectedStyleData?.productDetails?.isEngraving ? "flex items-center space-x-2" : "hidden"}`}>
                   <input
                     type="checkbox"
                     id="engraving"
