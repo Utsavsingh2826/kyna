@@ -1632,7 +1632,10 @@ export const getProductByModelSku = async (
               sku.includes(`-${skuDiamondType}${normalizedClarity}`)
             ) {
               const parts = sku.split("-");
-              const metalPart = parts[3]; // 14 | PT | SLV
+              // const metalPart = parts[3]; // 14 | PT | SLV
+              const metalPart =
+                parts.find(p => p === "SLV" || p === "PT") ||
+                parts.find(p => /^\d+$/.test(p)); // gold karat like 14,18
 
               let resolvedMetal =
                 metalPart === "SLV" ? "SILVER" :
