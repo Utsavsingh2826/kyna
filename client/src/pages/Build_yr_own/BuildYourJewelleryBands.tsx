@@ -1728,23 +1728,43 @@ const ProductDetail = () => {
       const originKey =
         selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
       
-      // Map metal type to key
-      // If SILVER, we likely use GOLD options or fallback? 
-      // Based on user request, only GOLD and PLATINUM keys exist.
-      // Assuming SILVER uses GOLD options or defaults to diamondColorClarity if needed.
-      // Let's default to GOLD if not PLATINUM.
-      let metalKey: "GOLD" | "PLATINUM" = "GOLD";
+      // Map metal type to key - SILVER uses its own key if available
+      let metalKey: "GOLD" | "PLATINUM" | "SILVER" = "GOLD";
       if (selectedMetalType === "PLATINUM") {
         metalKey = "PLATINUM";
+      } else if (selectedMetalType === "SILVER") {
+        metalKey = "SILVER";
       }
 
-      const options = details.diamondOptions[originKey]?.[metalKey];
+      // Try to get options for the selected combination
+      let options = details.diamondOptions[originKey] && metalKey in details.diamondOptions[originKey]
+        ? (details.diamondOptions[originKey as keyof typeof details.diamondOptions] as Record<string, string[]>)[metalKey]
+        : undefined;
+      
+      // Fallback logic if specific combination doesn't exist
+      if (!options || options.length === 0) {
+        // If NATURAL + SILVER doesn't exist, try NATURAL + GOLD
+        if (originKey === "NATURAL" && metalKey === "SILVER") {
+          options = details.diamondOptions["NATURAL"]?.["GOLD"];
+        }
+        // If still no options, try LAB with same metal type
+        if (!options || options.length === 0) {
+          options = metalKey in details.diamondOptions["LAB"]
+            ? details.diamondOptions["LAB"][metalKey as keyof typeof details.diamondOptions["LAB"]]
+            : undefined;
+        }
+        // Last resort: try LAB + GOLD
+        if (!options || options.length === 0) {
+          options = details.diamondOptions["LAB"]?.["GOLD"];
+        }
+      }
+
       if (options && options.length > 0) {
         return options;
       }
     }
 
-    // Fallback to existing logic if diamondOptions missing
+    // Fallback to old structure if diamondOptions not available
     return details.diamondColorClarity || [];
   }, [
     selectedStyleData?.productDetails,
