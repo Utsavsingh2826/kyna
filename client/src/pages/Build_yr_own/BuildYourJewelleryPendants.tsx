@@ -294,6 +294,9 @@ const ProductDetail = () => {
     metalType: "GOLD",
   });
 
+  // Track the last parsed parent SKU to prevent re-parsing
+  const lastParsedParentSkuRef = useRef<string>("");
+
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
     getInitialStyleAndDesign(),
@@ -363,31 +366,20 @@ const ProductDetail = () => {
 
   // Fetch data from API
   const fetchCategoryData = useCallback(async (categoryName: string) => {
-    console.log("fetchCategoryData called with:", categoryName);
-    
-    if (!categoryMappings[categoryName]) {
-      console.log("No mapping found for category:", categoryName);
-      return;
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      console.log("Fetching from API:", `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`);
       const response = await fetch(
         `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`,
       );
       const data: ApiResponse = await response.json();
-      console.log("API Response:", data);
 
       if (data.success && data.entries) {
         // Fetch detailed product data for each entry
         const validEntries = data.entries.filter(
           (e) => e.variants && e.variants.length > 0,
         );
-
-        console.log("Valid entries:", validEntries.length);
 
         const mappedSubstyles = validEntries.map((entry) => ({
           img: entry.selectedImage,
@@ -405,15 +397,11 @@ const ProductDetail = () => {
           ),
         );
 
-        // console.log("Updated styleAndDesign with", mappedSubstyles.length, "substyles");
-
         // auto-select first style
         if (mappedSubstyles.length > 0) {
-          // console.log("Auto-selecting first style:", mappedSubstyles[0].parentSku);
           setSelectedParentSku(mappedSubstyles[0].parentSku || "");
         }
       } else {
-        // console.log("No entries found in API response");
         // Don't mark as loaded if no data
       }
     } catch (err) {
@@ -570,20 +558,14 @@ if (data.deliveryDays) {
 
   // Load data for current category
   useEffect(() => {
-    // console.log("useEffect triggered - selectedStyleCategory:", selectedStyleCategory);
     const currentCategory = styleAndDesign.find(
       (cat) => cat.name === selectedStyleCategory,
     );
-    // console.log("currentCategory:", currentCategory);
-    // console.log("isLoaded:", currentCategory?.isLoaded);
-    // console.log("substyles count:", currentCategory?.substyles?.length);
     
     // Fetch if not loaded OR if loaded but substyles is empty (data didn't populate)
     if (currentCategory && (!currentCategory.isLoaded || currentCategory.substyles.length === 0)) {
-      // console.log("Calling fetchCategoryData for:", selectedStyleCategory);
       fetchCategoryData(selectedStyleCategory);
     } else if (currentCategory?.isLoaded) {
-      // console.log("Category already loaded with data, skipping API call");
     }
   }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
 
@@ -594,11 +576,93 @@ if (data.deliveryDays) {
     );
     if (currentCategory?.substyles && currentCategory.substyles.length > 0) {
       const firstStyle = currentCategory.substyles[0];
-      if (firstStyle.parentSku) {
+      // Only set if we don't have a selection yet OR if current selection is not in this category
+      const currentStyleInCategory = currentCategory.substyles.find(
+        s => s.parentSku === selectedParentSku
+      );
+      
+      if (firstStyle.parentSku && (!selectedParentSku || !currentStyleInCategory)) {
+        console.log("Auto-selecting first style in category:", firstStyle.parentSku);
         setSelectedParentSku(firstStyle.parentSku);
       }
     }
-  }, [selectedStyleCategory, styleAndDesign]);
+  }, [selectedStyleCategory, styleAndDesign, selectedParentSku]);
+
+  // Parse first variant SKU when parent SKU changes to set all fields
+  useEffect(() => {
+    if (!selectedParentSku || !selectedStyleData?.variants?.[0]?.sku) return;
+
+    // Skip if we already parsed this parent SKU
+    if (lastParsedParentSkuRef.current === selectedParentSku) return;
+
+    console.log("Parsing first variant for new parent SKU:", selectedParentSku);
+    lastParsedParentSkuRef.current = selectedParentSku;
+
+    const firstVariantSku = selectedStyleData.variants[0].sku;
+    console.log("First variant SKU:", firstVariantSku);
+    const parts = firstVariantSku.split('-');
+    
+    // Expected format: PD18-RD-10-18-LGEFVVS
+    // parts[0] = PD18 (model)
+    // parts[1] = RD (shape)
+    // parts[2] = 10 (size in cents, 10 = 0.10 carat)
+    // parts[3] = 18 (karat, 18kt)
+    // parts[4] = LGEFVVS (origin + clarity)
+
+    if (parts.length >= 5) {
+      // Parse shape
+      const shapeCode = parts[1];
+      const shapeMap: Record<string, string> = {
+        "RD": "Round",
+        "OV": "Oval",
+        "PRN": "Princess",
+        "EM": "Emerald",
+        "MQ": "Marquise",
+        "PRS": "Pear",
+        "HRT": "Heart",
+        "CUS": "Cushion",
+        "AS": "Asscher",
+        "RAD": "Radiant"
+      };
+      const shapeName = shapeMap[shapeCode] || "Round";
+      console.log("Setting shape:", shapeName);
+      setSelectedDiamondShape(shapeName);
+
+      // Parse size (convert from cents to carats)
+      const sizeInCents = parseInt(parts[2]);
+      const sizeInCarats = (sizeInCents / 100).toFixed(2);
+      console.log("Setting size:", sizeInCarats);
+      setSelectedDiamondSize(sizeInCarats);
+
+      // Parse karat
+      const karat = parts[3] + "kt";
+      console.log("Setting karat:", karat);
+      setSelectedGoldKarat(karat);
+
+      // Parse origin and clarity
+      const specifications = parts[4];
+      if (specifications.startsWith('LG')) {
+        console.log("Setting origin: Lab Grown Diamond");
+        setSelectedDiamondOrigin("Lab Grown Diamond");
+        const clarity = specifications.substring(2); // Remove "LG"
+        // Try to match with spaces (e.g., "EFVVS" -> "EF VVS")
+        const clarityWithSpaces = clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
+        console.log("Setting clarity:", clarityWithSpaces);
+        setSelectedColorClarity(clarityWithSpaces);
+      } else if (specifications.startsWith('ND')) {
+        console.log("Setting origin: Natural Diamond");
+        setSelectedDiamondOrigin("Natural Diamond");
+        const clarity = specifications.substring(2); // Remove "ND"
+        const clarityWithSpaces = clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
+        console.log("Setting clarity:", clarityWithSpaces);
+        setSelectedColorClarity(clarityWithSpaces);
+      }
+
+      // Metal type defaults to GOLD
+      console.log("Setting metal type: GOLD");
+      setSelectedMetalType("GOLD");
+    }
+  }, [selectedParentSku, selectedStyleData?.variants]);
 
   // Load Tennis Bracelet data on component mount
   // useEffect(() => {
@@ -999,7 +1063,6 @@ if (data.deliveryDays) {
         try {
           main.innerHTML = "";
           main.appendChild(pre.canvas);
-          console.log("Moved preloaded canvas to main viewer");
           return;
         } catch (err) {
           console.warn("Error moving preloaded canvas:", err);
@@ -1243,12 +1306,15 @@ if (data.deliveryDays) {
     
     // Don't refetch if required selections are not set yet
     if (!selectedDiamondSize || !selectedGoldKarat || !selectedDiamondShape) {
+      console.log("Skipping refetch - missing required selections");
       return;
     }
     
+    console.log("Refetching product for parent SKU:", selectedStyleData.parentSku);
     refetchUpdatedProduct(selectedStyleData);
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    selectedParentSku, // Add this to track parent SKU changes
     selectedDiamondOrigin,
     selectedDiamondShape,
     selectedDiamondSize,
