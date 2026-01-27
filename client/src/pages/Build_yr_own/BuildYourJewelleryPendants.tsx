@@ -101,7 +101,8 @@ interface ApiVariant {
 
 interface ApiProduct {
   parentSku: string;
-  builderView: string;
+  builderStyle: string;
+  builderView?: string; // Optional for backward compatibility
   selectedImage: string;
   variants: ApiVariant[];
 }
@@ -362,16 +363,23 @@ const ProductDetail = () => {
 
   // Fetch data from API
   const fetchCategoryData = useCallback(async (categoryName: string) => {
-    if (!categoryMappings[categoryName]) return;
+    console.log("fetchCategoryData called with:", categoryName);
+    
+    if (!categoryMappings[categoryName]) {
+      console.log("No mapping found for category:", categoryName);
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
+      console.log("Fetching from API:", `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`);
       const response = await fetch(
         `/api/products/builder?stylingName=${encodeURIComponent(categoryName)}`,
       );
       const data: ApiResponse = await response.json();
+      console.log("API Response:", data);
 
       if (data.success && data.entries) {
         // Fetch detailed product data for each entry
@@ -379,9 +387,11 @@ const ProductDetail = () => {
           (e) => e.variants && e.variants.length > 0,
         );
 
+        console.log("Valid entries:", validEntries.length);
+
         const mappedSubstyles = validEntries.map((entry) => ({
           img: entry.selectedImage,
-          name: entry.builderView,
+          name: entry.builderView || entry.builderStyle || entry.parentSku,
           price: "", // blank initially
           parentSku: entry.parentSku,
           variants: entry.variants,
@@ -395,10 +405,16 @@ const ProductDetail = () => {
           ),
         );
 
+        // console.log("Updated styleAndDesign with", mappedSubstyles.length, "substyles");
+
         // auto-select first style
-        if (!selectedParentSku && mappedSubstyles.length > 0) {
+        if (mappedSubstyles.length > 0) {
+          // console.log("Auto-selecting first style:", mappedSubstyles[0].parentSku);
           setSelectedParentSku(mappedSubstyles[0].parentSku || "");
         }
+      } else {
+        // console.log("No entries found in API response");
+        // Don't mark as loaded if no data
       }
     } catch (err) {
       console.error("Failed to fetch category data:", err);
@@ -406,7 +422,7 @@ const ProductDetail = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedParentSku]);  
 
   // Helper to re-fetch product model for a specific substyle and metal color
   const updateSubstyleProductDetails = useCallback(
@@ -537,7 +553,7 @@ if (data.deliveryDays) {
     currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
-  // When selectedColorCode changes for the currently selected style, re-fetch its product details
+  // Fetch product details when selected style changes or color changes
   useEffect(() => {
     const parent = selectedStyleData?.parentSku;
     const variantSku = selectedStyleData?.variants?.[0]?.sku;
@@ -545,6 +561,7 @@ if (data.deliveryDays) {
       updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
     }
   }, [
+    selectedParentSku,
     selectedColorCode,
     selectedStyleData?.parentSku,
     selectedStyleData?.variants,
@@ -553,13 +570,35 @@ if (data.deliveryDays) {
 
   // Load data for current category
   useEffect(() => {
+    // console.log("useEffect triggered - selectedStyleCategory:", selectedStyleCategory);
     const currentCategory = styleAndDesign.find(
       (cat) => cat.name === selectedStyleCategory,
     );
-    if (currentCategory && !currentCategory.isLoaded) {
+    // console.log("currentCategory:", currentCategory);
+    // console.log("isLoaded:", currentCategory?.isLoaded);
+    // console.log("substyles count:", currentCategory?.substyles?.length);
+    
+    // Fetch if not loaded OR if loaded but substyles is empty (data didn't populate)
+    if (currentCategory && (!currentCategory.isLoaded || currentCategory.substyles.length === 0)) {
+      // console.log("Calling fetchCategoryData for:", selectedStyleCategory);
       fetchCategoryData(selectedStyleCategory);
+    } else if (currentCategory?.isLoaded) {
+      // console.log("Category already loaded with data, skipping API call");
     }
   }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
+
+  // When category changes, auto-select first style
+  useEffect(() => {
+    const currentCategory = styleAndDesign.find(
+      (cat) => cat.name === selectedStyleCategory,
+    );
+    if (currentCategory?.substyles && currentCategory.substyles.length > 0) {
+      const firstStyle = currentCategory.substyles[0];
+      if (firstStyle.parentSku) {
+        setSelectedParentSku(firstStyle.parentSku);
+      }
+    }
+  }, [selectedStyleCategory, styleAndDesign]);
 
   // Load Tennis Bracelet data on component mount
   // useEffect(() => {
@@ -2466,7 +2505,8 @@ if (data.deliveryDays) {
                           </div>
                         )}
 
-                        <div className="hidden py-2 border-b border-[#328F94]">
+                        <div className="hidden py-2 border-b 
+                        border-[#328F94]">
                           <div className="text-muted-foreground mb-2">
                             Product Dimensions (In mm)
                           </div>
