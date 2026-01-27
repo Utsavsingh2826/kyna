@@ -133,6 +133,18 @@ interface ProductModelResponse {
     SILVER?: string[];
   };
   diamondColorClarity: string[];
+  diamondOptions?: {
+    LAB?: {
+      GOLD?: string[];
+      PLATINUM?: string[];
+      SILVER?: string[];
+    };
+    NATURAL?: {
+      GOLD?: string[];
+      PLATINUM?: string[];
+      SILVER?: string[];
+    };
+  };
   isEngraving: boolean;
   engravingInfo: {
     fontSize: number;
@@ -726,7 +738,20 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
   const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
+  const [selectedStyleCategory, setSelectedStyleCategory] = useState("CLASSIC");
   const [deliveryDays, setDeliveryDays] = useState<number | 25>(25);
+   // API state
+  const [styleAndDesign, setStyleAndDesign] = useState(
+    getInitialStyleAndDesign(),
+  );
+   // Get current category's substyles and selected style data
+  const currentCategory = styleAndDesign.find(
+    (cat) => cat.name === selectedStyleCategory,
+  );
+  const currentSubstyles = currentCategory?.substyles || [];
+  const selectedStyleData =
+    currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
+    currentSubstyles[0];
    const formattedDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + deliveryDays);
@@ -736,6 +761,35 @@ const ProductDetail = () => {
       year: "numeric",
     });
   }, [deliveryDays]);
+
+  // Helper function to get available clarity options based on diamond origin and metal type
+  const getAvailableClarityOptions = useCallback(() => {
+    if (!selectedStyleData?.productDetails) return [];
+
+    const productDetails = selectedStyleData.productDetails;
+    
+    // Check if diamondOptions exists and has data
+    if (
+      !productDetails.diamondOptions ||
+      Object.keys(productDetails.diamondOptions).length === 0
+    ) {
+      // Fallback to diamondColorClarity if diamondOptions is missing/empty
+      return (productDetails.diamondColorClarity || []).map((c) =>
+        c.replace(/\s+/g, ""),
+      );
+    }
+
+    const diamondType =
+      selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+    const metalTypeKey = selectedMetalType || "GOLD";
+
+    // Get clarity options with proper typing
+    const clarityOptions: string[] = 
+      (productDetails.diamondOptions as any)?.[diamondType]?.[metalTypeKey] || [];
+    
+    // Return the clarity options with spaces removed for consistency
+    return clarityOptions.map((option: string) => option.replace(/\s+/g, ""));
+  }, [selectedStyleData, selectedDiamondOrigin, selectedMetalType]);
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
@@ -749,15 +803,10 @@ const ProductDetail = () => {
     metalType: "GOLD",
   });
 
-  // API state
-  const [styleAndDesign, setStyleAndDesign] = useState(
-    getInitialStyleAndDesign(),
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Default to first category
-  const [selectedStyleCategory, setSelectedStyleCategory] = useState("CLASSIC");
   const [selectedParentSku, setSelectedParentSku] = useState("");
 
   // Fetch data from API
@@ -901,14 +950,6 @@ const ProductDetail = () => {
     [],
   );
 
-  // Get current category's substyles and selected style data
-  const currentCategory = styleAndDesign.find(
-    (cat) => cat.name === selectedStyleCategory,
-  );
-  const currentSubstyles = currentCategory?.substyles || [];
-  const selectedStyleData =
-    currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
-    currentSubstyles[0];
 
   // Function to check if image is a 3D model
   const is3DModel = (imagePath: string, index: number) => {
@@ -1311,7 +1352,7 @@ const ProductDetail = () => {
 
     const clarityToken =
       selectedColorClarity ||
-      substyle?.productDetails?.diamondColorClarity?.[0] ||
+      getAvailableClarityOptions()[0] ||
       "EFVVS";
     const specifications = `${originCode}${clarityToken}`;
 
@@ -1830,9 +1871,8 @@ const ProductDetail = () => {
       if (diamondSizes.length > 0 && (selectedDiamondSize === "" || !diamondSizes.includes(selectedDiamondSize))) {
         setSelectedDiamondSize(diamondSizes[0]);
       }
-      // Initialize clarity from product details
-      const clarities =
-        selectedStyleData.productDetails.diamondColorClarity || [];
+      // Initialize clarity from available options
+      const clarities = getAvailableClarityOptions();
       if (
         clarities.length > 0 &&
         (selectedColorClarity === "" ||
@@ -1859,6 +1899,7 @@ const ProductDetail = () => {
     getAvailableDiamondShapes,
     getAvailableDiamondSizes,
     getAvailableKarats,
+    getAvailableClarityOptions,
   ]);
 
   useEffect(() => {
@@ -2430,7 +2471,7 @@ const ProductDetail = () => {
                         }}
                       >
                         <SelectTrigger className="w-full text-sm border-neutral-300">
-                          <SelectValue placeholder="Select Diamond Size" />
+                          <SelectValue placeholder={selectedDiamondSize} />
                         </SelectTrigger>
 
                         <SelectContent className="bg-white">
@@ -2455,16 +2496,16 @@ const ProductDetail = () => {
                 )}
 
                 {/* Diamond Color & Clarity Section */}
-                {selectedStyleData?.productDetails?.diamondColorClarity &&
-                  selectedStyleData.productDetails.diamondColorClarity.length >
-                  0 && (
+                {(() => {
+                  const availableClarityOptions = getAvailableClarityOptions();
+                  
+                  return availableClarityOptions.length > 0 ? (
                     <div className="w-1/2 mb-6">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Color & Clarity:{" "}
                         <span className="text-[#8D8A91]">
                           {selectedColorClarity ||
-                            selectedStyleData.productDetails
-                              .diamondColorClarity[0]}
+                            availableClarityOptions[0]}
                         </span>
                       </h3>
 
@@ -2479,26 +2520,16 @@ const ProductDetail = () => {
                         </SelectTrigger>
 
                         <SelectContent className="bg-white">
-                          {selectedStyleData.productDetails.diamondColorClarity
-                            .filter((cc) => {
-                              // For Lab Grown Diamond, exclude GHVS and GHSI
-                              if (
-                                selectedDiamondOrigin === "Lab Grown Diamond"
-                              ) {
-                                return cc !== "GHVS" && cc !== "GHSI";
-                              }
-                              // For Natural Diamond, show all options
-                              return true;
-                            })
-                            .map((clarity) => (
-                              <SelectItem key={clarity} value={clarity}>
-                                {clarity}
-                              </SelectItem>
-                            ))}
+                          {availableClarityOptions.map((clarity) => (
+                            <SelectItem key={clarity} value={clarity}>
+                              {clarity}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
-                  )}
+                  ) : null;
+                })()}
                 </div>
 
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
@@ -3154,7 +3185,7 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Total Diamond Weight
                           </span>
-                          <span className="font-medium">{totalDiamondWeight}</span>
+                          <span className="font-medium">{totalDiamondWeight.toFixed(3)}</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">

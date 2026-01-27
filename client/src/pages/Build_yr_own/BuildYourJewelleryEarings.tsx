@@ -152,6 +152,18 @@ interface ProductModelResponse {
   netWeightGrams?: number;
   totalDiamondWeight?: number;
   deliveryDays?: number;
+  diamondOptions?: {
+    LAB: {
+      GOLD: string[];
+      PLATINUM: string[];
+      SILVER: string[];
+    };
+    NATURAL: {
+      GOLD: string[];
+      PLATINUM: string[];
+      SILVER: string[];
+    };
+  };
 }
 
 interface SubStyle {
@@ -504,9 +516,29 @@ const ProductDetail = () => {
                 }
                 
                 // Extract clarity (everything after LG or ND)
-                const clarity = specifications.replace(/^(LG|ND)/, '');
-                if (clarity && clarity !== selectedColorClarity) {
-                  setSelectedColorClarity(clarity);
+                const clarityCompact = specifications.replace(/^(LG|ND)/, '');
+                
+                // Find matching display clarity from API options
+                let matchedClarity = clarityCompact;
+                
+                // Helper to get options from the data response directly
+                const getOptionsFromData = () => {
+                   if (data.diamondOptions) {
+                     const originKey = selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+                     const metalKey = (selectedMetalType || "GOLD") as "GOLD" | "PLATINUM" | "SILVER";
+                     return data.diamondOptions[originKey]?.[metalKey] || [];
+                   }
+                   return data.diamondColorClarity || [];
+                };
+
+                const availableClarities = getOptionsFromData();
+                const found = availableClarities.find(c => c.replace(/\s+/g, '') === clarityCompact);
+                if (found) {
+                  matchedClarity = found;
+                }
+
+                if (matchedClarity && matchedClarity !== selectedColorClarity) {
+                  setSelectedColorClarity(matchedClarity);
                 }
               }
             }
@@ -735,9 +767,9 @@ if (data.deliveryDays) {
       selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
 
     const clarityToken =
-      selectedColorClarity ||
+      (selectedColorClarity ||
       substyle?.productDetails?.diamondColorClarity?.[0] ||
-      "EFVVS";
+      "EFVVS").replace(/\s+/g, "");
     const specifications = `${originCode}${clarityToken}`;
 
     return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
@@ -1014,6 +1046,35 @@ if (data.deliveryDays) {
 
     return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
   }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
+
+  const getAvailableColorClarities = useCallback(() => {
+    if (!selectedStyleData?.productDetails) return [];
+    
+    // Check new structure first
+    if (selectedStyleData.productDetails.diamondOptions) {
+      const originKey = selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+      // selectedMetalType is "GOLD", "PLATINUM", "SILVER"
+      const metalKey = (selectedMetalType || "GOLD") as "GOLD" | "PLATINUM" | "SILVER";
+      
+      const options = selectedStyleData.productDetails.diamondOptions[originKey]?.[metalKey];
+      if (options && Array.isArray(options)) {
+        return options;
+      }
+    }
+
+    // Fallback to old behavior
+    const allOptions = selectedStyleData.productDetails.diamondColorClarity || [];
+    
+    // if (selectedDiamondOrigin === "Lab Grown Diamond") {
+    //   return allOptions.filter(cc => cc !== "GHVS" && cc !== "GHSI");
+    // }
+    
+    return allOptions;
+  }, [
+    selectedStyleData?.productDetails,
+    selectedDiamondOrigin,
+    selectedMetalType
+  ]);
 
   // Engraving upload helpers (mirror ProductDetail behavior)
   const uploadEngravingToBackend = useCallback(
@@ -1338,6 +1399,19 @@ if (data.deliveryDays) {
     }
   }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
 
+  // Track previous parent SKU to detect changes
+  const previousParentSkuRef = useRef<string>("");
+
+  // Reset color to WG when parent SKU actually changes
+  useEffect(() => {
+    if (selectedParentSku && selectedParentSku !== previousParentSkuRef.current) {
+      previousParentSkuRef.current = selectedParentSku;
+      setSelectedMetalColor("White Gold");
+      setSelectedColorCode("WG");
+      setSelectedMetalType("GOLD");
+    }
+  }, [selectedParentSku]);
+
   // Update selected options when style changes
   useEffect(() => {
     if (selectedStyleData?.productDetails) {
@@ -1361,8 +1435,7 @@ if (data.deliveryDays) {
         setSelectedDiamondSize(diamondSizes[0]);
       }
       // Initialize clarity from product details
-      const clarities =
-        selectedStyleData.productDetails.diamondColorClarity || [];
+      const clarities = getAvailableColorClarities();
       if (
         clarities.length > 0 &&
         (selectedColorClarity === "" ||
@@ -1389,6 +1462,7 @@ if (data.deliveryDays) {
     getAvailableDiamondShapes,
     getAvailableDiamondSizes,
     getAvailableKarats,
+    getAvailableColorClarities
   ]);
 
   // Initialize lastValidStateRef with the first loaded state
@@ -1779,7 +1853,7 @@ if (data.deliveryDays) {
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
+                              <div className="w-12 h-12 md:w-48 md:h-48 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={style.img}
                                   alt={style.name}
@@ -2014,7 +2088,7 @@ if (data.deliveryDays) {
                       <SelectTrigger className="w-full text-sm border-neutral-300">
                         <SelectValue>
                           {selectedDiamondSize
-                            ? `${selectedDiamondSize} ct`
+                            ? `${selectedDiamondSize} carat`
                             : "Select Diamond Size"}
                         </SelectValue>
                       </SelectTrigger>
@@ -2040,16 +2114,13 @@ if (data.deliveryDays) {
                 )}
 
                 {/* Diamond Color & Clarity Section */}
-                {selectedStyleData?.productDetails?.diamondColorClarity &&
-                  selectedStyleData.productDetails.diamondColorClarity.length >
-                    0 && (
+                {getAvailableColorClarities().length > 0 && (
                     <div className="w-1/2 mb-6">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Color & Clarity:{" "}
                         <span className="text-[#8D8A91]">
                           {selectedColorClarity ||
-                            selectedStyleData.productDetails
-                              .diamondColorClarity[0]}
+                            getAvailableColorClarities()[0]}
                         </span>
                       </h3>
 
@@ -2064,18 +2135,7 @@ if (data.deliveryDays) {
                         </SelectTrigger>
 
                         <SelectContent className="bg-white">
-                          {selectedStyleData.productDetails.diamondColorClarity
-                            .filter((cc) => {
-                              // For Lab Grown Diamond, exclude GHVS and GHSI
-                              if (
-                                selectedDiamondOrigin === "Lab Grown Diamond"
-                              ) {
-                                return cc !== "GHVS" && cc !== "GHSI";
-                              }
-                              // For Natural Diamond, show all options
-                              return true;
-                            })
-                            .map((clarity) => (
+                          {getAvailableColorClarities().map((clarity) => (
                               <SelectItem key={clarity} value={clarity}>
                                 {clarity}
                               </SelectItem>
@@ -2696,7 +2756,7 @@ if (data.deliveryDays) {
                             Total Diamond Weight
                           </span>
                           <span className="font-medium">
-                            {totalDiamondWeight || "-"}
+                            {totalDiamondWeight.toFixed(3) || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">

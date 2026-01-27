@@ -131,6 +131,16 @@ interface ProductModelResponse {
       }
     | string[];
   diamondColorClarity: string[];
+  diamondOptions?: {
+    LAB: {
+      GOLD: string[];
+      PLATINUM: string[];
+    };
+    NATURAL: {
+      GOLD: string[];
+      PLATINUM: string[];
+    };
+  };
   isEngraving: boolean;
   engravingInfo: {
     fontSize: number;
@@ -1122,10 +1132,14 @@ const ProductDetail = () => {
     const originCode =
       selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
 
-    const clarityToken =
+    let clarityToken =
       selectedColorClarity ||
       substyle?.productDetails?.diamondColorClarity?.[0] ||
       "EFVVS";
+    
+    // Remove spaces from clarity token (e.g. "EF VVS" -> "EFVVS") for SKU matching
+    clarityToken = clarityToken.replace(/\s+/g, "");
+
     const specifications = `${originCode}${clarityToken}`;
 
     // Build variant ID based on what's selected
@@ -1139,14 +1153,36 @@ const ProductDetail = () => {
       variantId = `${modelSku}-${karat}-${specifications}`;
     }
 
-    // Add bandwidth if selected (Men's Rings)
-    if (selectedBandwidth) {
-      variantId += `-${selectedBandwidth}`;
+    // Add bandwidth: prefer selected, otherwise fallback to first available option
+    const bandwidthOptions = substyle.productDetails?.bandwidth || [];
+    let bandwidthToUse = "";
+    
+    if (selectedBandwidth && bandwidthOptions.includes(selectedBandwidth)) {
+      bandwidthToUse = selectedBandwidth;
+    } else if (bandwidthOptions.length > 0) {
+      // Sort to ensure we pick the "smallest" or first consistent option
+      const sortedBw = [...bandwidthOptions].sort((a,b) => parseFloat(a) - parseFloat(b));
+      bandwidthToUse = sortedBw[0];
     }
 
-    // Add finishing if selected (Men's Rings)
-    if (selectedFinishing) {
-      variantId += `-${selectedFinishing}`;
+    if (bandwidthToUse) {
+      variantId += `-${bandwidthToUse}`;
+    }
+
+    // Add finishing: prefer selected, otherwise fallback to first available option
+    const finishingOptions = substyle.productDetails?.finishing || [];
+    // finishingOptions can be string[] or {code, type}[]
+    const finishingCodes = finishingOptions.map(f => typeof f === 'string' ? f : f.code);
+    let finishingToUse = "";
+
+    if (selectedFinishing && finishingCodes.includes(selectedFinishing)) {
+      finishingToUse = selectedFinishing;
+    } else if (finishingCodes.length > 0) {
+      finishingToUse = finishingCodes[0];
+    }
+    
+    if (finishingToUse) {
+      variantId += `-${finishingToUse}`;
     }
 
     return variantId;
@@ -1317,11 +1353,15 @@ const ProductDetail = () => {
   }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
 
   // Get available bandwidth options
+  // Get available bandwidth options
   const getAvailableBandwidth = useCallback(() => {
     if (!selectedStyleData?.productDetails?.bandwidth) {
       return [];
     }
-    return selectedStyleData.productDetails.bandwidth;
+    // Sort numerical bandwidths in ascending order
+    return [...selectedStyleData.productDetails.bandwidth].sort(
+      (a, b) => parseFloat(a) - parseFloat(b)
+    );
   }, [selectedStyleData?.productDetails?.bandwidth]);
 
   // Get available finishing options
@@ -1679,6 +1719,39 @@ const ProductDetail = () => {
     }
   }, [selectedStyleData?.productDetails?.goldKarats, selectedMetalType]);
 
+  const getAvailableColorClarity = useCallback(() => {
+    const details = selectedStyleData?.productDetails;
+    if (!details) return [];
+
+    // If we have the new diamondOptions structure
+    if (details.diamondOptions) {
+      const originKey =
+        selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+      
+      // Map metal type to key
+      // If SILVER, we likely use GOLD options or fallback? 
+      // Based on user request, only GOLD and PLATINUM keys exist.
+      // Assuming SILVER uses GOLD options or defaults to diamondColorClarity if needed.
+      // Let's default to GOLD if not PLATINUM.
+      let metalKey: "GOLD" | "PLATINUM" = "GOLD";
+      if (selectedMetalType === "PLATINUM") {
+        metalKey = "PLATINUM";
+      }
+
+      const options = details.diamondOptions[originKey]?.[metalKey];
+      if (options && options.length > 0) {
+        return options;
+      }
+    }
+
+    // Fallback to existing logic if diamondOptions missing
+    return details.diamondColorClarity || [];
+  }, [
+    selectedStyleData?.productDetails,
+    selectedDiamondOrigin,
+    selectedMetalType,
+  ]);
+
   // Update selected options when style changes
   useEffect(() => {
     if (selectedStyleData?.productDetails) {
@@ -1714,14 +1787,13 @@ const ProductDetail = () => {
         setSelectedDiamondSize("");
       }
       // Initialize clarity from product details
-      const clarities =
-        selectedStyleData.productDetails.diamondColorClarity || [];
+      const availableColorClarity = getAvailableColorClarity();
       if (
-        clarities.length > 0 &&
+        availableColorClarity.length > 0 &&
         (selectedColorClarity === "" ||
-          !clarities.includes(selectedColorClarity))
+          !availableColorClarity.includes(selectedColorClarity))
       ) {
-        setSelectedColorClarity(clarities[0]);
+        setSelectedColorClarity(availableColorClarity[0]);
       }
       if (
         availableKarats.length > 0 &&
@@ -1736,53 +1808,70 @@ const ProductDetail = () => {
       if (firstVariantSku) {
         const parts = firstVariantSku.split("-");
         
-        // Handle different SKU formats:
-        // 5-part: GR10-9-LGEFVVS-MF (modelSku-carat-specs-finishing)
-        // 5-part: GR49-14-LGEFVS-4-BF (modelSku-carat-specs-bandwidth-finishing)
-        // Extract bandwidth and finishing from the SKU parts
         let extractedBandwidth = "";
         let extractedFinishing = "";
 
-        if (parts.length >= 4) {
-          // Check if last part is finishing (typically 2 chars like MF, BF, etc.)
-          const lastPart = parts[parts.length - 1];
-          if (lastPart && lastPart.length === 2 && /^[A-Z]{2}$/.test(lastPart)) {
-            extractedFinishing = lastPart;
+        // Robust parsing: check tokens against available options
+        // Skip the first 3 parts: Model SKU, Karat/Type, Specs
+        // Example: GR40-14-LGEFVS-10 (parts[3] = "10")
+        // Example: GR49-14-LGEFVS-4-BF (parts[3] = "4", parts[4] = "BF")
+        
+        if (parts.length > 3) {
+            const potentialOptions = parts.slice(3);
             
-            // Check if second-to-last part is bandwidth (typically 1-2 digits or letters)
-            const secondLastPart = parts[parts.length - 2];
-            if (secondLastPart && /^[\d.]+$/.test(secondLastPart)) {
-              extractedBandwidth = secondLastPart;
+            // Try to find bandwidth
+            if (availableBandwidth.length > 0) {
+                 const foundBw = potentialOptions.find(p => availableBandwidth.includes(p));
+                 if (foundBw) {
+                     extractedBandwidth = foundBw;
+                 }
             }
-          }
+
+            // Try to find finishing
+            if (availableFinishing.length > 0) {
+                const finishingCodes = availableFinishing.map(f => typeof f === 'string' ? f : f.code);
+                const foundFin = potentialOptions.find(p => finishingCodes.includes(p));
+                if (foundFin) {
+                    extractedFinishing = foundFin;
+                }
+            }
         }
 
         // Set bandwidth if available and not already set
-        if (extractedBandwidth && availableBandwidth.length > 0 && !selectedBandwidth) {
-          if (availableBandwidth.includes(extractedBandwidth)) {
-            setSelectedBandwidth(extractedBandwidth);
-          } else if (availableBandwidth.length > 0) {
-            setSelectedBandwidth(availableBandwidth[0]);
-          }
-        } else if (availableBandwidth.length > 0 && !selectedBandwidth) {
-          setSelectedBandwidth(availableBandwidth[0]);
+        if (extractedBandwidth) {
+             if (availableBandwidth.length > 0) {
+                 // Validate it exists in available options
+                 if (availableBandwidth.includes(extractedBandwidth)) {
+                    // Only update if not currently set or if we need to force sync with SKU
+                     if (!selectedBandwidth) {
+                        setSelectedBandwidth(extractedBandwidth);
+                     }
+                 }
+             }
+        } else {
+             // Fallback: if no bandwidth extracted but options exist, select first
+             if (availableBandwidth.length > 0 && !selectedBandwidth) {
+                setSelectedBandwidth(availableBandwidth[0]);
+             }
         }
 
         // Set finishing if available and not already set
-        if (extractedFinishing && availableFinishing.length > 0 && !selectedFinishing) {
-          // Check if finishing code exists in available finishing
-          const finishingMatch = availableFinishing.find(
-            (f) => (typeof f === "string" ? f : f.code) === extractedFinishing
-          );
-          if (finishingMatch) {
-            setSelectedFinishing(typeof finishingMatch === "string" ? finishingMatch : finishingMatch.code);
-          } else if (availableFinishing.length > 0) {
-            const firstFinishing = availableFinishing[0];
-            setSelectedFinishing(typeof firstFinishing === "string" ? firstFinishing : firstFinishing.code);
-          }
-        } else if (availableFinishing.length > 0 && !selectedFinishing) {
-          const firstFinishing = availableFinishing[0];
-          setSelectedFinishing(typeof firstFinishing === "string" ? firstFinishing : firstFinishing.code);
+        if (extractedFinishing) {
+             if (availableFinishing.length > 0) {
+                const finishingMatch = availableFinishing.find(
+                  (f) => (typeof f === "string" ? f : f.code) === extractedFinishing
+                );
+                
+                if (finishingMatch && !selectedFinishing) {
+                   setSelectedFinishing(typeof finishingMatch === "string" ? finishingMatch : finishingMatch.code); 
+                }
+             }
+        } else {
+             // Fallback: if no finishing extracted but options exist, select first
+             if (availableFinishing.length > 0 && !selectedFinishing) {
+                const firstFinishing = availableFinishing[0];
+                setSelectedFinishing(typeof firstFinishing === "string" ? firstFinishing : firstFinishing.code);
+             }
         }
       }
     }
@@ -1797,6 +1886,7 @@ const ProductDetail = () => {
     getAvailableDiamondShapes,
     getAvailableDiamondSizes,
     getAvailableKarats,
+    getAvailableColorClarity,
     getAvailableBandwidth,
     getAvailableFinishing,
   ]);
@@ -2196,7 +2286,7 @@ const ProductDetail = () => {
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
+                              <div className="w-12 h-12 md:w-48 md:h-48 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={style.img}
                                   alt={style.name}
@@ -2417,16 +2507,13 @@ const ProductDetail = () => {
                 )}
 
                 {/* Diamond Color & Clarity Section */}
-                {selectedStyleData?.productDetails?.diamondColorClarity &&
-                  selectedStyleData.productDetails.diamondColorClarity.length >
-                    0 && (
+                {getAvailableColorClarity().length > 0 && (
                     <div className="w-1/2 mb-6">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Color & Clarity:{" "}
                         <span className="text-[#8D8A91]">
                           {selectedColorClarity ||
-                            selectedStyleData.productDetails
-                              .diamondColorClarity[0]}
+                            getAvailableColorClarity()[0]}
                         </span>
                       </h3>
 
@@ -2441,18 +2528,7 @@ const ProductDetail = () => {
                         </SelectTrigger>
 
                         <SelectContent className="bg-white">
-                          {selectedStyleData.productDetails.diamondColorClarity
-                            .filter((cc) => {
-                              // For Lab Grown Diamond, exclude GHVS and GHSI
-                              if (
-                                selectedDiamondOrigin === "Lab Grown Diamond"
-                              ) {
-                                return cc !== "GHVS" && cc !== "GHSI";
-                              }
-                              // For Natural Diamond, show all options
-                              return true;
-                            })
-                            .map((clarity) => (
+                          {getAvailableColorClarity().map((clarity) => (
                               <SelectItem key={clarity} value={clarity}>
                                 {clarity}
                               </SelectItem>
@@ -3195,7 +3271,7 @@ const ProductDetail = () => {
                             Total Diamond Weight 
                           </span>
                           <span className="font-medium">
-                            {totalDiamondWeight || "-"}
+                            {totalDiamondWeight.toFixed(3) || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">

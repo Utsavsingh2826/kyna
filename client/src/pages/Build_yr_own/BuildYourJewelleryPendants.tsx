@@ -159,6 +159,18 @@ interface ProductModelResponse {
   chainLengthInches?: number;
   totalDiamondWeight?: number;
   deliveryDays?: number;
+  diamondOptions?: {
+    LAB: {
+      GOLD: string[];
+      PLATINUM: string[];
+      SILVER: string[];
+    };
+    NATURAL: {
+      GOLD: string[];
+      PLATINUM: string[];
+      SILVER: string[];
+    };
+  };
 }
 
 interface SubStyle {
@@ -424,6 +436,83 @@ const ProductDetail = () => {
               ),
             })),
           );
+          
+          // Parse the chosen variant SKU to sync UI state with API data
+          const chosenVariant = data.chosenVariantSku;
+          if (chosenVariant) {
+            const parts = chosenVariant.split('-');
+            if (parts.length >= 2) {
+              const shapeCode = parts[1]; // e.g., "CUS" from "ER324-CUS-100-14-LGEFVS"
+              
+              // Map shape codes back to display names
+              const codeToShapeMap: {[key: string]: string} = {
+                "RD": "Round", 
+                "OV": "Oval", 
+                "PRN": "Princess",
+                "EM": "Emerald",
+                "MQ": "Marquise",
+                "PRS": "Pear",
+                "HRT": "Heart",
+                "CUS": "Cushion"
+              };
+              
+              const shapeName = codeToShapeMap[shapeCode];
+              if (shapeName && shapeName !== selectedDiamondShape) {
+                setSelectedDiamondShape(shapeName);
+              }
+
+              // Parse other variant details if needed
+              if (parts.length >= 3) {
+                const caratCode = parts[2]; // e.g., "100" = 1.00 carat
+                const caratValue = (parseInt(caratCode) / 100).toString();
+                if (caratValue !== selectedDiamondSize) {
+                  setSelectedDiamondSize(caratValue);
+                }
+              }
+
+              if (parts.length >= 4) {
+                const goldKarat = parts[3] + "kt"; // e.g., "14" -> "14kt"
+                if (goldKarat !== selectedGoldKarat) {
+                  setSelectedGoldKarat(goldKarat);
+                }
+              }
+
+              // Parse lab grown and clarity from the last part
+              if (parts.length >= 5) {
+                const specifications = parts[4]; // e.g., "LGEFVS"
+                if (specifications.startsWith('LG') && selectedDiamondOrigin !== "Lab Grown Diamond") {
+                  setSelectedDiamondOrigin("Lab Grown Diamond");
+                } else if (specifications.startsWith('ND') && selectedDiamondOrigin !== "Natural Diamond") {
+                  setSelectedDiamondOrigin("Natural Diamond");
+                }
+                
+                // Extract clarity (everything after LG or ND)
+                const clarityCompact = specifications.replace(/^(LG|ND)/, '');
+                
+                // Find matching display clarity from API options
+                let matchedClarity = clarityCompact;
+                
+                const getOptionsFromData = () => {
+                   if (data.diamondOptions) {
+                     const originKey = selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+                     const metalKey = (selectedMetalType || "GOLD") as "GOLD" | "PLATINUM" | "SILVER";
+                     return data.diamondOptions[originKey]?.[metalKey] || [];
+                   }
+                   return data.diamondColorClarity || [];
+                };
+
+                const availableClarities = getOptionsFromData();
+                const found = availableClarities.find(c => c.replace(/\s+/g, '') === clarityCompact);
+                if (found) {
+                  matchedClarity = found;
+                }
+
+                if (matchedClarity && matchedClarity !== selectedColorClarity) {
+                  setSelectedColorClarity(matchedClarity);
+                }
+              }
+            }
+          }
         }
         // Update total diamond weight if available
 if (data.totalDiamondWeight) {
@@ -650,19 +739,33 @@ if (data.deliveryDays) {
         Math.round(parsedSize * 100),
       );
 
-      const karat = selectedGoldKarat.replace(/kt/i, "");
-      if (!karat) return null;
+      // Determine metal code based on metal type
+      let metalCode = selectedGoldKarat;
+      
+      if (selectedMetalType === "GOLD") {
+        // For gold, extract just the number from "18kt", "14kt", "9kt"
+        metalCode = selectedGoldKarat.replace(/kt/i, "");
+        if (!metalCode) {
+          return null;
+        }
+      } else if (selectedMetalType === "SILVER") {
+        // For silver, use "SLV" directly
+        metalCode = "SLV";
+      } else if (selectedMetalType === "PLATINUM") {
+        // For platinum, use "PT" directly
+        metalCode = "PT";
+      }
 
       const originCode =
         selectedDiamondOrigin === "Lab Grown Diamond" ? "LG" : "ND";
 
       const clarityToken =
-        selectedColorClarity ||
+        (selectedColorClarity ||
         substyle?.productDetails?.diamondColorClarity?.[0] ||
-        "EFVVS";
+        "EFVVS").replace(/\s+/g, "");
       const specifications = `${originCode}${clarityToken}`;
 
-      return `${modelSku}-${shapeCode}-${caratCode}-${karat}-${specifications}`;
+      return `${modelSku}-${shapeCode}-${caratCode}-${metalCode}-${specifications}`;
     },
     [
       selectedDiamondShape,
@@ -670,6 +773,7 @@ if (data.deliveryDays) {
       selectedGoldKarat,
       selectedDiamondOrigin,
       selectedColorClarity,
+      selectedMetalType,
     ],
   );
 
@@ -947,6 +1051,36 @@ if (data.deliveryDays) {
     return ["0.5", "1.0", "1.5", "2.0"]; // Fallback
   }, [selectedStyleData?.productDetails?.diamondSize, selectedMetalType]);
 
+  const getAvailableColorClarities = useCallback(() => {
+    if (!selectedStyleData?.productDetails) return [];
+    
+    // Check new structure first
+    if (selectedStyleData.productDetails.diamondOptions) {
+      const originKey = selectedDiamondOrigin === "Lab Grown Diamond" ? "LAB" : "NATURAL";
+      // selectedMetalType is "GOLD", "PLATINUM", "SILVER"
+      const metalKey = (selectedMetalType || "GOLD") as "GOLD" | "PLATINUM" | "SILVER";
+      
+      const options = selectedStyleData.productDetails.diamondOptions[originKey]?.[metalKey];
+      if (options && Array.isArray(options)) {
+        // Remove spaces from clarity options for consistency
+        return options.map((c) => c.replace(/\s+/g, ""));
+      }
+    }
+
+    // Fallback to old behavior with space removal
+    const allOptions = selectedStyleData.productDetails.diamondColorClarity || [];
+    
+    if (selectedDiamondOrigin === "Lab Grown Diamond") {
+      return allOptions.filter(cc => cc !== "GHVS" && cc !== "GHSI").map((c) => c.replace(/\s+/g, ""));
+    }
+    
+    return allOptions.map((c) => c.replace(/\s+/g, ""));
+  }, [
+    selectedStyleData?.productDetails,
+    selectedDiamondOrigin,
+    selectedMetalType
+  ]);
+
   // Ref for metal types scroll container
   const metalTypesRef = useRef<HTMLDivElement>(null);
 
@@ -1010,6 +1144,24 @@ if (data.deliveryDays) {
     selectedStyleData?.productDetails?.goldKarats,
     selectedStyleData?.productDetails?.diamondShape,
     selectedStyleData?.productDetails?.diamondSize,
+    selectedMetalType,
+    getAvailableMetalTypes,
+    getAvailableDiamondShapes,
+    getAvailableDiamondSizes,
+    getAvailableKarats,
+    getAvailableColorClarities
+  ]);
+
+  useEffect(() => {
+    const clarities = getAvailableColorClarities();
+    if (!clarities.includes(selectedColorClarity)) {
+      setSelectedColorClarity(clarities[0] || "");
+    }
+  }, [
+    selectedDiamondOrigin,
+    selectedMetalType,
+    selectedStyleData?.productDetails,
+    getAvailableColorClarities,
   ]);
 
   // Initialize lastValidStateRef with the first loaded state
@@ -1632,53 +1784,7 @@ if (data.deliveryDays) {
                 </div>)}
 
                <div className="flex items-end gap-4">
-                 {/* Diamond Color & Clarity Section */}
-                {selectedStyleData?.productDetails?.diamondColorClarity &&
-                  selectedStyleData.productDetails.diamondColorClarity.length >
-                    0 && (
-                    <div className="w-1/2 mb-2">
-                      <h3 className="mb-3 text-sm md:text-base">
-                        Diamond Color & Clarity:{" "}
-                        <span className="text-[#8D8A91]">
-                          {selectedColorClarity ||
-                            selectedStyleData.productDetails
-                              .diamondColorClarity[0]}
-                        </span>
-                      </h3>
-
-                      <Select
-                        value={selectedColorClarity}
-                        onValueChange={(value) => {
-                        setSelectedColorClarity(value);
-                      }}
-                      >
-                        <SelectTrigger className="w-full text-sm border-neutral-300">
-                          <SelectValue placeholder={selectedColorClarity || selectedStyleData.productDetails.diamondColorClarity[0]} />
-                        </SelectTrigger>
-
-                        <SelectContent className="bg-white">
-                          {selectedStyleData.productDetails.diamondColorClarity
-                            .filter((cc) => {
-                              // For Lab Grown Diamond, exclude GHVS and GHSI
-                              if (
-                                selectedDiamondOrigin === "Lab Grown Diamond"
-                              ) {
-                                return cc !== "GHVS" && cc !== "GHSI";
-                              }
-                              // For Natural Diamond, show all options
-                              return true;
-                            })
-                            .map((clarity) => (
-                              <SelectItem key={clarity} value={clarity}>
-                                {clarity}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                {/* Diamond Size Section */}
+                 {/* Diamond Size Section */}
                 {selectedStyleData?.productDetails?.diamondSize && (
                   <div className="w-1/2">
                     <h3 className="mb-3 text-sm md:text-base">
@@ -1719,7 +1825,7 @@ if (data.deliveryDays) {
                                 key={`${size}-${index}`}
                                 value={String(size)}
                               >
-                                {size} ct
+                                {size} carat
                               </SelectItem>
                             ))}
                         </SelectContent>
@@ -1727,6 +1833,37 @@ if (data.deliveryDays) {
                     </div>
                   </div>
                 )}
+                 {/* Diamond Color & Clarity Section */}
+                {getAvailableColorClarities().length > 0 && (
+                    <div className="w-1/2 mb-2">
+                      <h3 className="mb-3 text-sm md:text-base">
+                        Diamond Color & Clarity:{" "}
+                        <span className="text-[#8D8A91]">
+                          {selectedColorClarity ||
+                            getAvailableColorClarities()[0]}
+                        </span>
+                      </h3>
+
+                      <Select
+                        value={selectedColorClarity}
+                        onValueChange={(value) => {
+                        setSelectedColorClarity(value);
+                      }}
+                      >
+                        <SelectTrigger className="w-full text-sm border-neutral-300">
+                          <SelectValue placeholder={selectedColorClarity || getAvailableColorClarities()[0]} />
+                        </SelectTrigger>
+
+                        <SelectContent className="bg-white">
+                          {getAvailableColorClarities().map((clarity) => (
+                              <SelectItem key={clarity} value={clarity}>
+                                {clarity}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                </div>
 
                 {/* Select Gold Karat Section - Dynamic based on Metal Type */}
@@ -2425,7 +2562,7 @@ if (data.deliveryDays) {
                             Total Diamond Weight
                           </span>
                           <span className="font-medium">
-                            {totalDiamondWeight || "-"}
+                            {totalDiamondWeight.toFixed(3) || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
@@ -2479,12 +2616,12 @@ if (data.deliveryDays) {
                               : "-"}
                           </span>
                         </div>
-                        <div className="flex justify-between py-2 border-b border-[#328F94]">
+                        {/* <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Gemstones Value
                           </span>
                           <span className="font-medium">Rs -</span>
-                        </div>
+                        </div> */}
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
                             Making Charges

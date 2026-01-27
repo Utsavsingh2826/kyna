@@ -1823,7 +1823,7 @@ if (data.deliveryDays) {
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
+                              <div className="w-12 h-12 md:w-48 md:h-48 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={style.img}
                                   alt={style.name}
@@ -2026,7 +2026,7 @@ if (data.deliveryDays) {
                         <SelectContent className="bg-white">
                           {getAvailableDiamondSizes().map((size) => (
                             <SelectItem key={size} value={size}>
-                              {size} ct
+                              {size} carat
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -2717,7 +2717,7 @@ if (data.deliveryDays) {
                             Total Diamond Weight
                           </span>
                           <span className="font-medium">
-                            {totalDiamondWeight || "-"}
+                            {totalDiamondWeight.toFixed(3) || "-"}
                           </span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
