@@ -503,7 +503,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
               <div className="bg-gray-50 rounded-lg p-6">
                 {currentSelectedImage ? (
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold mb-3 text-gray-800">
+                    <h3 className="hidden sm:flex text-lg font-semibold mb-3 text-gray-800">
                       Selected Image for Engraving
                     </h3>
                     {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
@@ -649,7 +649,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                 </div>
 
                 {/* disclamer */}
-                <ul className="list-disc pl-5 text-[10px] mt-1 text-gray-500">
+                <ul className="hidden sm:flex list-disc pl-5 text-[10px] mt-1 text-gray-500">
                   <li>
                     Approximate Position: Any positioning shown in digital
                     mock-ups or requested by the customer is considered
@@ -781,7 +781,7 @@ const EngravingPage: React.FC<EngraveProps> = ({
                 {activeTab === "FONT" && (
                   <div className="space-y-6">
                     {/* Font Style and Size */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Font Style
@@ -980,6 +980,19 @@ const EngravingPage: React.FC<EngraveProps> = ({
                         </li>
                       </ul>
                     </div> */}
+                    {/* disclamer */}
+                <ul className="list-disc pl-5 text-[10px] mb-2 text-gray-500">
+                  <li>
+                    Approximate Position: Any positioning shown in digital
+                    mock-ups or requested by the customer is considered
+                    approximate.
+                  </li>
+                  <li>
+                    Manufacturing Variance: The final engraved position may
+                    slightly shift due to technical requirements or constraints
+                    during manufacturing, setting, or polishing.
+                  </li>
+                </ul>
                   </div>
                 )}
 

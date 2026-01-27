@@ -2571,9 +2571,7 @@ const ProductDetail = () => {
                   </div>
 
                   {/* Chain Information for Pendants */}
-                  {productData.category === "PENDANTS" &&
-                    productData.chainOption &&
-                    productData.chainLengthInches && (
+                  {productData.category === "PENDANTS" && (
                       <div
                         style={{
                           backgroundColor: "#EDF8F1",
@@ -2585,8 +2583,10 @@ const ProductDetail = () => {
                         className="w-fit pt-1 pb-1 pl-4 pr-4 rounded-full mb-4"
                       >
                         <p style={{ marginBottom: "0" }}>
-                          Pricing {productData.chainOption} | Chain Length:{" "}
-                          {productData.chainLengthInches} inches
+                          Pricing {productData.chainOption}  {productData.chainLengthInches !== null
+                            ? `| Chain length ${productData.chainLengthInches} inches`
+                            : ""
+                          }
                         </p>
                       </div>
                     )}
@@ -3065,7 +3065,7 @@ const ProductDetail = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm mb-2">
-                            Bracelet Size
+                            Bracelet Size <span className="text-gray-500">(inches)</span>
                           </label>
                           <Select
                             value={selectedBraceletSize}
@@ -3079,7 +3079,7 @@ const ProductDetail = () => {
                             <SelectContent className="bg-white">
                               {braceletSizes.map((size) => (
                                 <SelectItem key={size} value={size}>
-                                  Size {size}
+                                  {size} inches
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -3478,7 +3478,7 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Total Diamond Weight
                           </span>
-                          <span className="font-medium">{totalDiamondWeight}</span>
+                          <span className="font-medium">{totalDiamondWeight.toFixed(3)}</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">
