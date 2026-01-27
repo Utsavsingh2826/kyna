@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 const EducationPage: React.FC = () => {
   return (
-    <div className="min-h-screen flex justify-center bg-gray-50 py-8">
+    <div className="min-h-screen flex justify-center py-8">
       <div className="container ">
         {/* Breadcrumb */}
         <div className="bg-white">
@@ -298,7 +298,7 @@ const EducationPage: React.FC = () => {
         </div>
         {/* Size Chart */}
         <div className="flex justify-center">
-          <div className="bg-gray-50 container max-w-4xl rounded-lg p-6 mb-8">
+          <div className="container max-w-4xl rounded-lg p-6 mb-8">
             <div className="grid grid-cols-2 gap-4 ">
               <div>
                 <h3 className="font-medium text-gray-800 sm:mb-4 text-center">

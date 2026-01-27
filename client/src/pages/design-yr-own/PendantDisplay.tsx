@@ -429,7 +429,7 @@ export default function RingBuilder() {
           size === "0.3 Carat" ||
           size === "0.5 Carat" ||
           size === "0.7 Carat" ||
-          size === "1 Carat",
+          size === "1.00 Carat",
       );
     } else if (diamondType === "Lab Grown") {
       if (metal === "Silver") {
@@ -440,9 +440,9 @@ export default function RingBuilder() {
             size === "0.3 Carat" ||
             size === "0.5 Carat" ||
             size === "0.7 Carat" ||
-            size === "1 Carat" ||
-            size === "1.5 Carat" ||
-            size === "2 Carat",
+            size === "1.00 Carat" ||
+            size === "1.50 Carat" ||
+            size === "2.00 Carat",
         );
       } else {
         // Lab Grown + Gold/Platinum: Up to 5 carat
