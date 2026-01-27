@@ -1489,7 +1489,7 @@ export default function RingBuilder() {
             {/* Ring Size */}
             <div>
               <label className="text-sm text-muted-foreground">
-                Bracelet Size (Indian)
+                Bracelet Size <span className="text-gray-500">(Inches)</span>
               </label>
               <Select
                 value={formData.braceletSize}
@@ -1517,7 +1517,7 @@ export default function RingBuilder() {
             </div>
 
             {/* Add Engraving - Updated with Popup */}
-            <div className="bg-[#328F94]/5 rounded-lg p-4">
+            <div className="hidden bg-[#328F94]/5 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-6 h-6 bg-[#328F94] text-white rounded-full flex items-center justify-center text-xs font-bold">
                   +

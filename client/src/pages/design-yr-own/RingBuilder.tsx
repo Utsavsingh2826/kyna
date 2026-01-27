@@ -446,12 +446,12 @@ export default function RingBuilder() {
       "0.3 Carat",
       "0.5 Carat",
       "0.7 Carat",
-      "1 Carat",
-      "1.5 Carat",
-      "2 Carat",
-      "3 Carat",
-      "4 Carat",
-      "5 Carat",
+      "1.00 Carat",
+      "1.50 Carat",
+      "2.00 Carat",
+      "3.00 Carat",
+      "4.00 Carat",
+      "5.00 Carat",
     ];
 
     if (diamondType === "Natural") {

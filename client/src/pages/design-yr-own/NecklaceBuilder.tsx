@@ -325,14 +325,14 @@ export default function RingBuilder() {
       "0.3 Carat",
       "0.5 Carat",
       "0.7 Carat",
-      "1 Carat",
-      "1.3 Carat",
-      "1.5 Carat",
-      "1.8 Carat",
-      "2 Carat",
-      "3 Carat",
-      "4 Carat",
-      "5 Carat",
+      "1.00 Carat",
+      "1.30 Carat",
+      "1.50 Carat",
+      "1.80 Carat",
+      "2.00 Carat",
+      "3.00 Carat",
+      "4.00 Carat",
+      "5.00 Carat",
     ];
 
     if (diamondType === "Natural") {
@@ -1538,7 +1538,7 @@ export default function RingBuilder() {
             </Button>
 
             {/* Add Engraving - Updated with Popup */}
-            <div className="bg-[#328F94]/5 rounded-lg p-4">
+            <div className= "hidden bg-[#328F94]/5 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-6 h-6 bg-[#328F94] text-white rounded-full flex items-center justify-center text-xs font-bold">
                   +

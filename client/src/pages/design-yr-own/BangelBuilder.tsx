@@ -1509,7 +1509,7 @@ export default function RingBuilder() {
             <div>
               <label className="text-sm text-muted-foreground">
                 Bangle Size{" "}
-                <span className="text-gray-500">(Inches or Ani)</span>
+                <span className="text-gray-500">(Ani or inner diameter in mm)</span>
               </label>
               <Select
                 value={formData.braceletSize}
@@ -1521,9 +1521,11 @@ export default function RingBuilder() {
                   <SelectValue placeholder="Select Size" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
-                  <SelectItem value="5">6 inches</SelectItem>
-                  <SelectItem value="6">7 inches</SelectItem>
-                  <SelectItem value="7">8 inches</SelectItem>
+                  <SelectItem value="2.2 Ani (54.8mm)">2.2 Ani (54.8mm)</SelectItem>
+                  <SelectItem value="2.4 Ani (57.2mm)">2.4 Ani (57.2mm)</SelectItem>
+                  <SelectItem value="2.6 Ani (59.5mm)">2.6 Ani (59.5mm)</SelectItem>
+                  <SelectItem value="2.8 Ani (62.8mm)">2.8 Ani (62.8mm)</SelectItem>
+                  <SelectItem value="3.0 Ani (65.1mm)">3.0 Ani (65.1mm)</SelectItem>
                 </SelectContent>
               </Select>
               <Button
@@ -1537,7 +1539,7 @@ export default function RingBuilder() {
             </div>
 
             {/* Add Engraving - Updated with Popup */}
-            <div className="bg-[#328F94]/5 rounded-lg p-4">
+            <div className="hidden bg-[#328F94]/5 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-6 h-6 bg-[#328F94] text-white rounded-full flex items-center justify-center text-xs font-bold">
                   +
