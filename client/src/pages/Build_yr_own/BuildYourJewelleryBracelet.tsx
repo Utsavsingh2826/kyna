@@ -77,7 +77,7 @@ const getColorDisplayInfo = (
         case "RG":
           return "Rose Gold";
         case "BR":
-          return "Brown";
+          return "Black Rhodium";
         default:
           return c;
       }

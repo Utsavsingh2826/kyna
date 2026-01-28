@@ -1101,7 +1101,7 @@ export default function JewelleryPage() {
                     />
                   </Link>
                   {/* Available colors */}
-                  {/* {p.availableColors && p.availableColors.length > 0 && (
+                  {p.availableColors && p.availableColors.length > 0 && (
                     <div
                       className="eng-color-row"
                       aria-label="Available colors"
@@ -1110,7 +1110,7 @@ export default function JewelleryPage() {
                         <span key={`${p.id}-${c}`}>{COLOR_ICONS[c]}</span>
                       ))}
                     </div>
-                  )} */}
+                  )}
                   <div className="eng-card-body">
                     <h3 className="eng-card-title">
                       <Link
