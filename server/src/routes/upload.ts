@@ -62,4 +62,52 @@ router.post(
   }
 );
 
+/**
+ * POST /api/upload/pan-card
+ * Upload PAN card image to Cloudinary via backend
+ */
+router.post(
+  "/pan-card",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    try {
+      console.log("📄 PAN card upload request received");
+
+      if (!req.file) {
+        console.log("❌ No PAN card file uploaded");
+        return res.status(400).json({
+          success: false,
+          message: "PAN card image is required",
+        });
+      }
+
+      console.log("📁 PAN card file received:", {
+        originalname: req.file.originalname,
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size,
+      });
+
+      // The upload middleware already handles Cloudinary upload
+      // Return the Cloudinary URL
+      res.status(200).json({
+        success: true,
+        message: "PAN card uploaded successfully",
+        data: {
+          url: req.file.path, // Cloudinary URL
+          publicId: req.file.filename || `pan_card_${Date.now()}`,
+          uploadedAt: new Date(),
+        },
+      });
+    } catch (error) {
+      console.error("❌ PAN card upload error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error uploading PAN card image",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+);
+
 export default router;

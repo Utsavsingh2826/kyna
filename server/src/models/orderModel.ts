@@ -79,12 +79,12 @@ export interface IOrder extends Document {
     cancel: string;
   };
   orderStatus:
-    | "pending"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled"
-    | "returned";
+  | "pending"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "returned";
   subtotal: number;
   gst: number;
   shippingCharge: number;
@@ -114,6 +114,11 @@ export interface IOrder extends Document {
     source?: string; // e.g., 'cloudinary', 'local'
     alt?: string;
   }>;
+  // PAN Card details for orders >= 2 Lakhs
+  panCardDetails?: {
+    url: string;
+    uploadedAt?: Date;
+  };
   // Product details with complete specifications
   productDetails?: {
     jewelryType?: string;
@@ -385,6 +390,12 @@ const orderSchema = new Schema<IOrder>(
         alt: { type: String },
       },
     ],
+
+    // PAN Card details for orders >= 2 Lakhs
+    panCardDetails: {
+      url: { type: String },
+      uploadedAt: { type: Date },
+    },
 
     // Product details with complete specifications
     productDetails: {

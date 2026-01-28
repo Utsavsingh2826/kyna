@@ -110,6 +110,10 @@ export interface PaymentInitiateRequest {
     source?: string;
     alt?: string;
   }>;
+  panCardDetails?: {
+    url: string;
+    uploadedAt?: Date | string;
+  };
 }
 
 export interface PaymentInitiateResponse {
@@ -261,16 +265,14 @@ class PaymentService {
 
         if (data.error === "Invalid payment amount") {
           throw new Error(
-            `Payment amount ₹${data.amount} is invalid. ${
-              data.razorpayError || data.message
+            `Payment amount ₹${data.amount} is invalid. ${data.razorpayError || data.message
             }. Please try using Net Banking or Card payment.`
           );
         }
 
         if (data.error === "Payment gateway error") {
           throw new Error(
-            `Payment gateway error: ${
-              data.razorpayError || data.message
+            `Payment gateway error: ${data.razorpayError || data.message
             }. Please try again or contact support at ${data.supportContact}.`
           );
         }
@@ -332,8 +334,8 @@ class PaymentService {
         error && error.message
           ? error.message
           : error
-          ? JSON.stringify(error)
-          : null;
+            ? JSON.stringify(error)
+            : null;
       if (errMsg) {
         throw new Error(errMsg);
       }

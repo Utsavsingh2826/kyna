@@ -140,6 +140,8 @@ router.post("/initiate", async (req: Request, res: Response) => {
       items,
       // Order details with all customization data
       orderDetails,
+      // PAN Card details
+      panCardDetails,
     } = req.body;
 
     // Debug: log the orderDetails being received
@@ -307,6 +309,7 @@ router.post("/initiate", async (req: Request, res: Response) => {
       // Accept estimated delivery information if frontend provided it
       estimatedDelivery: req.body.estimatedDelivery || null,
       estimatedDeliveryDay: req.body.estimatedDeliveryDay || null,
+      panCardDetails: panCardDetails || null,
     });
 
     await order.save();
@@ -420,6 +423,7 @@ router.post("/initiate", async (req: Request, res: Response) => {
               note: "Order created via payment initiation",
             },
           ],
+          panCardDetails: panCardDetails || null,
         };
 
         // Add product details and items if cart data is provided
@@ -691,8 +695,7 @@ router.get("/callback", async (req: Request, res: Response) => {
     console.error("Payment callback error:", error);
     // Redirect to failure page on error
     res.redirect(
-      `${
-        process.env.CLIENT_URL || "http://localhost:3000"
+      `${process.env.CLIENT_URL || "http://localhost:3000"
       }/payment-failure?error=callback_error`
     );
   }
@@ -872,9 +875,9 @@ router.post("/verify", async (req: Request, res: Response) => {
     if (purchasingUser) {
       const alreadyLinked = Array.isArray(purchasingUser.orders)
         ? purchasingUser.orders.some(
-            (orderId: any) =>
-              orderId?.toString() === paymentOrder._id.toString()
-          )
+          (orderId: any) =>
+            orderId?.toString() === paymentOrder._id.toString()
+        )
         : false;
       if (!alreadyLinked) {
         purchasingUser.orders = [
@@ -959,9 +962,8 @@ router.post("/verify", async (req: Request, res: Response) => {
         if (referralCredit > 0) {
           queueReferralCredit(referrer, referralCredit, {
             orderId: paymentOrder._id,
-            note: `Referral purchase by ${
-              purchasingUser.email || purchasingUser._id
-            }`,
+            note: `Referral purchase by ${purchasingUser.email || purchasingUser._id
+              }`,
           });
           referrerChanged = true;
           referralSummary.credits = {
@@ -1131,21 +1133,21 @@ router.post("/verify", async (req: Request, res: Response) => {
             // Add cart items data for multi-item orders
             ...(orderDetails.cartItems &&
               !orderDetails.isDirectPurchase && {
-                cartItems: orderDetails.cartItems.map((item: any) => ({
-                  productId: item.productId,
-                  productTitle: item.productTitle,
-                  productSku: item.productSku,
-                  variantSku: item.variantSku,
-                  variantConfig: item.variantConfig,
-                  quantity: item.quantity,
-                  price: item.price,
-                  sellingPrice: item.sellingPrice,
-                  priceBreakdown: item.priceBreakdown,
-                  metalDetails: item.metalDetails,
-                  diamondDetails: item.diamondDetails,
-                  ringDetails: item.ringDetails,
-                })),
-              }),
+              cartItems: orderDetails.cartItems.map((item: any) => ({
+                productId: item.productId,
+                productTitle: item.productTitle,
+                productSku: item.productSku,
+                variantSku: item.variantSku,
+                variantConfig: item.variantConfig,
+                quantity: item.quantity,
+                price: item.price,
+                sellingPrice: item.sellingPrice,
+                priceBreakdown: item.priceBreakdown,
+                metalDetails: item.metalDetails,
+                diamondDetails: item.diamondDetails,
+                ringDetails: item.ringDetails,
+              })),
+            }),
           };
 
           // Also update the main items array for cart orders

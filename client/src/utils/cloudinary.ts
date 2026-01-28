@@ -22,12 +22,21 @@ export const uploadToCloudinary = async (
     formData.append("folder", folder);
 
     // Add timestamp to filename for uniqueness
-    const timestamp = Date.now();
-    formData.append("public_id", `engraving_${timestamp}`);
+    // Only set public_id if we are using the default engraving preset which we know allows it
+    // For other presets (like pan_cards), let Cloudinary handle generation or use preset defaults to avoid 400 Bad Request
+    if (uploadPreset === "engraving_preset") {
+      const timestamp = Date.now();
+      const prefix = folder === "engravings" ? "engraving" : folder;
+      formData.append("public_id", `${prefix}_${timestamp}`);
+    }
 
-    // Use environment variable or fallback
+    // Use environment variable or fallback (supports both VITE_ and REACT_APP_ prefixes)
     const cloudName =
-      process.env.REACT_APP_CLOUDINARY_CLOUD_NAME || "your-cloud-name";
+      import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ||
+      import.meta.env.REACT_APP_CLOUDINARY_CLOUD_NAME ||
+      "your-cloud-name";
+
+    console.log("☁️ Uploading to Cloudinary cloud:", cloudName);
 
     const response = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
@@ -38,7 +47,9 @@ export const uploadToCloudinary = async (
     );
 
     if (!response.ok) {
-      throw new Error(`Cloudinary upload failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error("Cloudinary error details:", errorText);
+      throw new Error(`Cloudinary upload failed: ${response.status} - ${errorText}`);
     }
 
     const data: CloudinaryUploadResult = await response.json();

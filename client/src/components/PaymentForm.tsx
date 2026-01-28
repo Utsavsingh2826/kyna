@@ -7,6 +7,8 @@ import {
   PaymentInitiateRequest,
 } from "../services/paymentService";
 import { Country, State, City } from "country-state-city";
+import { toast } from "sonner";
+
 
 interface PaymentFormProps {
   orderData: {
@@ -102,8 +104,8 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
   // Get cities for selected state (excluding Borivli)
   const cities = selectedState
     ? City.getCitiesOfState(selectedCountry, selectedState).filter(
-        (city) => city.name.toLowerCase() !== "borivli"
-      )
+      (city) => city.name.toLowerCase() !== "borivli"
+    )
     : [];
 
   const [billingInfo, setBillingInfo] = useState({
@@ -116,6 +118,45 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     zip: userInfo.zipCode || "",
     country: userInfo.country || "India",
   });
+
+  // PAN Card State
+  const [panCardUrl, setPanCardUrl] = useState<string>("");
+  const [isPanUploading, setIsPanUploading] = useState(false);
+
+  const handlePanUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsPanUploading(true);
+
+      // Create FormData for backend upload
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Upload via backend API
+      const response = await fetch("/api/upload/pan-card", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data?.url) {
+        setPanCardUrl(result.data.url);
+        toast.success("PAN card uploaded successfully");
+      } else {
+        toast.error(result.message || "Failed to upload PAN card image");
+        onError?.(result.message || "Failed to upload PAN card image");
+      }
+    } catch (error) {
+      console.error("PAN upload error:", error);
+      toast.error("Error uploading PAN card");
+      onError?.("Error uploading PAN card");
+    } finally {
+      setIsPanUploading(false);
+    }
+  };
 
   // Update billing info when selections change
   useEffect(() => {
@@ -140,13 +181,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
   const pricingSummary = orderData.orderDetails?.pricingSummary as
     | {
-        subtotal?: number;
-        promoDiscount?: number;
-        referralWallet?: number;
-        taxableAmount?: number;
-        tax?: number;
-        payableAmount?: number;
-      }
+      subtotal?: number;
+      promoDiscount?: number;
+      referralWallet?: number;
+      taxableAmount?: number;
+      tax?: number;
+      payableAmount?: number;
+    }
     | undefined;
 
   const formatCurrency = (value?: number) => {
@@ -211,7 +252,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       }
 
       console.warn("⛔ Pincode does NOT belong to selected city/state");
-      alert(
+      toast.error(
         `Pincode ${pinCode} does not match ${selectedCityName}, ${selectedStateName}`
       );
       setServiceabilityStatus("idle");
@@ -303,6 +344,11 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
       return false;
     }
 
+    if (orderData.amount >= 200000 && !panCardUrl) {
+      onError?.("Please upload PAN Card details for orders above ₹2,00,000");
+      return false;
+    }
+
     return true;
   };
 
@@ -314,13 +360,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
     // Check if serviceability has been verified
     if (serviceabilityStatus !== "serviceable") {
       if (serviceabilityStatus === "not-serviceable") {
-        alert(
+        toast.error(
           "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
         );
         setIsProcessing(false);
         return;
       } else if (serviceabilityStatus === "checking") {
-        alert("Please wait while we check if your area is serviceable.");
+        toast.info("Please wait while we check if your area is serviceable.");
         setIsProcessing(false);
         return;
       } else {
@@ -329,7 +375,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         const isServiceable = await checkServiceability(billingInfo.zip);
 
         if (!isServiceable) {
-          alert(
+          toast.error(
             "❌ Sorry, we cannot process customization requests to your area as it is not serviceable. Please contact customer support for more information."
           );
           setIsProcessing(false);
@@ -358,6 +404,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           orderData.orderDetails?.estimatedDelivery || "03-04-05",
         estimatedDeliveryDay:
           orderData.orderDetails?.estimatedDeliveryDay || "sunday",
+        panCardDetails: panCardUrl ? {
+          url: panCardUrl,
+          uploadedAt: new Date()
+        } : undefined
       };
 
       console.log("💳 Initiating payment with data:", paymentData);
@@ -377,9 +427,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
           prefill: response.data.prefill,
           theme: response.data.theme,
           notes: response.data.notes,
-          handler: () => {}, // Will be set by openRazorpayCheckout
+          handler: () => { }, // Will be set by openRazorpayCheckout
           modal: {
-            ondismiss: () => {},
+            ondismiss: () => { },
           },
         };
 
@@ -496,9 +546,9 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
               prefill: retryResponse.data.prefill,
               theme: retryResponse.data.theme,
               notes: retryResponse.data.notes,
-              handler: () => {}, // Will be set by openRazorpayCheckout
+              handler: () => { }, // Will be set by openRazorpayCheckout
               modal: {
-                ondismiss: () => {},
+                ondismiss: () => { },
               },
             };
 
@@ -644,6 +694,45 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             </p>
           )}
       </div>
+
+      {/* PAN Card Upload Section for High Value Orders */}
+      {orderData.amount >= 200000 && (
+        <div className="mb-8 p-6 bg-yellow-50 rounded-lg border border-yellow-200">
+          <h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-yellow-800">
+            <Shield className="w-5 h-5" />
+            PAN Card Details Required
+          </h3>
+          <p className="text-sm text-yellow-700 mb-4">
+            As per government regulations, PAN card details are mandatory for orders of ₹2,00,000 and above.
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Upload PAN Card Image *
+              </label>
+              <div className="flex items-center gap-4">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePanUpload}
+                  disabled={isPanUploading}
+                  className="bg-white"
+                />
+                {isPanUploading && <span className="text-sm text-gray-500">Uploading...</span>}
+              </div>
+              {panCardUrl && (
+                <div className="mt-2 text-sm text-green-600 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  PAN Card Verified
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Billing Information */}
       <div className="mb-8">

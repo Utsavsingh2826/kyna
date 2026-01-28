@@ -74,7 +74,7 @@ referralSchema.pre("save", async function (next) {
     // Get settings to determine expiry days
     const Settings = mongoose.model("Settings");
     const settings = await Settings.findOne({ isActive: true });
-    const expiryDays = settings?.promoExpiryDays || 30; // Default 30 days
+    const expiryDays = settings?.promoExpiryDays || 100; // Default 30 days
 
     this.expiresAt = new Date();
     this.expiresAt.setDate(this.expiresAt.getDate() + expiryDays);

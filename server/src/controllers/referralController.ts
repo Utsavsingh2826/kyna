@@ -60,7 +60,7 @@ export const createReferral = async (req: AuthRequest, res: Response) => {
       settings = new Settings({
         referralRewardFriend: 0,
         referralRewardReferrer: 10,
-        promoExpiryDays: 30,
+        promoExpiryDays: 100,
         isActive: true,
       });
       await settings.save();

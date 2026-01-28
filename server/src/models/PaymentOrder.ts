@@ -170,6 +170,11 @@ export interface IOrder extends Document {
   };
   redirectUrl: string;
   cancelUrl: string;
+  // PAN Card details for orders >= 2 Lakhs
+  panCardDetails?: {
+    url: string;
+    uploadedAt?: Date;
+  };
   // Order details with all customization data
   orderDetails?: IOrderDetails;
   // Estimated delivery information (optional)
@@ -464,6 +469,11 @@ const orderSchema = new Schema<IOrder>(
       type: String,
       required: true,
       trim: true,
+    },
+    // PAN Card details for orders >= 2 Lakhs
+    panCardDetails: {
+      url: { type: String },
+      uploadedAt: { type: Date },
     },
     // Razorpay fields
     razorpayOrderId: {
