@@ -2275,7 +2275,7 @@ const ProductDetail = () => {
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                                 }`}
                             >
-                              <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
+                              <div className="w-12 h-12 md:w-48 md:h-48 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={style.img}
                                   alt={style.name}
@@ -2456,7 +2456,7 @@ const ProductDetail = () => {
                   <div className="w-full">
                     <div className="mb-6 w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
-                        Diamond Size:{" "}
+                        Diamond Size(Center Stone)
                         {/* <span className="text-[#8D8A91]">
                           {selectedDiamondSize || getAvailableDiamondSizes()[0]}{" "}
                           carat

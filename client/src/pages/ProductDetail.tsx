@@ -2724,7 +2724,7 @@ const ProductDetail = () => {
                     ) && (
                       <div>
                         <label className="block text-xs mb-2">
-                          Diamond Size
+                          Diamond Size {productData.category === "RINGS" || productData.category === "PENDANTS" || productData.category === "EARRINGS" ? (<span>(Center Stone)</span>) : productData.category === "BRACELETS" ? (<span>(Per Stone)</span>) : null}:{" "}
                         </label>
                         <Select
                           value={selectedDiamondSize}
@@ -2765,7 +2765,7 @@ const ProductDetail = () => {
                     return availableClarityOptions.length > 0 ? (
                       <div>
                         <label className="block text-xs mb-2">
-                          Color & Clarity
+                          Color & Clarity:{" "}<span className="text-xs text-[#8D8A91]">{selectedColorClarity}</span>
                         </label>
                         <Select
                           value={selectedColorClarity}
@@ -2793,7 +2793,7 @@ const ProductDetail = () => {
                 {/* Metal Type */}
                 <div className="my-6 grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs mb-2">Metal Type</label>
+                    <label className="block text-xs mb-2">Metal Type:{" "}<span className="text-xs text-[#8D8A91]">{selectedMetalType}</span></label>
                     <Select
                       value={selectedMetalType}
                       onValueChange={(value) => {
@@ -2840,7 +2840,7 @@ const ProductDetail = () => {
                   </div>
                   {selectedMetalType && getAvailableKarats().length > 0 && (
                     <div>
-                      <h3 className="mb-1 text-sm">{getKaratSectionTitle()}</h3>
+                      <h3 className="mb-1 text-sm">{getKaratSectionTitle()}:{" "}<span className="text-xs text-[#8D8A91]">{selectedGoldKarat}</span></h3>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={scrollMetalTypesLeft}
@@ -3484,7 +3484,7 @@ const ProductDetail = () => {
                           <span className="text-muted-foreground">
                             Certification
                           </span>
-                          <span className="font-medium">IGI/SGL Certified</span>
+                          <span className="font-medium">GIA/IGI/SGL Certified</span>
                         </div>
                         <div className="flex justify-between py-2 border-b border-[#328F94]">
                           <span className="text-muted-foreground">

@@ -19,16 +19,15 @@ const Navigation: React.FC = () => {
     ["/earrings", "Earrings"],
     ["/pendants", "Pendants"],
     ["/bracelets", "Bracelets"],
-    ["/upload-your-design/rings", "Upload Your Design"],
-    ["/build-your-jewellery/Rings", "Build Your Jewellery"],
+    ["/engravings", "Engraving"],
+    // ["/upload-your-design/rings", "Upload Your Design"],
+    // ["/build-your-jewellery/Rings", "Build Your Jewellery"],
   ];
   const rightLinks = [
     ["/rings?ring_category=Mens+Rings", "Men's Rings"],
     ["/earrings?category1=stud%27s&category3=men%27s+stud", "Men's Studs"],
     ["/earrings?category1=fashion", "Fashion Earrings"],
     ["/pendants?ring_category=fashion", "Fashion Pendants"],
-
-    ["/engravings", "Engraving"],
   ];
 
   return (

@@ -1746,7 +1746,7 @@ if (data.deliveryDays) {
                                   : "border-neutral-300 hover:border-neutral-400 hover:bg-gray-50"
                               }`}
                             >
-                              <div className="w-12 h-12 md:w-24 md:h-24 rounded-lg overflow-hidden bg-gray-100">
+                              <div className="w-12 h-12 md:w-48 md:h-48 rounded-lg overflow-hidden bg-gray-100">
                                 <img
                                   src={style.img}
                                   alt={style.name}
@@ -1893,15 +1893,15 @@ if (data.deliveryDays) {
                 {selectedStyleData?.productDetails?.diamondSize && (
                   <div className="w-1/2">
                     <h3 className="mb-3 text-sm md:text-base">
-                      Diamond Size:{" "}
-                      <span className="text-[#8D8A91]">
+                      Diamond Size (Center Stone){" "}
+                      {/* <span className="text-[#8D8A91]">
                        {selectedDiamondSize ||
   (Array.isArray(selectedStyleData?.productDetails?.diamondSize)
     ? selectedStyleData?.productDetails?.diamondSize[0]  // It's an array, access [0]
     : selectedStyleData?.productDetails?.diamondSize?.[selectedMetalType as keyof typeof selectedStyleData.productDetails.diamondSize]?.[0]  // It's an object, access by metal type first
 )}  
                         carat
-                      </span>
+                      </span> */}
                     </h3>
 
                     <div className="mb-2 w-full">

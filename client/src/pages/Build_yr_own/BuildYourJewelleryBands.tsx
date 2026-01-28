@@ -2487,7 +2487,7 @@ const ProductDetail = () => {
                   <div className="w-full">
                     <div className="mb-6 w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
-                        Diamond Size:{" "}
+                        Diamond Size (Center Stone){" "}
                         {/* <span className="text-[#8D8A91]">
                           {selectedDiamondSize || getAvailableDiamondSizes()[0]}{" "}
                           carat

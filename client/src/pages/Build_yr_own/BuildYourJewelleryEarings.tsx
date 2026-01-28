@@ -67,13 +67,13 @@ const getColorDisplayInfo = (
     const getColorName = (c: string) => {
       switch (c) {
         case "WG":
-          return "White Gold";
+          return "White";
         case "YG":
-          return "Yellow Gold";
+          return "Yellow";
         case "RG":
-          return "Rose Gold";
+          return "Rose";
         case "BR":
-          return "Brown";
+          return "Black Rhodium";
         default:
           return c;
       }
@@ -82,7 +82,7 @@ const getColorDisplayInfo = (
     return {
       name: `${getColorName(color1)} & ${getColorName(color2)}`,
       colors: [color1, color2],
-      img: "/colors/twotone.png",
+      img: `/metal_colors/${color1}-${color2}.png`,
     };
   }
 
@@ -2068,14 +2068,14 @@ if (data.deliveryDays) {
                   {selectedStyleData?.productDetails?.diamondSize && (
                   <div className="w-1/2 mb-6">
                     <h3 className="mb-3 text-sm md:text-base">
-                      Diamond Size:{" "}
-                      <span className="text-[#8D8A91]">
+                      Diamond Size (Center Stone){" "}
+                      {/* <span className="text-[#8D8A91]">
                         {selectedDiamondSize ||
                           (Array.isArray(selectedStyleData?.productDetails?.diamondSize)
                             ? selectedStyleData?.productDetails?.diamondSize[0]
                             : selectedStyleData?.productDetails?.diamondSize?.[selectedMetalType as keyof typeof selectedStyleData.productDetails.diamondSize]?.[0])}{" "}
                         carat
-                      </span>
+                      </span> */}
                     </h3>
 
                     <Select

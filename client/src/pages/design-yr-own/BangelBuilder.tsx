@@ -240,7 +240,7 @@ export default function RingBuilder() {
     description: "",
     diamondOrigin: "Natural Diamond",
     diamondShape: "Round",
-    diamondSize: "Center Stone",
+    diamondSize: "Per Stone",
     diamondColor: "D-FL",
     diamondClarity: "Center Stone",
     metal: "Gold",
@@ -315,7 +315,7 @@ export default function RingBuilder() {
 
     // Define all possible bangle size options
     const allSizes = [
-      "Center Stone",
+      "Per Stone",
       "0.01 Carat",
       "0.02 Carat",
       "0.03 Carat",
@@ -672,10 +672,10 @@ export default function RingBuilder() {
       // Ensure step1 requirements are met first
       if (!validateForStep(2)) return false;
 
-      // Check if diamond size is "Center Stone"
-      if (formData.diamondSize === "Center Stone") {
+      // Check if diamond size is "Per Stone"
+      if (formData.diamondSize === "Per Stone") {
         toast.error(
-          "Please select a specific diamond carat to proceed. 'Center Stone' is not a valid selection.",
+          "Please select a specific diamond carat to proceed. 'Per Stone' is not a valid selection.",
         );
         return false;
       }
@@ -711,7 +711,7 @@ export default function RingBuilder() {
         "metal",
         "metalColor",
         "goldKarat",
-        "braceletSize",
+        "size",
       ];
 
       for (const field of customizationFields) {

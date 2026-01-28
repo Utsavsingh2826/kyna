@@ -3278,7 +3278,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                         loading="lazy"
                         className="eng-card-img"
                       />
-                      {p.metalTypes && p.metalTypes.length > 0 && (
+                      {/* {p.metalTypes && p.metalTypes.length > 0 && (
                         <div
                           className="eng-color-row"
                           aria-label="Available metals"
@@ -3308,7 +3308,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                             </div>
                           ))}
                         </div>
-                      )}
+                      )} */}
                       <div className="eng-card-body">
                         <h3 className="eng-card-title">{p.title}</h3>
                         <div className="text-xs text-black mt-1">

@@ -2088,11 +2088,11 @@ if (data.deliveryDays) {
                 {selectedStyleData?.productDetails?.diamondSize && (
                     <div className="mb-6 w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
-                        Diamond Size:{" "}
-                        <span className="text-[#8D8A91]">
+                        Diamond Size (Per Stone):{" "}
+                        {/* <span className="text-[#8D8A91]">
                           {selectedDiamondSize || getAvailableDiamondSizes()[0]}{" "}
                           carat
-                        </span>
+                        </span> */}
                       </h3>
 
                       <Select
