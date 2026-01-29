@@ -1625,7 +1625,7 @@ export default function RingBuilder() {
                       },
                     );
 
-                    setSelectedEngravingImage("/newring.jpg");
+                    setSelectedEngravingImage("/ringdiy.jpeg");
                     setShowEngravingPopup(true);
                   }}
                   className={`w-full text-sm py-2 transition-all ${

@@ -167,7 +167,7 @@ export default function AboutPage() {
               <div className="hidden sm:flex flex-col items-center">
                 {/* Replace with your uploaded image */}
                 <img
-                  src="/about/3.png"
+                  src="/about/3.jpeg"
                   alt="Jewellery Moment"
                   className="rounded-3xl w-full max-w-3xl object-cover mb-6"
                 />
@@ -216,7 +216,7 @@ export default function AboutPage() {
               <div className="flex flex-col items-center">
                 {/* Replace with your uploaded image */}
                 <img
-                  src="/about/4.jpg"
+                  src="/about/4.jpeg"
                   alt="Jewellery Moment"
                   className="rounded-3xl w-full max-w-3xl object-cover mb-6"
                 />
@@ -232,7 +232,7 @@ export default function AboutPage() {
               <div className="hidden sm:flex flex-col items-center">
                 {/* Replace with your uploaded image */}
                 <img
-                  src="/about/5.jpg"
+                  src="/about/book.jpeg"
                   alt="Jewellery Moment"
                   className="rounded-3xl w-full max-w-3xl object-cover mb-6"
                 />

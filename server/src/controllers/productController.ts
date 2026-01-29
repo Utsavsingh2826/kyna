@@ -1519,6 +1519,64 @@ export const getProductByModelSku = async (
       });
     }
 
+    const metalColorQuery = (req.query.metalColor ?? req.query.metal ?? "")
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    if (metalColorQuery) {
+      // Build available colors from variant images
+      const allImgs = (firstVariantDoc.images || [])
+        .map((img: any) => img?.url ?? img?.filename ?? img)
+        .filter(Boolean)
+        .map(String);
+
+      const PRIMARY_METALS = ["WG", "YG", "RG", "BR", "3T"];
+      const availableColorsSet = new Set<string>();
+
+      for (const url of allImgs) {
+        const name = url.split("/").pop()?.toUpperCase() || "";
+        const parts = name.split(/[-_.]/).filter(Boolean);
+        const metals: string[] = [];
+
+        for (const p of parts) {
+          if (PRIMARY_METALS.includes(p) && metals[metals.length - 1] !== p) {
+            metals.push(p);
+          }
+        }
+
+        if (metals.includes("3T")) {
+          availableColorsSet.add("3T");
+        } else if (metals.length === 1) {
+          availableColorsSet.add(metals[0]);
+        } else if (metals.length >= 2) {
+          for (let i = 0; i < metals.length - 1; i++) {
+            availableColorsSet.add(`${metals[i]}-${metals[i + 1]}`);
+          }
+        }
+      }
+
+      const normalizedQuery = metalColorQuery
+        .split("-")
+        .map(m => {
+          const metalMap: Record<string, string> = {
+            WHITE: "WG", WHITEGOLD: "WG", WG: "WG",
+            YELLOW: "YG", YELLOWGOLD: "YG", YG: "YG",
+            ROSE: "RG", ROSEGOLD: "RG", RG: "RG",
+            BLACK: "BR", BLACKRHODIUM: "BR", BR: "BR",
+          };
+          return metalMap[m] ?? m;
+        })
+        .join("-");
+
+      if (!availableColorsSet.has(normalizedQuery)) {
+        return res.status(404).json({
+          success: false,
+          message: `Variant ${variantIdParam} does not support metal color ${metalColorQuery}. Available colors: ${Array.from(availableColorsSet).join(", ")}`,
+        });
+      }
+    }
+
     const deliveryDays =
       firstVariantDoc?.attributes?.["DELIVERY DAYS"] ??
       firstVariantDoc?.attributes?.["DELIVERY_DAYS"] ??
@@ -1597,85 +1655,114 @@ export const getProductByModelSku = async (
         .map(v => String(v).toUpperCase())
     );
 
+    console.debug("[DEBUG] variantSkuSet check:", {
+      totalInSet: variantSkuSet.size,
+      hasSilverVariant: variantSkuSet.has("GR10-SLV-LGEFVVS-BF"),
+      sampleFromSet: Array.from(variantSkuSet).slice(0, 10),
+      allVariantDocsCount: allVariantDocs.length,
+      sampleMetalTypes: allVariantDocs.slice(0, 10).map(v => ({
+        sku: v.variantSku,
+        metal: v.metalType
+      }))
+    });
 
     // =================================================================
-    // ========== FILTER DIAMOND OPTIONS BY REAL VARIANTS ===============
+    // ===================== DIAMOND OPTIONS (FROM VARIANTS) ===========
     // =================================================================
 
-    const confirmedDiamondOptions: Record<string, Record<string, string[]>> = {};
-    const DIAMOND_TYPE_TO_SKU: Record<string, "LG" | "ND"> = {
-      LAB: "LG",
-      NATURAL: "ND",
+    // Extract diamond info from SKU
+    const extractDiamondInfo = (sku: string): { type: string; clarity: string } | null => {
+      const upper = sku.toUpperCase();
+      const match = upper.match(/(LG|ND)([A-Z]{2,10})/);
+      if (!match) return null;
+      return {
+        type: match[1] === "LG" ? "LAB" : "NATURAL",
+        clarity: match[2]
+      };
     };
 
+    // Extract metal type from SKU (token before LG/ND)
+    const extractMetalFromSku = (sku: string): string => {
+      const parts = sku.split("-");
 
-    for (const dType of Object.keys(diamondOptions)) {
-      for (const metal of Object.keys(diamondOptions[dType])) {
-        for (const clarity of diamondOptions[dType][metal]) {
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i].toUpperCase();
+        if (part.startsWith("LG") || part.startsWith("ND")) {
+          if (i > 0) {
+            const metalToken = parts[i - 1].toUpperCase();
 
-          // Build SKU using same base as selected variant
-          const skuDiamondType = DIAMOND_TYPE_TO_SKU[dType];
-          if (!skuDiamondType) continue;
+            if (metalToken === "SLV") return "SILVER";
+            if (metalToken === "PT") return "PLATINUM";
+            if (/^\d+$/.test(metalToken)) return "GOLD"; // 14, 18, 9, etc.
 
-          const normalizedClarity = clarity.replace(/\s+/g, ""); // "EF VVS" → "EFVVS"
-
-          // const candidateSKU = `${skuPrefix}-${skuDiamondType}${normalizedClarity}`;
-
-
-          // if (!candidateSKU) continue;
-
-          // // Check if this variant actually exists
-          // if (!variantSkuSet.has(candidateSKU.toUpperCase())) continue;
-
-          for (const sku of variantSkuSet) {
-            if (
-              sku.includes(`-${skuDiamondType}${normalizedClarity}`)
-            ) {
-              const parts = sku.split("-");
-              // const metalPart = parts[3]; // 14 | PT | SLV
-              const metalPart =
-                parts.find(p => p === "SLV" || p === "PT") ||
-                parts.find(p => /^\d+$/.test(p)); // gold karat like 14,18
-
-              let resolvedMetal =
-                metalPart === "SLV" ? "SILVER" :
-                  metalPart === "PT" ? "PLATINUM" :
-                    "GOLD";
-
-              if (!confirmedDiamondOptions[dType]) {
-                confirmedDiamondOptions[dType] = {};
-              }
-
-              if (!confirmedDiamondOptions[dType][resolvedMetal]) {
-                confirmedDiamondOptions[dType][resolvedMetal] = [];
-              }
-
-              confirmedDiamondOptions[dType][resolvedMetal].push(clarity);
-            }
+            return "GOLD"; // default
           }
-
-
-          // Only NOW we accept this option
-          if (!confirmedDiamondOptions[dType]) {
-            confirmedDiamondOptions[dType] = {};
-          }
-          if (!confirmedDiamondOptions[dType][metal]) {
-            confirmedDiamondOptions[dType][metal] = [];
-          }
-          confirmedDiamondOptions[dType][metal].push(clarity)
         }
       }
+
+      return "GOLD"; // fallback
+    };
+
+    // Format clarity with space (EFVVS → EF VVS, GHSI → GH SI)
+    const formatClarity = (clarity: string): string => {
+      return clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
+    };
+
+    // Build diamond options directly from variants
+    console.debug("[DEBUG] Building diamondOptions from variants, total:", variantSkuSet.size);
+
+    // Use a temporary structure to collect data with Sets
+    const tempOptions: Record<string, Record<string, Set<string>>> = {};
+
+    for (const sku of variantSkuSet) {
+      const diamondInfo = extractDiamondInfo(sku);
+      if (!diamondInfo) continue;
+
+      const metal = extractMetalFromSku(sku);
+      const dType = diamondInfo.type;
+      const rawClarity = diamondInfo.clarity;
+      const formattedClarity = formatClarity(rawClarity);
+
+      // Initialize using Sets to auto-deduplicate
+      if (!tempOptions[dType]) {
+        tempOptions[dType] = {};
+      }
+      if (!tempOptions[dType][metal]) {
+        tempOptions[dType][metal] = new Set<string>();
+      }
+
+      // Add to Set (automatically deduplicates)
+      tempOptions[dType][metal].add(formattedClarity);
     }
 
-    // Deduplicate (important)
-    for (const dType in confirmedDiamondOptions) {
-      for (const metal in confirmedDiamondOptions[dType]) {
-        confirmedDiamondOptions[dType][metal] = Array.from(
-          new Set(confirmedDiamondOptions[dType][metal])
-        );
+    // Convert Sets to sorted arrays and assign to diamondOptions
+
+    for (const dType in tempOptions) {
+      diamondOptions[dType] = {};
+      for (const metal in tempOptions[dType]) {
+        diamondOptions[dType][metal] = Array.from(tempOptions[dType][metal]).sort();
       }
     }
 
+    console.debug("[DEBUG] Detailed breakdown by metal:");
+    for (const dType in diamondOptions) {
+      for (const metal in diamondOptions[dType]) {
+        const matchingSkus = Array.from(variantSkuSet).filter(sku => {
+          const info = extractDiamondInfo(sku);
+          const skuMetal = extractMetalFromSku(sku);
+          return info?.type === dType && skuMetal === metal;
+        });
+
+        console.debug(`  ${dType} + ${metal}: ${matchingSkus.length} variants`, {
+          sampleSkus: matchingSkus.slice(0, 3),
+          clarities: diamondOptions[dType][metal]
+        });
+      }
+    }
+
+    console.debug("[getProductByModelSku] diamondOptions (from variants):", diamondOptions);
+
+    // =================================================================
     // =================================================================
 
     diamondShape = Array.isArray(diamondShape) ? diamondShape : [];
@@ -2137,7 +2224,8 @@ export const getProductByModelSku = async (
       goldKarats: metalKarats,
       diamondShape,
       diamondSize: diamondSizeByMetal,
-      diamondOptions: confirmedDiamondOptions,
+      // diamondOptions: confirmedDiamondOptions,
+      diamondOptions,
       diamondColorClarity,
       ...(isGentsRing && bandwidthArray.length > 0
         ? { bandwidth: bandwidthArray }

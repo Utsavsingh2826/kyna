@@ -779,6 +779,24 @@ const ProductDetail = () => {
     currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
+      // Keep total diamond weight in sync with product data changes (variant updates)
+  // Prioritize the API-provided totalDiamondWeight as it reflects the actual variant weight
+  useEffect(() => {
+    const currentProduct = styleAndDesign
+      .find((cat) => cat.name === selectedStyleCategory)
+      ?.substyles.find((s) => s.parentSku === selectedParentSku)
+      ?.productDetails;
+
+    if (currentProduct?.totalDiamondWeight && typeof currentProduct.totalDiamondWeight === "number") {
+      setTotalDiamondWeight(currentProduct.totalDiamondWeight);
+    } else if (selectedDiamondSize) {
+      const parsed = parseFloat(String(selectedDiamondSize));
+      if (!Number.isNaN(parsed)) {
+        setTotalDiamondWeight(parsed);
+      }
+    }
+  }, [styleAndDesign, selectedStyleCategory, selectedParentSku, selectedDiamondSize]);
+
   // Function to check if image is a 3D model
   const is3DModel = (imagePath: string, index: number) => {
     const isGLB = index === 1 && imagePath.endsWith(".glb");
@@ -801,6 +819,7 @@ const ProductDetail = () => {
       const parent = selectedStyleData?.parentSku;
       const variantSku = selectedStyleData?.variants?.[0]?.sku;
       if (parent && variantSku && typeof updateSubstyleProductDetails === "function") {
+        // Always use the first variant of the parent SKU with the user's selected color
         updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
       }
     } catch (err) {
@@ -810,6 +829,7 @@ const ProductDetail = () => {
     selectedColorCode,
     selectedStyleData?.parentSku,
     selectedStyleData?.variants,
+    updateSubstyleProductDetails,
   ]);
 
   // Load data for current category
@@ -862,6 +882,21 @@ const ProductDetail = () => {
   const ringStylesRef = useRef<HTMLDivElement>(null);
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
   const mainViewerRef = useRef<HTMLDivElement | null>(null);
+
+   // Track previous parent SKU to detect changes and reset colors
+  const previousParentSkuRef = useRef<string>("");
+
+  // Reset color to WG when parent SKU actually changes
+  useEffect(() => {
+    if (selectedParentSku && selectedParentSku !== previousParentSkuRef.current) {
+      console.log("Parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to WG");
+      previousParentSkuRef.current = selectedParentSku;
+      setSelectedMetalColor("White Gold");
+      setSelectedColorCode("WG");
+      setSelectedMetalType("GOLD");
+    }
+  }, [selectedParentSku]);
+
 
   const scrollToImageOnMobile = () => {
     // Increase threshold to include more devices and wrap in timeout to ensure state/UI updates finish
@@ -1244,6 +1279,16 @@ const ProductDetail = () => {
             ),
           })),
         );
+
+        // Update total diamond weight from the new product data
+        if (data.totalDiamondWeight && typeof data.totalDiamondWeight === 'number') {
+          setTotalDiamondWeight(data.totalDiamondWeight);
+        } else if (selectedDiamondSize) {
+          const parsed = parseFloat(String(selectedDiamondSize));
+          if (!Number.isNaN(parsed)) {
+            setTotalDiamondWeight(parsed);
+          }
+        }
 
         // Update last valid state since this variant exists
         lastValidStateRef.current = {
@@ -1958,6 +2003,7 @@ const ProductDetail = () => {
       return;
     }
     
+    console.log("Refetching product for parent SKU:", selectedStyleData.parentSku, "with color:", selectedColorCode);
     refetchUpdatedProduct(selectedStyleData);
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -2102,7 +2148,7 @@ const ProductDetail = () => {
 
                     <Button
                       onClick={() => setSelectedStyleCategory("CHANNEL SET")}
-                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold z-10"
+                      className="hidden absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold z-10"
                     >
                       RESET
                     </Button>

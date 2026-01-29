@@ -19,21 +19,21 @@ const SaleSection: React.FC = () => {
     },
     {
       image:
-        "https://images.pexels.com/photos/1927259/pexels-photo-1927259.jpeg?auto=compress&cs=tinysrgb&w=1600&h=500&dpr=1",
+        "/marketing/menstud.png",
       title: "Sparkle Like Never Before! Limited-Time Diamond Offer",
       subtitle: "Your Moment of Elegance Awaits",
       discount: "20%",
     },
     {
       image:
-        "https://images.pexels.com/photos/164821/pexels-photo-164821.jpeg?auto=compress&cs=tinysrgb&w=1600&h=500&dpr=1",
+        "/marketing/bracelelt.png",
       title: "Exclusive Ring Collection Sale",
       subtitle: "Timeless Beauty at Unbeatable Prices",
       discount: "25%",
     },
     {
       image:
-        "https://images.pexels.com/photos/1191531/pexels-photo-1191531.jpeg?auto=compress&cs=tinysrgb&w=1600&h=500&dpr=1",
+        "/marketing/earring.jpeg",
       title: "Premium Jewelry Flash Sale",
       subtitle: "Luxury Craftsmanship for Less",
       discount: "30%",
@@ -116,7 +116,7 @@ const SaleSection: React.FC = () => {
               <p className="text-sm opacity-90 mb-4">
                 {slides[currentSlide].subtitle}
               </p>
-              <div className="bg-black bg-opacity-30 inline-block px-4 py-2 rounded">
+              {/* <div className="bg-black bg-opacity-30 inline-block px-4 py-2 rounded">
                 <p className="text-lg font-semibold">
                   Only{" "}
                   <span className="text-yellow-400">
@@ -125,7 +125,7 @@ const SaleSection: React.FC = () => {
                   </span>{" "}
                   Left
                 </p>
-              </div>
+              </div> */}
             </div>
             <div className="lg:w-1/2 flex justify-center lg:justify-end relative">
               <div className="relative">

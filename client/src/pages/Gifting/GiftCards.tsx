@@ -2,6 +2,7 @@ import SEO from "@/components/SEO";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 const giftCards = [
   {
@@ -98,11 +99,13 @@ const GiftingCards = () => {
         {/* Gift Cards Grid Section */}
         <section className="py-16 bg-background">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-center mb-12">
+            <h2 className="text-3xl font-bold text-center mb-3">
               Buy Gift Cards
             </h2>
+              {/* coming soon banner */}
+            <h4 className="text-center text-[#328F94] text-xl font-semibold mb-8">Coming Soon</h4>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="hidden grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               {giftCards.map((card) => (
                 <Card
                   key={card.id}
@@ -133,7 +136,7 @@ const GiftingCards = () => {
                         </span>
                       </div>
 
-                      <Button
+                      <Button onClick={()=> toast.success("Gift cards launching soon")}
                         className="w-full bg-teal-500 hover:bg-teal-600 text-white font-medium"
                         size="sm"
                       >

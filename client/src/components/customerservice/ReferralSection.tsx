@@ -234,10 +234,7 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
                     Get Exclusive Discounts
                   </h3>
                   <p className="text-sm text-gray-600 leading-relaxed">
-                    Treat your friend to ₹
-                    {referralSettings?.referralRewardFriend || 10} and get ₹
-                    {referralSettings?.referralRewardReferrer || 10} towards a
-                    future purchase after their first order of ₹1,000+.
+                    Refer your friend our website, once they buy using your referral code, get exciting discount on your next purchase!
                   </p>
                 </div>
 
