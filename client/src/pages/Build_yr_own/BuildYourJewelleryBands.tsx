@@ -819,6 +819,7 @@ const ProductDetail = () => {
       const parent = selectedStyleData?.parentSku;
       const variantSku = selectedStyleData?.variants?.[0]?.sku;
       if (parent && variantSku && typeof updateSubstyleProductDetails === "function") {
+        // Always use the first variant of the parent SKU with the user's selected color
         updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
       }
     } catch (err) {
@@ -828,6 +829,7 @@ const ProductDetail = () => {
     selectedColorCode,
     selectedStyleData?.parentSku,
     selectedStyleData?.variants,
+    updateSubstyleProductDetails,
   ]);
 
   // Load data for current category
@@ -880,6 +882,21 @@ const ProductDetail = () => {
   const ringStylesRef = useRef<HTMLDivElement>(null);
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
   const mainViewerRef = useRef<HTMLDivElement | null>(null);
+
+   // Track previous parent SKU to detect changes and reset colors
+  const previousParentSkuRef = useRef<string>("");
+
+  // Reset color to WG when parent SKU actually changes
+  useEffect(() => {
+    if (selectedParentSku && selectedParentSku !== previousParentSkuRef.current) {
+      console.log("Parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to WG");
+      previousParentSkuRef.current = selectedParentSku;
+      setSelectedMetalColor("White Gold");
+      setSelectedColorCode("WG");
+      setSelectedMetalType("GOLD");
+    }
+  }, [selectedParentSku]);
+
 
   const scrollToImageOnMobile = () => {
     // Increase threshold to include more devices and wrap in timeout to ensure state/UI updates finish
@@ -1986,6 +2003,7 @@ const ProductDetail = () => {
       return;
     }
     
+    console.log("Refetching product for parent SKU:", selectedStyleData.parentSku, "with color:", selectedColorCode);
     refetchUpdatedProduct(selectedStyleData);
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

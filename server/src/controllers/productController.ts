@@ -1519,6 +1519,64 @@ export const getProductByModelSku = async (
       });
     }
 
+    const metalColorQuery = (req.query.metalColor ?? req.query.metal ?? "")
+      .toString()
+      .trim()
+      .toUpperCase();
+
+    if (metalColorQuery) {
+      // Build available colors from variant images
+      const allImgs = (firstVariantDoc.images || [])
+        .map((img: any) => img?.url ?? img?.filename ?? img)
+        .filter(Boolean)
+        .map(String);
+
+      const PRIMARY_METALS = ["WG", "YG", "RG", "BR", "3T"];
+      const availableColorsSet = new Set<string>();
+
+      for (const url of allImgs) {
+        const name = url.split("/").pop()?.toUpperCase() || "";
+        const parts = name.split(/[-_.]/).filter(Boolean);
+        const metals: string[] = [];
+
+        for (const p of parts) {
+          if (PRIMARY_METALS.includes(p) && metals[metals.length - 1] !== p) {
+            metals.push(p);
+          }
+        }
+
+        if (metals.includes("3T")) {
+          availableColorsSet.add("3T");
+        } else if (metals.length === 1) {
+          availableColorsSet.add(metals[0]);
+        } else if (metals.length >= 2) {
+          for (let i = 0; i < metals.length - 1; i++) {
+            availableColorsSet.add(`${metals[i]}-${metals[i + 1]}`);
+          }
+        }
+      }
+
+      const normalizedQuery = metalColorQuery
+        .split("-")
+        .map(m => {
+          const metalMap: Record<string, string> = {
+            WHITE: "WG", WHITEGOLD: "WG", WG: "WG",
+            YELLOW: "YG", YELLOWGOLD: "YG", YG: "YG",
+            ROSE: "RG", ROSEGOLD: "RG", RG: "RG",
+            BLACK: "BR", BLACKRHODIUM: "BR", BR: "BR",
+          };
+          return metalMap[m] ?? m;
+        })
+        .join("-");
+
+      if (!availableColorsSet.has(normalizedQuery)) {
+        return res.status(404).json({
+          success: false,
+          message: `Variant ${variantIdParam} does not support metal color ${metalColorQuery}. Available colors: ${Array.from(availableColorsSet).join(", ")}`,
+        });
+      }
+    }
+
     const deliveryDays =
       firstVariantDoc?.attributes?.["DELIVERY DAYS"] ??
       firstVariantDoc?.attributes?.["DELIVERY_DAYS"] ??
