@@ -3,21 +3,33 @@ import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import vid1 from "/heropage/Bracelet.mov";
 import vid2 from "/heropage/Ring-and-Braclelet.mov";
+import vid3 from "/heropage/ring.mp4";
+import vid4 from "/heropage/newring.mp4";
 
 const HeroSection: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
     {
-      video: vid1,
-      title: "LOVE IN EVERY MILESTONE",
-      subtitle: "Discover our exquisite collection of handcrafted jewelry",
-    },
-    {
       video: vid2,
       title: "LOVE IN EVERY MILESTONE",
       subtitle: "Discover our exquisite collection of handcrafted jewelry",
     },
+    {
+      video: vid3,
+      title: "LOVE IN EVERY MILESTONE",
+      subtitle: "Discover our exquisite collection of handcrafted jewelry",
+    },
+    {
+      video: vid4,
+      title: "LOVE IN EVERY MILESTONE",
+      subtitle: "Discover our exquisite collection of handcrafted jewelry",
+    },
+    {
+      video: vid1,
+      title: "LOVE IN EVERY MILESTONE",
+      subtitle: "Discover our exquisite collection of handcrafted jewelry",
+    }
   ];
 
   const nextSlide = () => {

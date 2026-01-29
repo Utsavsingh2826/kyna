@@ -115,19 +115,19 @@ const collections: CollectionItem[] = [
   {
     title: "Explore Earrings",
     href: "/earrings",
-    src: "collections(Home)/1.jpg",
+    src: "collections(Home)/1.jpeg",
     alt: "Diamond stud earrings close-up shimmering with light",
   },
   {
     title: "Explore Men's Rings",
     href: "/rings?ring_category=Mens+Rings",
-    src: "collections(Home)/2.jpg",
+    src: "collections(Home)/2.png",
     alt: "Men's ring on hand with metallic finish",
   },
   {
     title: "Explore Pendants",
     href: "/pendants",
-    src: "collections(Home)/3.jpg",
+    src: "collections(Home)/3.jpeg",
     alt: "Pendant necklace with gemstone on neckline",
   },
   {
