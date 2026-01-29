@@ -2102,7 +2102,7 @@ const ProductDetail = () => {
 
                     <Button
                       onClick={() => setSelectedStyleCategory("CHANNEL SET")}
-                      className="absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold z-10"
+                      className="hidden absolute bg-[#68C5C0] text-white top-4 right-4 px-2 py-1 rounded-md text-xs font-semibold z-10"
                     >
                       RESET
                     </Button>
