@@ -69,11 +69,11 @@ const getColorDisplayInfo = (
     const getColorName = (c: string) => {
       switch (c) {
         case "WG":
-          return "White Gold";
+          return "White";
         case "YG":
-          return "Yellow Gold";
+          return "Yellow";
         case "RG":
-          return "Rose Gold";
+          return "Rose";
         case "BR":
           return "Black Rhodium";
         default:
@@ -81,13 +81,10 @@ const getColorDisplayInfo = (
       }
     };
 
-    // For combinations, use the image from metal_colors folder
-    const combinationImageUrl = `/metal_colors/${code}.png`;
-
     return {
-      name: `${getColorName(color1)} - ${getColorName(color2)}`,
+      name: `${getColorName(color1)} & ${getColorName(color2)}`,
       colors: [color1, color2],
-      img: combinationImageUrl,
+      img: `/metal_colors/${color1}-${color2}.png`,
     };
   }
 
@@ -296,6 +293,12 @@ const ProductDetail = () => {
 
   // Track the last parsed parent SKU to prevent re-parsing
   const lastParsedParentSkuRef = useRef<string>("");
+  
+  // Track when we're parsing to prevent refetch during parsing
+  const isParsingRef = useRef(false);
+
+  // Track previous parent SKU to detect changes
+  const previousParentSkuRef = useRef<string>("");
 
   // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
@@ -508,7 +511,8 @@ const ProductDetail = () => {
                 const availableClarities = getOptionsFromData();
                 const found = availableClarities.find(c => c.replace(/\s+/g, '') === clarityCompact);
                 if (found) {
-                  matchedClarity = found;
+                  // Always use the no-space version for consistency
+                  matchedClarity = found.replace(/\s+/g, '');
                 }
 
                 if (matchedClarity && matchedClarity !== selectedColorClarity) {
@@ -556,8 +560,11 @@ if (data.deliveryDays) {
     updateSubstyleProductDetails,
   ]);
 
-  // Load data for current category
+  // Load data for current category and reset parsing ref
   useEffect(() => {
+    // Reset the parsing ref when category changes so first variant gets re-parsed
+    lastParsedParentSkuRef.current = "";
+    
     const currentCategory = styleAndDesign.find(
       (cat) => cat.name === selectedStyleCategory,
     );
@@ -588,6 +595,28 @@ if (data.deliveryDays) {
     }
   }, [selectedStyleCategory, styleAndDesign, selectedParentSku]);
 
+  // Reset color to WG when parent SKU actually changes
+  useEffect(() => {
+    // Only reset if:
+    // 1. We have a selectedParentSku
+    // 2. previousParentSkuRef has been set before (not initial load)
+    // 3. The parent SKU has actually changed
+    if (
+      selectedParentSku &&
+      previousParentSkuRef.current &&
+      previousParentSkuRef.current !== selectedParentSku
+    ) {
+      console.log("Parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to WG");
+      setSelectedMetalColor("White Gold");
+      setSelectedColorCode("WG");
+    }
+    
+    // Always update the ref to track current parent SKU
+    if (selectedParentSku) {
+      previousParentSkuRef.current = selectedParentSku;
+    }
+  }, [selectedParentSku]);
+
   // Parse first variant SKU when parent SKU changes to set all fields
   useEffect(() => {
     if (!selectedParentSku || !selectedStyleData?.variants?.[0]?.sku) return;
@@ -595,8 +624,12 @@ if (data.deliveryDays) {
     // Skip if we already parsed this parent SKU
     if (lastParsedParentSkuRef.current === selectedParentSku) return;
 
-    console.log("Parsing first variant for new parent SKU:", selectedParentSku);
+    console.log("🔄 PARSING STARTED for parent SKU:", selectedParentSku);
     lastParsedParentSkuRef.current = selectedParentSku;
+    
+    // Set flag to prevent refetch during parsing
+    isParsingRef.current = true;
+    console.log("🚩 isParsingRef.current = TRUE");
 
     const firstVariantSku = selectedStyleData.variants[0].sku;
     console.log("First variant SKU:", firstVariantSku);
@@ -644,24 +677,28 @@ if (data.deliveryDays) {
       if (specifications.startsWith('LG')) {
         console.log("Setting origin: Lab Grown Diamond");
         setSelectedDiamondOrigin("Lab Grown Diamond");
-        const clarity = specifications.substring(2); // Remove "LG"
-        // Try to match with spaces (e.g., "EFVVS" -> "EF VVS")
-        const clarityWithSpaces = clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
-        console.log("Setting clarity:", clarityWithSpaces);
-        setSelectedColorClarity(clarityWithSpaces);
+        const clarity = specifications.substring(2).replace(/\s+/g, ''); // Remove "LG" and any spaces
+        console.log("Setting clarity:", clarity);
+        setSelectedColorClarity(clarity);
       } else if (specifications.startsWith('ND')) {
         console.log("Setting origin: Natural Diamond");
         setSelectedDiamondOrigin("Natural Diamond");
-        const clarity = specifications.substring(2); // Remove "ND"
-        const clarityWithSpaces = clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
-        console.log("Setting clarity:", clarityWithSpaces);
-        setSelectedColorClarity(clarityWithSpaces);
+        const clarity = specifications.substring(2).replace(/\s+/g, ''); // Remove "ND" and any spaces
+        console.log("Setting clarity:", clarity);
+        setSelectedColorClarity(clarity);
       }
 
       // Metal type defaults to GOLD
       console.log("Setting metal type: GOLD");
       setSelectedMetalType("GOLD");
     }
+    
+    // Clear the flag after a longer delay to ensure all dependent useEffects complete
+    // This prevents clarity validation from overriding the parsed clarity
+    setTimeout(() => {
+      isParsingRef.current = false;
+      console.log("Parsing flag cleared - refetch and clarity validation can now run");
+    }, 500);
   }, [selectedParentSku, selectedStyleData?.variants]);
 
   // Load Tennis Bracelet data on component mount
@@ -885,15 +922,9 @@ if (data.deliveryDays) {
       const variantId = generateVariantId(substyle);
       if (!variantId) return;
 
-      const colorCodeMap: { [key: string]: string } = {
-        "White Gold": "WG",
-        "Yellow Gold": "YG",
-        "Rose Gold": "RG",
-        "Black Rhodium": "BR",
-        Silver: "SLV",
-        Platinum: "PT",
-      };
-      const metalColor = colorCodeMap[selectedMetalColor] || "WG";
+      // Use selectedColorCode directly instead of mapping from selectedMetalColor
+      // This ensures combination colors like "WG-BR" are preserved
+      const metalColor = selectedColorCode;
 
       try {
         const res = await fetch(
@@ -1254,16 +1285,46 @@ if (data.deliveryDays) {
     getAvailableColorClarities
   ]);
 
+  // Validate clarity selection and ensure it's always without spaces
   useEffect(() => {
+    // Skip if we're currently parsing the first variant
+    if (isParsingRef.current) {
+      console.log("⏭️ Skipping clarity validation - parsing in progress");
+      return;
+    }
+    
+    // Skip validation if no clarity is selected yet (initial load)
+    if (!selectedColorClarity) {
+      console.log("⏭️ Skipping clarity validation - no clarity selected yet");
+      return;
+    }
+    
     const clarities = getAvailableColorClarities();
-    if (!clarities.includes(selectedColorClarity)) {
+    // Ensure selected clarity is also without spaces for comparison
+    const normalizedSelectedClarity = selectedColorClarity.replace(/\s+/g, '');
+    
+    console.log("🔍 Clarity validation running:", {
+      availableClarities: clarities,
+      currentClarity: selectedColorClarity,
+      normalizedClarity: normalizedSelectedClarity,
+      isValid: clarities.includes(normalizedSelectedClarity),
+      isParsingFlag: isParsingRef.current
+    });
+    
+    if (!clarities.includes(normalizedSelectedClarity)) {
+      console.log("❌ Invalid clarity detected, changing from", selectedColorClarity, "to", clarities[0]);
       setSelectedColorClarity(clarities[0] || "");
+    } else if (selectedColorClarity !== normalizedSelectedClarity) {
+      // Update to normalized version if it has spaces
+      console.log("🔧 Normalizing clarity from", selectedColorClarity, "to", normalizedSelectedClarity);
+      setSelectedColorClarity(normalizedSelectedClarity);
     }
   }, [
     selectedDiamondOrigin,
     selectedMetalType,
     selectedStyleData?.productDetails,
     getAvailableColorClarities,
+    selectedColorClarity,
   ]);
 
   // Initialize lastValidStateRef with the first loaded state
@@ -1303,6 +1364,12 @@ if (data.deliveryDays) {
   // Refetch variant when selection changes - similar to bracelet builder
   useEffect(() => {
     if (!selectedStyleData?.parentSku) return;
+    
+    // Skip if we're currently parsing the first variant
+    if (isParsingRef.current) {
+      console.log("Skipping refetch - parsing in progress");
+      return;
+    }
     
     // Don't refetch if required selections are not set yet
     if (!selectedDiamondSize || !selectedGoldKarat || !selectedDiamondShape) {
@@ -1952,7 +2019,9 @@ if (data.deliveryDays) {
                       <Select
                         value={selectedColorClarity}
                         onValueChange={(value) => {
-                        setSelectedColorClarity(value);
+                        // Ensure the selected value is always without spaces
+                        const normalizedValue = value.replace(/\s+/g, '');
+                        setSelectedColorClarity(normalizedValue);
                       }}
                       >
                         <SelectTrigger className="w-full text-sm border-neutral-300">

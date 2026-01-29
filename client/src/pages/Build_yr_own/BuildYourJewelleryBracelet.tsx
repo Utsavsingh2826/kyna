@@ -563,14 +563,18 @@ if (data.deliveryDays) {
     updateSubstyleProductDetails,
   ]);
 
-  // Load data for current category
+  // Load data for current category and reset parsing ref
   useEffect(() => {
     try {
       if (!selectedStyleCategory || typeof fetchCategoryData !== "function") return;
+      
+      // Reset the parsing ref when category changes so first variant gets re-parsed
+      lastParsedParentSkuRef.current = "";
+      
       const currentCategory = styleAndDesign.find(
         (cat) => cat.name === selectedStyleCategory,
       );
-      if (currentCategory && !currentCategory.isLoaded) {
+      if (currentCategory && (!currentCategory.isLoaded || currentCategory.substyles.length === 0)) {
         fetchCategoryData(selectedStyleCategory);
       }
     } catch (err) {
@@ -636,18 +640,31 @@ if (data.deliveryDays) {
         console.log("Setting origin: Lab Grown Diamond");
         setSelectedDiamondOrigin("Lab Grown Diamond");
         const clarity = specifications.substring(2); // Remove "LG"
-        // Try to match with spaces (e.g., "EFVS" -> "EF VS")
-        const clarityWithSpaces = clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
-        console.log("Setting clarity:", clarityWithSpaces);
-        setSelectedColorClarity(clarityWithSpaces);
+        console.log("Setting clarity:", clarity);
+        setSelectedColorClarity(clarity);
       } else if (specifications.startsWith('ND')) {
         console.log("Setting origin: Natural Diamond");
         setSelectedDiamondOrigin("Natural Diamond");
         const clarity = specifications.substring(2); // Remove "ND"
-        const clarityWithSpaces = clarity.replace(/^([A-Z]{2})([A-Z]+)$/, '$1 $2');
-        console.log("Setting clarity:", clarityWithSpaces);
-        setSelectedColorClarity(clarityWithSpaces);
+        console.log("Setting clarity:", clarity);
+        setSelectedColorClarity(clarity);
       }
+
+      // Parse bracelet size from last part if available (e.g., "6" = 6 inches)
+      if (parts.length >= 6) {
+        const sizeCode = parts[5];
+        console.log("Setting bracelet size:", sizeCode);
+        setSelectedSize(sizeCode);
+      } else {
+        // Clear size if not in SKU
+        console.log("Clearing bracelet size");
+        setSelectedSize("");
+      }
+
+      // Reset metal color and code to default (White Gold)
+      console.log("Resetting metal color to White Gold");
+      setSelectedMetalColor("White Gold");
+      setSelectedColorCode("WG");
 
       // Metal type defaults to GOLD
       console.log("Setting metal type: GOLD");

@@ -2673,7 +2673,7 @@ const ProductDetail = () => {
                             selectedDiamondShape.slice(1).toLowerCase()}
                         </span>
                       </h3>
-                      <div className="flex flex-wrap gap-2 overflow-x-auto no-scrollbar py-2">
+                      <div className="flex flex-wrap gap-2 overflow-x-auto overflow-hidden no-scrollbar py-2">
                         {sampleProduct.diamondShapes
                           .filter((shape) =>
                             productData.diamondShape.includes(
