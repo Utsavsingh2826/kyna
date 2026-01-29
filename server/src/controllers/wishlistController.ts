@@ -29,7 +29,7 @@ const getCollectionModel = (collectionName: string): Model<Document> => {
   return conn.model<Document>(modelName, schema, collectionName);
 };
 
-const PRODUCT_COLLECTION = 'products';
+const PRODUCT_COLLECTION = 'products2';
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
   ring: 'rings',
@@ -77,7 +77,7 @@ const fetchCatalogProduct = async ({
   }
 
   if (!doc && modelSku) {
-    doc = await ProductModel.findOne({ modelSku });
+    doc = await ProductModel.findOne({ parentSku: modelSku });
   }
 
   return doc;
@@ -308,7 +308,7 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
     const productSnapshot = toPlainObject(catalogProduct || legacyProduct);
     const normalizedPrice =
       typeof price === 'number' && Number.isFinite(price) ? price : null;
-    
+
     // Use the productId sent by the client directly - it's already the correct ID
     const normalizedProductId = productId;
 
@@ -332,6 +332,7 @@ export const addToWishlist = async (req: AuthRequest, res: Response) => {
       productRef: legacyProduct?._id,
       modelSku:
         modelSku ||
+        productSnapshot?.parentSku ||
         productSnapshot?.modelSku ||
         productSnapshot?.sku ||
         normalizedProductId,

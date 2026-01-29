@@ -30,6 +30,9 @@ import CustomerService from "./pages/CustomerService";
 import { useSelector } from "react-redux";
 import type { RootState } from "./store";
 import { initializeAuth } from "./store/slices/authSlice";
+import { logoutSucceeded } from "./store/slices/authSlice";
+
+import { isJwtExpired, getJwtExpiryMs } from "@/lib/jwt";
 import RingSizeEducation from "./pages/Education/RingSizeEducation";
 import JewelleryPage from "./pages/JewelleryPage";
 import Gifting from "./pages/Gifting/GiftCards";
@@ -132,11 +135,34 @@ function MainLayout({ children }: { children: React.ReactNode }) {
 
 function App() {
   const dispatch = useDispatch();
+  const token = useSelector((state: RootState) => state.auth.token);
 
   useEffect(() => {
     // Initialize auth state from localStorage on app start
     dispatch(initializeAuth());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    // If token is already expired, logout immediately
+    if (isJwtExpired(token)) {
+      dispatch(logoutSucceeded());
+      return;
+    }
+
+    const expiryMs = getJwtExpiryMs(token);
+    if (!expiryMs) return;
+
+    const delay = Math.max(0, expiryMs - Date.now());
+    const timeoutId = window.setTimeout(() => {
+      dispatch(logoutSucceeded());
+      // redirect after logout
+      window.location.href = "/login";
+    }, delay);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [dispatch, token]);
 
   return (
     <Router>
