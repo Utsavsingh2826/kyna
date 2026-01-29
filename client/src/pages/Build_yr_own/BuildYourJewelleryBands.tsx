@@ -779,6 +779,24 @@ const ProductDetail = () => {
     currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
+      // Keep total diamond weight in sync with product data changes (variant updates)
+  // Prioritize the API-provided totalDiamondWeight as it reflects the actual variant weight
+  useEffect(() => {
+    const currentProduct = styleAndDesign
+      .find((cat) => cat.name === selectedStyleCategory)
+      ?.substyles.find((s) => s.parentSku === selectedParentSku)
+      ?.productDetails;
+
+    if (currentProduct?.totalDiamondWeight && typeof currentProduct.totalDiamondWeight === "number") {
+      setTotalDiamondWeight(currentProduct.totalDiamondWeight);
+    } else if (selectedDiamondSize) {
+      const parsed = parseFloat(String(selectedDiamondSize));
+      if (!Number.isNaN(parsed)) {
+        setTotalDiamondWeight(parsed);
+      }
+    }
+  }, [styleAndDesign, selectedStyleCategory, selectedParentSku, selectedDiamondSize]);
+
   // Function to check if image is a 3D model
   const is3DModel = (imagePath: string, index: number) => {
     const isGLB = index === 1 && imagePath.endsWith(".glb");
@@ -1244,6 +1262,16 @@ const ProductDetail = () => {
             ),
           })),
         );
+
+        // Update total diamond weight from the new product data
+        if (data.totalDiamondWeight && typeof data.totalDiamondWeight === 'number') {
+          setTotalDiamondWeight(data.totalDiamondWeight);
+        } else if (selectedDiamondSize) {
+          const parsed = parseFloat(String(selectedDiamondSize));
+          if (!Number.isNaN(parsed)) {
+            setTotalDiamondWeight(parsed);
+          }
+        }
 
         // Update last valid state since this variant exists
         lastValidStateRef.current = {

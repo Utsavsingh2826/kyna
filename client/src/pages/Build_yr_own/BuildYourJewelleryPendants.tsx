@@ -366,6 +366,23 @@ const ProductDetail = () => {
       isImage: false,
     },
   ];
+    // Keep total diamond weight in sync with product data changes (variant updates)
+  // Prioritize the API-provided totalDiamondWeight as it reflects the actual variant weight
+  useEffect(() => {
+    const currentProduct = styleAndDesign
+      .find((cat) => cat.name === selectedStyleCategory)
+      ?.substyles.find((s) => s.parentSku === selectedParentSku)
+      ?.productDetails;
+
+    if (currentProduct?.totalDiamondWeight && typeof currentProduct.totalDiamondWeight === "number") {
+      setTotalDiamondWeight(currentProduct.totalDiamondWeight);
+    } else if (selectedDiamondSize) {
+      const parsed = parseFloat(String(selectedDiamondSize));
+      if (!Number.isNaN(parsed)) {
+        setTotalDiamondWeight(parsed);
+      }
+    }
+  }, [styleAndDesign, selectedStyleCategory, selectedParentSku, selectedDiamondSize]);
 
   // Fetch data from API
   const fetchCategoryData = useCallback(async (categoryName: string) => {
@@ -973,6 +990,16 @@ if (data.deliveryDays) {
               ),
             })),
           );
+
+          // Update total diamond weight from the new product data
+          if (data.totalDiamondWeight && typeof data.totalDiamondWeight === 'number') {
+            setTotalDiamondWeight(data.totalDiamondWeight);
+          } else if (selectedDiamondSize) {
+            const parsed = parseFloat(String(selectedDiamondSize));
+            if (!Number.isNaN(parsed)) {
+              setTotalDiamondWeight(parsed);
+            }
+          }
 
           lastValidStateRef.current = {
             metalColor: selectedMetalColor,

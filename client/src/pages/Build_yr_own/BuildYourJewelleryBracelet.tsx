@@ -542,6 +542,24 @@ if (data.deliveryDays) {
     currentSubstyles.find((style) => style.parentSku === selectedParentSku) ||
     currentSubstyles[0];
 
+      // Keep total diamond weight in sync with product data changes (variant updates)
+  // Prioritize the API-provided totalDiamondWeight as it reflects the actual variant weight
+  useEffect(() => {
+    const currentProduct = styleAndDesign
+      .find((cat) => cat.name === selectedStyleCategory)
+      ?.substyles.find((s) => s.parentSku === selectedParentSku)
+      ?.productDetails;
+
+    if (currentProduct?.totalDiamondWeight && typeof currentProduct.totalDiamondWeight === "number") {
+      setTotalDiamondWeight(currentProduct.totalDiamondWeight);
+    } else if (selectedDiamondSize) {
+      const parsed = parseFloat(String(selectedDiamondSize));
+      if (!Number.isNaN(parsed)) {
+        setTotalDiamondWeight(parsed);
+      }
+    }
+  }, [styleAndDesign, selectedStyleCategory, selectedParentSku, selectedDiamondSize]);
+
   // When selectedColorCode or selectedParentSku changes for the currently selected style, re-fetch its product details
   useEffect(() => {
     try {
@@ -916,6 +934,16 @@ if (data.deliveryDays) {
             ),
           })),
         );
+
+        // Update total diamond weight from the new product data
+        if (data.totalDiamondWeight && typeof data.totalDiamondWeight === 'number') {
+          setTotalDiamondWeight(data.totalDiamondWeight);
+        } else if (selectedDiamondSize) {
+          const parsed = parseFloat(String(selectedDiamondSize));
+          if (!Number.isNaN(parsed)) {
+            setTotalDiamondWeight(parsed);
+          }
+        }
 
         lastValidStateRef.current = {
           metalColor: selectedMetalColor,
@@ -2103,7 +2131,7 @@ if (data.deliveryDays) {
                 <div className="flex items-end gap-4">
                   {/* Diamond Size Section */}
                 {selectedStyleData?.productDetails?.diamondSize && (
-                    <div className="mb-6 w-1/2">
+                    <div className="w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Size (Per Stone):{" "}
                         {/* <span className="text-[#8D8A91]">
@@ -2136,7 +2164,7 @@ if (data.deliveryDays) {
 
                 {/* Diamond Color & Clarity Section */}
                 {filteredColorClarity && filteredColorClarity.length > 0 && (
-                  <div className="w-1/2 mb-6">
+                  <div className="w-1/2">
                     <h3 className="mb-3 text-sm md:text-base">
                       Diamond Color & Clarity:{" "}
                       {/* <span className="text-[#8D8A91]">

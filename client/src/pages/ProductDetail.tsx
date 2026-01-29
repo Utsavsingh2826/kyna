@@ -265,6 +265,19 @@ const ProductDetail = () => {
   const [shareUrl, setShareUrl] = useState("");
   const [shareMessage, setShareMessage] = useState("");
 
+  // Keep total diamond weight in sync with product data changes (variant updates)
+  // Prioritize the API-provided totalDiamondWeight as it reflects the actual variant weight
+  useEffect(() => {
+    if (productData?.totalDiamondWeight && typeof productData.totalDiamondWeight === "number") {
+      setTotalDiamondWeight(productData.totalDiamondWeight);
+    } else if (selectedDiamondSize) {
+      const parsed = parseFloat(String(selectedDiamondSize));
+      if (!Number.isNaN(parsed)) {
+        setTotalDiamondWeight(parsed);
+      }
+    }
+  }, [productData?.totalDiamondWeight, selectedDiamondSize]);
+
   const handleShare = async (platform: "whatsapp" | "email" | "copy") => {
     // Construct the correct URL for the current variant
     const currentUrl = window.location.href;
@@ -1319,6 +1332,16 @@ const ProductDetail = () => {
 
       // Update product data with valid response
       setProductData(newData);
+
+      // Update total diamond weight from the new product data
+      if (newData.totalDiamondWeight && typeof newData.totalDiamondWeight === 'number') {
+        setTotalDiamondWeight(newData.totalDiamondWeight);
+      } else if (selectedDiamondSize) {
+        const parsed = parseFloat(String(selectedDiamondSize));
+        if (!Number.isNaN(parsed)) {
+          setTotalDiamondWeight(parsed);
+        }
+      }
 
       // Update last valid state since this variant exists
       lastValidStateRef.current = {

@@ -640,6 +640,9 @@ const sampleProductData = {
 
 const ProductDetail = () => {
   const [showTooltip, setShowTooltip] = useState(false);
+  
+  // Default to first category
+  const [selectedParentSku, setSelectedParentSku] = useState("");
   const [showEngraveModal, setShowEngraveModal] = useState(false);
   // Engraving state: only one engraving allowed for rings
   const [hasEngraving, setHasEngraving] = useState(false);
@@ -744,6 +747,24 @@ const ProductDetail = () => {
   const [styleAndDesign, setStyleAndDesign] = useState(
     getInitialStyleAndDesign(),
   );
+
+  // Keep total diamond weight in sync with product data changes (variant updates)
+  // Prioritize the API-provided totalDiamondWeight as it reflects the actual variant weight
+  useEffect(() => {
+    const currentProduct = styleAndDesign
+      .find((cat) => cat.name === selectedStyleCategory)
+      ?.substyles.find((s) => s.parentSku === selectedParentSku)
+      ?.productDetails;
+
+    if (currentProduct?.totalDiamondWeight && typeof currentProduct.totalDiamondWeight === "number") {
+      setTotalDiamondWeight(currentProduct.totalDiamondWeight);
+    } else if (selectedDiamondSize) {
+      const parsed = parseFloat(String(selectedDiamondSize));
+      if (!Number.isNaN(parsed)) {
+        setTotalDiamondWeight(parsed);
+      }
+    }
+  }, [styleAndDesign, selectedStyleCategory, selectedParentSku, selectedDiamondSize]);
    // Get current category's substyles and selected style data
   const currentCategory = styleAndDesign.find(
     (cat) => cat.name === selectedStyleCategory,
@@ -805,9 +826,6 @@ const ProductDetail = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Default to first category
-  const [selectedParentSku, setSelectedParentSku] = useState("");
 
   // Fetch data from API
   const fetchCategoryData = useCallback(async (categoryName: string) => {
@@ -1417,6 +1435,16 @@ const ProductDetail = () => {
             ),
           })),
         );
+
+        // Update total diamond weight from the new product data
+        if (data.totalDiamondWeight && typeof data.totalDiamondWeight === 'number') {
+          setTotalDiamondWeight(data.totalDiamondWeight);
+        } else if (selectedDiamondSize) {
+          const parsed = parseFloat(String(selectedDiamondSize));
+          if (!Number.isNaN(parsed)) {
+            setTotalDiamondWeight(parsed);
+          }
+        }
 
         // Update last valid state since this variant exists
         lastValidStateRef.current = {
