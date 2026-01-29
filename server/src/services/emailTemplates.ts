@@ -81,16 +81,18 @@ export const baseStyles = `
   .primary-btn {
     display: inline-block;
     background: #0f9aa7;
-    color: #ffffff;
+    color: #ffffff !important;
     padding: 14px 32px;
     border-radius: 40px;
-    text-decoration: none;
+    text-decoration: none !important;
     text-transform: uppercase;
     letter-spacing: 2px;
     font-size: 13px;
     margin: 14px 0 8px;
+    font-weight: bold;
   }
   .note {
+    display: inline-block;
     background: #fff4ea;
     border-radius: 14px;
     border-left: 4px solid #c97c42;
@@ -163,7 +165,7 @@ export const VERIFICATION_EMAIL_TEMPLATE = `
       <div class="hero">Email Verification Required</div>
       <div class="content">
         <div class="card">
-          <div class="card-title">Dear Patron,</div>
+          <div class="card-title">Dear Customer,</div>
           <p class="summary">Thank you for registering with KYNA. Use the code below to activate your account and continue your journey with us.</p>
           <div class="highlight-box">{verificationCode}</div>
           <table class="details-table">
@@ -172,10 +174,12 @@ export const VERIFICATION_EMAIL_TEMPLATE = `
             <tr><td>Need help?</td><td>Call +91 8928610682 or email enquiries@kynajewellery.com</td></tr>
           </table>
           <div style="text-align:center;">
-            <a class="primary-btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}/verify-email">Verify My Email</a>
+            <a class="primary-btn" href="${process.env.CLIENT_URL || 'https://kynajewels.com'}/verify-email" style="display:inline-block;background:#0f9aa7;color:#ffffff !important;padding:14px 32px;border-radius:40px;text-decoration:none;text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:bold;">Verify My Email</a>
           </div>
-          <div class="note">
-            If you didn’t request this, ignore the message—your account stays secure.
+          <div style="text-align:center;">
+            <div class="note">
+              If you didn’t request this, ignore the message.
+            </div>
           </div>
         </div>
       </div>
@@ -215,10 +219,12 @@ export const WELCOME_EMAIL_TEMPLATE = `
             <tr><td>Track</td><td>Follow orders, manage returns, and monitor referrals</td></tr>
           </table>
           <div style="text-align:center;">
-            <a class="primary-btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}">Explore KYNA</a>
+            <a class="primary-btn" href="${process.env.CLIENT_URL || 'https://kynajewels.com'}" style="display:inline-block;background:#0f9aa7;color:#ffffff !important;padding:14px 32px;border-radius:40px;text-decoration:none;text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:bold;">Explore KYNA</a>
           </div>
-          <div class="note">
-            Need styling advice or gifting assistance? Our concierge is here for you—just reply to this email.
+          <div style="text-align:center;">
+            <div class="note">
+              Need styling advice or gifting assistance? Our concierge is here for you—just reply to this email.
+            </div>
           </div>
         </div>
       </div>
@@ -258,10 +264,12 @@ export const PASSWORD_RESET_REQUEST_TEMPLATE = `
             <tr><td>Security</td><td>Link can be used once and cannot be forwarded</td></tr>
           </table>
           <div style="text-align:center;">
-            <a class="primary-btn" href="{resetURL}">Reset Password</a>
+            <a class="primary-btn" href="{resetURL}" style="display:inline-block;background:#0f9aa7;color:#ffffff !important;padding:14px 32px;border-radius:40px;text-decoration:none;text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:bold;">Reset Password</a>
           </div>
-          <div class="note">
-            Didn’t request this? Ignore the message—your password remains unchanged.
+          <div style="text-align:center;">
+            <div class="note">
+              Didn’t request this? Ignore the message—your password remains unchanged.
+            </div>
           </div>
         </div>
       </div>
@@ -282,7 +290,7 @@ export const verificationEmail = (otp: string): string => {
 
 // Password reset email function (for compatibility with rajan/backend)
 export const resetPasswordEmail = (resetToken: string): string => {
-  const resetURL = `${process.env.CLIENT_URL || 'http://localhost:5173'}/reset-password/${resetToken}`;
+  const resetURL = `${process.env.CLIENT_URL || 'https://kynajewels.com'}/reset-password/${resetToken}`;
   return PASSWORD_RESET_REQUEST_TEMPLATE.replace('{resetURL}', resetURL);
 };
 
@@ -311,10 +319,12 @@ export const PASSWORD_RESET_SUCCESS_TEMPLATE = `
             <tr><td>Tip</td><td>Use a unique passphrase & update it periodically</td></tr>
           </table>
           <div style="text-align:center;">
-            <a class="primary-btn" href="${process.env.CLIENT_URL || 'http://localhost:5173'}/login">Continue to KYNA</a>
+            <a class="primary-btn" href="${process.env.CLIENT_URL || 'https://kynajewels.com'}/login" style="display:inline-block;background:#0f9aa7;color:#ffffff !important;padding:14px 32px;border-radius:40px;text-decoration:none;text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:bold;">Continue to KYNA</a>
           </div>
-          <div class="note">
-            Didn’t change your password? Contact us immediately at <a class="contact-link" href="mailto:enquiries@kynajewellery.com">enquiries@kynajewellery.com</a>.
+          <div style="text-align:center;">
+            <div class="note">
+              Didn’t change your password? Contact us immediately at <a class="contact-link" href="mailto:enquiries@kynajewellery.com">enquiries@kynajewellery.com</a>.
+            </div>
           </div>
         </div>
       </div>

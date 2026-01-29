@@ -102,7 +102,7 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "", "http://localhost:5173"],
+        connectSrc: ["'self'", "https://kynajewels.com", "http://localhost:5173"],
       },
     },
   })

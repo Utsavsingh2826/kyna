@@ -17,16 +17,16 @@ const createTransporter = () => {
 
 // Send referral invitation email
 export const sendReferralInvitation = async (
-  referral: IReferral, 
-  referrer: IUser, 
+  referral: IReferral,
+  referrer: IUser,
   friendEmail: string
 ): Promise<boolean> => {
   try {
     const transporter = createTransporter();
-    
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const baseUrl = process.env.FRONTEND_URL || 'https://kynajewels.com';
     const referralLink = `${baseUrl}/signup?referral=${referrer.referralCode}`;
-    
+
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
       to: friendEmail,
@@ -98,7 +98,7 @@ export const sendReferralSuccessNotification = async (
 ): Promise<boolean> => {
   try {
     const transporter = createTransporter();
-    
+
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
       to: referrer.email,
@@ -133,7 +133,7 @@ export const sendReferralSuccessNotification = async (
                   </table>
                   
                   <div style="text-align:center;">
-                    <a class="primary-btn" href="${process.env.FRONTEND_URL || 'http://localhost:5173'}">View My Account</a>
+                    <a class="primary-btn" href="${process.env.FRONTEND_URL || 'https://kynajewels.com'}">View My Account</a>
                   </div>
                   
                   <div class="note">
@@ -162,16 +162,16 @@ export const sendReferralSuccessNotification = async (
 
 // Send reminder email for pending referrals
 export const sendReferralReminder = async (
-  referral: IReferral, 
-  referrer: IUser, 
+  referral: IReferral,
+  referrer: IUser,
   friendEmail: string
 ): Promise<boolean> => {
   try {
     const transporter = createTransporter();
-    
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const baseUrl = process.env.FRONTEND_URL || 'https://kynajewels.com';
     const referralLink = `${baseUrl}/signup?referral=${referrer.referralCode}`;
-    
+
     const mailOptions = {
       from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
       to: friendEmail,

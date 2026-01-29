@@ -68,18 +68,18 @@ export const createReferral = async (req: AuthRequest, res: Response) => {
 
     // Create referral
     const referral = new Referral({
-  referFrdId,
-  fromUserId,
-  toEmails,
-  note: note || "",
-  sendReminder: Boolean(sendReminder),
-  expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 12)), // 1 year expiry
-});
+      referFrdId,
+      fromUserId,
+      toEmails,
+      note: note || "",
+      sendReminder: Boolean(sendReminder),
+      expiresAt: new Date(new Date().setFullYear(new Date().getFullYear() + 12)), // 1 year expiry
+    });
 
-await referral.save();
+    await referral.save();
 
 
-    
+
 
     // Send invitation emails to all friends
     const emailPromises = toEmails.map(async (email: string) => {
@@ -95,7 +95,7 @@ await referral.save();
     const emailResults = await Promise.all(emailPromises);
 
     // Generate shareable link (redirects to signup page)
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = process.env.FRONTEND_URL || "https://kynajewels.com";
     const shareableLink = `${baseUrl}/signup?referral=${user.referralCode}`;
 
     res.status(201).json({
