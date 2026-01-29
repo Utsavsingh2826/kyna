@@ -220,9 +220,7 @@ const SignUpPage: React.FC = () => {
                   🎉 Referral code detected: <span className="font-mono font-bold">{referralCode}</span>
                 </div>
               </div>
-              <p className="text-xs text-blue-600 text-center mt-1">
-                You'll get ₹100 rewards after successful signup!
-              </p>
+              
             </div>
           )}
         </div>
