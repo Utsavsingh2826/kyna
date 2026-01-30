@@ -71,7 +71,7 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
           // Generate referral link if user has a referral code
           if (userData.referralCode) {
             const baseUrl =
-              import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173";
+              import.meta.env.VITE_FRONTEND_URL || "https://kynajewels.com";
             // Redirect to signup page with referral code as parameter
             const shareableLink = `${baseUrl}/signup?referral=${userData.referralCode}`;
             setReferralLink(shareableLink);
@@ -148,7 +148,7 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
         // Update referral link if new one was generated
         if (response.data.data?.referralCode) {
           const baseUrl =
-            import.meta.env.VITE_FRONTEND_URL || "http://localhost:5173";
+            import.meta.env.VITE_FRONTEND_URL || "https://kynajewels.com";
           // Redirect to signup page with referral code as parameter
           const shareableLink = `${baseUrl}/signup?referral=${response.data.data.referralCode}`;
           setReferralLink(shareableLink);
@@ -341,11 +341,10 @@ export default function ReferralSection({ isOpen }: ReferralSectionProps) {
 
                   {message && (
                     <p
-                      className={`text-sm mt-2 ${
-                        message.includes("success")
+                      className={`text-sm mt-2 ${message.includes("success")
                           ? "text-green-600"
                           : "text-red-500"
-                      }`}
+                        }`}
                     >
                       {message}
                     </p>
