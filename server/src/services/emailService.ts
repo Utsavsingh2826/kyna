@@ -116,9 +116,12 @@ export const sendShareEmail = async (email: string, message: string, url: string
     ];
     const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
 
-    const title = url.includes('wishlist') ? 'Discover Wishlist' : 'Discover the Collection';
+    const title = url.includes('wishlist')
+      ? (senderName ? `Discover ${senderName}'s Wishlist` : 'Discover Wishlist')
+      : 'Discover the Collection';
+
     const headerText = senderName
-      ? `${senderName} shared their favorites with you!`
+      ? `${senderName} shared something beautiful with you!`
       : "Someone shared something beautiful with you!";
 
     // Premium HTML template for sharing
