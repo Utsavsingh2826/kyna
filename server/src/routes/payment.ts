@@ -860,13 +860,26 @@ router.post("/verify", async (req: Request, res: Response) => {
       walletRedemption?: { amount: number };
     } = {};
 
-    // Update payment order status
-    paymentOrder.status = OrderStatus.SUCCESS;
+    console.log("🔍 About to update payment order status to SUCCESS");
+    console.log("🔍 Previous status:", paymentOrder.status);
+    
+    // Update payment order status using the updateStatus method to trigger email
     paymentOrder.razorpayPaymentId = razorpay_payment_id;
     paymentOrder.razorpaySignature = razorpay_signature;
     paymentOrder.paidAt = new Date();
 
-    await paymentOrder.save();
+    console.log("🔍 Calling updateStatus method...");
+    await paymentOrder.updateStatus(OrderStatus.SUCCESS, {
+      orderId: paymentOrder.orderId,
+      trackingId: razorpay_payment_id,
+      orderStatus: "Success",
+      paymentMode: "razorpay",
+      statusMessage: "Payment successful",
+      amount: String(paymentOrder.amount),
+      currency: paymentOrder.currency,
+    } as any);
+    
+    console.log("🔍 Payment order status updated to:", paymentOrder.status);
 
     const promoInfo =
       (paymentOrder.orderDetails as any)?.promo ||
@@ -1261,6 +1274,8 @@ router.post("/verify", async (req: Request, res: Response) => {
           `✅ OrderModel updated with product details for payment: ${paymentOrder.orderNumber}`
         );
 
+        // Note: Email confirmation is handled by OrderModel post-findOneAndUpdate hook
+
         // Clear user's cart after successful order update (only for cart orders, not direct purchases)
         if (orderDetails.cartItems && !orderDetails.isDirectPurchase) {
           try {
@@ -1292,7 +1307,164 @@ router.post("/verify", async (req: Request, res: Response) => {
       console.log(
         `⏭️ Skipping OrderModel update for customization order: ${paymentOrder.orderNumber}`
       );
+      console.log(`📧 Order category: "${paymentOrder.orderCategory}"`);
+      console.log(`📧 Checking if should send customization email...`);
+      
+      // Send customization order confirmation email since OrderModel hooks won't trigger
+      try {
+        console.log(`📧 Sending customization order confirmation email for ${paymentOrder.orderNumber}`);
+        
+        // Import the customization email function
+        const { sendCustomizationOrderConfirmationEmail } = await import("../services/emailService");
+        
+        // For customization orders, we can extract details from the PaymentOrder itself
+        // or try to find the associated CustomizationRequest
+        let customizationDetails = {
+          title: 'Custom Jewelry Design',
+          description: 'Custom jewelry design request',
+          category: 'Custom',
+          subCategory: 'Design Your Own',
+          jewelryType: 'Custom Jewelry',
+          metalType: undefined,
+          metalKarat: undefined,
+          metalColor: undefined,
+          diamondShape: undefined,
+          diamondSize: undefined,
+          diamondOrigin: undefined,
+          size: undefined,
+          engraving: undefined,
+          specialInstructions: undefined,
+        };
+        
+        let requestNumber = null;
+        
+        // Try to find the associated CustomizationRequest for more detailed information
+        const CustomizationRequest = (await import("../models/CustomizationRequest")).default;
+        
+        // Try multiple ways to find the customization request
+        let customizationRequest = null;
+        
+        console.log(`📧 Searching for CustomizationRequest...`);
+        
+        // Method 1: Find by PaymentOrder ID
+        customizationRequest = await CustomizationRequest.findOne({
+          paymentId: paymentOrder._id.toString()
+        });
+        console.log(`📧 Method 1 (PaymentOrder ID): ${customizationRequest ? 'Found' : 'Not found'}`);
+        
+        // Method 2: Find by Razorpay payment ID
+        if (!customizationRequest) {
+          customizationRequest = await CustomizationRequest.findOne({
+            paymentId: razorpay_payment_id
+          });
+          console.log(`📧 Method 2 (Razorpay ID): ${customizationRequest ? 'Found' : 'Not found'}`);
+        }
+        
+        // Method 3: Find by PaymentOrder orderId
+        if (!customizationRequest) {
+          customizationRequest = await CustomizationRequest.findOne({
+            paymentId: paymentOrder.orderId
+          });
+          console.log(`📧 Method 3 (Order ID): ${customizationRequest ? 'Found' : 'Not found'}`);
+        }
+        
+        // Method 4: Find by user ID and recent creation (within last 10 minutes) and matching amount
+        if (!customizationRequest) {
+          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+          customizationRequest = await CustomizationRequest.findOne({
+            userId: paymentOrder.userId,
+            createdAt: { $gte: tenMinutesAgo },
+            $or: [
+              { paymentAmount: paymentOrder.amount },
+              { paymentStatus: { $in: ['pending', 'success'] } }
+            ]
+          }).sort({ createdAt: -1 });
+          console.log(`📧 Method 4 (Recent + Amount): ${customizationRequest ? 'Found' : 'Not found'}`);
+        }
+        
+        // Method 5: Find by user ID and recent creation (including future - for timing issues)
+        if (!customizationRequest) {
+          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+          const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
+          customizationRequest = await CustomizationRequest.findOne({
+            userId: paymentOrder.userId,
+            createdAt: { $gte: tenMinutesAgo, $lte: fiveMinutesFromNow }
+          }).sort({ createdAt: -1 });
+          console.log(`📧 Method 5 (Recent with future): ${customizationRequest ? 'Found' : 'Not found'}`);
+        }
+        
+        if (customizationRequest) {
+          console.log(`📧 Found customization request: ${customizationRequest.requestNumber}`);
+          requestNumber = customizationRequest.requestNumber;
+          customizationDetails = {
+            title: customizationRequest.title,
+            description: customizationRequest.description,
+            category: customizationRequest.category,
+            subCategory: customizationRequest.subCategory,
+            jewelryType: customizationRequest.jewelryType,
+            metalType: customizationRequest.metalType,
+            metalKarat: customizationRequest.metalKarat,
+            metalColor: customizationRequest.metalColor,
+            diamondShape: customizationRequest.diamondShape,
+            diamondSize: customizationRequest.diamondSize,
+            diamondOrigin: customizationRequest.diamondOrigin,
+            size: customizationRequest.size || customizationRequest.ringSize,
+            engraving: customizationRequest.engraving?.text,
+            specialInstructions: customizationRequest.specialInstructions,
+          };
+          
+          // Update the customization request with payment success
+          customizationRequest.paymentStatus = 'success';
+          customizationRequest.paymentId = razorpay_payment_id;
+          await customizationRequest.save();
+        } else {
+          console.warn(`📧 No customization request found for payment order: ${paymentOrder.orderNumber}`);
+        }
+        
+        // Prepare email data
+        const emailData = {
+          customerName: paymentOrder.billingInfo.name,
+          customerEmail: paymentOrder.billingInfo.email,
+          orderNumber: paymentOrder.orderNumber,
+          requestNumber: requestNumber,
+          orderDate: new Date().toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          paymentMethod: 'Razorpay',
+          transactionId: razorpay_payment_id,
+          estimatedDelivery: paymentOrder.estimatedDelivery || 'To be confirmed',
+          customizationDetails: customizationDetails,
+          totalAmount: paymentOrder.amount,
+          shippingAddress: {
+            street: paymentOrder.billingInfo.address,
+            city: paymentOrder.billingInfo.city,
+            state: paymentOrder.billingInfo.state,
+            country: paymentOrder.billingInfo.country,
+            zipCode: paymentOrder.billingInfo.zip,
+          },
+          billingAddress: {
+            street: paymentOrder.billingInfo.address,
+            city: paymentOrder.billingInfo.city,
+            state: paymentOrder.billingInfo.state,
+            country: paymentOrder.billingInfo.country,
+            zipCode: paymentOrder.billingInfo.zip,
+          },
+        };
+        
+        console.log(`📧 Calling sendCustomizationOrderConfirmationEmail...`);
+        await sendCustomizationOrderConfirmationEmail(emailData);
+        console.log(`📧 Customization order confirmation email sent successfully for ${paymentOrder.orderNumber}`);
+      } catch (emailError) {
+        console.error('📧 Failed to send customization order confirmation email:', emailError);
+        console.error('📧 Error stack:', emailError.stack);
+        // Don't fail the verification if email sending fails
+      }
     }
+
+    // Note: Order confirmation email is handled by OrderModel post-findOneAndUpdate hook
+    // to avoid duplicate emails and ensure proper product data is used
 
     res.json({
       success: true,

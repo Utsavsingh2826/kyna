@@ -39,6 +39,7 @@ import uploadRoutes from "./routes/upload";
 import imageProxy from "./routes/imageProxy";
 import marketingRoutes from "./routes/marketing";
 import wishlistShareRoutes from "./routes/wishlistShare";
+import testEmailRoutes from "./routes/test-email";
 
 // Import tracking services
 import { TrackingController } from "./controllers/trackingController";
@@ -358,6 +359,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/image-proxy", imageProxy);
 app.use("/api/marketing", marketingRoutes);
 app.use("/api/wishlist-share", wishlistShareRoutes);
+app.use("/api/test-email", testEmailRoutes);
 
 // Home route
 app.get("/", (req: Request, res: Response) => {

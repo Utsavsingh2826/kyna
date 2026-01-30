@@ -4,6 +4,7 @@ import {
   PASSWORD_RESET_SUCCESS_TEMPLATE,
   VERIFICATION_EMAIL_TEMPLATE,
   WELCOME_EMAIL_TEMPLATE,
+  ORDER_CONFIRMATION_TEMPLATE,
 } from './emailTemplates';
 
 // Email transporter configuration
@@ -178,5 +179,223 @@ export const sendShareEmail = async (email: string, message: string, url: string
   } catch (error) {
     console.error('Error sending share email:', error);
     throw new Error(`Error sending share email: ${error}`);
+  }
+};
+
+// Order confirmation email interface
+export interface OrderConfirmationData {
+  customerName: string;
+  customerEmail: string;
+  orderNumber: string;
+  orderDate: string;
+  paymentMethod: string;
+  transactionId: string;
+  estimatedDelivery: string;
+  items: Array<{
+    title: string;
+    sku?: string;
+    variantSku?: string;
+    quantity: number;
+    price: number;
+    total: number;
+    imageUrl?: string;
+    variantConfig?: any;
+  }>;
+  subtotal: number;
+  gst: number;
+  shipping: number;
+  totalAmount: number;
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  billingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+}
+
+// Customization order confirmation email interface
+export interface CustomizationOrderConfirmationData {
+  customerName: string;
+  customerEmail: string;
+  orderNumber: string;
+  requestNumber: string;
+  orderDate: string;
+  paymentMethod: string;
+  transactionId: string;
+  estimatedDelivery: string;
+  customizationDetails: {
+    title: string;
+    description: string;
+    category: string;
+    subCategory: string;
+    jewelryType: string;
+    metalType?: string;
+    metalKarat?: string;
+    metalColor?: string;
+    diamondShape?: string;
+    diamondSize?: string;
+    diamondOrigin?: string;
+    size?: string;
+    engraving?: string;
+    specialInstructions?: string;
+  };
+  totalAmount: number;
+  shippingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+  billingAddress: {
+    street: string;
+    city: string;
+    state: string;
+    country: string;
+    zipCode: string;
+  };
+}
+
+// Send customization order confirmation email
+export const sendCustomizationOrderConfirmationEmail = async (orderData: CustomizationOrderConfirmationData) => {
+  console.log(`📧 sendCustomizationOrderConfirmationEmail called for order ${orderData.orderNumber}`);
+  console.log(`📧 Customer email: ${orderData.customerEmail}`);
+  
+  try {
+    const transporter = createTransporter();
+    console.log(`📧 Email transporter created successfully`);
+
+    // Format customization details HTML
+    const customizationDetailsHtml = `
+      <div class="order-item">
+        <div class="item-details" style="padding: 16px 0;">
+          <div class="item-title" style="font-weight: 600; color: #3a2f2a; margin-bottom: 4px; font-size: 16px;">${orderData.customizationDetails.title}</div>
+          ${orderData.requestNumber && !orderData.requestNumber.startsWith('REQ-KYNA') ? `<div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">Request: ${orderData.requestNumber}</div>` : ''}
+          <div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">Category: ${orderData.customizationDetails.category} - ${orderData.customizationDetails.subCategory}</div>
+          <div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">Type: ${orderData.customizationDetails.jewelryType}</div>
+          ${orderData.customizationDetails.metalType ? `<div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">Metal: ${orderData.customizationDetails.metalColor} ${orderData.customizationDetails.metalType} ${orderData.customizationDetails.metalKarat}</div>` : ''}
+          ${orderData.customizationDetails.diamondShape ? `<div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">Diamond: ${orderData.customizationDetails.diamondSize} carat ${orderData.customizationDetails.diamondShape} ${orderData.customizationDetails.diamondOrigin}</div>` : ''}
+          ${orderData.customizationDetails.size ? `<div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">Size: ${orderData.customizationDetails.size}</div>` : ''}
+          ${orderData.customizationDetails.engraving ? `<div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">Engraving: ${orderData.customizationDetails.engraving}</div>` : ''}
+          ${orderData.customizationDetails.specialInstructions ? `<div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 8px;">Special Instructions: ${orderData.customizationDetails.specialInstructions}</div>` : ''}
+          <div class="item-price" style="font-weight: 600; color: #0f9aa7; font-size: 18px; margin-top: 8px;">₹${orderData.totalAmount.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+    `;
+
+    // Format addresses
+    const formatAddress = (address: any) => {
+      return `${address.street}<br>${address.city}, ${address.state} ${address.zipCode}<br>${address.country}`;
+    };
+
+    // Replace template placeholders (using same template but with customization content)
+    let emailHtml = ORDER_CONFIRMATION_TEMPLATE
+      .replace('{customerName}', orderData.customerName)
+      .replace('{orderNumber}', orderData.orderNumber)
+      .replace('{orderDate}', orderData.orderDate)
+      .replace('{paymentMethod}', orderData.paymentMethod)
+      .replace('{transactionId}', orderData.transactionId)
+      .replace('{estimatedDelivery}', orderData.estimatedDelivery)
+      .replace('{orderItems}', customizationDetailsHtml)
+      .replace('{subtotal}', orderData.totalAmount.toLocaleString('en-IN'))
+      .replace('{gst}', '0') // Customization orders may not have separate GST breakdown
+      .replace('{shipping}', '0') // Customization orders may not have separate shipping
+      .replace('{totalAmount}', orderData.totalAmount.toLocaleString('en-IN'))
+      .replace('{shippingAddress}', formatAddress(orderData.shippingAddress))
+      .replace('{billingAddress}', formatAddress(orderData.billingAddress));
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
+      to: orderData.customerEmail,
+      subject: `Customization Order Confirmation #${orderData.orderNumber} - Kyna Jewels`,
+      html: emailHtml,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Customization order confirmation email sent successfully to ${orderData.customerEmail} for order ${orderData.orderNumber}`);
+  } catch (error) {
+    console.error('Error sending customization order confirmation email:', error);
+    throw new Error(`Error sending customization order confirmation email: ${error}`);
+  }
+};
+
+// Send order confirmation email
+export const sendOrderConfirmationEmail = async (orderData: OrderConfirmationData) => {
+  console.log(`📧 sendOrderConfirmationEmail called for order ${orderData.orderNumber}`);
+  console.log(`📧 Customer email: ${orderData.customerEmail}`);
+  
+  try {
+    const transporter = createTransporter();
+    console.log(`📧 Email transporter created successfully`);
+
+    // Format order items HTML (without images)
+    const orderItemsHtml = orderData.items.map(item => {
+      console.log(`📧 Processing item: ${item.title}`);
+      
+      const variantDetails = [];
+      
+      if (item.variantConfig) {
+        if (item.variantConfig.metalType && item.variantConfig.metalColor) {
+          variantDetails.push(`Metal: ${item.variantConfig.metalColor} ${item.variantConfig.metalType}`);
+        }
+        if (item.variantConfig.goldKarat) variantDetails.push(`Karat: ${item.variantConfig.goldKarat}`);
+        if (item.variantConfig.diamondShape) variantDetails.push(`Diamond: ${item.variantConfig.diamondShape}`);
+        if (item.variantConfig.ringSize) variantDetails.push(`Size: ${item.variantConfig.ringSize}`);
+      }
+      
+      return `
+        <div class="order-item">
+          <div class="item-details" style="padding: 16px 0;">
+            <div class="item-title" style="font-weight: 600; color: #3a2f2a; margin-bottom: 4px; font-size: 16px;">${item.title}</div>
+            ${item.sku ? `<div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">SKU: ${item.sku}</div>` : ''}
+            ${variantDetails.length > 0 ? `<div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">${variantDetails.join(' • ')}</div>` : ''}
+            <div class="item-variant" style="font-size: 13px; color: #8b776a; margin-bottom: 2px;">Quantity: ${item.quantity}</div>
+            <div class="item-price" style="font-weight: 600; color: #0f9aa7; font-size: 18px; margin-top: 8px;">₹${item.total.toLocaleString('en-IN')}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Format addresses
+    const formatAddress = (address: any) => {
+      return `${address.street}<br>${address.city}, ${address.state} ${address.zipCode}<br>${address.country}`;
+    };
+
+    // Replace template placeholders
+    let emailHtml = ORDER_CONFIRMATION_TEMPLATE
+      .replace('{customerName}', orderData.customerName)
+      .replace('{orderNumber}', orderData.orderNumber)
+      .replace('{orderDate}', orderData.orderDate)
+      .replace('{paymentMethod}', orderData.paymentMethod)
+      .replace('{transactionId}', orderData.transactionId)
+      .replace('{estimatedDelivery}', orderData.estimatedDelivery)
+      .replace('{orderItems}', orderItemsHtml)
+      .replace('{subtotal}', orderData.subtotal.toLocaleString('en-IN'))
+      .replace('{gst}', orderData.gst.toLocaleString('en-IN'))
+      .replace('{shipping}', orderData.shipping.toLocaleString('en-IN'))
+      .replace('{totalAmount}', orderData.totalAmount.toLocaleString('en-IN'))
+      .replace('{shippingAddress}', formatAddress(orderData.shippingAddress))
+      .replace('{billingAddress}', formatAddress(orderData.billingAddress));
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
+      to: orderData.customerEmail,
+      subject: `Order Confirmation #${orderData.orderNumber} - Kyna Jewels`,
+      html: emailHtml,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Order confirmation email sent successfully to ${orderData.customerEmail} for order ${orderData.orderNumber}`);
+  } catch (error) {
+    console.error('Error sending order confirmation email:', error);
+    throw new Error(`Error sending order confirmation email: ${error}`);
   }
 };

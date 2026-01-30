@@ -337,3 +337,141 @@ export const PASSWORD_RESET_SUCCESS_TEMPLATE = `
 </body>
 </html>
 `;
+
+// Order confirmation template
+export const ORDER_CONFIRMATION_TEMPLATE = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Confirmation - KYNA</title>
+  <style>
+    ${baseStyles}
+    .order-item {
+      border-bottom: 1px solid #f0e4d4;
+      padding: 16px 0;
+      width: 100%;
+    }
+    .order-item:last-child {
+      border-bottom: none;
+    }
+    .item-details {
+      width: 100%;
+      padding: 0;
+    }
+    .item-title {
+      font-weight: 600;
+      color: #3a2f2a;
+      margin-bottom: 4px;
+    }
+    .item-variant {
+      font-size: 13px;
+      color: #8b776a;
+      margin-bottom: 2px;
+    }
+    .item-price {
+      font-weight: 600;
+      color: #0f9aa7;
+    }
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0e4d4;
+    }
+    .price-row:last-child {
+      border-bottom: none;
+      font-weight: 600;
+      font-size: 16px;
+      color: #0f9aa7;
+    }
+    .address-section {
+      margin: 16px 0;
+    }
+    .address-title {
+      font-weight: 600;
+      color: #8b776a;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .address-text {
+      color: #57463d;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="brand-bar">KYNA<span>FINE JEWELLERY</span></div>
+      <div class="hero">Order Confirmed</div>
+      <div class="content">
+        <div class="card">
+          <div class="card-title">Thank you, {customerName}!</div>
+          <p class="summary">Your order has been confirmed and payment received. We'll begin crafting your jewelry with care and precision.</p>
+          <div class="highlight-box">{orderNumber}</div>
+          <table class="details-table">
+            <tr><td>Order Date</td><td>{orderDate}</td></tr>
+            <tr><td>Payment Method</td><td>{paymentMethod}</td></tr>
+            <tr><td>Transaction ID</td><td>{transactionId}</td></tr>
+            <tr><td>Estimated Delivery</td><td>{estimatedDelivery}</td></tr>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Order Items</div>
+          {orderItems}
+          <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #f0e4d4;">
+            <div class="price-row">
+              <span>Subtotal:</span>
+              <span>₹{subtotal}</span>
+            </div>
+            <div class="price-row">
+              <span>GST (18%):</span>
+              <span>₹{gst}</span>
+            </div>
+            <div class="price-row">
+              <span>Shipping:</span>
+              <span>₹{shipping}</span>
+            </div>
+            <div class="price-row">
+              <span>Total Amount:</span>
+              <span>₹{totalAmount}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Delivery Information</div>
+          <div class="address-section">
+            <div class="address-title">Shipping Address</div>
+            <div class="address-text">{shippingAddress}</div>
+          </div>
+          <div class="address-section">
+            <div class="address-title">Billing Address</div>
+            <div class="address-text">{billingAddress}</div>
+          </div>
+        </div>
+
+        <div style="text-align:center; margin: 24px 0;">
+          <a class="primary-btn" href="${process.env.CLIENT_URL || 'https://kynajewels.com'}/track-order" style="display:inline-block;background:#0f9aa7;color:#ffffff !important;padding:14px 32px;border-radius:40px;text-decoration:none;text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:bold;">Track Your Order</a>
+        </div>
+
+        <div style="text-align:center;">
+          <div class="note">
+            Questions about your order? Contact us at <a class="contact-link" href="mailto:enquiries@kynajewellery.com">enquiries@kynajewellery.com</a> or call +91 8928610682.
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        ${socialFooter}
+        ${legalFooter}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;

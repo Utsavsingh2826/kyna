@@ -743,6 +743,21 @@ const ProductDetail = () => {
   const [totalDiamondWeight, setTotalDiamondWeight] = useState(0);
   const [selectedStyleCategory, setSelectedStyleCategory] = useState("CLASSIC");
   const [deliveryDays, setDeliveryDays] = useState<number | 25>(25);
+  
+  // Track previous parent SKU to detect changes and reset colors
+  const previousParentSkuRef = useRef<string>("");
+
+  // Reset color to WG when parent SKU actually changes
+  useEffect(() => {
+    if (selectedParentSku && selectedParentSku !== previousParentSkuRef.current) {
+      console.log("Ring parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to WG");
+      previousParentSkuRef.current = selectedParentSku;
+      setSelectedMetalColor("White Gold");
+      setSelectedColorCode("WG");
+      setSelectedMetalType("GOLD");
+    }
+  }, [selectedParentSku]);
+
    // API state
   const [styleAndDesign, setStyleAndDesign] = useState(
     getInitialStyleAndDesign(),
