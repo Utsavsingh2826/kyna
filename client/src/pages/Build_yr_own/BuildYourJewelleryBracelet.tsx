@@ -2907,9 +2907,9 @@ if (data.deliveryDays) {
                             ₹{" "}
                             {Math.round(
                               (selectedStyleData?.productDetails?.priceBreakdown
-                                ?.labourCost || 0) +
+                                ?.labourCost || 0) *
                                 (selectedStyleData?.productDetails
-                                  ?.priceBreakdown?.expense || 0),
+                                  ?.netWeightGrams || 1),
                             ).toLocaleString()}
                           </span>
                         </div>
