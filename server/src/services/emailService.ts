@@ -303,11 +303,7 @@ export const sendCustomizationOrderConfirmationEmail = async (orderData: Customi
       .replace('{orderDate}', orderData.orderDate)
       .replace('{paymentMethod}', orderData.paymentMethod)
       .replace('{transactionId}', orderData.transactionId)
-      .replace('{estimatedDelivery}', orderData.estimatedDelivery)
       .replace('{orderItems}', customizationDetailsHtml)
-      .replace('{subtotal}', orderData.totalAmount.toLocaleString('en-IN'))
-      .replace('{gst}', '0') // Customization orders may not have separate GST breakdown
-      .replace('{shipping}', '0') // Customization orders may not have separate shipping
       .replace('{totalAmount}', orderData.totalAmount.toLocaleString('en-IN'))
       .replace('{shippingAddress}', formatAddress(orderData.shippingAddress))
       .replace('{billingAddress}', formatAddress(orderData.billingAddress));
@@ -376,11 +372,7 @@ export const sendOrderConfirmationEmail = async (orderData: OrderConfirmationDat
       .replace('{orderDate}', orderData.orderDate)
       .replace('{paymentMethod}', orderData.paymentMethod)
       .replace('{transactionId}', orderData.transactionId)
-      .replace('{estimatedDelivery}', orderData.estimatedDelivery)
       .replace('{orderItems}', orderItemsHtml)
-      .replace('{subtotal}', orderData.subtotal.toLocaleString('en-IN'))
-      .replace('{gst}', orderData.gst.toLocaleString('en-IN'))
-      .replace('{shipping}', orderData.shipping.toLocaleString('en-IN'))
       .replace('{totalAmount}', orderData.totalAmount.toLocaleString('en-IN'))
       .replace('{shippingAddress}', formatAddress(orderData.shippingAddress))
       .replace('{billingAddress}', formatAddress(orderData.billingAddress));

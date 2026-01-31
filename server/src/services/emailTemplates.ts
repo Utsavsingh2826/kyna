@@ -417,7 +417,6 @@ export const ORDER_CONFIRMATION_TEMPLATE = `
             <tr><td>Order Date</td><td>{orderDate}</td></tr>
             <tr><td>Payment Method</td><td>{paymentMethod}</td></tr>
             <tr><td>Transaction ID</td><td>{transactionId}</td></tr>
-            <tr><td>Estimated Delivery</td><td>{estimatedDelivery}</td></tr>
           </table>
         </div>
 
@@ -425,18 +424,6 @@ export const ORDER_CONFIRMATION_TEMPLATE = `
           <div class="card-title">Order Items</div>
           {orderItems}
           <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #f0e4d4;">
-            <div class="price-row">
-              <span>Subtotal:</span>
-              <span>₹{subtotal}</span>
-            </div>
-            <div class="price-row">
-              <span>GST (18%):</span>
-              <span>₹{gst}</span>
-            </div>
-            <div class="price-row">
-              <span>Shipping:</span>
-              <span>₹{shipping}</span>
-            </div>
             <div class="price-row">
               <span>Total Amount:</span>
               <span>₹{totalAmount}</span>

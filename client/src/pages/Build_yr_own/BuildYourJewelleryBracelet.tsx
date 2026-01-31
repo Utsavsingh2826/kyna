@@ -1318,10 +1318,6 @@ if (data.deliveryDays) {
       return;
     }
 
-    if (!selectedDiamondSize) {
-      toast.error("Please select a diamond size");
-      return;
-    }
 
     if (!selectedSize) {
       toast.error("Please select a bracelet size");

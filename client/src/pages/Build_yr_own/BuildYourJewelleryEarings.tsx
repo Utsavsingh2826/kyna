@@ -1259,10 +1259,6 @@ if (data.deliveryDays) {
       return;
     }
 
-    if (!selectedDiamondSize) {
-      toast.error("Please select a diamond size");
-      return;
-    }
 
     const productDetails = selectedStyleData?.productDetails;
     const productId =

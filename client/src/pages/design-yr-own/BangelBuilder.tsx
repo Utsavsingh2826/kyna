@@ -711,7 +711,7 @@ export default function RingBuilder() {
         "metal",
         "metalColor",
         "goldKarat",
-        "size",
+        "braceletSize", // Changed from "size" to "braceletSize" for bangles
       ];
 
       for (const field of customizationFields) {
@@ -1505,7 +1505,7 @@ export default function RingBuilder() {
               </Select>
             </div>
 
-            {/* Ring Size */}
+            {/* Bangle Size */}
             <div>
               <label className="text-sm text-muted-foreground">
                 Bangle Size{" "}
