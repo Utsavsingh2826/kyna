@@ -3394,9 +3394,7 @@ const ProductDetail = () => {
                             ₹{" "}
                             {Math.round(
                               (selectedStyleData?.productDetails?.priceBreakdown
-                                ?.labourCost || 0) *
-                                (selectedStyleData?.productDetails
-                                  ?.netWeightGrams || 1),
+                                ?.labourCost || 0)
                             ).toLocaleString()}
                           </span>
                         </div>

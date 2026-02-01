@@ -2834,7 +2834,7 @@ if (data.deliveryDays) {
                               ?.labourCost
                               ? Math.round(
                                   (selectedStyleData.productDetails
-                                    .priceBreakdown.labourCost)* (selectedStyleData.productDetails.netWeightGrams ?? 1),
+                                    .priceBreakdown.labourCost),
                                 ).toLocaleString()
                               : "-"}
                           </span>

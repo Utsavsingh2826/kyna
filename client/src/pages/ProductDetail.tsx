@@ -3556,8 +3556,7 @@ const ProductDetail = () => {
                           <span className="font-medium">
                             Rs.{" "}
                             {Math.round(
-                              (productData.priceBreakdown.labourCost ?? 0) *
-                              (productData.netWeightGrams ?? 1),
+                              (productData.priceBreakdown.labourCost)
                             ).toLocaleString()}
                             /-
                           </span>
