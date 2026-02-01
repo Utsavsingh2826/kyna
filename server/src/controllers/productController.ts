@@ -693,20 +693,47 @@ async function processProductsWithBatchedPricing(
 
     // Get image
     let imageUrl: string | null = null;
-    if (Array.isArray(variant.images) && variant.images.length > 0) {
-      const img =
-        variant.images.find(
-          (i: any) =>
-            typeof i?.url === "string" && i.url.toUpperCase().includes("GP"),
-        ) ||
-        variant.images.find(
-          (i: any) =>
-            typeof i?.url === "string" && i.url.toUpperCase().includes("FV"),
-        ) ||
-        null;
+    // if (Array.isArray(variant.images) && variant.images.length > 0) {
+    //   const img =
+    //     variant.images.find(
+    //       (i: any) =>
+    //         typeof i?.url === "string" && i.url.toUpperCase().includes("GP"),
+    //     ) ||
+    //     variant.images.find(
+    //       (i: any) =>
+    //         typeof i?.url === "string" && i.url.toUpperCase().includes("FV"),
+    //     ) ||
+    //     null;
 
-      imageUrl = img?.url || img?.filename || null;
-    }
+    //   imageUrl = img?.url || img?.filename || null;
+    // }
+
+    const upperImages = variant.images.map((i: any) => ({
+      raw: i,
+      url: (i?.url || i?.filename || "").toUpperCase(),
+    }));
+
+    // helpers
+    const isPureYG = (u: string) => u.includes("YG") && !u.includes("WG") && !u.includes("RG") && !u.includes("BG");
+    const isDualYG = (u: string) => u.includes("YG") && (u.includes("WG") || u.includes("RG") || u.includes("BG"));
+    const isTripleTone = (u: string) =>
+      ["YG", "WG", "RG", "BG"].filter(m => u.includes(m)).length >= 3;
+
+    const img =
+      upperImages.find(i => isPureYG(i.url) && i.url.includes("GP")) ||
+      upperImages.find(i => isPureYG(i.url) && i.url.includes("FV")) ||
+
+      upperImages.find(i => isDualYG(i.url) && i.url.includes("GP")) ||
+      upperImages.find(i => isDualYG(i.url) && i.url.includes("FV")) ||
+
+      upperImages.find(i => isTripleTone(i.url) && i.url.includes("GP")) ||
+      upperImages.find(i => isTripleTone(i.url) && i.url.includes("FV")) ||
+
+      upperImages.find(i => i.url.includes("YG")) || // final YG fallback
+      null;
+
+    imageUrl = img?.raw?.url || img?.raw?.filename || null;
+
 
     // Get engraving from VARIANT attributes
     const engravingEnabled = variant.attributes?.ENGRAVABLE === "YES";
@@ -772,6 +799,7 @@ async function processProductsWithBatchedPricing(
         }
 
         diamondCost += pricePerCt * cts;
+        diamondCost = Math.round(diamondCost);
       }
 
       // Add variant expense to diamond cost
@@ -805,26 +833,33 @@ async function processProductsWithBatchedPricing(
       let metalIncomplete = false;
 
       if (!Number.isNaN(metalWeightGrams) && !Number.isNaN(metalPricePerGram)) {
-        metalCost = metalPricePerGram * metalWeightGrams;
+        // metalCost = metalPricePerGram * metalWeightGrams;
+        metalCost = Math.round(metalPricePerGram * metalWeightGrams);
 
         // Get labour cost based on metal type
         if (metalType === "GOLD") {
-          labourCost = !Number.isNaN(labourCostGold) ? labourCostGold : 0;
+          labourCost = !Number.isNaN(labourCostGold)
+            ? labourCostGold * metalWeightGrams
+            : 0;
+          labourCost = Math.round(labourCost);
           additionalExpense = !Number.isNaN(goldExpense) ? goldExpense : 0;
         } else if (metalType === "SILVER") {
-          labourCost = !Number.isNaN(labourCostSilver) ? labourCostSilver : 0;
+          labourCost = !Number.isNaN(labourCostSilver) ? labourCostSilver * metalWeightGrams : 0;
+          labourCost = Math.round(labourCost);
           additionalExpense = !Number.isNaN(silverExpense) ? silverExpense : 0;
         } else if (metalType === "PLATINUM") {
           labourCost = !Number.isNaN(labourCostPlatinum)
-            ? labourCostPlatinum
+            ? labourCostPlatinum * metalWeightGrams
             : 0;
+          labourCost = Math.round(labourCost);
           additionalExpense = !Number.isNaN(platinumExpense)
             ? platinumExpense
             : 0;
         } else if (metalType === "TITANIUM") {
           labourCost = !Number.isNaN(labourCostTitanium)
-            ? labourCostTitanium
+            ? labourCostTitanium * metalWeightGrams
             : 0;
+          labourCost = Math.round(labourCost);
           additionalExpense = !Number.isNaN(titaniumExpense)
             ? titaniumExpense
             : 0;
@@ -835,9 +870,12 @@ async function processProductsWithBatchedPricing(
 
       // Calculate final selling price with GST
       const basePrice =
-        metalCost + diamondCost + labourCost + additionalExpense;
+        Math.round(
+          metalCost + diamondCost + labourCost + additionalExpense
+        );
+
       const gstMultiplier = !Number.isNaN(gstValue) ? 1 + gstValue / 100 : 1;
-      const sellingPrice = basePrice * gstMultiplier;
+      const sellingPrice = Math.round(basePrice * gstMultiplier);
 
       baseOut.sellingPrice =
         !Number.isNaN(sellingPrice) && sellingPrice > 0
@@ -1736,11 +1774,24 @@ export const getProductByModelSku = async (
     }
 
     // Convert Sets to sorted arrays and assign to diamondOptions
+    const DIAMOND_ORDER = ["DEIF", "EFVVS", "EFVS", "GHVS", "GHSI"];
 
     for (const dType in tempOptions) {
       diamondOptions[dType] = {};
       for (const metal in tempOptions[dType]) {
-        diamondOptions[dType][metal] = Array.from(tempOptions[dType][metal]).sort();
+        // diamondOptions[dType][metal] = Array.from(tempOptions[dType][metal]).sort();
+        // diamondOptions[dType][metal] = Array.from(tempOptions[dType][metal]).sort(
+        //   (a, b) => DIAMOND_ORDER.indexOf(a.replace(" ", ""))
+        //     - DIAMOND_ORDER.indexOf(b.replace(" ", ""))
+        // );
+        const orderIndex = (v: string) => {
+          const i = DIAMOND_ORDER.indexOf(v.replace(" ", ""));
+          return i === -1 ? 999 : i;
+        };
+
+        diamondOptions[dType][metal] = Array.from(tempOptions[dType][metal]).sort(
+          (a, b) => orderIndex(a) - orderIndex(b)
+        );
       }
     }
 
@@ -2017,7 +2068,7 @@ export const getProductByModelSku = async (
             continue;
           }
 
-          diamondCost += pricePerCt * cts;
+          diamondCost += Math.round(pricePerCt * cts);
           totalDiamondWeight += cts;
         }
 
@@ -2097,8 +2148,8 @@ export const getProductByModelSku = async (
           : gstPercentDefault;
 
         if (netWeightGrams && !Number.isNaN(metalPricePerGram)) {
-          metalCost = metalPricePerGram * netWeightGrams;
-          labourCost = resolvedLabourCost;
+          metalCost = Math.round(metalPricePerGram * netWeightGrams);
+          labourCost = Math.round(resolvedLabourCost * netWeightGrams);
         } else {
           metalIncomplete = true;
           if (!netWeightGrams)
@@ -2116,7 +2167,7 @@ export const getProductByModelSku = async (
         const gstPercent = resolvedGstPercent || 0;
         const gstAmount = totalBeforeGst * (gstPercent / 100);
 
-        const totalWithGst = totalBeforeGst + gstAmount;
+        const totalWithGst = Number((totalBeforeGst + gstAmount).toFixed(2));
 
         sellingPrice =
           !Number.isNaN(totalWithGst) && totalWithGst > 0

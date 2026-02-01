@@ -613,6 +613,7 @@ function CollapsibleSection({
             "Design Your Own",
             "Upload Your Design",
             "Build Your Jewellery",
+            "Jewellery",
           ].includes(title) ? (
             <button
               onClick={onToggle}

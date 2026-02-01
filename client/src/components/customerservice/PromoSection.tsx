@@ -12,16 +12,6 @@ const promoData = [
     description:
       "Get 10% off on your first order. Valid for new customers only.",
   },
-  {
-    code: "WEDDING20",
-    description:
-      "20% off on engagement rings and wedding bands. Valid until end of month.",
-  },
-  {
-    code: "FREESHIP",
-    description:
-      "Free shipping on orders above ₹25,000. No minimum purchase required.",
-  },
 ];
 
 export default function PromoSection({ isOpen }: PromoSectionProps) {
