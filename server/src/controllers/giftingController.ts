@@ -391,11 +391,14 @@ async function processProductsWithPricing(
         diamondCost += pricePerCt * cts;
       }
 
-      // Add variant expense to diamond cost
+      // NOTE: variant.expense is considered "old" and is being replaced by 
+      // the metal-specific expenses from defaultvalues (goldExpense, silverExpense, etc.)
+      /*
       const variantExpense = toNumberRobust(variant.expense);
       if (!Number.isNaN(variantExpense)) {
         diamondCost += variantExpense;
       }
+      */
 
       const metalType = (variant.metalType || 'GOLD').toString().toUpperCase();
 
@@ -426,21 +429,25 @@ async function processProductsWithPricing(
 
         // Get labour cost based on metal type
         if (metalType === 'GOLD') {
-          labourCost = !Number.isNaN(labourCostGold) ? labourCostGold : 0;
+          labourCost = !Number.isNaN(labourCostGold)
+            ? Math.round(labourCostGold * metalWeightGrams)
+            : 0;
           additionalExpense = !Number.isNaN(goldExpense) ? goldExpense : 0;
         } else if (metalType === 'SILVER') {
-          labourCost = !Number.isNaN(labourCostSilver) ? labourCostSilver : 0;
+          labourCost = !Number.isNaN(labourCostSilver)
+            ? Math.round(labourCostSilver * metalWeightGrams)
+            : 0;
           additionalExpense = !Number.isNaN(silverExpense) ? silverExpense : 0;
         } else if (metalType === 'PLATINUM') {
           labourCost = !Number.isNaN(labourCostPlatinum)
-            ? labourCostPlatinum
+            ? Math.round(labourCostPlatinum * metalWeightGrams)
             : 0;
           additionalExpense = !Number.isNaN(platinumExpense)
             ? platinumExpense
             : 0;
         } else if (metalType === 'TITANIUM') {
           labourCost = !Number.isNaN(labourCostTitanium)
-            ? labourCostTitanium
+            ? Math.round(labourCostTitanium * metalWeightGrams)
             : 0;
           additionalExpense = !Number.isNaN(titaniumExpense)
             ? titaniumExpense

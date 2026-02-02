@@ -811,11 +811,14 @@ async function processProductsWithBatchedPricing(
         diamondCost = Math.round(diamondCost);
       }
 
-      // Add variant expense to diamond cost
+      // NOTE: variant.expense is considered "old" and is being replaced by 
+      // the metal-specific expenses from defaultvalues (goldExpense, silverExpense, etc.)
+      /*
       const variantExpense = toNumberRobust(variant.expense);
       if (!Number.isNaN(variantExpense)) {
         diamondCost += variantExpense;
       }
+      */
 
       const metalType = (variant.metalType || "GOLD").toString().toUpperCase();
 
@@ -2092,11 +2095,14 @@ export const getProductByModelSku = async (
           totalDiamondWeight += cts;
         }
 
-        // Add variant expense to diamond cost
+        // NOTE: variant.expense is considered "old" and is being replaced by 
+        // the metal-specific expenses from defaultvalues (goldExpense, silverExpense, etc.)
+        /*
         const variantExpense = toNumberRobust(variant.expense);
         if (!Number.isNaN(variantExpense)) {
           diamondCost += variantExpense;
         }
+        */
 
         let metalType: string;
 
