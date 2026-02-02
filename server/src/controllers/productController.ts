@@ -592,7 +592,7 @@ async function processProductsWithBatchedPricing(
 ): Promise<any[]> {
   const conn = getCatalogConnection();
   const pricingColl = conn.collection("pricing");
-  const defaultsColl = conn.collection("defaultValues");
+  const defaultsColl = conn.collection("defaultvalues");
 
   // Get defaults once
   const defaultDocs = await defaultsColl.find({}).toArray();
@@ -1294,7 +1294,7 @@ export const getProductByModelSku = async (
 
     // ----------------- Pricing setup (merge multi-doc defaults) -----------------
     const pricingColl = conn.collection("pricing");
-    const defaultsColl = conn.collection("defaultValues");
+    const defaultsColl = conn.collection("defaultvalues");
 
     const defaultDocs = (await defaultsColl
       .find({})
@@ -1466,7 +1466,7 @@ export const getProductByModelSku = async (
 
     if (missingDefaults.length) {
       console.warn(
-        "[getProductByModelSku] pricing: missing/NaN defaultValues:",
+        "[getProductByModelSku] pricing: missing/NaN defaultvalues:",
         {
           missingDefaults,
           mergedDefaultsKeys: Object.keys(mergedDefaults),
