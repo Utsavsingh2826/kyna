@@ -2492,8 +2492,7 @@ const ProductDetail = () => {
                 <div className="flex items-end gap-4">
                   {/* Diamond Size Section */}
                 {selectedStyleData?.productDetails?.diamondSize && (
-                  <div className="w-full">
-                    <div className="mb-6 w-1/2">
+                    <div className="w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Size(Center Stone)
                         {/* <span className="text-[#8D8A91]">
@@ -2531,7 +2530,6 @@ const ProductDetail = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
                 )}
 
                 {/* Diamond Color & Clarity Section */}
@@ -2539,7 +2537,7 @@ const ProductDetail = () => {
                   const availableClarityOptions = getAvailableClarityOptions();
                   
                   return availableClarityOptions.length > 0 ? (
-                    <div className="w-1/2 mb-6">
+                    <div className="w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Color & Clarity:{" "}
                         <span className="text-[#8D8A91]">

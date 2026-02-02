@@ -2088,7 +2088,7 @@ if (data.deliveryDays) {
                 {/* Diamond Size Section */}
                 <div className="flex items-end gap-4">
                   {selectedStyleData?.productDetails?.diamondSize && (
-                  <div className="w-1/2 mb-6">
+                  <div className="w-1/2">
                     <h3 className="mb-3 text-sm md:text-base">
                       Diamond Size (Center Stone){" "}
                       {/* <span className="text-[#8D8A91]">
@@ -2137,7 +2137,7 @@ if (data.deliveryDays) {
 
                 {/* Diamond Color & Clarity Section */}
                 {getAvailableColorClarities().length > 0 && (
-                    <div className="w-1/2 mb-6">
+                    <div className="w-1/2">
                       <h3 className="mb-3 text-sm md:text-base">
                         Diamond Color & Clarity:{" "}
                         <span className="text-[#8D8A91]">

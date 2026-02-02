@@ -2324,125 +2324,127 @@ export const getProductByModelSku = async (
 
 export const getBuilderVariants = async (req: Request, res: Response) => {
   try {
-    const stylingName = (req.query.stylingName || "")
-      .toString()
+    const stylingName = String(req.query.stylingName || "")
       .trim()
       .toUpperCase();
 
     if (!stylingName) {
       return res.status(400).json({
         success: false,
-        message: "stylingName is required",
+        message: "stylingName required",
       });
     }
 
     const conn = getCatalogConnection();
-    const variantsColl = conn.collection("variants2");
 
-    // =========================
-    // 1️⃣ Fetch all variants for this builder style
-    // =========================
-    const variants = await variantsColl
-      .find(
-        {
+    const results = await conn.collection("variants2").aggregate([
+      // 1️⃣ Filter early (BIG performance gain)
+      {
+        $match: {
           "attributes.BUILDER STYLE NAME": stylingName,
         },
-        {
-          projection: {
-            variantSku: 1,
-            images: 1,
-            "attributes.PARENT SKU": 1,
-            "attributes.BUILDER STYLE NAME": 1,
+      },
+
+      // 2️⃣ Keep only needed fields
+      {
+        $project: {
+          variantSku: 1,
+          images: 1,
+          parentSku: {
+            $toUpper: "$attributes.PARENT SKU",
           },
         },
-      )
-      .toArray();
+      },
 
-    if (!variants.length) {
-      return res.json({
-        success: true,
-        stylingName,
-        count: 0,
-        entries: [],
-      });
-    }
-
-    // =========================
-    // 2️⃣ Group by parentSku
-    // =========================
-    const grouped: Record<
-      string,
+      // 3️⃣ Group by parent SKU
       {
-        parentSku: string;
-        builderStyle: string;
-        selectedImage: string | null;
-        variants: { sku: string }[];
-      }
-    > = {};
+        $group: {
+          _id: "$parentSku",
+          variants: {
+            $push: { sku: "$variantSku" },
+          },
+          images: {
+            $push: "$images",
+          },
+        },
+      },
 
-    for (const v of variants) {
-      const parentSku =
-        v?.attributes?.["PARENT SKU"]?.toString().toUpperCase() || "UNKNOWN";
+      // 4️⃣ Flatten images + pick GP → FV → fallback
+      {
+        $project: {
+          parentSku: "$_id",
+          variants: 1,
 
-      if (!grouped[parentSku]) {
-        grouped[parentSku] = {
-          parentSku,
-          builderStyle: stylingName,
-          selectedImage: null,
-          variants: [],
-        };
-      }
+          selectedImage: {
+            $let: {
+              vars: {
+                flatImages: {
+                  $reduce: {
+                    input: "$images",
+                    initialValue: [],
+                    in: { $concatArrays: ["$$value", "$$this"] },
+                  },
+                },
+              },
+              in: {
+                $ifNull: [
+                  // ✅ First priority → GP
+                  {
+                    $first: {
+                      $filter: {
+                        input: "$$flatImages",
+                        as: "img",
+                        cond: {
+                          $regexMatch: {
+                            input: "$$img.url",
+                            regex: /[-_\/]GP(\.|-|_|$)/i,
+                          },
+                        },
+                      },
+                    },
+                  },
 
-      if (v.variantSku) {
-        grouped[parentSku].variants.push({ sku: v.variantSku });
-      }
+                  {
+                    $ifNull: [
+                      // ✅ Second priority → FV
+                      {
+                        $first: {
+                          $filter: {
+                            input: "$$flatImages",
+                            as: "img",
+                            cond: {
+                              $regexMatch: {
+                                input: "$$img.url",
+                                regex: /[-_\/]FV(\.|-|_|$)/i,
+                              },
+                            },
+                          },
+                        },
+                      },
 
-      // Pick first valid image deterministically
-      if (!grouped[parentSku].selectedImage && Array.isArray(v.images)) {
-        const images = v.images
-          .map((i: any) => i?.url ?? i?.filename ?? i)
-          .filter(Boolean) as string[];
-
-        // helper for case-insensitive matching without mutating URL
-        const hasCode = (url: string, code: string) =>
-          new RegExp(`[-_\/]${code}(\\.|-|_|$)`, "i").test(url);
-
-        // 1️⃣ Prefer GP
-        let selected = images.find((u) => hasCode(u, "GP"));
-
-        // 2️⃣ Fallback to FV
-        if (!selected) {
-          selected = images.find((u) => hasCode(u, "FV"));
-        }
-
-        // 3️⃣ Final fallback
-        if (!selected && images.length) {
-          selected = images[0];
-        }
-
-        grouped[parentSku].selectedImage = selected ?? null;
-      }
-
-
-    }
-
-    // =========================
-    // 3️⃣ Final response
-    // =========================
-    const entries = Object.values(grouped);
+                      // ✅ Final fallback → first image
+                      { $arrayElemAt: ["$$flatImages", 0] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    ]).toArray();
 
     return res.json({
       success: true,
       stylingName,
-      count: entries.length,
-      entries,
+      count: results.length,
+      entries: results,
     });
   } catch (err) {
     console.error("getBuilderVariants error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
-      error: err instanceof Error ? err.message : String(err),
     });
   }
 };
