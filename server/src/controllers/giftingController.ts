@@ -257,11 +257,19 @@ async function processProductsWithPricing(
 
   const conn = getCatalogConnection();
   const pricingColl = conn.collection('pricing');
-  const defaultsColl = conn.collection('defaultvalues');
+  // Get defaults once with fallbacks
+  let defaultDocs: any[] = [];
+  const collNames = ["defaultvalues", "defaultValues", "defaultvalucs"];
+  for (const name of collNames) {
+    const coll = conn.collection(name);
+    const docs = await coll.find({}).toArray();
+    if (docs && docs.length > 0) {
+      defaultDocs = docs;
+      break;
+    }
+  }
 
-  // Get defaults once
-  const defaultDocs = await defaultsColl.find({}).toArray();
-  const mergedDefaults = Object.assign(
+  const mergedDefaults: Record<string, any> = Object.assign(
     {},
     ...defaultDocs.map((d) => {
       const c = { ...d };

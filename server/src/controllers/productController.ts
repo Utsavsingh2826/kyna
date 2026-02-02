@@ -592,11 +592,20 @@ async function processProductsWithBatchedPricing(
 ): Promise<any[]> {
   const conn = getCatalogConnection();
   const pricingColl = conn.collection("pricing");
-  const defaultsColl = conn.collection("defaultvalues");
+  // Get defaults once with fallbacks for collection name typos/case
+  let defaultDocs: any[] = [];
+  const collNames = ["defaultvalues", "defaultValues", "defaultvalucs"];
+  for (const name of collNames) {
+    const coll = conn.collection(name);
+    const docs = await coll.find({}).toArray();
+    if (docs && docs.length > 0) {
+      defaultDocs = docs;
+      console.log(`[processProductsWithBatchedPricing] Found ${docs.length} docs in collection: ${name}`);
+      break;
+    }
+  }
 
-  // Get defaults once
-  const defaultDocs = await defaultsColl.find({}).toArray();
-  const mergedDefaults = Object.assign(
+  const mergedDefaults: Record<string, any> = Object.assign(
     {},
     ...defaultDocs.map((d) => {
       const c = { ...d };
@@ -1332,11 +1341,22 @@ export const getProductByModelSku = async (
 
     // ----------------- Pricing setup (merge multi-doc defaults) -----------------
     const pricingColl = conn.collection("pricing");
-    const defaultsColl = conn.collection("defaultvalues");
 
-    const defaultDocs = (await defaultsColl
-      .find({})
-      .toArray()) as DefaultValuesDoc[];
+    // Try multiple possible names for defaults collection
+    let defaultDocs: DefaultValuesDoc[] = [];
+    const collNames = ["defaultvalues", "defaultValues", "defaultvalucs"];
+    let matchedCollName = "";
+
+    for (const name of collNames) {
+      const coll = conn.collection(name);
+      const docs = (await coll.find({}).toArray()) as DefaultValuesDoc[];
+      if (docs && docs.length > 0) {
+        defaultDocs = docs;
+        matchedCollName = name;
+        break;
+      }
+    }
+
     const mergedDefaults: DefaultValuesDoc = Object.assign(
       {},
       ...defaultDocs.map((doc) => {
@@ -1347,7 +1367,7 @@ export const getProductByModelSku = async (
     );
 
     console.debug(
-      "[getProductByModelSku] mergedDefaults keys:",
+      `[getProductByModelSku] Found defaults in collection: ${matchedCollName || "NONE"}. Merged keys:`,
       Object.keys(mergedDefaults),
     );
 
