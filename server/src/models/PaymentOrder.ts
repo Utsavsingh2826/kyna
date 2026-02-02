@@ -524,15 +524,27 @@ orderSchema.pre("save", function (next) {
 });
 
 // Instance methods
-orderSchema.methods.updateStatus = function (
+orderSchema.methods.updateStatus = async function (
   newStatus: OrderStatus,
   paymentResponse?: IPaymentResponse
 ) {
+  const previousStatus = this.status;
   this.status = newStatus;
   if (paymentResponse) {
     this.paymentResponse = paymentResponse;
   }
-  return this.save();
+  
+  // Set paidAt timestamp when payment is successful
+  if (newStatus === OrderStatus.SUCCESS && !this.paidAt) {
+    this.paidAt = new Date();
+  }
+  
+  const savedOrder = await this.save();
+  
+  // Note: Order confirmation email is handled by OrderModel hooks
+  // to avoid duplicate emails when both PaymentOrder and OrderModel are updated
+  
+  return savedOrder;
 };
 
 orderSchema.methods.isSuccessful = function (): boolean {

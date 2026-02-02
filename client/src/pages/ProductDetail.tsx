@@ -2461,7 +2461,7 @@ const ProductDetail = () => {
                     );
                   })()}
 
-                  <div className="absolute bg-[#68C5C0] text-white top-4 left-4 px-2 py-1 rounded-md text-xs font-semibold">
+                  <div className="hidden absolute bg-[#68C5C0] text-white top-4 left-4 px-2 py-1 rounded-md text-xs font-semibold">
                     15% OFF
                   </div>
                   <button
@@ -3556,7 +3556,7 @@ const ProductDetail = () => {
                           <span className="font-medium">
                             Rs.{" "}
                             {Math.round(
-                              productData.priceBreakdown.labourCost,
+                              (productData.priceBreakdown.labourCost)
                             ).toLocaleString()}
                             /-
                           </span>

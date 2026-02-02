@@ -1259,10 +1259,6 @@ if (data.deliveryDays) {
       return;
     }
 
-    if (!selectedDiamondSize) {
-      toast.error("Please select a diamond size");
-      return;
-    }
 
     const productDetails = selectedStyleData?.productDetails;
     const productId =
@@ -2844,9 +2840,7 @@ if (data.deliveryDays) {
                             ₹{" "}
                             {Math.round(
                               (selectedStyleData?.productDetails?.priceBreakdown
-                                ?.labourCost || 0) +
-                                (selectedStyleData?.productDetails
-                                  ?.priceBreakdown?.expense || 0),
+                                ?.labourCost || 0)
                             ).toLocaleString()}
                           </span>
                         </div>

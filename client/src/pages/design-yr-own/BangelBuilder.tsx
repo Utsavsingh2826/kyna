@@ -711,7 +711,7 @@ export default function RingBuilder() {
         "metal",
         "metalColor",
         "goldKarat",
-        "size",
+        "braceletSize", // Changed from "size" to "braceletSize" for bangles
       ];
 
       for (const field of customizationFields) {
@@ -955,7 +955,7 @@ export default function RingBuilder() {
             {/* Ring Image Display */}
             <div className="rounded-lg p-8 flex items-center justify-center min-h-64">
               <img
-                src="/navigation/upload-your-design/bangeldisplay.png"
+                src="/navigation/upload-your-design/bangeldisplay.jpeg"
                 alt="Bangle preview"
                 className="max-w-full max-h-full object-contain"
               />
@@ -1505,7 +1505,7 @@ export default function RingBuilder() {
               </Select>
             </div>
 
-            {/* Ring Size */}
+            {/* Bangle Size */}
             <div>
               <label className="text-sm text-muted-foreground">
                 Bangle Size{" "}

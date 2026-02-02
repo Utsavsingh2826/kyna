@@ -353,7 +353,7 @@ const Navigation: React.FC = () => {
                           className="flex flex-col items-center"
                         >
                           <img
-                            src="/navigation/upload-your-design/bangeldisplay.png"
+                            src="/navigation/upload-your-design/bangeldisplay.jpeg"
                             alt="Bangles"
                             className="h-30 object-cover rounded"
                           />
@@ -374,7 +374,7 @@ const Navigation: React.FC = () => {
                           className="flex flex-col items-center"
                         >
                           <img
-                            src="/navigation/build-your-jewellery/rings.jpg"
+                            src="/navigation/build-your-jewellery/rings.png"
                             alt="Rings"
                             className="h-40 object-cover rounded"
                           />
@@ -437,7 +437,7 @@ const Navigation: React.FC = () => {
                             alt="Bangles"
                             className="h-40 object-cover rounded"
                           />
-                          <span className="mt-2 text-sm">Gents Ring</span>
+                          <span className="mt-2 text-sm">Men's Ring</span>
                         </a>
                       </div>
                     </>

@@ -145,6 +145,70 @@ export const createCustomizationRequestWithPayment = async (
       `✅ Customization request created: ${customizationRequest.requestId}`
     );
 
+    // Send customization order confirmation email if payment was successful
+    if (paymentStatus === 'success' && paymentId) {
+      try {
+        console.log(`📧 Sending customization confirmation email for request: ${customizationRequest.requestNumber}`);
+        
+        const { sendCustomizationOrderConfirmationEmail } = await import("../services/emailService");
+        
+        // Prepare email data
+        const emailData = {
+          customerName: contactInfo?.firstName && contactInfo?.lastName 
+            ? `${contactInfo.firstName} ${contactInfo.lastName}` 
+            : 'Valued Customer',
+          customerEmail: contactInfo?.email || 'customer@example.com',
+          orderNumber: `ORDER-${customizationRequest.requestNumber}`,
+          requestNumber: customizationRequest.requestNumber,
+          orderDate: new Date().toLocaleDateString('en-IN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          }),
+          paymentMethod: 'Razorpay',
+          transactionId: paymentId,
+          estimatedDelivery: estimatedDelivery ? new Date(estimatedDelivery).toLocaleDateString('en-IN') : 'To be confirmed',
+          customizationDetails: {
+            title: title,
+            description: description,
+            category: category,
+            subCategory: subCategory,
+            jewelryType: jewelryType,
+            metalType: metalType,
+            metalKarat: metalKarat,
+            metalColor: metalColor,
+            diamondShape: diamondShape,
+            diamondSize: diamondSize,
+            diamondOrigin: diamondOrigin,
+            size: normalizedSize,
+            engraving: engraving?.text,
+            specialInstructions: specialInstructions,
+          },
+          totalAmount: paymentAmount || 1000,
+          shippingAddress: {
+            street: contactInfo?.address || '',
+            city: contactInfo?.city || '',
+            state: contactInfo?.state || '',
+            country: contactInfo?.country || 'India',
+            zipCode: contactInfo?.zipCode || '',
+          },
+          billingAddress: {
+            street: contactInfo?.address || '',
+            city: contactInfo?.city || '',
+            state: contactInfo?.state || '',
+            country: contactInfo?.country || 'India',
+            zipCode: contactInfo?.zipCode || '',
+          },
+        };
+        
+        await sendCustomizationOrderConfirmationEmail(emailData);
+        console.log(`📧 Customization confirmation email sent successfully for request: ${customizationRequest.requestNumber}`);
+      } catch (emailError) {
+        console.error('📧 Failed to send customization confirmation email:', emailError);
+        // Don't fail the request creation if email sending fails
+      }
+    }
+
     // Return data for payment processing
     res.status(201).json({
       success: true,

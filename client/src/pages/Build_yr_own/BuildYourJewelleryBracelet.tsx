@@ -1318,10 +1318,6 @@ if (data.deliveryDays) {
       return;
     }
 
-    if (!selectedDiamondSize) {
-      toast.error("Please select a diamond size");
-      return;
-    }
 
     if (!selectedSize) {
       toast.error("Please select a bracelet size");
@@ -2907,9 +2903,7 @@ if (data.deliveryDays) {
                             ₹{" "}
                             {Math.round(
                               (selectedStyleData?.productDetails?.priceBreakdown
-                                ?.labourCost || 0) +
-                                (selectedStyleData?.productDetails
-                                  ?.priceBreakdown?.expense || 0),
+                                ?.labourCost || 0)
                             ).toLocaleString()}
                           </span>
                         </div>

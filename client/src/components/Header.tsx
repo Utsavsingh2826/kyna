@@ -544,7 +544,7 @@ const uploadDesignImages: Record<
     path: "/upload-your-design/necklaces",
   },
   Bangles: {
-    src: "/navigation/upload-your-design/bangeldisplay.png",
+    src: "/navigation/upload-your-design/bangeldisplay.jpeg",
     label: "Bangles",
     path: "/upload-your-design/bangles",
   },
@@ -556,7 +556,7 @@ const buildJewelleryImages: Record<
   { src: string; label: string; path: string }
 > = {
   Rings: {
-    src: "/navigation/build-your-jewellery/rings.jpg",
+    src: "/navigation/build-your-jewellery/rings.png",
     label: "Engagement / Solitaire Rings",
     path: "/build-your-jewellery/Rings",
   },
@@ -613,6 +613,7 @@ function CollapsibleSection({
             "Design Your Own",
             "Upload Your Design",
             "Build Your Jewellery",
+            "Jewellery",
           ].includes(title) ? (
             <button
               onClick={onToggle}

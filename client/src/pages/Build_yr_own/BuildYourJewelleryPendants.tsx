@@ -2833,8 +2833,8 @@ if (data.deliveryDays) {
                             {selectedStyleData?.productDetails?.priceBreakdown
                               ?.labourCost
                               ? Math.round(
-                                  selectedStyleData.productDetails
-                                    .priceBreakdown.labourCost,
+                                  (selectedStyleData.productDetails
+                                    .priceBreakdown.labourCost),
                                 ).toLocaleString()
                               : "-"}
                           </span>

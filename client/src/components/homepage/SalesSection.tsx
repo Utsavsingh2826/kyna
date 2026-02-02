@@ -12,12 +12,6 @@ const SaleSection: React.FC = () => {
 
   const slides = [
     {
-      image: banner,
-      title: "Sparkle Like Never Before! Limited-Time Diamond Offer",
-      subtitle: "Your Moment of Elegance Awaits",
-      discount: "20%",
-    },
-    {
       image:
         "/marketing/menstud.png",
       title: "Sparkle Like Never Before! Limited-Time Diamond Offer",
@@ -74,11 +68,11 @@ const SaleSection: React.FC = () => {
   const formatTime = (time: number) => time.toString().padStart(2, "0");
 
   return (
-    <section className="py-8 sm:py-12 px-4 md:px-8 lg:px-16 bg-white">
+    <section className="py-8 pb-2 sm:py-12 px-4 md:px-8 lg:px-16 bg-white">
       <div
-        className="relative overflow-hidden group rounded-lg shadow-lg"
-        style={{ height: "465px" }}
-      >
+  className="relative overflow-hidden group rounded-lg shadow-lg 
+             h-[300px] sm:h-[350px] md:h-[420px] lg:h-[465px]"
+>
         {/* Background Image Slider */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 ease-in-out"
@@ -107,15 +101,15 @@ const SaleSection: React.FC = () => {
         <div className="container mx-auto px-4 relative z-10 h-full">
           <div className="flex flex-col lg:flex-row items-center justify-between h-full">
             <div className="lg:w-1/2 mb-8 lg:mb-0 text-white">
-              <h3 className="text-2xl md:text-4xl font-light mb-4">
+              {/* <h3 className="text-2xl md:text-4xl font-light mb-4">
                 {slides[currentSlide].title}
-              </h3>
-              <button className="border border-white bg-transparent text-white px-8 py-3 hover:bg-white hover:text-blue-900 transition-all duration-300 mb-4 rounded">
+              </h3> */}
+              {/* <button className="border border-white bg-transparent text-white px-8 py-3 hover:bg-white hover:text-blue-900 transition-all duration-300 mb-4 rounded">
                 Buy Now
-              </button>
-              <p className="text-sm opacity-90 mb-4">
+              </button> */}
+              {/* <p className="text-sm opacity-90 mb-4">
                 {slides[currentSlide].subtitle}
-              </p>
+              </p> */}
               {/* <div className="bg-black bg-opacity-30 inline-block px-4 py-2 rounded">
                 <p className="text-lg font-semibold">
                   Only{" "}
@@ -127,7 +121,7 @@ const SaleSection: React.FC = () => {
                 </p>
               </div> */}
             </div>
-            <div className="lg:w-1/2 flex justify-center lg:justify-end relative">
+            {/* <div className="lg:w-1/2 flex justify-center lg:justify-end relative">
               <div className="relative">
                 <div className="absolute -top-4 -right-4 bg-white text-orange-600 rounded-full w-20 h-20 flex flex-col items-center justify-center shadow-lg z-10">
                   <span className="text-xs font-bold">SALE</span>
@@ -137,7 +131,7 @@ const SaleSection: React.FC = () => {
                   <span className="text-xs">OFF</span>
                 </div>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
 
