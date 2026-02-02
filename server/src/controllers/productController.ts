@@ -592,11 +592,20 @@ async function processProductsWithBatchedPricing(
 ): Promise<any[]> {
   const conn = getCatalogConnection();
   const pricingColl = conn.collection("pricing");
-  const defaultsColl = conn.collection("defaultValues");
+  // Get defaults once with fallbacks for collection name typos/case
+  let defaultDocs: any[] = [];
+  const collNames = ["defaultvalues", "defaultValues", "defaultvalucs"];
+  for (const name of collNames) {
+    const coll = conn.collection(name);
+    const docs = await coll.find({}).toArray();
+    if (docs && docs.length > 0) {
+      defaultDocs = docs;
+      console.log(`[processProductsWithBatchedPricing] Found ${docs.length} docs in collection: ${name}`);
+      break;
+    }
+  }
 
-  // Get defaults once
-  const defaultDocs = await defaultsColl.find({}).toArray();
-  const mergedDefaults = Object.assign(
+  const mergedDefaults: Record<string, any> = Object.assign(
     {},
     ...defaultDocs.map((d) => {
       const c = { ...d };
@@ -802,11 +811,14 @@ async function processProductsWithBatchedPricing(
         diamondCost = Math.round(diamondCost);
       }
 
-      // Add variant expense to diamond cost
+      // NOTE: variant.expense is considered "old" and is being replaced by 
+      // the metal-specific expenses from defaultvalues (goldExpense, silverExpense, etc.)
+      /*
       const variantExpense = toNumberRobust(variant.expense);
       if (!Number.isNaN(variantExpense)) {
         diamondCost += variantExpense;
       }
+      */
 
       const metalType = (variant.metalType || "GOLD").toString().toUpperCase();
 
@@ -1332,11 +1344,22 @@ export const getProductByModelSku = async (
 
     // ----------------- Pricing setup (merge multi-doc defaults) -----------------
     const pricingColl = conn.collection("pricing");
-    const defaultsColl = conn.collection("defaultValues");
 
-    const defaultDocs = (await defaultsColl
-      .find({})
-      .toArray()) as DefaultValuesDoc[];
+    // Try multiple possible names for defaults collection
+    let defaultDocs: DefaultValuesDoc[] = [];
+    const collNames = ["defaultvalues", "defaultValues", "defaultvalucs"];
+    let matchedCollName = "";
+
+    for (const name of collNames) {
+      const coll = conn.collection(name);
+      const docs = (await coll.find({}).toArray()) as DefaultValuesDoc[];
+      if (docs && docs.length > 0) {
+        defaultDocs = docs;
+        matchedCollName = name;
+        break;
+      }
+    }
+
     const mergedDefaults: DefaultValuesDoc = Object.assign(
       {},
       ...defaultDocs.map((doc) => {
@@ -1347,7 +1370,7 @@ export const getProductByModelSku = async (
     );
 
     console.debug(
-      "[getProductByModelSku] mergedDefaults keys:",
+      `[getProductByModelSku] Found defaults in collection: ${matchedCollName || "NONE"}. Merged keys:`,
       Object.keys(mergedDefaults),
     );
 
@@ -1504,7 +1527,7 @@ export const getProductByModelSku = async (
 
     if (missingDefaults.length) {
       console.warn(
-        "[getProductByModelSku] pricing: missing/NaN defaultValues:",
+        "[getProductByModelSku] pricing: missing/NaN defaultvalues:",
         {
           missingDefaults,
           mergedDefaultsKeys: Object.keys(mergedDefaults),
@@ -2072,11 +2095,14 @@ export const getProductByModelSku = async (
           totalDiamondWeight += cts;
         }
 
-        // Add variant expense to diamond cost
+        // NOTE: variant.expense is considered "old" and is being replaced by 
+        // the metal-specific expenses from defaultvalues (goldExpense, silverExpense, etc.)
+        /*
         const variantExpense = toNumberRobust(variant.expense);
         if (!Number.isNaN(variantExpense)) {
           diamondCost += variantExpense;
         }
+        */
 
         let metalType: string;
 
