@@ -97,7 +97,12 @@ interface ApiVariant {
 interface ApiProduct {
   parentSku: string;
   builderView: string;
-  selectedImage: string;
+   selectedImage: {
+    url: string;
+    color: string;
+    metalType: string;
+    metalKt: string;
+  };
   variants: ApiVariant[];
 }
 
@@ -410,7 +415,7 @@ const ProductDetail = () => {
         );
 
         const mappedSubstyles = validEntries.map((entry) => ({
-          img: entry.selectedImage,
+          img: entry.selectedImage.url,
           name: entry.builderView,
           price: "",
           parentSku: entry.parentSku,

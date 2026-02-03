@@ -100,7 +100,12 @@ interface ApiProduct {
   parentSku: string;
   builderStyle: string;
   builderView?: string; // Optional for backward compatibility
-  selectedImage: string;
+  selectedImage: {
+    url: string;
+    color: string;
+    metalType: string;
+    metalKt: string;
+  };
   variants: ApiVariant[];
 }
 
@@ -402,7 +407,7 @@ const ProductDetail = () => {
         );
 
         const mappedSubstyles = validEntries.map((entry) => ({
-          img: entry.selectedImage,
+          img: entry.selectedImage.url,
           name: entry.builderView || entry.builderStyle || entry.parentSku,
           price: "", // blank initially
           parentSku: entry.parentSku,
