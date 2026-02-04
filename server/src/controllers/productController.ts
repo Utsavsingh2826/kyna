@@ -2364,101 +2364,111 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
     const conn = getCatalogConnection();
 
     const results = await conn.collection("variants2").aggregate([
-      // 1️⃣ Filter early (BIG performance gain)
+      // Step 1: Filter
       {
         $match: {
           "attributes.BUILDER STYLE NAME": stylingName,
         },
       },
 
-      // 2️⃣ Keep only needed fields
+      // Step 2: Project and find best image per variant
       {
         $project: {
           variantSku: 1,
+          parentSku: { $toUpper: "$attributes.PARENT SKU" },
           images: 1,
-          parentSku: {
-            $toUpper: "$attributes.PARENT SKU",
+          // Separate the image searches
+          gpImages: {
+            $filter: {
+              input: { $ifNull: ["$images", []] },
+              as: "img",
+              cond: {
+                $regexMatch: {
+                  input: { $toString: { $ifNull: ["$$img.url", ""] } },
+                  regex: "GP"
+                }
+              }
+            }
           },
-        },
+          fvImages: {
+            $filter: {
+              input: { $ifNull: ["$images", []] },
+              as: "img",
+              cond: {
+                $regexMatch: {
+                  input: { $toString: { $ifNull: ["$$img.url", ""] } },
+                  regex: "FV"
+                }
+              }
+            }
+          }
+        }
       },
 
-      // 3️⃣ Group by parent SKU
+      // Step 3: Pick the best image with clear priority
+      {
+        $addFields: {
+          primaryImage: {
+            $cond: {
+              if: { $gt: [{ $size: "$gpImages" }, 0] },
+              then: { $arrayElemAt: ["$gpImages", 0] },
+              else: {
+                $cond: {
+                  if: { $gt: [{ $size: "$fvImages" }, 0] },
+                  then: { $arrayElemAt: ["$fvImages", 0] },
+                  else: { $arrayElemAt: [{ $ifNull: ["$images", []] }, 0] }
+                }
+              }
+            }
+          }
+        }
+      },
+
+      // Step 4: Group by parent
       {
         $group: {
           _id: "$parentSku",
           variants: {
-            $push: { sku: "$variantSku" },
+            $push: { sku: "$variantSku" }
           },
-          images: {
-            $push: "$images",
-          },
-        },
+          // Collect all non-null images, then pick first
+          allImages: {
+            $push: "$primaryImage"
+          }
+        }
       },
 
-      // 4️⃣ Flatten images + pick GP → FV → fallback
+      // Step 5: Pick first non-null image from the group
+      {
+        $addFields: {
+          selectedImage: {
+            $arrayElemAt: [
+              {
+                $filter: {
+                  input: "$allImages",
+                  as: "img",
+                  cond: { $ne: ["$$img", null] }
+                }
+              },
+              0
+            ]
+          }
+        }
+      },
+
+      // Step 6: Final shape
       {
         $project: {
+          _id: 1,
           parentSku: "$_id",
           variants: 1,
-
-          selectedImage: {
-            $let: {
-              vars: {
-                flatImages: {
-                  $reduce: {
-                    input: "$images",
-                    initialValue: [],
-                    in: { $concatArrays: ["$$value", "$$this"] },
-                  },
-                },
-              },
-              in: {
-                $ifNull: [
-                  // ✅ First priority → GP
-                  {
-                    $first: {
-                      $filter: {
-                        input: "$$flatImages",
-                        as: "img",
-                        cond: {
-                          $regexMatch: {
-                            input: "$$img.url",
-                            regex: /[-_\/]GP(\.|-|_|$)/i,
-                          },
-                        },
-                      },
-                    },
-                  },
-
-                  {
-                    $ifNull: [
-                      // ✅ Second priority → FV
-                      {
-                        $first: {
-                          $filter: {
-                            input: "$$flatImages",
-                            as: "img",
-                            cond: {
-                              $regexMatch: {
-                                input: "$$img.url",
-                                regex: /[-_\/]FV(\.|-|_|$)/i,
-                              },
-                            },
-                          },
-                        },
-                      },
-
-                      // ✅ Final fallback → first image
-                      { $arrayElemAt: ["$$flatImages", 0] },
-                    ],
-                  },
-                ],
-              },
-            },
-          },
-        },
-      },
-    ]).toArray();
+          selectedImage: 1
+        }
+      }
+    ], {
+      allowDiskUse: true,
+      maxTimeMS: 30000
+    }).toArray();
 
     return res.json({
       success: true,
@@ -2466,6 +2476,7 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
       count: results.length,
       entries: results,
     });
+
   } catch (err) {
     console.error("getBuilderVariants error:", err);
     return res.status(500).json({
