@@ -77,19 +77,16 @@ const getColorDisplayInfo = (
         case "RG":
           return "Rose Gold";
         case "BR":
-          return "Brown";
+          return "Black Rhodium";
         default:
           return c;
       }
     };
 
-    // For combinations, use the image from metal_colors folder
-    const combinationImageUrl = `/metal_colors/${code}.png`;
-
-    return {
-      name: `${getColorName(color1)} - ${getColorName(color2)}`,
+     return {
+      name: `${getColorName(color1)} & ${getColorName(color2)}`,
       colors: [color1, color2],
-      img: combinationImageUrl,
+      img: `/metal_colors/${color1}-${color2}.png`,
     };
   }
 
@@ -752,11 +749,13 @@ const ProductDetail = () => {
   // Track previous parent SKU to detect changes and reset colors
   const previousParentSkuRef = useRef<string>("");
 
-  // Reset color to WG when parent SKU actually changes
+  // Reset color to WG when parent SKU actually changes - using ref for immediate effect
   useEffect(() => {
     if (selectedParentSku && selectedParentSku !== previousParentSkuRef.current) {
       console.log("Ring parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to WG");
       previousParentSkuRef.current = selectedParentSku;
+      
+      // Reset to default state immediately
       setSelectedMetalColor("White Gold");
       setSelectedColorCode("WG");
       setSelectedMetalType("GOLD");
@@ -1008,9 +1007,29 @@ const ProductDetail = () => {
   useEffect(() => {
     try {
       if (!selectedStyleData) return;
+      
+      // CRITICAL: Don't fetch if parent SKU has changed but ref hasn't updated yet
+      // This prevents using the old color with the new parent SKU
+      if (selectedStyleData.parentSku !== previousParentSkuRef.current) {
+        console.log("Skipping API call - parent SKU mismatch (transitioning state)");
+        return;
+      }
+      
+      // Validate that the selected color is available for this ring
+      const availableColors = selectedStyleData?.productDetails?.availableColors || 
+                             selectedStyleData?.availableColors || 
+                             ["WG", "YG", "RG"];
+      
+      // If current color is not available, don't make the API call
+      if (!availableColors.includes(selectedColorCode)) {
+        console.log(`Color ${selectedColorCode} not available for ${selectedStyleData.parentSku}, skipping API call`);
+        return;
+      }
+      
       const parent = selectedStyleData?.parentSku;
       const variantSku = selectedStyleData?.variants?.[0]?.sku;
       if (parent && variantSku && typeof updateSubstyleProductDetails === "function") {
+        console.log(`Fetching product details for ${parent} with color ${selectedColorCode}`);
         updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
       }
     } catch (err) {
@@ -1949,6 +1968,12 @@ const ProductDetail = () => {
   useEffect(() => {
     if (!selectedStyleData?.parentSku) return;
     
+    // Don't refetch if parent SKU has changed but ref hasn't updated yet
+    if (selectedStyleData.parentSku !== previousParentSkuRef.current) {
+      console.log("Skipping refetch - parent SKU mismatch (transitioning state)");
+      return;
+    }
+    
     // Don't refetch if required selections are not set yet
     // This prevents API calls with NaN or empty values
     if (!selectedDiamondSize || !selectedGoldKarat || !selectedDiamondShape) {
@@ -1960,6 +1985,17 @@ const ProductDetail = () => {
       return;
     }
     
+    // Validate that the selected color is available
+    const availableColors = selectedStyleData?.productDetails?.availableColors || 
+                           selectedStyleData?.availableColors || 
+                           ["WG", "YG", "RG"];
+    
+    if (!availableColors.includes(selectedColorCode)) {
+      console.log(`Color ${selectedColorCode} not available, skipping refetch`);
+      return;
+    }
+    
+    console.log(`Refetching for ${selectedStyleData.parentSku} with selections`);
     refetchUpdatedProduct(selectedStyleData);
     //eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -2301,17 +2337,8 @@ const ProductDetail = () => {
                               onClick={() => {
                                 setSelectedParentSku(style.parentSku || "");
                                 setSelectedImage(0); // Reset to first image when style changes
-                                // Fetch variant data for the selected style
-                                if (
-                                  style.parentSku &&
-                                  style.variants?.[0]?.sku
-                                ) {
-                                  updateSubstyleProductDetails(
-                                    style.parentSku,
-                                    style.variants[0].sku,
-                                    selectedColorCode,
-                                  );
-                                }
+                                // Don't call updateSubstyleProductDetails here - let the useEffect handle it
+                                // after the color has been reset to WG for the new ring
                               }}
                               className={`flex flex-col items-center rounded-xl border min-w-[75px] md:min-w-[100px] transition-all flex-shrink-0 ${
                                 selectedParentSku === style.parentSku
