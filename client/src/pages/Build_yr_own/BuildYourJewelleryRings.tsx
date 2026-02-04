@@ -739,7 +739,7 @@ const ProductDetail = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
-  const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
+  const [selectedDiamondShape, setSelectedDiamondShape] = useState("Round");
   const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
   const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code
   const [selectedMetalType, setSelectedMetalType] = useState<string>("GOLD");
@@ -836,7 +836,7 @@ const ProductDetail = () => {
   const lastValidStateRef = useRef({
     metalColor: "White Gold",
     colorCode: "WG",
-    diamondShape: "Oval",
+    diamondShape: "Round",
     diamondSize: "",
     diamondOrigin: "Natural Diamond",
     colorClarity: "",
