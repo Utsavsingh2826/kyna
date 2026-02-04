@@ -571,6 +571,13 @@ if (data.deliveryDays) {
       if (!selectedStyleData) return;
       const parent = selectedStyleData?.parentSku;
       const variantSku = selectedStyleData?.variants?.[0]?.sku;
+      
+      // Skip if this parent SKU hasn't been parsed yet (avoid calling API with stale color)
+      if (parent && parent !== lastParsedParentSkuRef.current) {
+        console.log("Skipping API call - parent SKU not parsed yet:", parent);
+        return;
+      }
+      
       if (parent && variantSku && typeof updateSubstyleProductDetails === "function") {
         console.log("Refetching product for parent SKU:", parent);
         updateSubstyleProductDetails(parent, variantSku, selectedColorCode);
@@ -613,6 +620,14 @@ if (data.deliveryDays) {
     if (lastParsedParentSkuRef.current === selectedParentSku) return;
 
     console.log("Parsing first variant for new parent SKU:", selectedParentSku);
+    
+    // Reset metal color to WG immediately BEFORE setting the ref
+    // This ensures the colorCode useEffect doesn't fire with stale color
+    console.log("Resetting metal color to White Gold (pre-parse)");
+    setSelectedMetalColor("White Gold");
+    setSelectedColorCode("WG");
+    
+    // Now mark this parent SKU as being parsed
     lastParsedParentSkuRef.current = selectedParentSku;
 
     const firstVariantSku = selectedStyleData.variants[0].sku;
@@ -683,11 +698,6 @@ if (data.deliveryDays) {
         console.log("Clearing bracelet size");
         setSelectedSize("");
       }
-
-      // Reset metal color and code to default (White Gold)
-      console.log("Resetting metal color to White Gold");
-      setSelectedMetalColor("White Gold");
-      setSelectedColorCode("WG");
 
       // Metal type defaults to GOLD
       console.log("Setting metal type: GOLD");
