@@ -947,6 +947,48 @@ export default function JewelleryPage({
     updatePriceFilter("max_price", value.toString());
   };
 
+  // Helper function to extract metal color code from image URL
+  const getMetalColorFromImage = (imageUrl: string): string => {
+    if (!imageUrl) return "YG"; // Default to Yellow Gold
+
+    const filename = imageUrl.split("/").pop() || "";
+    const upperFilename = filename.toUpperCase();
+
+    // Check for color codes in the filename
+    // Priority: YG (Yellow Gold) > RG (Rose Gold) > WG (White Gold) > BR (Black Rhodium)
+    if (
+      upperFilename.includes("YG") ||
+      upperFilename.includes("_YG_") ||
+      upperFilename.includes("-YG-")
+    ) {
+      return "YG";
+    }
+    if (
+      upperFilename.includes("RG") ||
+      upperFilename.includes("_RG_") ||
+      upperFilename.includes("-RG-")
+    ) {
+      return "RG";
+    }
+    if (
+      upperFilename.includes("WG") ||
+      upperFilename.includes("_WG_") ||
+      upperFilename.includes("-WG-")
+    ) {
+      return "WG";
+    }
+    if (
+      upperFilename.includes("BR") ||
+      upperFilename.includes("_BR_") ||
+      upperFilename.includes("-BR-")
+    ) {
+      return "BR";
+    }
+
+    // Default to YG if no color code found
+    return "YG";
+  };
+
   // Combine static products with API products
   const allProducts = [
     // ...products,
@@ -1125,75 +1167,6 @@ export default function JewelleryPage({
 
             {/* Products */}
             <section aria-label="Products" className="eng-grid">
-              {/* Display active filters summary */}
-              {Object.values(activeFilters).some((filter) =>
-                Array.isArray(filter)
-                  ? filter.length > 0
-                  : filter !== "24000" && filter !== "100000"
-              ) && (
-                  <div className="col-span-full mb-4 p-3 bg-gray-100 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-gray-600">Active Filters:</p>
-                      <button
-                        onClick={clearAllFilters}
-                        className="text-xs text-red-600 hover:text-red-800 font-medium"
-                      >
-                        Clear All Filters
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {/* All Categories */}
-                      {Object.entries(activeFilters).map(([key, values]) => {
-                        if (!Array.isArray(values) || values.length === 0)
-                          return null;
-
-                        const displayName = key
-                          .replace(/_/g, " ")
-                          .replace(/category|diamond shape/gi, "")
-                          .trim();
-                        const colorClass = key.includes("ring")
-                          ? "bg-teal-100 text-teal-800"
-                          : key.includes("earring")
-                            ? "bg-blue-100 text-blue-800"
-                            : key.includes("pendant")
-                              ? "bg-purple-100 text-purple-800"
-                              : key.includes("bracelet")
-                                ? "bg-orange-100 text-orange-800"
-                                : "bg-green-100 text-green-800";
-
-                        return (Array.isArray(values) ? values : []).map(
-                          (value: string) => (
-                            <span
-                              key={`${key}-${value}`}
-                              className={`px-2 py-1 ${colorClass} rounded-md text-xs flex items-center gap-1`}
-                            >
-                              <span className="font-medium">{displayName}:</span>{" "}
-                              {value}
-                              <button
-                                onClick={() =>
-                                  updateUrlFilters(key, value, false)
-                                }
-                                className="ml-1 hover:opacity-75 text-sm font-bold"
-                                title={`Remove ${value} filter`}
-                              >
-                                ×
-                              </button>
-                            </span>
-                          )
-                        );
-                      })}
-                    </div>
-                    {/* Show total filter count */}
-                    <p className="text-xs text-gray-500 mt-2">
-                      Total active filters:{" "}
-                      {Object.values(activeFilters).reduce(
-                        (count, filter) =>
-                          count + (Array.isArray(filter) ? filter.length : 0),
-                        0
-                      )}
-                    </p>
-                  </div>
-                )}
 
               {loading && (
                 <div className="eng-loading col-span-full">
@@ -1209,8 +1182,8 @@ export default function JewelleryPage({
 
               {filteredProducts.map((p) => {
                 const pWithMeta = p as Product & { modelSku?: string; variantSku?: string; categoryRaw?: string };
-                // Default metal color (can be enhanced later)
-                const metalColor = "WG";
+                // Detect metal color from image URL - defaults to YG (Yellow Gold)
+                const metalColor = getMetalColorFromImage(p.img);
 
                 return (
                   <article
