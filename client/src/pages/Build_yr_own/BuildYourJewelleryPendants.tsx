@@ -255,8 +255,8 @@ const ProductDetail = () => {
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Oval");
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [videoRef, setVideoRef] = useState<HTMLVideoElement | null>(null);
-  const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
-  const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code
+  const [selectedMetalColor, setSelectedMetalColor] = useState("Yellow Gold");
+  const [selectedColorCode, setSelectedColorCode] = useState("YG"); // Store the color code
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
 
   // Add missing state variables for pendants builder
@@ -286,8 +286,8 @@ const ProductDetail = () => {
   }, [deliveryDays]);
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
-    metalColor: "White Gold",
-    colorCode: "WG",
+    metalColor: "Yellow Gold",
+    colorCode: "YG",
     diamondShape: "Oval",
     diamondSize: "",
     diamondOrigin: "Natural Diamond",
@@ -617,7 +617,7 @@ if (data.deliveryDays) {
     }
   }, [selectedStyleCategory, styleAndDesign, selectedParentSku]);
 
-  // Reset color to WG when parent SKU actually changes
+  // Reset color to YG when parent SKU actually changes
   useEffect(() => {
     // Only reset if:
     // 1. We have a selectedParentSku
@@ -628,9 +628,9 @@ if (data.deliveryDays) {
       previousParentSkuRef.current &&
       previousParentSkuRef.current !== selectedParentSku
     ) {
-      console.log("Parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to WG");
-      setSelectedMetalColor("White Gold");
-      setSelectedColorCode("WG");
+      console.log("Parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to YG");
+      setSelectedMetalColor("Yellow Gold");
+      setSelectedColorCode("YG");
     }
     
     // Always update the ref to track current parent SKU

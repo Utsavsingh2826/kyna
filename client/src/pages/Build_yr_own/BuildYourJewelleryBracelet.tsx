@@ -331,8 +331,8 @@ const ProductDetail = () => {
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Round");
-  const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
-  const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code
+  const [selectedMetalColor, setSelectedMetalColor] = useState("Yellow Gold");
+  const [selectedColorCode, setSelectedColorCode] = useState("YG"); // Store the color code
   const [selectedMetalType, setSelectedMetalType] = useState<string>("GOLD");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
@@ -346,8 +346,8 @@ const ProductDetail = () => {
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
-    metalColor: "White Gold",
-    colorCode: "WG",
+    metalColor: "Yellow Gold",
+    colorCode: "YG",
     diamondShape: "Round",
     diamondSize: "",
     diamondOrigin: "Natural Diamond",
@@ -621,11 +621,11 @@ if (data.deliveryDays) {
 
     console.log("Parsing first variant for new parent SKU:", selectedParentSku);
     
-    // Reset metal color to WG immediately BEFORE setting the ref
+    // Reset metal color to YG immediately BEFORE setting the ref
     // This ensures the colorCode useEffect doesn't fire with stale color
-    console.log("Resetting metal color to White Gold (pre-parse)");
-    setSelectedMetalColor("White Gold");
-    setSelectedColorCode("WG");
+    console.log("Resetting metal color to Yellow Gold (pre-parse)");
+    setSelectedMetalColor("Yellow Gold");
+    setSelectedColorCode("YG");
     
     // Now mark this parent SKU as being parsed
     lastParsedParentSkuRef.current = selectedParentSku;

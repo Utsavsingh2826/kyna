@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Mail,
-  MessageCircle,
   Share2,
 } from "lucide-react";
 import * as THREE from "three";
@@ -737,8 +736,8 @@ const ProductDetail = () => {
   const [selectedDiamondOrigin, setSelectedDiamondOrigin] =
     useState("Natural Diamond");
   const [selectedDiamondShape, setSelectedDiamondShape] = useState("Round");
-  const [selectedMetalColor, setSelectedMetalColor] = useState("White Gold");
-  const [selectedColorCode, setSelectedColorCode] = useState("WG"); // Store the color code
+  const [selectedMetalColor, setSelectedMetalColor] = useState("Yellow Gold");
+  const [selectedColorCode, setSelectedColorCode] = useState("YG"); // Store the color code
   const [selectedMetalType, setSelectedMetalType] = useState<string>("GOLD");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColorClarity, setSelectedColorClarity] = useState<string>("");
@@ -749,15 +748,15 @@ const ProductDetail = () => {
   // Track previous parent SKU to detect changes and reset colors
   const previousParentSkuRef = useRef<string>("");
 
-  // Reset color to WG when parent SKU actually changes - using ref for immediate effect
+  // Reset color to YG when parent SKU actually changes - using ref for immediate effect
   useEffect(() => {
     if (selectedParentSku && selectedParentSku !== previousParentSkuRef.current) {
-      console.log("Ring parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to WG");
+      console.log("Ring parent SKU changed from", previousParentSkuRef.current, "to", selectedParentSku, "- resetting color to YG");
       previousParentSkuRef.current = selectedParentSku;
       
       // Reset to default state immediately
-      setSelectedMetalColor("White Gold");
-      setSelectedColorCode("WG");
+      setSelectedMetalColor("Yellow Gold");
+      setSelectedColorCode("YG");
       setSelectedMetalType("GOLD");
     }
   }, [selectedParentSku]);
@@ -833,8 +832,8 @@ const ProductDetail = () => {
 
   // Track the last valid state for reverting when variant not found
   const lastValidStateRef = useRef({
-    metalColor: "White Gold",
-    colorCode: "WG",
+    metalColor: "Yellow Gold",
+    colorCode: "YG",
     diamondShape: "Round",
     diamondSize: "",
     diamondOrigin: "Natural Diamond",
@@ -1076,7 +1075,7 @@ const ProductDetail = () => {
       previousParentSkuRef.current = parent;
       
       console.log(`Auto-fetching product details for ${parent} (first load)`);
-      updateSubstyleProductDetails(parent, variantSku, "WG");
+      updateSubstyleProductDetails(parent, variantSku, "YG");
     } catch (err) {
       console.error("Error in auto-fetch product details useEffect:", err);
     }
