@@ -341,20 +341,54 @@ async function processProductsWithPricing(
     const variant = row.firstVariant;
     const product = row.product;
 
-    // Get image
+    // Get image - prioritize Yellow Gold (YG) images
     let imageUrl: string | null = null;
     if (Array.isArray(variant.images) && variant.images.length > 0) {
-      const img =
-        variant.images.find(
-          (i: any) =>
-            typeof i?.url === 'string' && i.url.toUpperCase().includes('GP'),
-        ) ||
-        variant.images.find(
-          (i: any) =>
-            typeof i?.url === 'string' && i.url.toUpperCase().includes('FV'),
-        ) ||
-        null;
+      // Priority: YG (Yellow Gold) > RG (Rose Gold) > WG (White Gold) > BR (Black Rhodium) > GP/FV
+      const ygImg = variant.images.find(
+        (i: any) =>
+          typeof i?.url === 'string' &&
+          (i.url.toUpperCase().includes('YG') ||
+            i.url.toUpperCase().includes('_YG_') ||
+            i.url.toUpperCase().includes('-YG-'))
+      );
 
+      const rgImg = variant.images.find(
+        (i: any) =>
+          typeof i?.url === 'string' &&
+          (i.url.toUpperCase().includes('RG') ||
+            i.url.toUpperCase().includes('_RG_') ||
+            i.url.toUpperCase().includes('-RG-'))
+      );
+
+      const wgImg = variant.images.find(
+        (i: any) =>
+          typeof i?.url === 'string' &&
+          (i.url.toUpperCase().includes('WG') ||
+            i.url.toUpperCase().includes('_WG_') ||
+            i.url.toUpperCase().includes('-WG-'))
+      );
+
+      const brImg = variant.images.find(
+        (i: any) =>
+          typeof i?.url === 'string' &&
+          (i.url.toUpperCase().includes('BR') ||
+            i.url.toUpperCase().includes('_BR_') ||
+            i.url.toUpperCase().includes('-BR-'))
+      );
+
+      const gpImg = variant.images.find(
+        (i: any) =>
+          typeof i?.url === 'string' && i.url.toUpperCase().includes('GP'),
+      );
+
+      const fvImg = variant.images.find(
+        (i: any) =>
+          typeof i?.url === 'string' && i.url.toUpperCase().includes('FV'),
+      );
+
+      // Select image with priority: YG > RG > WG > BR > GP > FV
+      const img = ygImg || rgImg || wgImg || brImg || gpImg || fvImg || null;
       imageUrl = img?.url || img?.filename || null;
     }
 
