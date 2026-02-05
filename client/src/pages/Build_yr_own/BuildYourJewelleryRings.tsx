@@ -844,6 +844,7 @@ const ProductDetail = () => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [isVariantLoading, setIsVariantLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Fetch data from API
@@ -897,6 +898,7 @@ const ProductDetail = () => {
   // Helper to re-fetch product model for a specific substyle and metal color
   const updateSubstyleProductDetails = useCallback(
     async (parentSku: string, variantSku: string, metalColorCode: string) => {
+      setIsVariantLoading(true);
       try {
         // Use the color code directly
         const metalCode = metalColorCode;
@@ -982,6 +984,8 @@ const ProductDetail = () => {
         setSelectedColorClarity(lastValidStateRef.current.colorClarity);
         setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
         setSelectedMetalType(lastValidStateRef.current.metalType);
+      } finally {
+        setIsVariantLoading(false);
       }
     },
     [],
@@ -1055,6 +1059,28 @@ const ProductDetail = () => {
       console.error("Error in category load useEffect:", err);
     }
   }, [selectedStyleCategory, fetchCategoryData, styleAndDesign]);
+
+  // Fetch first product's details when category loads or when parentSku changes
+  // This handles the case where colorCode didn't change (already WG) so the colorCode useEffect doesn't trigger
+  useEffect(() => {
+    try {
+      // Skip if no selected style data or if it already has product details loaded
+      if (!selectedStyleData?.parentSku || !selectedStyleData?.variants?.[0]?.sku) return;
+      if (selectedStyleData.productDetails) return;
+      
+      // Fetch product details for the newly selected product
+      const parent = selectedStyleData.parentSku;
+      const variantSku = selectedStyleData.variants[0].sku;
+      
+      // Update the previousParentSkuRef to prevent race conditions
+      previousParentSkuRef.current = parent;
+      
+      console.log(`Auto-fetching product details for ${parent} (first load)`);
+      updateSubstyleProductDetails(parent, variantSku, "WG");
+    } catch (err) {
+      console.error("Error in auto-fetch product details useEffect:", err);
+    }
+  }, [selectedStyleData?.parentSku, selectedStyleData?.variants, selectedStyleData?.productDetails, updateSubstyleProductDetails]);
 
   // Initialize lastValidStateRef with the first loaded state
   const initialStateSetRef = useRef(false);
@@ -1423,6 +1449,7 @@ const ProductDetail = () => {
     // Use selectedColorCode directly
     const metalColor = selectedColorCode;
 
+    setIsVariantLoading(true);
     try {
       const res = await fetch(
         `/api/products/model/${substyle.parentSku}?variantId=${variantId}&metalColor=${metalColor}`,
@@ -1511,6 +1538,8 @@ const ProductDetail = () => {
       setSelectedColorClarity(lastValidStateRef.current.colorClarity);
       setSelectedGoldKarat(lastValidStateRef.current.goldKarat);
       setSelectedMetalType(lastValidStateRef.current.metalType);
+    } finally {
+      setIsVariantLoading(false);
     }
   };
 
@@ -2113,7 +2142,7 @@ const ProductDetail = () => {
                       thumbnailImages[selectedImage],
                       selectedImage,
                     ) ? (
-                      <div className="w-full h-full object-contain">
+                      <div className={`w-full h-full object-contain transition-all duration-300 ${isVariantLoading ? 'blur-sm opacity-60' : ''}`}>
                         <div
                           ref={mainViewerRef}
                           id="ijewel-viewer-main"
@@ -2131,8 +2160,15 @@ const ProductDetail = () => {
                           thumbnailImages[selectedImage] || thumbnailImages[0]
                         }
                         alt={selectedStyleData?.name || "Ring Style"}
-                        className="w-full h-full object-cover transition-opacity duration-300"
+                        className={`w-full h-full object-cover transition-all duration-300 ${isVariantLoading ? 'blur-sm opacity-60' : ''}`}
                       />
+                    )}
+
+                    {/* Loading overlay for variant updates */}
+                    {isVariantLoading && !isImagesLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/30 z-10">
+                        <div className="w-10 h-10 border-3 border-[#328F94] border-t-transparent rounded-full animate-spin" />
+                      </div>
                     )}
 
                     <Button
