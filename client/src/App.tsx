@@ -1,3 +1,9 @@
+declare global {
+  interface Window {
+    gtag?: (command: string, id: string, config: Record<string, any>) => void;
+  }
+}
+
 import {
   BrowserRouter as Router,
   Routes,
@@ -110,6 +116,13 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 function MainLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const hideLayout = new URLSearchParams(location.search).get("hideLayout") === "true";
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag("config", "G-KTEHX66RXQ", {
+        page_path: location.pathname,
+      });
+    }
+  }, [location]);
 
   return (
     <div className="min-h-screen bg-white text-black">
