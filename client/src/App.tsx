@@ -116,14 +116,6 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 function MainLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const hideLayout = new URLSearchParams(location.search).get("hideLayout") === "true";
-  useEffect(() => {
-    if (window.gtag) {
-      window.gtag("config", "G-KTEHX66RXQ", {
-        page_path: location.pathname,
-      });
-    }
-  }, [location]);
-
   return (
     <div className="min-h-screen bg-white text-black">
       {!hideLayout && (
@@ -150,6 +142,14 @@ function App() {
   const dispatch = useDispatch();
   const token = useSelector((state: RootState) => state.auth.token);
 
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag("config", "G-J7JKTG3NQN", {
+        page_path: location.pathname,
+      });
+    }
+  }, [location]);
+  
   useEffect(() => {
     // Initialize auth state from localStorage on app start
     dispatch(initializeAuth());
