@@ -460,7 +460,7 @@ const PaymentPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header with back button */}
         <div className="mb-8">
           <Button
@@ -529,7 +529,7 @@ const PaymentPage = () => {
 
         {/* Promo Code Section */}
         {/* {isDirectPurchase && ( */}
-        <div className="bg-white rounded-lg p-6 mb-8">
+        <div className="bg-white rounded-lg p-6 mb-8 shadow-lg">
           <h2 className="text-xl font-semibold text-gray-900 mb-3">
             Coupon Code
           </h2>
@@ -581,7 +581,7 @@ const PaymentPage = () => {
         {/* )} */}
 
         {/* Referral Wallet Section */}
-        <div className="bg-white rounded-lg p-6 mb-8">
+        <div className="bg-white rounded-lg p-6 mb-8 shadow-lg">
           <h2 className="text-xl font-semibold text-gray-900 mb-3">
             Referral Wallet
           </h2>

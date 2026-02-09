@@ -199,7 +199,7 @@ const Navigation: React.FC = () => {
             <div className="relative group">
               <div
                 className={`px-3 py-4 block transition-colors hover:bg-[#68C5C0] hover:text-white ${
-                  isActive("/") ? "bg-[#68C5C0] text-white" : ""
+                  isActive("/jewellery") ? "bg-[#68C5C0] text-white" : ""
                 }`}
               >
                 JEWELLERY

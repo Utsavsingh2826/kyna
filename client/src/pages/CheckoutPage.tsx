@@ -1356,7 +1356,7 @@ const CheckoutPage = () => {
           {/* Billing Address Section */}
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
-              Billing Information
+              Information
             </h2>
 
             <div className="space-y-6">

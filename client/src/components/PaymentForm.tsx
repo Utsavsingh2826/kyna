@@ -736,7 +736,7 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
 
       {/* Billing Information */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-4">Billing Information</h3>
+        <h3 className="text-lg font-semibold mb-4">Shipping Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
