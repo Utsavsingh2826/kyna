@@ -18,7 +18,7 @@ const columns = [
   {
     title: "EDUCATION",
     links: [
-      { label: "Blog", href: "/blog" },
+      { label: "Blog", href: "/blogs" },
       { label: "Ring Size Guide", href: "/RingSize-Education" },
       { label: "Bracelet Size Guide", href: "/Bracelet-education" },
     ],
