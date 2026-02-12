@@ -156,39 +156,42 @@ const Blogs = () => {
         </div>
 
         {/* Newsletter Section */}
-        <div className="bg-[#328F94] text-white h-24 gap-12 flex justify-center items-center">
-          <div
-            style={{ fontFamily: "Poppins, sans-serif" }}
-            className="flex max-w-sm flex-col"
-          >
-            <h2 className="font-bold">Let's Keep In Touch</h2>
-            <p className="text-[12px] text-wrap">
-              Be the first to know about new arrivals,
-              <br /> exclusive offers, and the latest trends.
-            </p>
-          </div>
-          <div className="">
-            <form className="flex gap-2" onSubmit={handleSubscribe}>
-              <Input
-                type="email"
-                placeholder="Your Email Address"
-                className="flex-1 text-black"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={isLoading}
-              />
-              <Button
-                type="submit"
-                className="px-3 h-10 bg-[#68C5C0] hover:bg-[#5ab3ae]"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <ArrowRight className="h-4 w-4 text-white" />
-                )}
-              </Button>
-            </form>
+        <div className="bg-[#328F94] text-white">
+          <div className="container mx-auto max-w-6xl px-4 py-6 sm:py-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-12">
+            <div
+              style={{ fontFamily: "Poppins, sans-serif" }}
+              className="max-w-sm flex flex-col text-center sm:text-left"
+            >
+              <h2 className="font-bold text-lg sm:text-xl">Let's Keep In Touch</h2>
+              <p className="text-[12px] sm:text-sm">
+                Be the first to know about new arrivals,
+                <br className="hidden sm:block" /> exclusive offers, and the latest trends.
+              </p>
+            </div>
+
+            <div className="w-full sm:w-auto">
+              <form className="flex w-full max-w-md gap-2" onSubmit={handleSubscribe}>
+                <Input
+                  type="email"
+                  placeholder="Your Email Address"
+                  className="flex-1 text-white h-10 min-w-0"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                />
+                <Button
+                  type="submit"
+                  className="px-3 h-10 bg-[#68C5C0] hover:bg-[#5ab3ae]"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4 text-white" />
+                  )}
+                </Button>
+              </form>
+            </div>
           </div>
         </div>
         {/* Blog Cards Section */}
