@@ -42,3 +42,13 @@ html {
     padding-right: 1rem;
   }
 }
+
+/* Sonner toast action button styling */
+[data-sonner-toast] [data-button] {
+  background-color: #68C5C0 !important;
+  color: white !important;
+}
+
+[data-sonner-toast] [data-button]:hover {
+  background-color: #2a7579 !important;
+}
