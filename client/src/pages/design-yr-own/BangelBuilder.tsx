@@ -955,7 +955,7 @@ export default function RingBuilder() {
             {/* Ring Image Display */}
             <div className="rounded-lg p-8 flex items-center justify-center min-h-64">
               <img
-                src="/navigation/upload-your-design/bangeldisplay.jpeg"
+                src="/thumb.jpeg"
                 alt="Bangle preview"
                 className="max-w-full max-h-full object-contain"
               />
