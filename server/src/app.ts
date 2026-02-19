@@ -496,6 +496,7 @@ process.on("SIGTERM", async () => {
 // MongoDB connection with retry and pooling options
 mongoose
   .connect(process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels", {
+    dbName: process.env.MONGO_DB_NAME || "catalog",
     maxPoolSize: 10,
     minPoolSize: 2,
     retryWrites: true,
