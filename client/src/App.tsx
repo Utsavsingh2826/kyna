@@ -1,3 +1,9 @@
+declare global {
+  interface Window {
+    gtag?: (command: string, id: string, config: Record<string, any>) => void;
+  }
+}
+
 import {
   BrowserRouter as Router,
   Routes,
@@ -110,7 +116,6 @@ function PublicRoute({ children }: { children: JSX.Element }) {
 function MainLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const hideLayout = new URLSearchParams(location.search).get("hideLayout") === "true";
-
   return (
     <div className="min-h-screen bg-white text-black">
       {!hideLayout && (
@@ -137,6 +142,14 @@ function App() {
   const dispatch = useDispatch();
   const token = useSelector((state: RootState) => state.auth.token);
 
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag("config", "G-J7JKTG3NQN", {
+        page_path: location.pathname,
+      });
+    }
+  }, [location]);
+  
   useEffect(() => {
     // Initialize auth state from localStorage on app start
     dispatch(initializeAuth());

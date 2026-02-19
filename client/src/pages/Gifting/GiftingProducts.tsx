@@ -1061,7 +1061,7 @@ export default function JewelleryPage({
               Filters
             </button>
           </div>
-
+           {/* hid hosrizonatal scroll bar */}
           <section className="eng-layout mt-5">
             <aside
               className="eng-filters sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto"
@@ -1080,7 +1080,7 @@ export default function JewelleryPage({
 
               {/* Price Filters */}
               <div className="mb-6 border-b pb-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Price</h3>
+                <h3 className="font-semibold ml-3 text-gray-900 mb-4">Price</h3>
                 <div className="space-y-3">
                   <button
                     onClick={() => {
@@ -1134,7 +1134,7 @@ export default function JewelleryPage({
 
               {/* Category Filters */}
               <div className="space-y-3">
-                <h3 className="font-semibold text-gray-900 mb-4">Category</h3>
+                <h3 className="font-semibold text-gray-900 ml-3 mb-4">Category</h3>
                 {["Rings", "Earrings", "Pendants", "Bracelets"].map((cat) => (
                   <button
                     key={cat}
@@ -1151,7 +1151,7 @@ export default function JewelleryPage({
                       }
                       setSearchParams(params, { replace: true });
                     }}
-                    className={`w-full text-left flex items-center justify-between px-2 py-2 rounded-lg transition-all ${selectedCategory === cat.toLowerCase()
+                    className={`w-full ml-4 text-left flex items-center justify-between px-2 py-2 rounded-lg transition-all ${selectedCategory === cat.toLowerCase()
                       ? "bg-teal-50 text-teal-700 font-medium"
                       : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}

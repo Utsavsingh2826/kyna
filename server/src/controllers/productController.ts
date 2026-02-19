@@ -2377,7 +2377,20 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
           variantSku: 1,
           parentSku: { $toUpper: "$attributes.PARENT SKU" },
           images: 1,
-          // Separate the image searches
+          // Filter for YG images first, then GP, then FV
+          ygImages: {
+            $filter: {
+              input: { $ifNull: ["$images", []] },
+              as: "img",
+              cond: {
+                $regexMatch: {
+                  input: { $toString: { $ifNull: ["$$img.url", ""] } },
+                  regex: "YG",
+                  options: "i"
+                }
+              }
+            }
+          },
           gpImages: {
             $filter: {
               input: { $ifNull: ["$images", []] },
@@ -2385,7 +2398,8 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
               cond: {
                 $regexMatch: {
                   input: { $toString: { $ifNull: ["$$img.url", ""] } },
-                  regex: "GP"
+                  regex: "GP",
+                  options: "i"
                 }
               }
             }
@@ -2397,7 +2411,8 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
               cond: {
                 $regexMatch: {
                   input: { $toString: { $ifNull: ["$$img.url", ""] } },
-                  regex: "FV"
+                  regex: "FV",
+                  options: "i"
                 }
               }
             }
@@ -2405,18 +2420,24 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
         }
       },
 
-      // Step 3: Pick the best image with clear priority
+      // Step 3: Pick the best image with YG priority
       {
         $addFields: {
           primaryImage: {
             $cond: {
-              if: { $gt: [{ $size: "$gpImages" }, 0] },
-              then: { $arrayElemAt: ["$gpImages", 0] },
+              if: { $gt: [{ $size: "$ygImages" }, 0] },
+              then: { $arrayElemAt: ["$ygImages", 0] },
               else: {
                 $cond: {
-                  if: { $gt: [{ $size: "$fvImages" }, 0] },
-                  then: { $arrayElemAt: ["$fvImages", 0] },
-                  else: { $arrayElemAt: [{ $ifNull: ["$images", []] }, 0] }
+                  if: { $gt: [{ $size: "$gpImages" }, 0] },
+                  then: { $arrayElemAt: ["$gpImages", 0] },
+                  else: {
+                    $cond: {
+                      if: { $gt: [{ $size: "$fvImages" }, 0] },
+                      then: { $arrayElemAt: ["$fvImages", 0] },
+                      else: { $arrayElemAt: [{ $ifNull: ["$images", []] }, 0] }
+                    }
+                  }
                 }
               }
             }
@@ -2431,7 +2452,6 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
           variants: {
             $push: { sku: "$variantSku" }
           },
-          // Collect all non-null images, then pick first
           allImages: {
             $push: "$primaryImage"
           }

@@ -246,7 +246,7 @@ const WishlistPage = () => {
                 : `Try browsing other categories or add some ${activeTab.toLowerCase()} items`}
             </p>
             <Link to="/">
-              <Button className="bg-teal-600 hover:bg-teal-700">
+              <Button className="bg-teal-600 text-white hover:bg-teal-700">
                 Continue Shopping
               </Button>
             </Link>
@@ -299,7 +299,7 @@ const WishlistPage = () => {
                   <div className="mt-auto">
                     <div className="flex gap-2 mb-2">
                       <Link to={buildProductUrl(item)} className="flex-1">
-                        <Button className="w-full bg-teal-600 hover:bg-teal-700">
+                        <Button className="w-full text-white bg-teal-600 hover:bg-teal-700">
                           Show Details
                         </Button>
                       </Link>

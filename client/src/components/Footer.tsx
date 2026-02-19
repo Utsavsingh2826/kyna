@@ -18,7 +18,7 @@ const columns = [
   {
     title: "EDUCATION",
     links: [
-      { label: "Blog", href: "/blog" },
+      { label: "Blog", href: "/blogs" },
       { label: "Ring Size Guide", href: "/RingSize-Education" },
       { label: "Bracelet Size Guide", href: "/Bracelet-education" },
     ],
@@ -100,19 +100,13 @@ const Footer: React.FC = () => {
 
   // Function to open Calendly popup
   const openCalendly = () => {
-    // Replace 'your-calendly-url' with your actual Calendly scheduling URL
-    const calendlyUrl = "https://calendly.com/enquiries-kynajewels"; // Update this with your actual Calendly URL
-
-    // Open Calendly in a popup window
-    window.open(
-      calendlyUrl,
-      "calendly-popup",
-      "width=800,height=600,scrollbars=yes,resizable=yes",
-    );
+    window.Calendly.initPopupWidget({
+      url: "https://calendly.com/enquiries-kynajewels",
+    });
   };
 
   return (
-    <footer className="border-t bg-white overflow-hidden">
+    <footer className="border-t mt-20 bg-white overflow-hidden">
       <div className="w-full max-w-7xl mx-auto px-4 py-10 md:py-14">
         {/* Mobile Accordion */}
         <div className="block md:hidden w-full">

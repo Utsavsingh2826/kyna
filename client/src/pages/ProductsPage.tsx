@@ -73,6 +73,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const priceDebounceRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const mainContainerRef = useRef<HTMLElement | null>(null);
+  const toastShownRef = useRef<boolean>(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +103,19 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       dispatch(fetchWishlist());
     }
   }, [dispatch, isAuthenticated, wishlistInitialized, wishlistLoading]);
+
+  // Show toast on engravings page
+  useEffect(() => {
+    if (isEngravingsPage && !toastShownRef.current) {
+      toastShownRef.current = true;
+      toast.success("Select a variant to add engraving in it", {
+        action: {
+          label: "Okay",
+          onClick: () => {},
+        },
+      });
+    }
+  }, [isEngravingsPage]);
 
   // Filter state management with backend parameter names - category-specific for all jewelry types
   const [activeFilters, setActiveFilters] = useState({

@@ -963,7 +963,7 @@ export default function RingBuilder() {
             {/* Ring Image Display */}
             <div className="rounded-lg p-8 flex items-center justify-center min-h-64">
               <img
-                src="/navigation/upload-your-design/pendantdisplay.jpg"
+                src="/thumb.jpeg"
                 alt="Pendant preview"
                 className="max-w-full max-h-full object-contain"
               />
