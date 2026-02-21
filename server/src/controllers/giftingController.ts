@@ -341,55 +341,37 @@ async function processProductsWithPricing(
     const variant = row.firstVariant;
     const product = row.product;
 
-    // Get image - prioritize Yellow Gold (YG) images
+    // Get image - use SAME logic as productController (product listing page)
+    // Priority: YG+GP > YG+FV > dual-YG+GP > dual-YG+FV > triple-tone+GP > triple-tone+FV > any YG
     let imageUrl: string | null = null;
     if (Array.isArray(variant.images) && variant.images.length > 0) {
-      // Priority: YG (Yellow Gold) > RG (Rose Gold) > WG (White Gold) > BR (Black Rhodium) > GP/FV
-      const ygImg = variant.images.find(
-        (i: any) =>
-          typeof i?.url === 'string' &&
-          (i.url.toUpperCase().includes('YG') ||
-            i.url.toUpperCase().includes('_YG_') ||
-            i.url.toUpperCase().includes('-YG-'))
-      );
+      const upperImages = variant.images.map((i: any) => ({
+        raw: i,
+        url: (i?.url || i?.filename || '').toUpperCase(),
+      }));
 
-      const rgImg = variant.images.find(
-        (i: any) =>
-          typeof i?.url === 'string' &&
-          (i.url.toUpperCase().includes('RG') ||
-            i.url.toUpperCase().includes('_RG_') ||
-            i.url.toUpperCase().includes('-RG-'))
-      );
+      // helpers - same as productController
+      const isPureYG = (u: string) =>
+        u.includes('YG') && !u.includes('WG') && !u.includes('RG') && !u.includes('BG');
+      const isDualYG = (u: string) =>
+        u.includes('YG') && (u.includes('WG') || u.includes('RG') || u.includes('BG'));
+      const isTripleTone = (u: string) =>
+        ['YG', 'WG', 'RG', 'BG'].filter(m => u.includes(m)).length >= 3;
 
-      const wgImg = variant.images.find(
-        (i: any) =>
-          typeof i?.url === 'string' &&
-          (i.url.toUpperCase().includes('WG') ||
-            i.url.toUpperCase().includes('_WG_') ||
-            i.url.toUpperCase().includes('-WG-'))
-      );
+      const img =
+        upperImages.find(i => isPureYG(i.url) && i.url.includes('GP')) ||
+        upperImages.find(i => isPureYG(i.url) && i.url.includes('FV')) ||
 
-      const brImg = variant.images.find(
-        (i: any) =>
-          typeof i?.url === 'string' &&
-          (i.url.toUpperCase().includes('BR') ||
-            i.url.toUpperCase().includes('_BR_') ||
-            i.url.toUpperCase().includes('-BR-'))
-      );
+        upperImages.find(i => isDualYG(i.url) && i.url.includes('GP')) ||
+        upperImages.find(i => isDualYG(i.url) && i.url.includes('FV')) ||
 
-      const gpImg = variant.images.find(
-        (i: any) =>
-          typeof i?.url === 'string' && i.url.toUpperCase().includes('GP'),
-      );
+        upperImages.find(i => isTripleTone(i.url) && i.url.includes('GP')) ||
+        upperImages.find(i => isTripleTone(i.url) && i.url.includes('FV')) ||
 
-      const fvImg = variant.images.find(
-        (i: any) =>
-          typeof i?.url === 'string' && i.url.toUpperCase().includes('FV'),
-      );
+        upperImages.find(i => i.url.includes('YG')) || // final YG fallback
+        null;
 
-      // Select image with priority: YG > RG > WG > BR > GP > FV
-      const img = ygImg || rgImg || wgImg || brImg || gpImg || fvImg || null;
-      imageUrl = img?.url || img?.filename || null;
+      imageUrl = img?.raw?.url || img?.raw?.filename || null;
     }
 
     // Calculate price
