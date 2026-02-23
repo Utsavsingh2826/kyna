@@ -1067,7 +1067,8 @@ export default function RingBuilder() {
                     src="/build_yr_own/ring.mp4"
                     className="max-w-full max-h-full object-contain rounded-lg"
                     loop
-                    muted={isVideoMuted}
+                    // muted={isVideoMuted}
+                    muted={false}
                     playsInline
                   />
                   
