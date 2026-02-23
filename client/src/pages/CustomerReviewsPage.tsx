@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Star, CheckCircle } from "lucide-react";
 import SEO from "@/components/SEO";
-import StoreLocator from "@/components/StoreLocator";
 
 interface ProductReview {
   _id: string;
@@ -369,7 +368,6 @@ const CustomerReviewsPage: React.FC = () => {
             </div>
           )}
         </div>
-        <StoreLocator />
       </div>
     </>
   );
