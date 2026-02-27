@@ -1,101 +1,167 @@
 import { Request, Response } from 'express';
-import GiftCard, { IGiftCard } from '../models/giftCardModel';
+import GiftCard from '../models/giftCardModel';
 import User from '../models/userModel';
-import { sendEmail } from '../services/email';
 import { AuthRequest } from '../types';
+import { getRazorpayInstance, createOrderPayload, verifyWebhookSignature } from '../utils/razorpay';
+import crypto from 'crypto';
 
-// Create a new gift card
-export const createGiftCard = async (req: Request, res: Response): Promise<void> => {
+// Helper to generate unique voucher code
+const generateVoucherCode = (): string => {
+    const timestamp = Date.now().toString().slice(-4);
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `KYNAGC${timestamp}${random}`;
+};
+
+// Create a new gift card order
+export const createGiftCardOrder = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { from, to, amount } = req.body;
+        const userId = req.user?._id;
+        const { amount, type } = req.body;
 
-        // Validation
-        if (!from || !to || !amount) {
-            res.status(400).json({
+        if (!userId) {
+            res.status(401).json({
                 success: false,
-                message: 'From, to, amount, and recipient email are required',
+                message: 'Please log in to purchase a gift card',
             });
             return;
         }
 
-        if (amount < 1) {
+        if (!amount || !type) {
             res.status(400).json({
                 success: false,
-                message: 'Amount must be at least ₹1',
+                message: 'Amount and type are required',
             });
             return;
         }
 
-        // Email validation
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(to)) {
+        if (amount < 2500) {
             res.status(400).json({
                 success: false,
-                message: 'Please provide a valid email address',
+                message: 'Amount must be at least ₹2500',
             });
             return;
         }
 
-        // Check if recipient is an existing user
-        const existingUser = await User.findOne({ email: to });
+        // Create Razorpay order
+        const razorpay = getRazorpayInstance();
+        const payload = createOrderPayload(amount);
 
-        // Create gift card
+        const razorpayOrder = await razorpay.orders.create(payload);
+
+        // Save pending gift card purchase
         const giftCard = new GiftCard({
-            from,
-            to,
+            userId,
             amount,
+            points: amount, // ₹X → X points
+            type,
+            razorpayOrderId: razorpayOrder.id,
+            status: 'pending',
         });
 
         await giftCard.save();
 
-        // If user exists, add gift to their gifts array
-        if (existingUser) {
-            existingUser.gifts.push(giftCard._id);
-            await existingUser.save();
-        }
-
-        // Send email to recipient
-        try {
-            const emailContent = `
-                <h2>🎁 You've received a gift card!</h2>
-                <p>From: ${from}</p>
-                <p>Amount: $${amount}</p>
-                <p>Gift Card ID: ${giftCard._id.toString()}</p>
-                <p>Use this gift card code at checkout to redeem your gift!</p>
-            `;
-            await sendEmail(
-                to,
-                `🎁 You've received a gift card from ${from}!`,
-                emailContent
-            );
-        } catch (emailError) {
-            console.error('Failed to send gift card email:', emailError);
-            // Don't fail the request if email fails, but log it
-        }
-
-        res.status(201).json({
+        res.status(200).json({
             success: true,
-            message: 'Gift card created and sent successfully!',
             data: {
-                id: giftCard._id,
-                from: giftCard.from,
-                to: giftCard.to,
-                amount: giftCard.amount,
+                razorpayOrderId: razorpayOrder.id,
+                amount: razorpayOrder.amount,
+                currency: razorpayOrder.currency,
+                key: process.env.RAZORPAY_KEY_ID,
             },
         });
-    } catch (error) {
-        console.error('Error creating gift card:', error);
+    } catch (error: any) {
+        console.error('Error creating gift card order:', error);
         res.status(500).json({
             success: false,
-            message: 'Internal server error',
+            message: error.message || 'Internal server error',
         });
     }
 };
 
-// Redeem a gift card (when user clicks on gift link)
+// Verify payment and activate gift card
+export const verifyPayment = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
+        if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+            res.status(400).json({
+                success: false,
+                message: 'Missing required payment verification fields',
+            });
+            return;
+        }
 
-// Get user's gifts
+        // Verify signature
+        const secret = process.env.RAZORPAY_KEY_SECRET || '';
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+            .createHmac('sha256', secret)
+            .update(body.toString())
+            .digest('hex');
+
+        if (expectedSignature !== razorpay_signature) {
+            res.status(400).json({
+                success: false,
+                message: 'Invalid payment signature',
+            });
+            return;
+        }
+
+        // Find the gift card
+        const giftCard = await GiftCard.findOne({ razorpayOrderId: razorpay_order_id });
+        if (!giftCard) {
+            res.status(404).json({
+                success: false,
+                message: 'Gift card order not found',
+            });
+            return;
+        }
+
+        if (giftCard.status !== 'pending') {
+            res.status(400).json({
+                success: false,
+                message: 'Gift card already processed',
+            });
+            return;
+        }
+
+        // Payment success logic
+        const voucherCode = generateVoucherCode();
+
+        giftCard.status = 'active';
+        giftCard.razorpayPaymentId = razorpay_payment_id;
+        giftCard.voucherCode = voucherCode;
+        await giftCard.save();
+
+        // Credit points to user
+        const user = await User.findById(giftCard.userId);
+        if (user) {
+            user.points = (user.points || 0) + giftCard.points;
+            // Also store in gifts array if not already there
+            if (!user.gifts.includes(giftCard._id)) {
+                user.gifts.push(giftCard._id);
+            }
+            await user.save();
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Payment verified and gift card activated!',
+            data: {
+                voucherCode,
+                pointsCredited: giftCard.points,
+            },
+        });
+    } catch (error: any) {
+        console.error('Error verifying gift card payment:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Internal server error',
+        });
+    }
+};
+
+// GET user's gift cards (existing method update)
 export const getUserGifts = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const userId = req.user?._id;
@@ -103,23 +169,16 @@ export const getUserGifts = async (req: AuthRequest, res: Response): Promise<voi
         if (!userId) {
             res.status(401).json({
                 success: false,
-                message: 'Please log in to view your gifts',
+                message: 'Please log in to view your gift cards',
             });
             return;
         }
 
-        const user = await User.findById(userId).populate('gifts');
-        if (!user) {
-            res.status(404).json({
-                success: false,
-                message: 'User not found',
-            });
-            return;
-        }
+        const giftCards = await GiftCard.find({ userId }).sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
-            data: user.gifts,
+            data: giftCards,
         });
     } catch (error) {
         console.error('Error fetching user gifts:', error);
@@ -129,73 +188,3 @@ export const getUserGifts = async (req: AuthRequest, res: Response): Promise<voi
         });
     }
 };
-
-
-
-// Claim a gift card from email link (when user clicks on email link after login)
-export const claimGiftFromEmail = async (req: AuthRequest, res: Response): Promise<void> => {
-    try {
-        const { giftCardId } = req.params;
-        const userId = req.user?._id;
-
-        if (!userId) {
-            res.status(401).json({
-                success: false,
-                message: 'Please log in to claim your gift',
-            });
-            return;
-        }
-
-        const giftCard = await GiftCard.findById(giftCardId);
-        if (!giftCard) {
-            res.status(404).json({
-                success: false,
-                message: 'Gift card not found',
-            });
-            return;
-        }
-
-
-        const user = await User.findById(userId);
-        if (!user) {
-            res.status(404).json({
-                success: false,
-                message: 'User not found',
-            });
-            return;
-        }
-
-        // Check if gift is for this user's email
-        if (giftCard.to !== user.email) {
-            res.status(403).json({
-                success: false,
-                message: 'This gift card is not for your email address',
-            });
-            return;
-        }
-
-        // Add to user's gifts if not already there (don't redeem yet, just claim)
-        if (!user.gifts.includes(giftCard._id)) {
-            user.gifts.push(giftCard._id);
-            await user.save();
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Gift card claimed successfully! You can now view it in your profile.',
-            data: {
-                id: giftCard._id,
-                from: giftCard.from,
-                to: giftCard.to,
-                amount: giftCard.amount,
-            },
-        });
-    } catch (error) {
-        console.error('Error claiming gift card:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-        });
-    }
-};
-

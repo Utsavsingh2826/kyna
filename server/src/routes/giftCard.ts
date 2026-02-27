@@ -1,18 +1,16 @@
 import express from 'express';
-import { createGiftCard, getUserGifts, claimGiftFromEmail } from '../controllers/giftCardController';
+import { createGiftCardOrder, verifyPayment, getUserGifts } from '../controllers/giftCardController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
 
-// Create a new gift card
-router.post('/', createGiftCard);
+// Create a new gift card order (Razorpay)
+router.post('/create-order', authenticateToken, createGiftCardOrder);
 
-// Claim a gift from email link (requires authentication)
-router.post('/claim/:giftCardId', authenticateToken, claimGiftFromEmail);
+// Verify payment and activate card
+router.post('/verify-payment', authenticateToken, verifyPayment);
 
-// Redeem a gift card (requires authentication)
-
-// Get user's gifts (requires authentication)
+// Get user's gifts
 router.get('/my-gifts', authenticateToken, getUserGifts);
 
 export default router;

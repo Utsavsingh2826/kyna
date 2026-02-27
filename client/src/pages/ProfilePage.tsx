@@ -657,11 +657,10 @@ const ProfilePage: React.FC = () => {
                     }
                     setActiveSection(item.label);
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-b-0 ${
-                    activeSection === item.label
+                  className={`w-full flex items-center px-4 py-3 text-left transition-colors border-b border-gray-100 last:border-b-0 ${activeSection === item.label
                       ? "bg-[#328F94] text-white "
                       : "text-gray-700"
-                  }`}
+                    }`}
                 >
                   <item.icon className="w-5 h-5 mr-3" />
                   <span className="text-sm font-medium">{item.label}</span>
@@ -738,6 +737,12 @@ const ProfilePage: React.FC = () => {
                         {user?.firstName} {user?.lastName}
                       </h3>
                       <p className="text-gray-600">{user?.email}</p>
+                      {user?.points !== undefined && (
+                        <div className="mt-2 inline-flex items-center px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-sm font-medium border border-teal-100">
+                          <span className="w-2 h-2 bg-teal-500 rounded-full mr-2"></span>
+                          {user.points} Points Available
+                        </div>
+                      )}
                     </div>
                   </div>
 
