@@ -187,6 +187,14 @@ export default function RingBuilder() {
 
   const [isDragging, setIsDragging] = useState(false);
 
+  // Video player states
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+  const [showControls, setShowControls] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(true);
+
   // Store engraved images as blobs for batch upload
   const [engravingBlobs, setEngravingBlobs] = useState<
     { blob: Blob; url: string }[]
@@ -299,6 +307,73 @@ export default function RingBuilder() {
 
     return "";
   }, [authUser]);
+
+  // Video helper functions
+  const isVideo = (filePath: string) => {
+    return /\.(mp4|webm|mov)$/i.test(filePath);
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const toggleVideoPlayPause = () => {
+    if (videoRef.current) {
+      if (isVideoPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsVideoPlaying(!isVideoPlaying);
+    }
+  };
+
+  const skipForward = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = Math.min(
+        videoRef.current.currentTime + 10,
+        videoDuration,
+      );
+    }
+  };
+
+  const skipBackward = () => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = Math.max(
+        videoRef.current.currentTime - 10,
+        0,
+      );
+    }
+  };
+
+  const handleTimelineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value);
+    if (videoRef.current) {
+      videoRef.current.currentTime = newTime;
+      setVideoCurrentTime(newTime);
+    }
+  };
+
+  const handleVideoClick = () => {
+    setShowControls(!showControls);
+  };
+
+  const handleMouseEnter = () => {
+    setShowControls(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowControls(false);
+  };
+
+  const toggleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = !isVideoMuted;
+      setIsVideoMuted(!isVideoMuted);
+    }
+  };
 
   // Update userId when authUser changes
   useEffect(() => {
@@ -981,13 +1056,193 @@ export default function RingBuilder() {
         }
         rightColumn={
           <div className="space-y-6">
-            {/* Ring Image Display */}
-            <div className="rounded-lg p-8 flex items-center justify-center min-h-64">
-              <img
-                src="/thumb.jpeg"
-                alt="Necklace preview"
-                className="max-w-full max-h-full object-contain"
-              />
+            {/* Necklace Image/Video Display */}
+            <div className="rounded-lg p-8 flex items-center justify-center min-h-64 relative">
+              {isVideo("/720p-NECKLACE.mp4") ? (
+                <div
+                  className="relative w-full h-full"
+                  onMouseEnter={handleMouseEnter}
+                  onMouseLeave={handleMouseLeave}
+                  onClick={handleVideoClick}
+                >
+                  <video
+                    ref={videoRef}
+                    src="/720p-NECKLACE.mp4"
+                    className="max-w-full max-h-full object-contain rounded-lg"
+                    // muted={isVideoMuted}
+                    muted={false}
+                    onLoadedMetadata={(e) => {
+                      const video = e.currentTarget;
+                      setVideoDuration(video.duration);
+                    }}
+                    onTimeUpdate={(e) => {
+                      const video = e.currentTarget;
+                      setVideoCurrentTime(video.currentTime);
+                    }}
+                  />
+
+                  {/* Video Controls Overlay */}
+                  <div
+                    className={`absolute inset-0 flex flex-col items-center justify-center transition-opacity duration-300 ${
+                      showControls ? "opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    {/* Center Controls */}
+                    <div className="flex items-center gap-6 mb-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          skipBackward();
+                        }}
+                        className="w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-all"
+                      >
+                        <svg
+                          className="w-6 h-6"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0019 16V8a1 1 0 00-1.6-.8l-5.333 4zM4.066 11.2a1 1 0 000 1.6l5.334 4A1 1 0 0011 16V8a1 1 0 00-1.6-.8l-5.334 4z"
+                          />
+                        </svg>
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleVideoPlayPause();
+                        }}
+                        className="w-16 h-16 rounded-full bg-[#328F94] hover:bg-[#267278] flex items-center justify-center text-white transition-all shadow-lg"
+                      >
+                        {isVideoPlaying ? (
+                          <svg
+                            className="w-8 h-8"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+                          </svg>
+                        ) : (
+                          <svg
+                            className="w-8 h-8 ml-1"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          skipForward();
+                        }}
+                        className="w-12 h-12 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-all"
+                      >
+                        <svg
+                          className="w-6 h-6"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11.933 12.8a1 1 0 000-1.6L6.6 7.2A1 1 0 005 8v8a1 1 0 001.6.8l5.333-4zM19.933 12.8a1 1 0 000-1.6l-5.333-4A1 1 0 0013 8v8a1 1 0 001.6.8l5.333-4z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Mute Button */}
+                    {/* <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMute();
+                      }}
+                      className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center text-white transition-all"
+                    >
+                      {isVideoMuted ? (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"
+                          />
+                        </svg>
+                      )}
+                    </button> */}
+                  </div>
+
+                  {/* Timeline at bottom */}
+                  <div
+                    className={`absolute bottom-4 left-4 right-4 transition-opacity duration-300 ${
+                      showControls ? "opacity-100" : "opacity-0"
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-center gap-2 text-white text-sm">
+                      <span className="min-w-[45px] text-[#328F94]">
+                        {formatTime(videoCurrentTime)}
+                      </span>
+                      <div className="flex-1 relative">
+                        <input
+                          type="range"
+                          min="0"
+                          max={videoDuration || 0}
+                          value={videoCurrentTime}
+                          onChange={handleTimelineChange}
+                          className="w-full h-1 bg-white/30 rounded-lg appearance-none cursor-pointer"
+                          style={{
+                            background: `linear-gradient(to right, #328F94 0%, #328F94 ${(videoCurrentTime / videoDuration) * 100}%, rgba(255,255,255,0.3) ${(videoCurrentTime / videoDuration) * 100}%, rgba(255,255,255,0.3) 100%)`,
+                          }}
+                        />
+                      </div>
+                      <span className="min-w-[45px] text-right text-[#328F94]">
+                        {formatTime(videoDuration)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src="/thumb.jpeg"
+                  alt="Necklace preview"
+                  className="max-w-full max-h-full object-contain"
+                />
+              )}
             </div>
 
             {/* Modification Input */}
