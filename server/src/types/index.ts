@@ -81,6 +81,7 @@ export interface IUser extends Document {
     appliedAt?: Date;
   }>;
   usedReferralCodes: string[];
+  points: number;
   comparePassword(candidatePassword: string): Promise<boolean>;
   createdAt: Date;
   updatedAt: Date;
@@ -214,11 +215,17 @@ export interface AuthRequest extends Request {
   userId?: string;
 }
 
-// Gift Card interface
 export interface IGiftCard extends Document {
-  from: string;
-  to: string;
+  userId: string | IUser;
   amount: number;
+  points: number;
+  voucherCode: string;
+  type: 'static' | 'custom';
+  razorpayOrderId: string;
+  razorpayPaymentId?: string;
+  status: 'pending' | 'active' | 'redeemed' | 'failed';
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Referral interface

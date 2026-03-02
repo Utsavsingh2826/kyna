@@ -70,6 +70,14 @@ class ApiService {
     }
   }
 
+  // Generic post method
+  public async post<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
   // Auth APIs
   async signup(userData: { name: string; email: string; password: string }) {
     return this.makeRequest("/auth/signup", {
@@ -491,6 +499,29 @@ class ApiService {
     return this.makeRequest("/address/copy-billing-to-shipping", {
       method: "POST",
     });
+  }
+
+  // Gift Card APIs
+  async createGiftCardOrder(amount: number, type: "static" | "custom") {
+    return this.makeRequest("/gift-cards/create-order", {
+      method: "POST",
+      body: JSON.stringify({ amount, type }),
+    });
+  }
+
+  async verifyGiftCardPayment(paymentData: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) {
+    return this.makeRequest("/gift-cards/verify-payment", {
+      method: "POST",
+      body: JSON.stringify(paymentData),
+    });
+  }
+
+  async getMyGiftCards() {
+    return this.makeRequest("/gift-cards/my-gifts");
   }
 }
 

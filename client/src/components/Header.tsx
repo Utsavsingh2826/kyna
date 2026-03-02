@@ -35,7 +35,7 @@ declare global {
   }
 }
 
-export {};
+export { };
 
 export default function Navbar() {
   const isAuthenticated = useSelector(
@@ -157,10 +157,15 @@ export default function Navbar() {
                       <div className="py-1">
                         {isAuthenticated ? (
                           <>
-                            <div className="px-3 py-2 text-xs text-gray-500">
+                            <div className="px-3 py-2 text-xs text-gray-500 border-b">
                               {displayName
                                 ? `Signed in as ${displayName}`
                                 : "Signed in"}
+                              {isAuthenticated && (
+                                <div className="mt-1 font-semibold text-[#328F94]">
+                                  Points: {useSelector((state: RootState) => state.auth.user?.points || 0)}
+                                </div>
+                              )}
                             </div>
                             <button
                               className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-[#68C5C0]/15"
@@ -628,10 +633,9 @@ function CollapsibleSection({
               <NavLink
                 to={getBasePath(title)}
                 className={({ isActive }) =>
-                  `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${
-                    isActive
-                      ? "bg-[#68C5C0]/20 text-foreground"
-                      : "text-muted-foreground"
+                  `flex-1 block rounded-md px-3 py-3 text-sm font-medium uppercase tracking-wide hover:bg-[#68C5C0]/15 ${isActive
+                    ? "bg-[#68C5C0]/20 text-foreground"
+                    : "text-muted-foreground"
                   }`
                 }
               >
@@ -709,8 +713,7 @@ function CollapsibleSection({
                   <NavLink
                     to={getLinkForItem(title, item)}
                     className={({ isActive }) =>
-                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${
-                        isActive ? "bg-[#68C5C0]/20" : ""
+                      `block rounded-md px-3 py-2 text-sm hover:bg-[#68C5C0]/15 ${isActive ? "bg-[#68C5C0]/20" : ""
                       }`
                     }
                   >

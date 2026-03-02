@@ -185,6 +185,8 @@ export interface IOrder extends Document {
   razorpayPaymentId?: string;
   razorpaySignature?: string;
   paidAt?: Date;
+  giftCardVoucher?: string;
+  giftCardAmount?: number;
   createdAt: Date;
   updatedAt: Date;
   updateStatus(
@@ -492,6 +494,9 @@ const orderSchema = new Schema<IOrder>(
     paidAt: {
       type: Date,
     },
+    // Gift card details
+    giftCardVoucher: { type: String, trim: true },
+    giftCardAmount: { type: Number, min: 0 },
     // Estimated delivery information (required) from courier API
     estimatedDelivery: { type: String, required: true },
     // Day label for the estimated delivery (optional)
@@ -533,17 +538,41 @@ orderSchema.methods.updateStatus = async function (
   if (paymentResponse) {
     this.paymentResponse = paymentResponse;
   }
-  
+
   // Set paidAt timestamp when payment is successful
   if (newStatus === OrderStatus.SUCCESS && !this.paidAt) {
     this.paidAt = new Date();
+
+    // Finalize Gift Card Redemption on Success - handles both webhook and manual verify
+    if (this.giftCardVoucher && this.giftCardAmount && this.giftCardAmount > 0) {
+      try {
+        const GiftCard = mongoose.model('GiftCard');
+        const giftCard = await GiftCard.findOne({
+          voucherCode: this.giftCardVoucher.toUpperCase(),
+        });
+
+        if (giftCard) {
+          console.log(`🎁 Redeeming used gift card: ${giftCard.voucherCode}`);
+          // Mark as redeemed first just in case deletion fails
+          await GiftCard.findByIdAndUpdate(giftCard._id, {
+            amount: 0,
+            status: 'redeemed'
+          });
+          // Then delete from database as requested
+          await GiftCard.findByIdAndDelete(giftCard._id);
+          console.log(`✅ Success: Gift card ${giftCard.voucherCode} balance zeroed and deleted.`);
+        }
+      } catch (gcError) {
+        console.error("❌ Failed to process gift card redemption on status update:", gcError);
+      }
+    }
   }
-  
+
   const savedOrder = await this.save();
-  
+
   // Note: Order confirmation email is handled by OrderModel hooks
   // to avoid duplicate emails when both PaymentOrder and OrderModel are updated
-  
+
   return savedOrder;
 };
 

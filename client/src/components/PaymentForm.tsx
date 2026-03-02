@@ -63,6 +63,10 @@ interface PaymentFormProps {
     zipCode?: string;
     country?: string;
   };
+  giftCardVoucher?: string;
+  giftCardAmount?: number;
+  promoCode?: string;
+  promoDiscount?: number;
   onPaymentInitiated?: (orderId: string) => void;
   onError?: (error: string) => void;
 }
@@ -76,6 +80,10 @@ type ServiceabilityStatus =
 const PaymentForm: React.FC<PaymentFormProps> = ({
   orderData,
   userInfo,
+  giftCardVoucher,
+  giftCardAmount,
+  promoCode,
+  promoDiscount,
   onPaymentInitiated,
   onError,
 }) => {
@@ -400,6 +408,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
         items: orderData.items,
         orderDetails: orderData.orderDetails,
         images: orderData.images || [],
+        giftCardVoucher,
+        giftCardAmount,
+        promoCode,
+        promoDiscount,
         estimatedDelivery:
           orderData.orderDetails?.estimatedDelivery || "03-04-05",
         estimatedDeliveryDay:
@@ -519,6 +531,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({
             items: orderData.items,
             orderDetails: orderData.orderDetails,
             images: orderData.images || [],
+            giftCardVoucher,
+            giftCardAmount,
+            promoCode,
+            promoDiscount,
             estimatedDelivery:
               orderData.orderDetails?.estimatedDelivery || "03-04-05",
             estimatedDeliveryDay:

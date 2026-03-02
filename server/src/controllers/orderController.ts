@@ -5,6 +5,7 @@ import OrderModel from "../models/orderModel";
 import Cart from "../models/cartModel";
 import Product from "../models/productModel";
 import User from "../models/userModel";
+import GiftCard from "../models/giftCardModel";
 import nodemailer from "nodemailer";
 
 interface TrackOrderRequest {
@@ -106,11 +107,11 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
       );
       variantConfigWithImages.variantImages =
         variantConfigWithImages.variantImages &&
-        Array.isArray(variantConfigWithImages.variantImages)
+          Array.isArray(variantConfigWithImages.variantImages)
           ? variantConfigWithImages.variantImages
           : product.images && Array.isArray(product.images)
-          ? product.images
-          : [];
+            ? product.images
+            : [];
 
       orderItems.push({
         product: product._id,
@@ -129,7 +130,32 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
     // Calculate totals
     const gst = calculateGST(subtotal);
     const shippingCharge = subtotal > 5000 ? 0 : 200;
-    const totalAmount = subtotal + gst + shippingCharge;
+    let totalBeforeGiftCard = subtotal + gst + shippingCharge;
+
+    // Gift Card Redemption
+    const { giftCardVoucher, giftCardAmount } = req.body;
+    let giftCardInfo = undefined;
+
+    if (giftCardVoucher && giftCardAmount > 0) {
+      const giftCard = await GiftCard.findOne({
+        voucherCode: giftCardVoucher.toUpperCase(),
+        status: 'active'
+      });
+
+      if (!giftCard) {
+        return res.status(400).json({ message: "Invalid or inactive gift card voucher" });
+      }
+
+      const actualDiscount = Math.min(giftCard.amount, totalBeforeGiftCard);
+      totalBeforeGiftCard -= actualDiscount;
+
+      giftCardInfo = {
+        code: giftCard.voucherCode,
+        amount: actualDiscount
+      };
+    }
+
+    const totalAmount = totalBeforeGiftCard;
 
     // Create order
     const collectedImages = orderItems
@@ -149,6 +175,7 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
       gst,
       shippingCharge,
       totalAmount,
+      giftCardSummary: giftCardInfo,
       estimatedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       statusHistory: [
         {
@@ -168,9 +195,8 @@ export const createDirectOrder = async (req: AuthRequest, res: Response) => {
 
     (order as any).productDetails = {
       isDirectPurchase: true,
-      description: `Direct purchase: ${
-        (orderItems[0] && (orderItems[0] as any).productTitle) || "product"
-      }`,
+      description: `Direct purchase: ${(orderItems[0] && (orderItems[0] as any).productTitle) || "product"
+        }`,
       product: {
         modelSku: (orderItems[0] as any)?.productSku,
         title: (orderItems[0] as any)?.productTitle,
@@ -281,7 +307,32 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
     const subtotal = cart.totalAmount;
     const gst = calculateGST(subtotal);
     const shippingCharge = subtotal > 5000 ? 0 : 200; // Free shipping above ₹5000
-    const totalAmount = subtotal + gst + shippingCharge;
+    let totalBeforeGiftCard = subtotal + gst + shippingCharge;
+
+    // Gift Card Redemption
+    const { giftCardVoucher, giftCardAmount, promoCode, promoDiscount } = req.body;
+    let giftCardInfo = undefined;
+
+    if (giftCardVoucher && giftCardAmount > 0) {
+      const giftCard = await GiftCard.findOne({
+        voucherCode: giftCardVoucher.toUpperCase(),
+        status: 'active'
+      });
+
+      if (!giftCard) {
+        return res.status(400).json({ message: "Invalid or inactive gift card voucher" });
+      }
+
+      const actualDiscount = Math.min(giftCard.amount, totalBeforeGiftCard);
+      totalBeforeGiftCard -= actualDiscount;
+
+      giftCardInfo = {
+        code: giftCard.voucherCode,
+        amount: actualDiscount
+      };
+    }
+
+    const totalAmount = totalBeforeGiftCard;
 
     console.log("Order totals:", {
       subtotal,
@@ -304,12 +355,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       );
       variantConfigWithImages.variantImages =
         variantConfigWithImages.variantImages &&
-        Array.isArray(variantConfigWithImages.variantImages)
+          Array.isArray(variantConfigWithImages.variantImages)
           ? variantConfigWithImages.variantImages
           : (productData as any)?.images &&
             Array.isArray((productData as any).images)
-          ? (productData as any).images
-          : [];
+            ? (productData as any).images
+            : [];
 
       return {
         product: productId,
@@ -326,23 +377,23 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
         // Map variant config to specific fields
         metalDetails: item.variantConfig
           ? {
-              type: item.variantConfig.metalType,
-              color: item.variantConfig.metalColor,
-              karat: item.variantConfig.goldKarat,
-            }
+            type: item.variantConfig.metalType,
+            color: item.variantConfig.metalColor,
+            karat: item.variantConfig.goldKarat,
+          }
           : undefined,
         diamondDetails: item.variantConfig
           ? {
-              shape: item.variantConfig.diamondShape,
-              size: item.variantConfig.diamondSize,
-              origin: item.variantConfig.diamondOrigin,
-              carat: item.variantConfig.diamondSize,
-            }
+            shape: item.variantConfig.diamondShape,
+            size: item.variantConfig.diamondSize,
+            origin: item.variantConfig.diamondOrigin,
+            carat: item.variantConfig.diamondSize,
+          }
           : undefined,
         ringDetails: item.variantConfig?.ringSize
           ? {
-              size: item.variantConfig.ringSize,
-            }
+            size: item.variantConfig.ringSize,
+          }
           : undefined,
         // Include engraving data
         engraving: item.variantConfig?.engravingText,
@@ -392,11 +443,11 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       // Add engraving details at order level
       engravingDetails: hasEngravingItems
         ? {
-            text: engravingTexts.join(", "),
-            imageUrl: orderItems.find((item) => item.engravingImageUrl)
-              ?.engravingImageUrl,
-            hasEngraving: hasEngravingItems,
-          }
+          text: engravingTexts.join(", "),
+          imageUrl: orderItems.find((item) => item.engravingImageUrl)
+            ?.engravingImageUrl,
+          hasEngraving: hasEngravingItems,
+        }
         : undefined,
       // Top-level images: store unique image URLs for the order
       images: collectedImages.length
@@ -426,6 +477,12 @@ export const createOrder = async (req: AuthRequest, res: Response) => {
       gst,
       shippingCharge,
       totalAmount,
+      giftCardSummary: giftCardInfo,
+      promoSummary: promoCode ? {
+        code: promoCode,
+        discountValue: promoDiscount || 0,
+        discountPercent: 0, // Fallback
+      } : undefined,
       estimatedDeliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
       statusHistory: [
         {
@@ -1569,16 +1626,14 @@ export const handleFailedPayment = async (req: Request, res: Response) => {
             <div class="order-details">
                 <h3>Order Details</h3>
                 <div class="product-info">
-                    ${
-                      productImageUrl
-                        ? `<img src="${productImageUrl}" alt="${productName}" class="product-image">`
-                        : ""
-                    }
+                    ${productImageUrl
+        ? `<img src="${productImageUrl}" alt="${productName}" class="product-image">`
+        : ""
+      }
                     <div class="product-details">
                         <h4>${productName}</h4>
-                        <p><strong>Category:</strong> ${
-                          productCategory || "Jewelry"
-                        }</p>
+                        <p><strong>Category:</strong> ${productCategory || "Jewelry"
+      }</p>
                         <p><strong>Quantity:</strong> ${quantity || 1}</p>
                         <p><strong>Price:</strong> ₹${price}</p>
                         <p><strong>Order ID:</strong> ${orderId}</p>
@@ -1592,9 +1647,8 @@ export const handleFailedPayment = async (req: Request, res: Response) => {
             </div>
             
             <div style="text-align: center;">
-                <a href="${
-                  retryPaymentUrl || "#"
-                }" class="retry-button">Retry Payment Now</a>
+                <a href="${retryPaymentUrl || "#"
+      }" class="retry-button">Retry Payment Now</a>
             </div>
             
             <h3>Next Steps:</h3>

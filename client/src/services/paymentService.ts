@@ -114,6 +114,10 @@ export interface PaymentInitiateRequest {
     url: string;
     uploadedAt?: Date | string;
   };
+  giftCardVoucher?: string;
+  giftCardAmount?: number;
+  promoCode?: string;
+  promoDiscount?: number;
 }
 
 export interface PaymentInitiateResponse {
