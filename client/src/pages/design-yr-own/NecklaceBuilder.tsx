@@ -1057,7 +1057,7 @@ export default function RingBuilder() {
         rightColumn={
           <div className="space-y-6">
             {/* Necklace Image/Video Display */}
-            <div className="rounded-lg p-8 flex items-center justify-center min-h-64 relative">
+            <div className="rounded-lg flex items-center justify-center min-h-64 relative">
               {isVideo("/720p-NECKLACE.mp4") ? (
                 <div
                   className="relative w-full h-full"
