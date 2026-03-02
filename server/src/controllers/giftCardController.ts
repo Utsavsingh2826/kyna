@@ -174,14 +174,75 @@ export const getUserGifts = async (req: AuthRequest, res: Response): Promise<voi
             return;
         }
 
-        const giftCards = await GiftCard.find({ userId }).sort({ createdAt: -1 });
+        const giftCards = await GiftCard.find({ userId, status: { $ne: 'redeemed' } }).sort({ createdAt: -1 });
+
+        const giftCardsWithKey = giftCards.map(card => ({
+            ...card.toObject(),
+            razorpayKeyId: process.env.RAZORPAY_KEY_ID
+        }));
 
         res.status(200).json({
             success: true,
-            data: giftCards,
+            data: giftCardsWithKey
         });
     } catch (error) {
         console.error('Error fetching user gifts:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+        });
+    }
+};
+// Validate a gift card voucher code
+export const validateVoucher = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { code, voucherCode } = req.body;
+        const finalCode = code || voucherCode;
+
+        if (!finalCode) {
+            res.status(400).json({
+                success: false,
+                message: 'Voucher code is required',
+            });
+            return;
+        }
+
+        const giftCard = await GiftCard.findOne({ voucherCode: finalCode.toUpperCase() });
+
+        if (!giftCard) {
+            res.status(404).json({
+                success: false,
+                message: 'Invalid voucher code',
+            });
+            return;
+        }
+
+        if (giftCard.status !== 'active') {
+            res.status(400).json({
+                success: false,
+                message: `This voucher is ${giftCard.status}`,
+            });
+            return;
+        }
+
+        if (giftCard.amount <= 0) {
+            res.status(400).json({
+                success: false,
+                message: 'This voucher has zero balance',
+            });
+            return;
+        }
+
+        res.status(200).json({
+            success: true,
+            data: {
+                code: giftCard.voucherCode,
+                amount: giftCard.amount,
+                applicableAmount: giftCard.amount, // Added for frontend compatibility
+            },
+        });
+    } catch (error: any) {
+        console.error('Error validating voucher:', error);
         res.status(500).json({
             success: false,
             message: 'Internal server error',

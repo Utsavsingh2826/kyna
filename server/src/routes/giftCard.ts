@@ -1,5 +1,5 @@
 import express from 'express';
-import { createGiftCardOrder, verifyPayment, getUserGifts } from '../controllers/giftCardController';
+import { createGiftCardOrder, verifyPayment, getUserGifts, validateVoucher } from '../controllers/giftCardController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
@@ -12,5 +12,8 @@ router.post('/verify-payment', authenticateToken, verifyPayment);
 
 // Get user's gifts
 router.get('/my-gifts', authenticateToken, getUserGifts);
+
+// Validate voucher
+router.post('/validate-voucher', authenticateToken, validateVoucher);
 
 export default router;

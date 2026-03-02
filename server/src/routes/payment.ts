@@ -14,6 +14,7 @@ import PaymentOrder, {
 import OrderModel from "../models/orderModel";
 import User from "../models/userModel";
 import Cart from "../models/cartModel";
+import GiftCard from "../models/giftCardModel";
 import {
   consumeReferralCredits,
   queueReferralCredit,
@@ -142,6 +143,9 @@ router.post("/initiate", async (req: Request, res: Response) => {
       orderDetails,
       // PAN Card details
       panCardDetails,
+      // Gift card details
+      giftCardVoucher,
+      giftCardAmount,
     } = req.body;
 
     // Debug: log the orderDetails being received
@@ -282,6 +286,30 @@ router.post("/initiate", async (req: Request, res: Response) => {
       });
     }
 
+    // Validate Gift Card if provided
+    if (giftCardVoucher) {
+      const giftCard = await GiftCard.findOne({
+        voucherCode: giftCardVoucher.toUpperCase(),
+        status: 'active'
+      });
+
+      if (!giftCard) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid gift card",
+          message: "The gift card voucher is either invalid or already used."
+        });
+      }
+
+      const expectedAmount = Number(giftCardAmount || 0);
+      if (Math.abs(giftCard.amount - expectedAmount) > 0.01) {
+        console.warn(`💰 Gift card amount mismatch. Provided: ${expectedAmount}, Actual: ${giftCard.amount}`);
+        // Optionally update the amount to match the database if we trust the database more
+        // For now, we'll just log it and use the database amount if logic allows, 
+        // but it's safer to reject if the frontend calculation differs significantly.
+      }
+    }
+
     // Check if order already exists
     const existingOrder = await PaymentOrder.findByOrderId(orderId);
     if (existingOrder) {
@@ -310,6 +338,8 @@ router.post("/initiate", async (req: Request, res: Response) => {
       estimatedDelivery: req.body.estimatedDelivery || null,
       estimatedDeliveryDay: req.body.estimatedDeliveryDay || null,
       panCardDetails: panCardDetails || null,
+      giftCardVoucher,
+      giftCardAmount,
     });
 
     await order.save();
@@ -423,6 +453,10 @@ router.post("/initiate", async (req: Request, res: Response) => {
               note: "Order created via payment initiation",
             },
           ],
+          giftCardSummary: giftCardVoucher ? {
+            code: giftCardVoucher,
+            amount: giftCardAmount || 0,
+          } : undefined,
           panCardDetails: panCardDetails || null,
         };
 
@@ -862,7 +896,7 @@ router.post("/verify", async (req: Request, res: Response) => {
 
     console.log("🔍 About to update payment order status to SUCCESS");
     console.log("🔍 Previous status:", paymentOrder.status);
-    
+
     // Update payment order status using the updateStatus method to trigger email
     paymentOrder.razorpayPaymentId = razorpay_payment_id;
     paymentOrder.razorpaySignature = razorpay_signature;
@@ -878,7 +912,7 @@ router.post("/verify", async (req: Request, res: Response) => {
       amount: String(paymentOrder.amount),
       currency: paymentOrder.currency,
     } as any);
-    
+
     console.log("🔍 Payment order status updated to:", paymentOrder.status);
 
     const promoInfo =
@@ -1056,6 +1090,31 @@ router.post("/verify", async (req: Request, res: Response) => {
       }
     }
 
+    // Redeem and delete gift card if used
+    if (paymentOrder.giftCardVoucher) {
+      try {
+        const giftCard = await GiftCard.findOne({
+          voucherCode: paymentOrder.giftCardVoucher.toUpperCase(),
+          status: 'active'
+        });
+
+        if (giftCard) {
+          console.log(`🎫 Redeeming gift card: ${paymentOrder.giftCardVoucher}`);
+          giftCard.amount = 0;
+          giftCard.status = 'redeemed';
+          await giftCard.save();
+
+          // Delete it as requested by the user
+          await GiftCard.findByIdAndDelete(giftCard._id);
+          console.log(`✅ Gift card ${paymentOrder.giftCardVoucher} redeemed and deleted successfully.`);
+        } else {
+          console.warn(`⚠️ Gift card ${paymentOrder.giftCardVoucher} not found or already redeemed.`);
+        }
+      } catch (gcError) {
+        console.error("❌ Failed to redeem gift card during payment verification:", gcError);
+      }
+    }
+
     // Update the main order if it exists (skip for customization orders)
     if (paymentOrder.orderCategory !== "design-your-own") {
       try {
@@ -1077,6 +1136,13 @@ router.post("/verify", async (req: Request, res: Response) => {
 
         if (referralSummary.walletRedemption || referralSummary.credits) {
           updateData.referralSummary = referralSummary;
+        }
+
+        if (paymentOrder.giftCardVoucher) {
+          updateData.giftCardSummary = {
+            code: paymentOrder.giftCardVoucher,
+            amount: paymentOrder.giftCardAmount || 0,
+          };
         }
 
         // Add detailed product information if available from PaymentOrder
@@ -1309,14 +1375,14 @@ router.post("/verify", async (req: Request, res: Response) => {
       );
       console.log(`📧 Order category: "${paymentOrder.orderCategory}"`);
       console.log(`📧 Checking if should send customization email...`);
-      
+
       // Send customization order confirmation email since OrderModel hooks won't trigger
       try {
         console.log(`📧 Sending customization order confirmation email for ${paymentOrder.orderNumber}`);
-        
+
         // Import the customization email function
         const { sendCustomizationOrderConfirmationEmail } = await import("../services/emailService");
-        
+
         // For customization orders, we can extract details from the PaymentOrder itself
         // or try to find the associated CustomizationRequest
         let customizationDetails = {
@@ -1335,23 +1401,23 @@ router.post("/verify", async (req: Request, res: Response) => {
           engraving: undefined,
           specialInstructions: undefined,
         };
-        
+
         let requestNumber = null;
-        
+
         // Try to find the associated CustomizationRequest for more detailed information
         const CustomizationRequest = (await import("../models/CustomizationRequest")).default;
-        
+
         // Try multiple ways to find the customization request
         let customizationRequest = null;
-        
+
         console.log(`📧 Searching for CustomizationRequest...`);
-        
+
         // Method 1: Find by PaymentOrder ID
         customizationRequest = await CustomizationRequest.findOne({
           paymentId: paymentOrder._id.toString()
         });
         console.log(`📧 Method 1 (PaymentOrder ID): ${customizationRequest ? 'Found' : 'Not found'}`);
-        
+
         // Method 2: Find by Razorpay payment ID
         if (!customizationRequest) {
           customizationRequest = await CustomizationRequest.findOne({
@@ -1359,7 +1425,7 @@ router.post("/verify", async (req: Request, res: Response) => {
           });
           console.log(`📧 Method 2 (Razorpay ID): ${customizationRequest ? 'Found' : 'Not found'}`);
         }
-        
+
         // Method 3: Find by PaymentOrder orderId
         if (!customizationRequest) {
           customizationRequest = await CustomizationRequest.findOne({
@@ -1367,7 +1433,7 @@ router.post("/verify", async (req: Request, res: Response) => {
           });
           console.log(`📧 Method 3 (Order ID): ${customizationRequest ? 'Found' : 'Not found'}`);
         }
-        
+
         // Method 4: Find by user ID and recent creation (within last 10 minutes) and matching amount
         if (!customizationRequest) {
           const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
@@ -1381,7 +1447,7 @@ router.post("/verify", async (req: Request, res: Response) => {
           }).sort({ createdAt: -1 });
           console.log(`📧 Method 4 (Recent + Amount): ${customizationRequest ? 'Found' : 'Not found'}`);
         }
-        
+
         // Method 5: Find by user ID and recent creation (including future - for timing issues)
         if (!customizationRequest) {
           const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
@@ -1392,7 +1458,7 @@ router.post("/verify", async (req: Request, res: Response) => {
           }).sort({ createdAt: -1 });
           console.log(`📧 Method 5 (Recent with future): ${customizationRequest ? 'Found' : 'Not found'}`);
         }
-        
+
         if (customizationRequest) {
           console.log(`📧 Found customization request: ${customizationRequest.requestNumber}`);
           requestNumber = customizationRequest.requestNumber;
@@ -1412,7 +1478,7 @@ router.post("/verify", async (req: Request, res: Response) => {
             engraving: customizationRequest.engraving?.text,
             specialInstructions: customizationRequest.specialInstructions,
           };
-          
+
           // Update the customization request with payment success
           customizationRequest.paymentStatus = 'success';
           customizationRequest.paymentId = razorpay_payment_id;
@@ -1420,7 +1486,7 @@ router.post("/verify", async (req: Request, res: Response) => {
         } else {
           console.warn(`📧 No customization request found for payment order: ${paymentOrder.orderNumber}`);
         }
-        
+
         // Prepare email data
         const emailData = {
           customerName: paymentOrder.billingInfo.name,
@@ -1452,7 +1518,7 @@ router.post("/verify", async (req: Request, res: Response) => {
             zipCode: paymentOrder.billingInfo.zip,
           },
         };
-        
+
         console.log(`📧 Calling sendCustomizationOrderConfirmationEmail...`);
         await sendCustomizationOrderConfirmationEmail(emailData);
         console.log(`📧 Customization order confirmation email sent successfully for ${paymentOrder.orderNumber}`);

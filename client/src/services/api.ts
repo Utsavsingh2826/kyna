@@ -70,6 +70,14 @@ class ApiService {
     }
   }
 
+  // Generic post method
+  public async post<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, {
+      method: "POST",
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  }
+
   // Auth APIs
   async signup(userData: { name: string; email: string; password: string }) {
     return this.makeRequest("/auth/signup", {

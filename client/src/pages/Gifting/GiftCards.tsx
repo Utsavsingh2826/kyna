@@ -139,6 +139,59 @@ const GiftingCards = () => {
     }
   };
 
+  const handleCompletePayment = (card: any) => {
+    if (!card.razorpayKeyId) {
+      toast.error("Configuration error: Razorpay key missing for this card.");
+      return;
+    }
+    setIsLoading(true);
+    const options = {
+      key: card.razorpayKeyId,
+      amount: card.amount * 100, // Razorpay expects paise
+      currency: "INR",
+      name: "Kyna Jewels",
+      description: `Gift Card Purchase - ₹${card.amount}`,
+      order_id: card.razorpayOrderId,
+      prefill: {
+        name: `${user?.firstName} ${user?.lastName}`.trim(),
+        email: user?.email || "",
+        contact: user?.phone || "",
+      },
+      theme: { color: "#328F94" },
+      handler: async (paymentResponse: any) => {
+        try {
+          const verifyResponse = await apiService.verifyGiftCardPayment({
+            razorpay_order_id: paymentResponse.razorpay_order_id,
+            razorpay_payment_id: paymentResponse.razorpay_payment_id,
+            razorpay_signature: paymentResponse.razorpay_signature,
+          });
+
+          if (verifyResponse.success) {
+            toast.success("Payment successful! Gift card activated.");
+            fetchMyGiftCards();
+          }
+        } catch (error) {
+          console.error("Verification error:", error);
+          toast.error("Verification failed.");
+        } finally {
+          setIsLoading(false);
+        }
+      },
+      modal: {
+        ondismiss: () => setIsLoading(false),
+      }
+    };
+
+    paymentService.openRazorpayCheckout(
+      options as any,
+      options.handler,
+      (error: any) => {
+        toast.error(error.message || "Payment failed");
+        setIsLoading(false);
+      }
+    );
+  };
+
   const handleCustomBuy = () => {
     const amount = parseInt(customAmount);
     if (isNaN(amount)) {
@@ -189,7 +242,7 @@ const GiftingCards = () => {
                   className="relative overflow-hidden hover:shadow-lg transition-shadow"
                 >
                   <div className="absolute top-3 left-3 z-10">
-                    <span className="bg-teal-500 text-white text-xs font-semibold px-2 py-1 rounded">
+                    <span className="bg-teal-500 text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-tighter">
                       {card.badge}
                     </span>
                   </div>
@@ -202,7 +255,8 @@ const GiftingCards = () => {
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-black/5"></div>
-                      <div className="absolute inset-0 flex items-center justify-center">
+                      {/* Shifted right to avoid badge overlap */}
+                      <div className="absolute inset-0 flex items-center justify-center translate-x-4">
                         <span className="text-2xl font-bold text-[#328F94] drop-shadow-sm">
                           ₹{card.amount.toLocaleString()}
                         </span>
@@ -210,7 +264,7 @@ const GiftingCards = () => {
                     </div>
 
                     <div className="text-center">
-                      <h3 className="font-semibold text-xs tracking-wider uppercase mb-4 text-gray-700">
+                      <h3 className="font-semibold text-[10px] tracking-wider uppercase mb-4 text-gray-700">
                         {card.title}
                       </h3>
 
@@ -227,34 +281,50 @@ const GiftingCards = () => {
                 </Card>
               ))}
 
-              {/* Custom Amount Card */}
-              <Card className="relative overflow-hidden hover:shadow-lg transition-shadow border-dashed border-2">
+              {/* Custom Amount Card - Improved UI */}
+              <Card className="relative overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="absolute top-3 left-3 z-10">
+                  <span className="bg-[#328F94] text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-tighter">
+                    CUSTOM
+                  </span>
+                </div>
+
                 <CardContent className="p-4">
-                  <div className="relative aspect-[1.6/1] mb-6 rounded-xl overflow-hidden shadow-md bg-gray-50 flex flex-col items-center justify-center gap-2 border border-dashed border-gray-300">
-                    <span className="text-xs text-gray-400 uppercase font-bold tracking-widest">Custom Amount</span>
-                    <div className="relative w-3/4">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#328F94] font-bold">₹</span>
-                      <Input
-                        type="number"
-                        placeholder="Min ₹2500"
-                        className="pl-8 text-center font-bold text-[#328F94] border-none focus-visible:ring-0 bg-transparent text-xl"
-                        value={customAmount}
-                        onChange={(e) => setCustomAmount(e.target.value)}
-                        min={2500}
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#68C5C0]/30"></div>
+                  <div className="relative aspect-[1.6/1] mb-6 rounded-xl overflow-hidden shadow-md group">
+                    <img
+                      src={giftCardImg}
+                      alt="Custom Gift Card"
+                      className="w-full h-full object-cover opacity-60 transition-transform duration-500 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-white/40"></div>
+
+                    {/* Input overlay - Shifted right */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center translate-x-4 pt-4">
+                      <span className="text-[10px] text-[#328F94] uppercase font-bold tracking-widest opacity-80 mb-1">Enter Amount</span>
+                      <div className="relative w-3/4">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[#328F94] font-bold text-xl">₹</span>
+                        <Input
+                          type="number"
+                          placeholder="2500+"
+                          className="pl-7 text-center font-bold text-[#328F94] border-none focus-visible:ring-0 bg-transparent text-2xl h-auto py-0"
+                          value={customAmount}
+                          onChange={(e) => setCustomAmount(e.target.value)}
+                          min={2500}
+                        />
+                        <div className="mx-auto w-24 h-0.5 bg-[#328F94]/30 mt-1"></div>
+                      </div>
                     </div>
                   </div>
 
                   <div className="text-center">
-                    <p className="text-[10px] text-gray-500 mb-2 uppercase tracking-tighter">Enter any value above ₹2500</p>
+                    <p className="text-[10px] text-gray-500 mb-4 uppercase tracking-tighter">Min. ₹2500 per card</p>
                     <Button
                       onClick={handleCustomBuy}
-                      className={`w-full font-semibold transition-all duration-300 ${isCustomAmountValid() ? 'bg-[#68C5C0] hover:bg-[#5bb3ae] text-white shadow-md' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+                      className={`w-full font-semibold transition-all duration-300 ${isCustomAmountValid() ? 'bg-[#328F94] hover:bg-[#2a7a7e] text-white shadow-md' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
                       size="sm"
                       disabled={isLoading || !isCustomAmountValid()}
                     >
-                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Purchase Custom Card"}
+                      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Purchase Custom"}
                     </Button>
                   </div>
                 </CardContent>
@@ -276,9 +346,9 @@ const GiftingCards = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {purchasedCards.map((card) => (
                     <Card key={card._id} className="overflow-hidden border-teal-100">
-                      <div className="bg-teal-500 p-4 text-white flex justify-between items-center">
-                        <span className="font-bold">₹{card.amount.toLocaleString()}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${card.status === 'active' ? 'bg-green-400' : card.status === 'redeemed' ? 'bg-gray-400' : 'bg-yellow-400'}`}>
+                      <div className="bg-teal-500 p-4 text-white flex justify-between items-center opacity-90">
+                        <span className="font-bold translate-x-2">₹{card.amount.toLocaleString()}</span>
+                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${card.status === 'active' ? 'bg-white text-teal-600' : card.status === 'redeemed' ? 'bg-gray-200 text-gray-600' : 'bg-yellow-400 text-yellow-900'}`}>
                           {card.status}
                         </span>
                       </div>
@@ -297,6 +367,18 @@ const GiftingCards = () => {
                             <span className="text-xs">{new Date(card.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
+
+                        {card.status === 'pending' && (
+                          <Button
+                            onClick={() => handleCompletePayment(card)}
+                            className="w-full mt-4 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold"
+                            size="sm"
+                            disabled={isLoading}
+                          >
+                            {isLoading ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : null}
+                            Complete Payment
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   ))}

@@ -102,6 +102,57 @@ const PaymentPage = () => {
   const [referralBalance, setReferralBalance] = useState(0);
   const [walletDiscount, setWalletDiscount] = useState(0);
   const [walletError, setWalletError] = useState("");
+
+  // Gift Card state
+  const [giftCardCode, setGiftCardCode] = useState("");
+  const [giftCardLoading, setGiftCardLoading] = useState(false);
+  const [giftCardError, setGiftCardError] = useState("");
+  const [appliedGiftCard, setAppliedGiftCard] = useState<{
+    code: string;
+    amount: number;
+  } | null>(null);
+
+  const handleApplyGiftCard = async () => {
+    if (!giftCardCode.trim()) return;
+    setGiftCardLoading(true);
+    setGiftCardError("");
+
+    try {
+      const response = await apiService.post<{ applicableAmount: number }>(
+        "/gift-cards/validate-voucher", // Fixed: use plural route as per server app.ts
+        {
+          voucherCode: giftCardCode.toUpperCase(),
+        }
+      );
+
+      if (response.success && response.data) {
+        setAppliedGiftCard({
+          code: giftCardCode.toUpperCase(),
+          amount: response.data.applicableAmount,
+        });
+        toast.success(`Gift card applied: ₹${response.data.applicableAmount}`);
+        setGiftCardCode("");
+      } else {
+        const errorMsg = response.error || response.message || "Invalid gift card voucher";
+        setGiftCardError(errorMsg);
+        toast.error(errorMsg);
+      }
+    } catch (err: any) {
+      console.error("Gift card validation error:", err);
+      const networkError = "Failed to validate gift card. Please try again.";
+      setGiftCardError(networkError);
+      toast.error(networkError);
+    } finally {
+      setGiftCardLoading(false);
+    }
+  };
+
+  const handleRemoveGiftCard = () => {
+    setAppliedGiftCard(null);
+    toast.info("Gift card removed");
+  };
+
+  // Pricing calculations
   const referralAvailableBalanceFromUser =
     Number(user?.referralAvailableBalance) || 0;
 
@@ -179,7 +230,7 @@ const PaymentPage = () => {
   }, [walletDiscount, maxWalletRedeemable]);
 
   const subtotalAfterDiscounts = Math.max(
-    totalAmount - promoDiscount - walletDiscount,
+    totalAmount - promoDiscount - walletDiscount - (appliedGiftCard?.amount || 0),
     0,
   );
   const payableAmount = subtotalAfterDiscounts;
@@ -212,6 +263,7 @@ const PaymentPage = () => {
     subtotal: totalAmount,
     promoDiscount,
     referralWallet: walletDiscount,
+    giftCardDiscount: appliedGiftCard?.amount || 0,
     taxableAmount: subtotalAfterDiscounts,
     tax: 0,
     payableAmount,
@@ -225,6 +277,10 @@ const PaymentPage = () => {
       : persistentOrderId ||
       `ORD_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`, // Fallback if persistent ID not ready
     amount: payableAmount,
+    giftCardVoucher: appliedGiftCard?.code,
+    giftCardAmount: appliedGiftCard?.amount,
+    promoCode: appliedPromo?.code,
+    promoDiscount: appliedPromo?.discountValue,
     items: itemsData.map((item: any) => ({
       name: item.product?.title || item.product?.name || "Product",
       quantity: item.quantity || 1,
@@ -478,7 +534,7 @@ const PaymentPage = () => {
             {isDirectPurchase ? "Back to Product" : "Back to Cart"}
           </Button>
 
-          <div className="bg-white rounded-lg p-6 mb-6">
+          <div className="bg-white rounded-lg p-6 mb-6 shadow-sm border border-gray-100">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Complete Your Payment
             </h1>
@@ -491,8 +547,14 @@ const PaymentPage = () => {
             </p>
             {appliedPromo && (
               <p className="text-sm text-green-700 mt-1">
-                Promo {appliedPromo.code} applied: now paying ₹
-                {payableAmount.toLocaleString()}
+                Promo {appliedPromo.code} applied: savings ₹
+                {promoDiscount.toLocaleString()}
+              </p>
+            )}
+            {appliedGiftCard && (
+              <p className="text-sm text-blue-700 mt-1">
+                Gift Card {appliedGiftCard.code} applied: savings ₹
+                {appliedGiftCard.amount.toLocaleString()}
               </p>
             )}
             {walletDiscount > 0 && (
@@ -501,143 +563,34 @@ const PaymentPage = () => {
                 {walletDiscount.toLocaleString("en-IN")}
               </p>
             )}
-            {isDirectPurchase && directPurchaseData?.orderData?.product && (
-              <div className="mt-3 text-sm text-gray-600">
-                <strong>Product:</strong>{" "}
-                {directPurchaseData.orderData.product.title}
-                {directPurchaseData.orderData.customization && (
-                  <div className="mt-1">
-                    <strong>Customization:</strong>{" "}
-                    {directPurchaseData.orderData.customization.metalColor},{" "}
-                    {directPurchaseData.orderData.customization.metalType}{" "}
-                    {directPurchaseData.orderData.customization.goldKarat},{" "}
-                    {directPurchaseData.orderData.customization.diamondShape}{" "}
-                    {directPurchaseData.orderData.customization.diamondSize}ct,{" "}
-                    {directPurchaseData.orderData.customization.diamondOrigin}
-                    {directPurchaseData.orderData.customization.ringSize && (
-                      <>
-                        , Size:{" "}
-                        {directPurchaseData.orderData.customization.ringSize}
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Promo Code Section */}
-        {/* {isDirectPurchase && ( */}
-        <div className="bg-white rounded-lg p-6 mb-8 shadow-lg">
-          <h2 className="text-xl font-semibold text-gray-900 mb-3">
-            Coupon Code
-          </h2>
-          <p className="text-sm text-gray-500 mb-4">
-            Apply a promo to get additional savings on the diamond value of your
-            order.
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Input
-              placeholder="Enter promo code"
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value)}
-              disabled={promoLoading || !!appliedPromo}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleApplyPromo}
-              disabled={promoLoading || !promoCode.trim() || !!appliedPromo}
-              className="bg-[#328F94] hover:bg-[#28777b]"
-            >
-              {promoLoading ? "Applying..." : "Apply Coupon"}
-            </Button>
-          </div>
-          {promoError && (
-            <p className="text-sm text-red-500 mt-2">{promoError}</p>
-          )}
-          {appliedPromo && (
-            <div className="mt-4 flex flex-col gap-2 rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="font-semibold">
-                  Promo {appliedPromo.code} applied
-                </p>
-                <p>
-                  Savings: ₹{appliedPromo.discountValue.toLocaleString()} on
-                  diamond value ₹{appliedPromo.diamondSubtotal.toLocaleString()}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRemovePromo}
-                className="text-red-600 hover:text-red-700"
-              >
-                Remove
-              </Button>
-            </div>
-          )}
-        </div>
-        {/* )} */}
-
-        {/* Referral Wallet Section */}
-        <div className="bg-white rounded-lg p-6 mb-8 shadow-lg">
-          <h2 className="text-xl font-semibold text-gray-900 mb-3">
-            Referral Wallet
-          </h2>
-          <p className="text-sm text-gray-600">
-            Wallet balance:{" "}
-            <span className="font-semibold">
-              ₹{displayedReferralBalance.toLocaleString("en-IN")}
-            </span>
-          </p>
-          {walletDiscount > 0 ? (
-            <p className="text-sm text-green-700 mt-1">
-              Redeeming ₹{walletDiscount.toLocaleString("en-IN")} on this order.
-            </p>
-          ) : (
-            <p className="text-sm text-gray-500 mt-1">
-              You can redeem up to ₹
-              {maxWalletRedeemable.toLocaleString("en-IN")} on this order.
-            </p>
-          )}
-          <div className="mt-4">
-            <Button
-              onClick={handleToggleWallet}
-              disabled={referralBalance <= 0 && walletDiscount <= 0}
-              className="bg-[#4c4f8f] hover:bg-[#3c3f72] text-white"
-            >
-              {walletDiscount > 0
-                ? "Remove Redemption"
-                : "Redeem Referral Earnings"}
-            </Button>
-          </div>
-          {walletError && (
-            <p className="text-sm text-red-500 mt-2">{walletError}</p>
-          )}
-        </div>
-
-        {/* Main content - Payment Form and Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Payment Form */}
-          <div className="lg:col-span-2">
+        {/* Main content - Payment Form on Left, Summary & Offers on Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Payment Form (Left Side) */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
             <PaymentForm
               orderData={orderData}
               userInfo={userInfo}
+              giftCardVoucher={appliedGiftCard?.code}
+              giftCardAmount={appliedGiftCard?.amount}
+              promoCode={appliedPromo?.code}
+              promoDiscount={appliedPromo?.discountValue}
               onPaymentInitiated={handlePaymentInitiated}
               onError={handleError}
             />
           </div>
 
-          {/* Order Summary Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg p-6 sticky top-4 shadow-sm border border-gray-200">
+          {/* Right Side - Summary and Voucher Inputs */}
+          <div className="space-y-6 lg:sticky lg:top-4">
+            {/* Order Summary */}
+            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Order Summary
               </h2>
 
-              {/* Items */}
-              <div className="space-y-3 mb-4 pb-4 border-b border-gray-200">
+              <div className="space-y-3 mb-4 pb-4 border-b border-gray-200 h-max max-h-48 overflow-y-auto">
                 {itemsData?.map((item: any, idx: number) => (
                   <div key={idx} className="flex justify-between text-sm">
                     <div>
@@ -652,6 +605,8 @@ const PaymentPage = () => {
                           {item.customization.metalColor},{" "}
                           {item.customization.metalType}{" "}
                           {item.customization.goldKarat}
+                          {item.customization.diamondShape &&
+                            `, ${item.customization.diamondShape} ${item.customization.diamondSize}ct`}
                           {item.customization.ringSize &&
                             `, Size: ${item.customization.ringSize}`}
                         </div>
@@ -664,7 +619,6 @@ const PaymentPage = () => {
                 ))}
               </div>
 
-              {/* Totals */}
               <div className="space-y-2">
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>Subtotal</span>
@@ -680,43 +634,149 @@ const PaymentPage = () => {
                     <span>-₹{promoDiscount.toLocaleString()}</span>
                   </div>
                 )}
+                {appliedGiftCard && (
+                  <div className="flex justify-between text-sm text-blue-600 font-medium">
+                    <span>Gift Card ({appliedGiftCard.code})</span>
+                    <span>-₹{appliedGiftCard.amount.toLocaleString()}</span>
+                  </div>
+                )}
                 {walletDiscount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
+                  <div className="flex justify-between text-sm text-indigo-600">
                     <span>Referral Wallet</span>
                     <span>-₹{walletDiscount.toLocaleString()}</span>
                   </div>
                 )}
                 <div className="border-t pt-3 mt-3">
-                  <div className="flex justify-between font-semibold text-gray-900">
-                    <span>Total Payable</span>
-                    <span className="text-lg text-teal-600">
+                  <div className="flex justify-between font-bold text-gray-900">
+                    <span className="text-lg">Total Payable</span>
+                    <span className="text-2xl text-teal-600">
                       ₹{payableAmount.toLocaleString()}
                     </span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Security Badge */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <div className="flex items-center justify-center gap-2 text-xs text-gray-600 bg-gray-50 p-3 rounded">
-                  <svg
-                    className="w-4 h-4 text-green-600"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
+            {/* Gift Card Voucher Section */}
+            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Gifting Voucher
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">
+                Redeem your Kyna gift card here.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter gift voucher code"
+                  value={giftCardCode}
+                  onChange={(e) => setGiftCardCode(e.target.value)}
+                  disabled={giftCardLoading || !!appliedGiftCard}
+                  className="flex-1 uppercase"
+                />
+                <Button
+                  onClick={handleApplyGiftCard}
+                  disabled={giftCardLoading || !giftCardCode.trim() || !!appliedGiftCard}
+                  className="bg-teal-600 hover:bg-teal-700"
+                >
+                  {giftCardLoading ? "..." : "Redeem"}
+                </Button>
+              </div>
+              {giftCardError && (
+                <p className="text-xs text-red-500 mt-2 font-medium">{giftCardError}</p>
+              )}
+              {appliedGiftCard && (
+                <div className="mt-4 flex items-center justify-between rounded-md bg-blue-50 p-3 text-blue-800 border border-blue-200">
+                  <div className="text-sm">
+                    <span className="font-bold">{appliedGiftCard.code}</span>
+                    <p className="text-xs">Value: ₹{appliedGiftCard.amount.toLocaleString()}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveGiftCard}
+                    className="text-red-500 hover:text-red-600 h-8 px-2"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.293 9.707a1 1 0 010-1.414L10 3.586l4.707 4.707a1 1 0 01-1.414 1.414L10 6.414l-3.293 3.293a1 1 0 01-1.414 0z"
-                      clipRule="evenodd"
-                    />
-                    <path
-                      fillRule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  <span>Secure & Encrypted</span>
+                    Remove
+                  </Button>
                 </div>
+              )}
+            </div>
+
+            {/* Coupon Code Section */}
+            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Coupon Code
+              </h2>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter promo code"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  disabled={promoLoading || !!appliedPromo}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={handleApplyPromo}
+                  disabled={promoLoading || !promoCode.trim() || !!appliedPromo}
+                  className="bg-[#328F94] hover:bg-[#28777b]"
+                >
+                  {promoLoading ? "..." : "Apply"}
+                </Button>
+              </div>
+              {promoError && (
+                <p className="text-xs text-red-500 mt-2 font-medium">{promoError}</p>
+              )}
+              {appliedPromo && (
+                <div className="mt-4 flex items-center justify-between rounded-md bg-green-50 p-3 text-green-800 border border-green-200">
+                  <div className="text-sm">
+                    <span className="font-bold">{appliedPromo.code}</span>
+                    <p className="text-xs">Savings: ₹{appliedPromo.discountValue.toLocaleString()}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemovePromo}
+                    className="text-red-500 hover:text-red-600 h-8 px-2"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Referral Wallet Section */}
+            <div className="bg-white rounded-lg p-6 shadow-md border border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                Referral Wallet
+              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm text-gray-600">
+                  Balance: <span className="font-bold text-gray-900">₹{displayedReferralBalance.toLocaleString("en-IN")}</span>
+                </p>
+                {walletDiscount > 0 && (
+                  <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-medium">Applied</span>
+                )}
+              </div>
+              <Button
+                onClick={handleToggleWallet}
+                disabled={referralBalance <= 0 && walletDiscount <= 0}
+                className="w-full bg-[#4c4f8f] hover:bg-[#3c3f72] text-white"
+              >
+                {walletDiscount > 0 ? "Remove Credit" : "Redeem Credits"}
+              </Button>
+              {walletError && (
+                <p className="text-xs text-red-500 mt-2 font-medium">{walletError}</p>
+              )}
+            </div>
+
+            {/* Trust Badges */}
+            <div className="bg-gray-50 rounded-lg p-4 flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                  <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13zm-6 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h.01a1 1 0 100-2H10zm3 0a1 1 0 000 2h.01a1 1 0 100-2H13z" clipRule="evenodd" />
+                </svg>
+                <span>100% SECURE CHECKOUT</span>
               </div>
             </div>
           </div>

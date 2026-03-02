@@ -215,6 +215,10 @@ export interface IOrder extends Document {
       amount: number;
     };
   };
+  giftCardSummary?: {
+    code: string;
+    amount: number;
+  };
   orderedAt: Date;
   shippedAt?: Date;
   deliveredAt?: Date;
@@ -493,6 +497,10 @@ const orderSchema = new Schema<IOrder>(
         amount: { type: Number },
       },
     },
+    giftCardSummary: {
+      code: { type: String, uppercase: true, trim: true },
+      amount: { type: Number },
+    },
 
     // Important dates
     orderedAt: { type: Date, default: Date.now },
@@ -528,20 +536,20 @@ orderSchema.pre("save", function (next) {
 });
 
 // Post-save hook to send order confirmation email when payment status changes to "paid"
-orderSchema.post('save', async function(doc) {
+orderSchema.post('save', async function (doc) {
   console.log(`🔍 OrderModel post-save hook triggered for order ${doc.orderNumber}`);
   console.log(`🔍 Payment status: ${doc.paymentStatus}`);
   console.log(`🔍 isModified available: ${typeof this.isModified}`);
-  
+
   // Check if this is an update and payment status changed to "paid"
   if (this.isModified && this.isModified('paymentStatus') && doc.paymentStatus === 'paid') {
     console.log(`🔍 Payment status changed to paid, sending email...`);
     try {
       console.log(`📧 Sending order confirmation email for OrderModel ${doc.orderNumber}...`);
-      
+
       const { sendOrderConfirmationEmail } = await import("../services/emailService");
       const User = await import("./userModel");
-      
+
       // Get user details
       const user = await User.default.findById(doc.user);
       if (!user || !user.email) {
@@ -561,12 +569,12 @@ orderSchema.post('save', async function(doc) {
         }),
         paymentMethod: doc.paymentMethod || 'Online Payment',
         transactionId: doc.transactionId || 'N/A',
-        estimatedDelivery: doc.estimatedDeliveryDate 
+        estimatedDelivery: doc.estimatedDeliveryDate
           ? new Date(doc.estimatedDeliveryDate).toLocaleDateString('en-IN', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
           : '7-10 business days',
         items: [],
         subtotal: doc.subtotal || 0,
@@ -599,7 +607,7 @@ orderSchema.post('save', async function(doc) {
           } else if (doc.images && doc.images.length > 0) {
             imageUrl = doc.images[0].url;
           }
-          
+
           return {
             title: item.productTitle || 'Jewelry Item',
             sku: item.productSku || '',
@@ -616,13 +624,13 @@ orderSchema.post('save', async function(doc) {
         const productSpecs = doc.productDetails.productSpecs;
         const product = doc.productDetails.product as any; // Type assertion for extended properties
         let imageUrl = '';
-        
+
         if (product?.images && product.images.length > 0) {
           imageUrl = product.images[0];
         } else if (doc.images && doc.images.length > 0) {
           imageUrl = doc.images[0].url;
         }
-        
+
         orderData.items = [{
           title: productSpecs?.title || product?.title || 'Custom Jewelry',
           sku: productSpecs?.modelSku || product?.modelSku || '',
@@ -639,7 +647,7 @@ orderSchema.post('save', async function(doc) {
         if (doc.images && doc.images.length > 0) {
           fallbackImageUrl = doc.images[0].url;
         }
-        
+
         orderData.items = [{
           title: 'Custom Jewelry',
           sku: '',
@@ -655,6 +663,23 @@ orderSchema.post('save', async function(doc) {
       // Send the email
       await sendOrderConfirmationEmail(orderData);
       console.log(`✅ Order confirmation email sent successfully to ${orderData.customerEmail} for OrderModel ${doc.orderNumber}`);
+
+      // Handle Gift Card deletion if used
+      if (doc.giftCardSummary?.code) {
+        try {
+          const GiftCard = mongoose.model('GiftCard');
+          const giftCard = await GiftCard.findOne({
+            voucherCode: doc.giftCardSummary.code.toUpperCase()
+          });
+
+          if (giftCard) {
+            console.log(`🎫 Redeeming and deleting gift card ${doc.giftCardSummary.code} after successful order payment`);
+            await GiftCard.findByIdAndDelete(giftCard._id);
+          }
+        } catch (gcError) {
+          console.error(`❌ Failed to delete gift card ${doc.giftCardSummary.code} in OrderModel post-save:`, gcError);
+        }
+      }
     } catch (emailError) {
       console.error(`❌ Failed to send order confirmation email for OrderModel ${doc.orderNumber}:`, emailError);
       // Don't fail the save operation if email sending fails
@@ -663,23 +688,23 @@ orderSchema.post('save', async function(doc) {
 });
 
 // Post-findOneAndUpdate hook to send order confirmation email when payment status changes to "paid"
-orderSchema.post('findOneAndUpdate', async function(doc) {
+orderSchema.post('findOneAndUpdate', async function (doc) {
   console.log(`🔍 OrderModel post-findOneAndUpdate hook triggered for order ${doc?.orderNumber}`);
   if (doc && this.getUpdate) {
     const update = this.getUpdate() as any;
     console.log(`🔍 Update object:`, update);
     console.log(`🔍 Current payment status: ${doc.paymentStatus}`);
     console.log(`🔍 Update payment status: ${update.paymentStatus || update.$set?.paymentStatus}`);
-    
+
     // Check if payment status is being updated to "paid"
     if (update.paymentStatus === 'paid' || update.$set?.paymentStatus === 'paid') {
       console.log(`🔍 Payment status being updated to paid, sending email...`);
       try {
         console.log(`📧 Sending order confirmation email for OrderModel ${doc.orderNumber} (findOneAndUpdate)...`);
-        
+
         const { sendOrderConfirmationEmail } = await import("../services/emailService");
         const User = await import("./userModel");
-        
+
         // Get user details
         const user = await User.default.findById(doc.user);
         if (!user || !user.email) {
@@ -699,12 +724,12 @@ orderSchema.post('findOneAndUpdate', async function(doc) {
           }),
           paymentMethod: doc.paymentMethod || 'Online Payment',
           transactionId: update.transactionId || update.$set?.transactionId || doc.transactionId || 'N/A',
-          estimatedDelivery: doc.estimatedDeliveryDate 
+          estimatedDelivery: doc.estimatedDeliveryDate
             ? new Date(doc.estimatedDeliveryDate).toLocaleDateString('en-IN', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })
             : '7-10 business days',
           items: [],
           subtotal: doc.subtotal || 0,
@@ -737,7 +762,7 @@ orderSchema.post('findOneAndUpdate', async function(doc) {
             } else if (doc.images && doc.images.length > 0) {
               imageUrl = doc.images[0].url;
             }
-            
+
             return {
               title: item.productTitle || 'Jewelry Item',
               sku: item.productSku || '',
@@ -754,13 +779,13 @@ orderSchema.post('findOneAndUpdate', async function(doc) {
           const productSpecs = doc.productDetails.productSpecs;
           const product = doc.productDetails.product as any; // Type assertion for extended properties
           let imageUrl = '';
-          
+
           if (product?.images && product.images.length > 0) {
             imageUrl = product.images[0];
           } else if (doc.images && doc.images.length > 0) {
             imageUrl = doc.images[0].url;
           }
-          
+
           orderData.items = [{
             title: productSpecs?.title || product?.title || 'Custom Jewelry',
             sku: productSpecs?.modelSku || product?.modelSku || '',
@@ -777,7 +802,7 @@ orderSchema.post('findOneAndUpdate', async function(doc) {
           if (doc.images && doc.images.length > 0) {
             fallbackImageUrl = doc.images[0].url;
           }
-          
+
           orderData.items = [{
             title: 'Custom Jewelry',
             sku: '',
@@ -793,6 +818,23 @@ orderSchema.post('findOneAndUpdate', async function(doc) {
         // Send the email
         await sendOrderConfirmationEmail(orderData);
         console.log(`✅ Order confirmation email sent successfully to ${orderData.customerEmail} for OrderModel ${doc.orderNumber} (findOneAndUpdate)`);
+
+        // Handle Gift Card deletion if used
+        if (doc.giftCardSummary?.code) {
+          try {
+            const GiftCard = mongoose.model('GiftCard');
+            const giftCard = await GiftCard.findOne({
+              voucherCode: doc.giftCardSummary.code.toUpperCase()
+            });
+
+            if (giftCard) {
+              console.log(`🎫 Redeeming and deleting gift card ${doc.giftCardSummary.code} after successful order payment (findOneAndUpdate)`);
+              await GiftCard.findByIdAndDelete(giftCard._id);
+            }
+          } catch (gcError) {
+            console.error(`❌ Failed to delete gift card ${doc.giftCardSummary.code} in OrderModel post-findOneAndUpdate:`, gcError);
+          }
+        }
       } catch (emailError) {
         console.error(`❌ Failed to send order confirmation email for OrderModel ${doc.orderNumber} (findOneAndUpdate):`, emailError);
         // Don't fail the update operation if email sending fails
