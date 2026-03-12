@@ -167,6 +167,7 @@ const userSchema = new Schema<IUserInternal>(
       },
     ],
     usedReferralCodes: [{ type: String }],
+    points: { type: Number, default: 0 },
   },
   {
     timestamps: true,

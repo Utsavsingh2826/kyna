@@ -42,17 +42,23 @@ export const createGiftCardOrder = async (req: AuthRequest, res: Response): Prom
             return;
         }
 
-        // Create Razorpay order
+        // Calculate 3% GST
+        const gstRate = 0.03;
+        const gstAmount = Math.round(amount * gstRate);
+        const totalAmount = amount + gstAmount;
+
+        // Create Razorpay order with total amount (base + GST)
         const razorpay = getRazorpayInstance();
-        const payload = createOrderPayload(amount);
+        const payload = createOrderPayload(totalAmount);
 
         const razorpayOrder = await razorpay.orders.create(payload);
 
-        // Save pending gift card purchase
+        // Save pending gift card purchase with GST logic
+        // Points credited are the total amount paid (base + GST)
         const giftCard = new GiftCard({
             userId,
-            amount,
-            points: amount, // ₹X → X points
+            amount: totalAmount, // Value of the gift card is the total amount paid
+            points: totalAmount, // Total amount paid → total points
             type,
             razorpayOrderId: razorpayOrder.id,
             status: 'pending',
@@ -64,9 +70,12 @@ export const createGiftCardOrder = async (req: AuthRequest, res: Response): Prom
             success: true,
             data: {
                 razorpayOrderId: razorpayOrder.id,
-                amount: razorpayOrder.amount,
+                amount: razorpayOrder.amount, // Razorpay amount is (base + GST) * 100
                 currency: razorpayOrder.currency,
                 key: process.env.RAZORPAY_KEY_ID,
+                baseAmount: amount,
+                gstAmount: gstAmount,
+                totalAmount: totalAmount,
             },
         });
     } catch (error: any) {
