@@ -76,6 +76,10 @@ interface Order {
     status: string;
     timestamp: string;
   }>;
+  giftCardSummary?: {
+    code: string;
+    amount: number;
+  };
 }
 
 const OrderHistoryPage: React.FC = () => {
@@ -97,7 +101,7 @@ const OrderHistoryPage: React.FC = () => {
         // Handle both array and object responses
         const ordersData = Array.isArray(response.data)
           ? response.data
-          : response.data.orders || response.data || [];
+          : (response.data as any)?.orders || response.data || [];
 
         // Filter for delivered orders - check both order status and tracking status
         const deliveredOrders = ordersData.filter((order: Order) => {
@@ -444,6 +448,14 @@ const OrderHistoryPage: React.FC = () => {
                                   </div>
                                 )}
                               </div>
+                            </div>
+                          )}
+
+                          {/* Gift Card Summary */}
+                          {order.giftCardSummary && (
+                            <div className="mb-4 flex items-center justify-between text-sm text-blue-600 font-medium">
+                              <span>Gift Card ({order.giftCardSummary.code})</span>
+                              <span>-{formatCurrency(order.giftCardSummary.amount)}</span>
                             </div>
                           )}
 

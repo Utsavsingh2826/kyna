@@ -23,6 +23,10 @@ interface TrackingData {
     image?: string;
   }>;
   totalAmount?: number;
+  giftCardSummary?: {
+    code: string;
+    amount: number;
+  };
   courierPartner?: string;
 }
 
@@ -119,6 +123,21 @@ export default function TrackingCard({
                   </p>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Gift Card Summary */}
+        {trackingData.giftCardSummary && (
+          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="flex items-center justify-between text-blue-800">
+              <div className="flex items-center space-x-3">
+                <Package className="w-5 h-5 text-blue-600" />
+                <span className="text-sm font-medium">Gift Card ({trackingData.giftCardSummary.code})</span>
+              </div>
+              <span className="text-sm font-bold">
+                -₹{trackingData.giftCardSummary.amount.toLocaleString()}
+              </span>
             </div>
           </div>
         )}

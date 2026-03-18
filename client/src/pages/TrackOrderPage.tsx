@@ -32,6 +32,10 @@ interface TrackingData {
     hasManufacturerFault: boolean;
     requestedAt: string;
   }; // ✅ For return request notice
+  giftCardSummary?: {
+    code: string;
+    amount: number;
+  };
   shippingAddress?: {
     name: string;
     line1: string;

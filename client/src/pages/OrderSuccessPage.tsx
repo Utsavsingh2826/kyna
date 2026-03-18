@@ -154,6 +154,12 @@ const OrderSuccessPage = () => {
                   <span className="text-gray-600">Shipping:</span>
                   <span>{formatCurrency(order.shippingCharge)}</span>
                 </div>
+                {order.giftCardSummary && order.giftCardSummary.amount > 0 && (
+                  <div className="flex justify-between text-blue-600">
+                    <span className="font-medium">Gift Card ({order.giftCardSummary.code}):</span>
+                    <span>-{formatCurrency(order.giftCardSummary.amount)}</span>
+                  </div>
+                )}
                 <div className="border-t pt-3">
                   <div className="flex justify-between">
                     <span className="text-lg font-semibold">Total:</span>

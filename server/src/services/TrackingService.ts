@@ -165,6 +165,7 @@ export class TrackingService {
       totalAmount: totalAmount,
       createdAt: order?.orderedAt || order?.createdAt || trackingObj.createdAt, // ✅ For 2-day cancellation policy
       orderedAt: order?.orderedAt || order?.createdAt, // ✅ For 2-day cancellation policy
+      giftCardSummary: order?.giftCardSummary, // ✅ Gift card info
       returnRequest: trackingObj.returnRequest, // ✅ Return request info
       updatedAt: trackingObj.updatedAt ? new Date(trackingObj.updatedAt).toISOString() : new Date().toISOString()
     };
