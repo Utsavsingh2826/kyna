@@ -102,6 +102,7 @@ export interface PaymentInitiateRequest {
     // Estimated delivery information from courier API
     estimatedDelivery?: string | null;
     estimatedDeliveryDay?: string | null;
+    [key: string]: any; // Allow other fields
   };
   images?: Array<{
     url: string;
@@ -118,6 +119,7 @@ export interface PaymentInitiateRequest {
   giftCardAmount?: number;
   promoCode?: string;
   promoDiscount?: number;
+  metaEventId?: string;
 }
 
 export interface PaymentInitiateResponse {
@@ -142,6 +144,7 @@ export interface PaymentInitiateResponse {
       orderId: string;
       userId: string;
     };
+    metaEventId?: string;
   };
   message: string;
 }
@@ -154,6 +157,7 @@ export interface PaymentStatusResponse {
     amount: string;
     transactionId?: string;
     paymentDate?: string;
+    metaEventId?: string;
   };
   message: string;
 }

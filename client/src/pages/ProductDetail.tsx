@@ -49,6 +49,7 @@ import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
 import BraceletSizeGuidePopup from "@/components/BraceletSizeGuidePopup";
 import { ShareEmailModal } from "@/components/ShareEmailModal";
 import "@/styles/image-loading.css"; // Ensure CSS for blur/skeleton is included
+import { trackEvent } from "@/utils/pixel";
 
 // Product interface for API data
 interface ProductData {
@@ -818,11 +819,17 @@ const ProductDetail = () => {
           throw new Error(`Failed to fetch product: ${response.status}`);
         }
 
-        const data: ProductData = await response.json();
-        // Apply API data to component state so the ProductDetail page renders
-        // real product information (images, options, price, etc.).
-        // Log the response for debugging as well.
         setProductData(data);
+
+        // Meta Pixel: Track ViewContent
+        trackEvent("ViewContent", {
+          content_name: data.title,
+          content_category: data.category || currentCategorySlug,
+          content_ids: [data.modelSku || data._id],
+          content_type: "product",
+          value: data.sellingPrice,
+          currency: "INR",
+        });
         // If metal type is still empty, set default
         if (!selectedMetalType) {
           if (data.metalTypes.includes("GOLD")) {
@@ -1826,6 +1833,17 @@ const ProductDetail = () => {
 
       // Use the product's MongoDB _id for cart operations with variant data
       await dispatch(addToCart(productData._id, 1, variantData));
+      
+      // Meta Pixel: Track AddToCart
+      trackEvent("AddToCart", {
+        content_name: productData.title,
+        content_category: productData.category || currentCategorySlug,
+        content_ids: [currentVariantSku],
+        content_type: "product",
+        value: productData.sellingPrice,
+        currency: "INR",
+      });
+
       toast.success("Product added to cart successfully!");
     } catch (error) {
       console.error("Error adding to cart:", error);
@@ -2040,10 +2058,21 @@ const ProductDetail = () => {
     console.log("Has Engraving:", hasEngraving);
     console.log("===================");
 
+    // Meta Pixel: Track InitiateCheckout
+    const eventId = `INIT_${Date.now()}`;
+    trackEvent("InitiateCheckout", {
+      content_name: productData.title,
+      content_category: productData.category || currentCategorySlug,
+      content_ids: [currentVariantSku],
+      content_type: "product",
+      value: productData.sellingPrice,
+      currency: "INR",
+    }, eventId);
+
     // Navigate to payment page with product data
     navigate("/payment", {
       state: {
-        orderData,
+        orderData: { ...orderData, metaEventId: eventId }, // Pass eventId for CAPI
         directPurchase: true,
         items: [
           {

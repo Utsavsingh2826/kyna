@@ -20,6 +20,7 @@ import {
   queueReferralCredit,
   releasePendingReferralCredits,
 } from "../utils/referralWallet";
+import { sendMetaEvent, hashData } from "../services/MetaTrackingService";
 
 const router = express.Router();
 
@@ -146,6 +147,7 @@ router.post("/initiate", async (req: Request, res: Response) => {
       // Gift card details
       giftCardVoucher,
       giftCardAmount,
+      metaEventId,
     } = req.body;
 
     // Debug: log the orderDetails being received
@@ -340,6 +342,7 @@ router.post("/initiate", async (req: Request, res: Response) => {
       panCardDetails: panCardDetails || null,
       giftCardVoucher,
       giftCardAmount,
+      metaEventId,
     });
 
     await order.save();
@@ -655,7 +658,28 @@ router.post(
           currency: payment.currency,
         } as any;
 
+
         await order.updateStatus(newStatus, paymentResp);
+
+        // Meta Pixel: Track Purchase via CAPI on success
+        if (newStatus === OrderStatus.SUCCESS) {
+          const email = order.billingInfo?.email;
+          const phone = order.billingInfo?.phone;
+          
+          await sendMetaEvent({
+            eventName: "Purchase",
+            eventId: order.metaEventId || `PURCH_${order.orderNumber}`,
+            userData: {
+              em: [hashData(email)],
+              ph: [hashData(phone)],
+            },
+            customData: {
+              currency: order.currency || "INR",
+              value: order.amount,
+              order_id: order.orderNumber,
+            },
+          });
+        }
 
         return res.json({ success: true });
       }

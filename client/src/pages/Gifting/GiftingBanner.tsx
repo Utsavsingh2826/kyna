@@ -45,12 +45,14 @@ export default function GiftingBanner() {
                   elegant earrings, find the perfect piece to make every
                   occasion unforgettable.
                 </p>
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary/90 bg-white text-[#328F94] font-semibold px-8"
-                >
-                  Get a Gift Card Now
-                </Button>
+                <Link to="/gifting/gift-card">
+                  <Button
+                    size="lg"
+                    className="bg-primary hover:bg-primary/90 bg-white text-[#328F94] font-semibold px-8"
+                  >
+                    Get a Gift Card Now
+                  </Button>
+                </Link>
               </div>
             </div>
           </section>

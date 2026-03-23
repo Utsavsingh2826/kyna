@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CreditCard, DollarSign, ArrowRight, ChevronDown } from "lucide-react";
 import apiService from "@/services/api";
 import { paymentService } from "@/services/paymentService";
+import { trackEvent } from "@/utils/pixel";
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -1053,6 +1054,16 @@ const CheckoutPage = () => {
       const orderId = persistentOrderId;
       console.log("💳 Using persistent order ID for payment:", orderId);
 
+      // Meta Pixel: Track InitiateCheckout
+      const eventId = `INIT_${Date.now()}`;
+      trackEvent("InitiateCheckout", {
+        content_ids: cart.items.map((item: any) => item.variantSku || item.productId),
+        content_type: "product",
+        value: finalAmount,
+        currency: "INR",
+        num_items: cart.items.length,
+      }, eventId);
+
       // Prepare payment data for Razorpay
       const paymentData = {
         orderId: orderId,
@@ -1060,6 +1071,7 @@ const CheckoutPage = () => {
         // the server multiplied again causing incorrect amounts and Razorpay failures.
         amount: finalAmount.toString(),
         currency: "INR",
+        metaEventId: eventId, // Pass for CAPI deduplication
         billingInfo: {
           name: user?.name || "Customer",
           email: user?.email || "customer@example.com",
@@ -1076,7 +1088,7 @@ const CheckoutPage = () => {
         orderNumber: orderId,
         orderCategory: "products" as const,
         orderType: "normal" as const,
-        items: cart.items.map((item) => ({
+        items: cart.items.map((item: any) => ({
           name: item.product?.title || item.product?.name || "Product",
           price: item.price,
           quantity: item.quantity,

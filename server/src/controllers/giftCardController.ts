@@ -4,6 +4,7 @@ import User from '../models/userModel';
 import { AuthRequest } from '../types';
 import { getRazorpayInstance, createOrderPayload, verifyWebhookSignature } from '../utils/razorpay';
 import crypto from 'crypto';
+import { sendGiftCardPurchaseEmail } from '../services/emailService';
 
 // Helper to generate unique voucher code
 const generateVoucherCode = (): string => {
@@ -151,6 +152,15 @@ export const verifyPayment = async (req: AuthRequest, res: Response): Promise<vo
                 user.gifts.push(giftCard._id);
             }
             await user.save();
+            
+            // Send success email
+            try {
+                const customerName = `${user.firstName} ${user.lastName}`.trim();
+                await sendGiftCardPurchaseEmail(user.email, customerName, voucherCode, giftCard.amount, giftCard.points);
+            } catch (emailError) {
+                console.error('Failed to send gift card purchase email:', emailError);
+                // Don't fail the response if only email sending fails
+            }
         }
 
         res.status(200).json({

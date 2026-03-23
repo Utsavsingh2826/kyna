@@ -76,6 +76,8 @@ import Giftings from "./pages/Gifting/Giftings";
 import CustomerReviewsPage from "./pages/CustomerReviewsPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 
+import { initPixel, trackPageView } from "./utils/pixel";
+
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const isAuthenticated = useSelector(
     (state: RootState) => state.auth.isAuthenticated
@@ -143,6 +145,11 @@ function App() {
   const token = useSelector((state: RootState) => state.auth.token);
 
   useEffect(() => {
+    initPixel();
+  }, []);
+
+  useEffect(() => {
+    trackPageView();
     if (window.gtag) {
       window.gtag("config", "G-J7JKTG3NQN", {
         page_path: location.pathname,

@@ -187,6 +187,7 @@ export interface IOrder extends Document {
   paidAt?: Date;
   giftCardVoucher?: string;
   giftCardAmount?: number;
+  metaEventId?: string;
   createdAt: Date;
   updatedAt: Date;
   updateStatus(
@@ -497,6 +498,8 @@ const orderSchema = new Schema<IOrder>(
     // Gift card details
     giftCardVoucher: { type: String, trim: true },
     giftCardAmount: { type: Number, min: 0 },
+    // Meta tracking deduplication ID
+    metaEventId: { type: String, trim: true },
     // Estimated delivery information (required) from courier API
     estimatedDelivery: { type: String, required: true },
     // Day label for the estimated delivery (optional)

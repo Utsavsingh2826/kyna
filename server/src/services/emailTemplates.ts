@@ -462,3 +462,49 @@ export const ORDER_CONFIRMATION_TEMPLATE = `
 </body>
 </html>
 `;
+
+// Gift card purchase template
+export const GIFT_CARD_PURCHASE_TEMPLATE = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gift Card Purchase Successful - KYNA</title>
+  <style>${baseStyles}</style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="container">
+      <div class="brand-bar">KYNA<span>FINE JEWELLERY</span></div>
+      <div class="hero">Gift Card Purchased!</div>
+      <div class="content">
+        <div class="card">
+          <div class="card-title">Thank you, {customerName}!</div>
+          <p class="summary">Your gift card purchase was successful. Below are the details of your new gift card.</p>
+          <div class="highlight-box">{voucherCode}</div>
+          <table class="details-table">
+            <tr><td>Amount</td><td>₹{amount}</td></tr>
+            <tr><td>Points Credited</td><td>{points} Points</td></tr>
+            <tr><td>Validity</td><td>1 Year (Expires on {expiryDate})</td></tr>
+            <tr><td>Status</td><td>Active</td></tr>
+          </table>
+          <div style="text-align:center;">
+            <a class="primary-btn" href="${process.env.CLIENT_URL || 'https://kynajewels.com'}/profile" style="display:inline-block;background:#0f9aa7;color:#ffffff !important;padding:14px 32px;border-radius:40px;text-decoration:none;text-transform:uppercase;letter-spacing:2px;font-size:13px;font-weight:bold;">View My Gift Cards</a>
+          </div>
+          <div style="text-align:center;">
+            <div class="note">
+              This gift card is valid for 1 year from the date of purchase. You can use this voucher code during checkout to redeem your points.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+        ${socialFooter}
+        ${legalFooter}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+`;

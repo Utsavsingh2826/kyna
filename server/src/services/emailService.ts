@@ -5,6 +5,7 @@ import {
   VERIFICATION_EMAIL_TEMPLATE,
   WELCOME_EMAIL_TEMPLATE,
   ORDER_CONFIRMATION_TEMPLATE,
+  GIFT_CARD_PURCHASE_TEMPLATE,
 } from './emailTemplates';
 
 // Email transporter configuration
@@ -389,5 +390,41 @@ export const sendOrderConfirmationEmail = async (orderData: OrderConfirmationDat
   } catch (error) {
     console.error('Error sending order confirmation email:', error);
     throw new Error(`Error sending order confirmation email: ${error}`);
+  }
+};
+
+// Send gift card purchase email
+export const sendGiftCardPurchaseEmail = async (email: string, customerName: string, voucherCode: string, amount: number, points: number) => {
+  try {
+    const transporter = createTransporter();
+    
+    // Calculate expiry date (1 year from now)
+    const expiryDate = new Date();
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+    const formattedExpiryDate = expiryDate.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const html = GIFT_CARD_PURCHASE_TEMPLATE
+      .replace('{customerName}', customerName)
+      .replace('{voucherCode}', voucherCode)
+      .replace('{amount}', amount.toLocaleString('en-IN'))
+      .replace('{points}', points.toLocaleString('en-IN'))
+      .replace('{expiryDate}', formattedExpiryDate);
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || 'noreply@kynajewels.com',
+      to: email,
+      subject: 'Gift Card Purchase Successful! - Kyna Jewels',
+      html,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Gift card purchase email sent successfully to ${email}`);
+  } catch (error) {
+    console.error('Error sending gift card purchase email:', error);
+    throw new Error(`Error sending gift card purchase email: ${error}`);
   }
 };

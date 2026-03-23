@@ -5,6 +5,7 @@ import { Button } from "../components/ui/button";
 import { paymentService } from "../services/paymentService";
 import { useDispatch } from "react-redux";
 import { clearCartItems } from "../store/slices/cartSlice";
+import { trackEvent } from "../utils/pixel";
 
 const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -44,6 +45,16 @@ const PaymentSuccess: React.FC = () => {
             await dispatch(clearCartItems() as any);
             setCartCleared(true);
             console.log("✅ Cart cleared successfully");
+
+            // Meta Pixel: Track Purchase (Frontend)
+            // Use the same eventId as InitiateCheckout if available, otherwise orderId
+            trackEvent("Purchase", {
+              content_ids: [response.data.orderId],
+              content_type: "product",
+              value: response.data.amount,
+              currency: "INR",
+              order_id: response.data.orderId,
+            }, response.data.metaEventId); // CAPI will use the same ID for deduplication
           } catch (clearError) {
             console.error("❌ Error clearing cart:", clearError);
             // Don't set error state as this is not critical for user experience
