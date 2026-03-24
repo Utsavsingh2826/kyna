@@ -819,6 +819,7 @@ const ProductDetail = () => {
           throw new Error(`Failed to fetch product: ${response.status}`);
         }
 
+        const data: ProductData = await response.json();
         setProductData(data);
 
         // Meta Pixel: Track ViewContent
