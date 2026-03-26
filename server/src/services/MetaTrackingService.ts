@@ -50,6 +50,9 @@ export const sendMetaEvent = async ({
       },
     ],
     access_token: ACCESS_TOKEN,
+    ...(process.env.META_TEST_EVENT_CODE && {
+      test_event_code: process.env.META_TEST_EVENT_CODE,
+    }),
   };
 
   try {
