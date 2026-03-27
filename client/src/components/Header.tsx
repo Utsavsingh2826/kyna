@@ -307,6 +307,10 @@ function MobileMenu() {
               "Earrings",
               "Pendants",
               "Bracelets",
+              "Men's Rings",
+              "Men's Studs",
+              "Fashion Earrings",
+              "Fashion Pendants",
               "Design Your Own",
               "Upload Your Design",
               "Build Your Jewellery",
@@ -465,6 +469,14 @@ function getLinkForItem(sectionTitle: string, itemLabel: string): string {
           return "/pendants";
         case "Bracelets":
           return "/bracelets";
+        case "Men's Rings":
+          return "/rings?ring_category=Mens+Rings";
+        case "Men's Studs":
+          return "/earrings?category1=stud%27s&category3=men%27s+stud";
+        case "Fashion Earrings":
+          return "/earrings?category1=fashion";
+        case "Fashion Pendants":
+          return "/pendants?ring_category=fashion";
         case "Upload Your Design":
           return "/upload-your-design/rings";
         case "Build Your Jewellery":
