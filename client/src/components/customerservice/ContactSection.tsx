@@ -33,7 +33,7 @@ export default function ContactSection() {
               (+5:30) Talk with us now
             </p>
             <p className="font-semibold text-lg mb-4">
-              enquiries@kynajewels.com
+              info@akynajewels.com
             </p>
             <Button className="w-full bg-green-600 hover:bg-green-700">
               Contact Us →

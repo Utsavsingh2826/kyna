@@ -577,7 +577,7 @@ export default function TermsAndConditions() {
 Any dispute arising out of or relating to the use of this website shall be subject to the exclusive jurisdiction of the courts located in [Mumbai/ Maharashtra, India] 
 By accessing or using this website, you consent to the jurisdiction and venue of such courts for resolving any disputes in any proceedings arising out of this user agreement. The information provided when using the Services is not intended for distribution If you choose to access our Services from a different jurisdiction, you are responsible for complying with local laws that may apply. We advise against accessing our Services from locations where it would be illegal or subject us to registration requirements.
 If you have any questions or concerns about these Terms and Conditions, please contact us on 
-+91 8928610682 or write to us on enquiries@kynajewels.com 
++91 8928610682 or write to us on info@akynajewels.com 
 
     </p>
   </div>
@@ -586,7 +586,7 @@ If you have any questions or concerns about these Terms and Conditions, please c
     <h3 className="text-xl font-semibold mb-4">3. Changes to the Site Disclaimer</h3>
     <p className="text-muted-foreground leading-relaxed mb-4">
       We may periodically update or modify the information provided on our website to ensure accuracy and relevance. Please note that changes to our site may occur without prior notice. We recommend regularly reviewing to stay informed about any updates. You acknowledge and agree to these potential changes. 
-If you have any questions or concerns regarding any terms, please contact us for clarification we respond within one month to your requests please contact us our customer service team call us on +91 8928610682 or write to us on enquiries@kynajewels.com 
+If you have any questions or concerns regarding any terms, please contact us for clarification we respond within one month to your requests please contact us our customer service team call us on +91 8928610682 or write to us on info@akynajewels.com 
 
     </p>
   </div>

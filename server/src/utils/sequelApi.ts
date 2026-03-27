@@ -290,7 +290,7 @@ export const getKynaPickupAddress = () => {
     pinCode: Number(process.env.SEQUEL_PINCODE || '400097'),
     auth_receiver_name: process.env.SEQUEL_RECEIVER_NAME || 'Kyna Jewels Admin',
     auth_receiver_phone: Number(process.env.SEQUEL_RECEIVER_PHONE || '8928610682'),
-    auth_receiver_email: process.env.SEQUEL_RECEIVER_EMAIL || 'enquiries@kynajewels.com',
+    auth_receiver_email: process.env.SEQUEL_RECEIVER_EMAIL || 'info@akynajewels.com',
     gst_in: process.env.SEQUEL_GST_IN || '22AAAAA0000A1Z5'
   };
 };

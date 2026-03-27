@@ -44,6 +44,9 @@ export default function Navbar() {
   const displayName = useSelector(
     (state: RootState) => state.auth.user?.firstName,
   );
+  const userPoints = useSelector(
+    (state: RootState) => state.auth.user?.points || 0,
+  );
   const cart = useSelector((state: RootState) => state.cart.cart);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const userMenuRef = React.useRef<HTMLDivElement | null>(null);
@@ -163,7 +166,7 @@ export default function Navbar() {
                                 : "Signed in"}
                               {isAuthenticated && (
                                 <div className="mt-1 font-semibold text-[#328F94]">
-                                  Points: {useSelector((state: RootState) => state.auth.user?.points || 0)}
+                                  Points: {userPoints}
                                 </div>
                               )}
                             </div>
