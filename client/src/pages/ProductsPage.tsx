@@ -21,7 +21,6 @@ import {
 } from "@/store/slices/wishlistSlice";
 import {
   saveCategoryProducts,
-  clearCategoryCache,
 } from "@/store/slices/productsCacheSlice";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 
@@ -1843,6 +1842,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         categoryName === "Fashion Rings" &&
         styles.some((s) => fashionRingStyles.includes(s));
 
+      console.log("isFashionRingStyles:", isFashionRingStyles); // Keep it if intended for future use or remove if not
+
       return (
         <>
           {styles.map((style) => {
@@ -2283,18 +2284,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     };
 
     // Map API values to UI labels (reverse mapping)
-    const mapApiToEngagementStyle = (apiValue: string): string => {
-      const mapping: Record<string, string> = {
-        Accent: "Accents",
-        Halo: "Halo",
-        "Hidden Halo": "Hidden Halo",
-        "3 Stone": "3 Stone",
-        "5 Stone": "5 Stone",
-        "7 STONE": "7 & 8 Stone",
-        "8 STONE": "7 & 8 Stone",
-      };
-      return mapping[apiValue] || apiValue;
-    };
+
 
     const renderEngagementRingStyles = (ringCategory: string) => {
       // Get current category2 values from state/URL
@@ -3057,22 +3047,6 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           </div>
         </nav>
 
-        {/* <div className="eng-header">
-          <h2 id="products-heading" className="eng-title">
-            {pageTitle} ({loading ? "..." : pagination.total})
-          </h2>
-          <div className="eng-actions">
-            <label>
-              Sort by:{" "}
-              <select className="eng-sort" aria-label="Sort products">
-                <option>Best Seller</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
-                <option>Newest</option>
-              </select>
-            </label>
-          </div>
-        </div> */}
 
         {/* API Applied Filters Display */}
         {appliedFilters && !loading && (

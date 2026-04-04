@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://kynajewels.com/</loc>
+    <lastmod>2024-03-30</lastmod>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://kynajewels.com/rings</loc>
+    <lastmod>2024-03-30</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kynajewels.com/earrings</loc>
+    <lastmod>2024-03-30</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kynajewels.com/pendants</loc>
+    <lastmod>2024-03-30</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kynajewels.com/bracelets</loc>
+    <lastmod>2024-03-30</lastmod>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://kynajewels.com/about</loc>
+    <lastmod>2024-03-30</lastmod>
+    <priority>0.5</priority>
+  </url>
+</urlset>

@@ -11,6 +11,7 @@ import helmet from "helmet";
 import compression from "compression";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
+import path from "path";
 
 import authRoutes from "./routes/auth";
 import productRoutes from "./routes/product";
@@ -208,6 +209,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use(cookieParser());
+app.use("/public", express.static(path.join(process.cwd(), "public")));
 
 // Request metrics middleware
 app.use((req: Request, res: Response, next: NextFunction) => {

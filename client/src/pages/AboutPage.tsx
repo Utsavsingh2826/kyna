@@ -64,7 +64,7 @@ export default function AboutPage() {
             animate={{ scale: 1 }}
             transition={{ duration: 0.8 }}
           >
-            Jewellery That Celebrates You
+            Kyna Jewels - Jewellery That Celebrates You
           </motion.h1>
           <motion.p
             className="text-sm md:text-lg max-w-3xl mx-auto px-4 font-light"

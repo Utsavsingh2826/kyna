@@ -84,9 +84,9 @@ const HeroSection: React.FC = () => {
         {/* Hero Content */}
         <div className="relative z-10 h-full flex items-center justify-center">
           <div className="text-center text-white px-4">
-            <h2 className="text-4xl md:text-6xl lg:text-7xl font-light mb-12 tracking-wide animate-fade-in">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-light mb-12 tracking-wide animate-fade-in">
               {slides[currentSlide].title}
-            </h2>
+            </h1>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Link
