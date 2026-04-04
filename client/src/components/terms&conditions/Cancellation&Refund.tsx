@@ -212,7 +212,7 @@ export default function TermsAndConditions() {
                         Retail purchase - 
                       </span>{" "}Any member/personnel who wishes to purchase an item from the website can either:
 Add the selected diamond(s)/ jewellery directly to the shopping cart; or customize jewellery by adding diamond(s) to a ring, pendant, earring or any other type of jewellery that is expressly stated as customizable on the website and then add the item to the shopping cart; or  
-Choose from the selection of jewellery available on the website and add the item to the shopping cart; or call our trained consultants on +91 8928610682 or write to us on enquiries@kynajewels.com   
+Choose from the selection of jewellery available on the website and add the item to the shopping cart; or call our trained consultants on +91 8928610682 or write to us on info@akynajewels.com   
 The member will receive the form for ordering via email/fax/ courier based on their convenience.
 In the event of a user wishing to make a purchase, the user may be required to register on the website after adding the item(s) to the shopping cart. 
 Orders are normally considered complete only after we have received the payment. 
@@ -222,7 +222,7 @@ In the event the bank rejects to honour any payment transaction made by a custom
                     </li>
                     <li>
                       <span className="font-bold"> For bulk or wholesale purchases, contact customer service at 
-+91 8928610682 or write to us on enquiries@kynajewels.com  for discounts and terms.
++91 8928610682 or write to us on info@akynajewels.com  for discounts and terms.
                       </span>
                     </li>
                   </ul>
@@ -289,7 +289,7 @@ We won’t entertain any cancellation request after specified timeframe. Upon ca
                     <li><p className="font-bold">•	Eligibility for Returns: </p>If you are not entirely satisfied with your purchase or if a defective product has been delivered, you may return the item within 15 working days of receiving the product. The product must be unused, in its original condition, with its original tags, invoices, certificates and packaging.</li>
                     <li><p className="font-bold">•	Return Process: </p>
                     <ul>
-                      <li>Contact our customer service team at enquiries@kynajewels.com  to request a Return.</li>
+                      <li>Contact our customer service team at info@akynajewels.com  to request a Return.</li>
                       <li>To process returns, customers must provide Kyna Jewellery with a valid reason for return and send pictures via WhatsApp or mail within 24 hours of receiving the product.</li>
                       <li>Our courier partner will collect the order from the provided address within India.</li>
                       <li>A charge of Rs. 1800 will be borne by the customer to process the return from within India.</li>
@@ -297,7 +297,7 @@ We won’t entertain any cancellation request after specified timeframe. Upon ca
                     </ul>
                     <li><p className="font-bold">•	Quality Check & Approval: </p>Eligibility for returns is determined upon receipt and quality check conducted by our Quality Department. If the product does not meet the merchantable condition as dispatched by the company, the return will be rejected, and the product will be returned within 5 - 10 working days. Once approved by the Quality Department, the refund process will be initiated.</li>
                     <li><p className="font-bold">•	Refund Process: </p>Once received, we will inspect the item and process your refund using electronic transfer methods such as RTGS, NEFT, or other appropriate means. The refunded amount will be credited to the same account used for the transaction. It may take approximately 21 - 30 working days from the date we receive the returned product(s) at our warehouse for the refund process and amount to reflect in your bank account. Original shipping fees are non-refundable.</li>
-                    <li><p className="font-bold">•	Defect Reporting: </p>The return of a defective product must be reported within 24 Hours of receipt of the product. You can report defects by calling us at +91 8928610682 or writing to us at enquiries@kynajewels.com
+                    <li><p className="font-bold">•	Defect Reporting: </p>The return of a defective product must be reported within 24 Hours of receipt of the product. You can report defects by calling us at +91 8928610682 or writing to us at info@akynajewels.com
                     </li>
                     <li><p className="font-bold">•	Exclusions: </p>Design your own jewellery, custom-made jewellery, personalized jewellery, custom jewellery parts, or any alterations made to the jewellery is where the return policy is not applicable.</li>
                     </li>
@@ -317,7 +317,7 @@ Exchange is permitted if the jewellery is in its original condition with its ori
                     <li><p className="font-bold">•	Exchange Process: </p>
                    
 <ul>
-  <li>Contact our customer service team at enquiries@kynajewels.com  to request an Exchange.</li>
+  <li>Contact our customer service team at info@akynajewels.com  to request an Exchange.</li>
   <li>To process exchanges, customers must provide Kyna Jewellery with a valid reason for exchange and send pictures via WhatsApp or mail within 24 hours of receiving the product.</li>
   <li>A processing fee of Rs. 1800 will be borne by the customer to process the exchange within India.</li>
   <li>Processes & Charges of exchange for international orders will be communicated during the request for exchange process.</li>
@@ -337,7 +337,7 @@ If the product does not meet the merchantable condition as dispatched by the com
                         <p className="font-bold">•	Eligibility Criteria:</p>Jewellery must be in its original condition without significant alterations or damages include all original certificates and documentation.
                       </li>
                        <li>
-                      <p className="font-bold">•	Valuation Process:</p>Contact our customer service team at enquiries@kynajewels.com to request for Buy Back.
+                      <p className="font-bold">•	Valuation Process:</p>Contact our customer service team at info@akynajewels.com to request for Buy Back.
 Final valuation will be determined based on prevailing market prices, condition of the item, and other relevant considerations. The valuation process includes an inspection and quality check by our Quality Department.
 
                     </li>
@@ -350,7 +350,7 @@ Final valuation will be determined based on prevailing market prices, condition 
 </ul>
                     </li>
                      <li>
-                      <p className="font-bold">•	Valuation Process:</p>Contact our customer service team at enquiries@kynajewels.com to request for Buy Back.
+                      <p className="font-bold">•	Valuation Process:</p>Contact our customer service team at info@akynajewels.com to request for Buy Back.
 Final valuation will be determined based on prevailing market prices, condition of the item, and other relevant considerations. The valuation process includes an inspection and quality check by our Quality Department.
 
                     </li>

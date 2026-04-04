@@ -567,10 +567,10 @@ export default function TermsAndConditions() {
                     result in legal action. For inquiries regarding content
                     usage, please contact us at +91 8928610682 or write to us on{" "}
                     <a
-                      href="mailto:enquiries@kynajewels.com"
+                      href="mailto:info@akynajewels.com"
                       className="underline text-[#328F94]"
                     >
-                      enquiries@kynajewels.com
+                      info@akynajewels.com
                     </a>
                   </p>
                 </div>
@@ -888,7 +888,7 @@ export default function TermsAndConditions() {
                   </p>
                   <ul className="text-muted-foreground leading-relaxed mb-4 list-disc pl-6">
                     <li>Phone: +91 8928610682</li>
-                    <li>Email: enquiries@kynajewels.com</li>
+                    <li>Email: info@akynajewels.com</li>
                     <li>
                       Live Chat: Accessible through our website during
                       operational hours.

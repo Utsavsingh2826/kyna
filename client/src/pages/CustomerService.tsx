@@ -93,7 +93,7 @@ export default function CustomerService() {
       title: "Chat with us",
       description:
         "We are available online from 9:00 AM to 7:00 PM IST\n(+5:30) Talk with us now",
-      contact: "enquiries@kynajewels.com",
+      contact: "info@akynajewels.com",
       contactHref: "https://wa.me/918928610682",
       buttonText: "Contact Us →",
       buttonColor: "bg-[#2DB224] hover:bg-green-700 text-white",
