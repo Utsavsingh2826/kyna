@@ -210,6 +210,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.use(cookieParser());
 app.use("/public", express.static(path.join(process.cwd(), "public")));
+app.use("/feeds", express.static(path.join(process.cwd(), "public", "feeds")));
 
 // Request metrics middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
