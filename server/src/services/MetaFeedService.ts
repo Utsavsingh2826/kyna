@@ -157,7 +157,7 @@ const generateMasterIndex = async (files: string[], baseUrl: string) => {
   files.forEach(file => {
     indexXml += `
   <sitemap>
-    <loc>${baseUrl}/feeds/${escapeXml(file)}</loc>
+    <loc>${baseUrl}/api/marketing/feeds/${escapeXml(file)}</loc>
     <lastmod>${lastMod}</lastmod>
   </sitemap>`;
   });
