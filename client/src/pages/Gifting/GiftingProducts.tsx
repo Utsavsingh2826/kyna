@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Heart } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 // import productsData from "@/data/products.json";
@@ -691,6 +691,19 @@ export default function JewelleryPage({
   const [error, setError] = useState<string | null>(null);
   const [urlParamsInitialized, setUrlParamsInitialized] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const mainContainerRef = useRef<HTMLElement | null>(null);
+
+  // Robust scrollToTop function
+  const scrollToTop = () => {
+    console.log("🚀 [Gifting] Executing robust scrollToTop");
+    window.scrollTo({ top: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    if (mainContainerRef.current) {
+      mainContainerRef.current.scrollTop = 0;
+    }
+  };
+
 
   // Simplified filter state - only category and price
   const [activeFilters, setActiveFilters] = useState({
@@ -824,6 +837,7 @@ export default function JewelleryPage({
   const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
+      scrollToTop();
 
       // Build URL with price range parameters
       const url = new URL("/api/gifting", window.location.origin);
@@ -885,6 +899,7 @@ export default function JewelleryPage({
         try {
           if (!active) return;
           setLoading(true);
+          scrollToTop();
 
           // Build URL with price range parameters
           const url = new URL("/api/gifting", window.location.origin);
@@ -938,9 +953,11 @@ export default function JewelleryPage({
   // Scroll to top when page or filters change
   useEffect(() => {
     if (urlParamsInitialized) {
-      window.scrollTo(0, 0);
+      scrollToTop();
     }
-  }, [pagination.currentPage, minPrice, maxPrice, selectedCategory]);
+  }, [pagination.currentPage, minPrice, maxPrice, selectedCategory, loading]);
+
+
 
 
 
@@ -1033,7 +1050,7 @@ export default function JewelleryPage({
         <h1>Jewellery Collection — Premium Diamond Jewellery</h1>
       </header>
 
-      <main aria-labelledby="jewellery-heading" className="eng-root">
+      <main ref={mainContainerRef} aria-labelledby="jewellery-heading" className="eng-root">
         <div className="eng-wrap">
           <div className="eng-header">
             <h2 id="jewellery-heading" className="eng-title">
