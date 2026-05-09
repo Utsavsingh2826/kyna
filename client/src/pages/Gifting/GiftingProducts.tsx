@@ -693,16 +693,19 @@ export default function JewelleryPage({
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const mainContainerRef = useRef<HTMLElement | null>(null);
 
-  // Robust scrollToTop function
+  // Robust scrollToTop function that scrolls to the product section (skipping the banner)
   const scrollToTop = () => {
-    console.log("🚀 [Gifting] Executing robust scrollToTop");
-    window.scrollTo({ top: 0, behavior: "instant" });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
+    console.log("🚀 [Gifting] Scrolling to products section");
     if (mainContainerRef.current) {
-      mainContainerRef.current.scrollTop = 0;
+      // Offset for fixed header if necessary (e.g., 80px)
+      const yOffset = -80; 
+      const y = mainContainerRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: "instant" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "instant" });
     }
   };
+
 
 
   // Simplified filter state - only category and price
