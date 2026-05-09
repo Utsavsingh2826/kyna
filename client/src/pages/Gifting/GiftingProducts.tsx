@@ -692,19 +692,31 @@ export default function JewelleryPage({
   const [urlParamsInitialized, setUrlParamsInitialized] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const mainContainerRef = useRef<HTMLElement | null>(null);
+  const sectionHeaderRef = useRef<HTMLDivElement | null>(null);
 
-  // Robust scrollToTop function that scrolls to the product section (skipping the banner)
+  // Robust scrollToTop function that scrolls to the product section
   const scrollToTop = () => {
-    console.log("🚀 [Gifting] Scrolling to products section");
-    if (mainContainerRef.current) {
-      // Offset for fixed header if necessary (e.g., 80px)
-      const yOffset = -80; 
-      const y = mainContainerRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: "instant" });
-    } else {
-      window.scrollTo({ top: 0, behavior: "instant" });
-    }
+    console.log("🚀 [Gifting] Scrolling to products header");
+    
+    const doScroll = () => {
+      const target = sectionHeaderRef.current || mainContainerRef.current;
+      if (target) {
+        // Use scrollIntoView as the primary method
+        target.scrollIntoView({ behavior: "instant", block: "start" });
+        
+        // Apply an offset to account for fixed headers
+        // We do this by scrolling the window up by the offset amount
+        window.scrollBy(0, -90); 
+      }
+    };
+
+    // Execute immediately
+    doScroll();
+    
+    // Execute again after a short delay to ensure DOM has settled after data load
+    setTimeout(doScroll, 100);
   };
+
 
 
 
@@ -1055,7 +1067,8 @@ export default function JewelleryPage({
 
       <main ref={mainContainerRef} aria-labelledby="jewellery-heading" className="eng-root">
         <div className="eng-wrap">
-          <div className="eng-header">
+          <div ref={sectionHeaderRef} className="eng-header">
+
             <h2 id="jewellery-heading" className="eng-title">
               Gifting Collection ({filteredProducts.length})
             </h2>
