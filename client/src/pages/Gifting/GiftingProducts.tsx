@@ -935,6 +935,15 @@ export default function JewelleryPage({
     return () => { active = false; };
   }, [minPrice, maxPrice, selectedCategory, urlParamsInitialized]);
 
+  // Scroll to top when page or filters change
+  useEffect(() => {
+    if (urlParamsInitialized) {
+      window.scrollTo(0, 0);
+    }
+  }, [pagination.currentPage, minPrice, maxPrice, selectedCategory]);
+
+
+
   const handleMinChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Math.min(Number(e.target.value), maxPrice - 1000);
     setMinPrice(value);
@@ -1242,7 +1251,6 @@ export default function JewelleryPage({
             <div className="flex justify-center items-center mt-8 mb-8 space-x-2">
               <button
                 onClick={() => {
-                  window.scrollTo({ top: 0, behavior: "smooth" });
                   fetchProducts(pagination.currentPage - 1);
                 }}
                 disabled={pagination.currentPage === 1}
@@ -1257,7 +1265,6 @@ export default function JewelleryPage({
 
               <button
                 onClick={() => {
-                  window.scrollTo({ top: 0, behavior: "smooth" });
                   fetchProducts(pagination.currentPage + 1);
                 }}
                 disabled={pagination.currentPage === pagination.totalPages}

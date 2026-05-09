@@ -993,7 +993,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchProducts]);
 
+  // Scroll to top when page or filters change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pagination.currentPage, activeFilters, category]);
+
   // Separate effect to handle ONLY page number changes from pagination buttons
+
   useEffect(() => {
     const pageParam = searchParams.get("page");
     // If no page param, it means page 1 (default)
