@@ -3208,7 +3208,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             {!loading &&
               !error &&
               products.length > 0 &&
-              products.map((p) => {
+              products
+                .filter(
+                  (p) =>
+                    typeof p.firstVariantImageUrl === "string" &&
+                    p.firstVariantImageUrl.trim().length > 0,
+                )
+                .map((p) => {
                 // Detect metal color from product image
                 const detectedMetalColor =
                   getMetalColorFromImage(p.firstVariantImageUrl) || "WG";

@@ -362,7 +362,10 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
         },
       },
 
-      // Group by parentSku
+      // Group by parentSku. Only firstVariant is carried through the pipeline
+      // (used for the canonical YG image/SKU on the listing card). The full
+      // variant set used for min-price computation is fetched in a separate,
+      // targeted query below to keep $group memory small.
       {
         $group: {
           _id: "$parentSku",
@@ -376,9 +379,16 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
 
     // If no product-level filters and no price sorting, we can limit early
     if (!hasProductFilters && !sortBy) {
-      // Get total count before limiting
-      const countPipeline = [...pipeline, { $count: "total" }];
-      const countResult = await VariantModel.aggregate(countPipeline).exec();
+      // Lightweight count pipeline – count distinct parentSkus without
+      // carrying any per-variant payload (avoids $group memory blow-ups).
+      const countPipeline: any[] = [
+        { $match: variantMatch },
+        { $group: { _id: "$parentSku" } },
+        { $count: "total" },
+      ];
+      const countResult = await VariantModel.aggregate(countPipeline)
+        .allowDiskUse(true)
+        .exec();
       const totalFiltered = countResult[0]?.total || 0;
 
       // Now add pagination to main pipeline
@@ -408,21 +418,56 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
 
       const productMap = new Map(products.map((p) => [p.parentSku, p]));
 
-      // Combine results
+      // Fetch every variant for ONLY the paged parentSkus so the pricing
+      // helper can compute the minimum selling price across the full product.
+      // We project just the fields needed for pricing to keep payload small.
+      const variantsForPricing = (await VariantModel.find(
+        { parentSku: { $in: parentSkus }, category },
+        {
+          parentSku: 1,
+          variantSku: 1,
+          stonePricing: 1,
+          netWeightInGrams: 1,
+          metalType: 1,
+          metalKt: 1,
+          expense: 1,
+        },
+      )
+        .lean()
+        .exec()) as any[];
+
+      const variantsByParent = new Map<string, any[]>();
+      for (const v of variantsForPricing) {
+        const key = v?.parentSku;
+        if (!key) continue;
+        const arr = variantsByParent.get(key);
+        if (arr) arr.push(v);
+        else variantsByParent.set(key, [v]);
+      }
+
+      // Combine results. allVariants powers "Starting at" = min(prices).
       const combinedResults = limitedResults
         .map((row) => ({
           firstVariant: row.firstVariant,
+          allVariants: variantsByParent.get(row._id) || [row.firstVariant],
           product: productMap.get(row._id),
         }))
         .filter((row) => row.product);
 
       // Process with batched pricing
-      const finalProducts = await processProductsWithBatchedPricing(
+      const finalProductsRaw = await processProductsWithBatchedPricing(
         combinedResults,
         category,
         minPrice,
         maxPrice,
       );
+
+      // Skip products whose first variant has no usable image URL so the
+      // listing never renders broken/empty cards.
+      const finalProducts = finalProductsRaw.filter(
+        (p: any) => typeof p?.firstVariantImageUrl === "string" && p.firstVariantImageUrl.trim().length > 0,
+      );
+      const droppedOnPage = finalProductsRaw.length - finalProducts.length;
 
       const totalProducts = await ProductModel.countDocuments({ category });
 
@@ -430,7 +475,10 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
         success: true,
         count: finalProducts.length,
         total: totalProducts,
-        totalFiltered: totalFiltered,
+        // Best-effort adjustment: subtract products dropped on this page.
+        // totalFiltered may still slightly overcount catalog-wide imageless
+        // products on the fast path; full accuracy lives in the filtered path.
+        totalFiltered: Math.max(0, totalFiltered - droppedOnPage),
         pagination: {
           totalPages: Math.ceil(totalFiltered / limit),
           currentPage: page,
@@ -516,12 +564,57 @@ export const getProductsByCategory = async (req: Request, res: Response) => {
       .allowDiskUse(true)
       .exec();
 
+    // Fetch every variant for the parentSkus that survived the aggregation
+    // so the pricing helper can compute the minimum selling price across the
+    // full product. We project just the fields needed for pricing.
+    const survivingParentSkus = allResults
+      .map((r: any) => r?._id)
+      .filter((x: any): x is string => typeof x === "string" && x.length > 0);
+
+    let variantsByParent: Map<string, any[]> = new Map();
+    if (survivingParentSkus.length > 0) {
+      const variantsForPricing = (await VariantModel.find(
+        { parentSku: { $in: survivingParentSkus }, category },
+        {
+          parentSku: 1,
+          variantSku: 1,
+          stonePricing: 1,
+          netWeightInGrams: 1,
+          metalType: 1,
+          metalKt: 1,
+          expense: 1,
+        },
+      )
+        .lean()
+        .exec()) as any[];
+
+      for (const v of variantsForPricing) {
+        const key = v?.parentSku;
+        if (!key) continue;
+        const arr = variantsByParent.get(key);
+        if (arr) arr.push(v);
+        else variantsByParent.set(key, [v]);
+      }
+    }
+
+    // Attach allVariants to each row so the pricing helper can compute min price.
+    for (const row of allResults as any[]) {
+      row.allVariants = variantsByParent.get(row._id) || [row.firstVariant];
+    }
+
     // Process with batched pricing (includes price filtering)
     let allProducts = await processProductsWithBatchedPricing(
       allResults,
       category,
       minPrice,
       maxPrice,
+    );
+
+    // Skip products whose first variant has no usable image URL so the
+    // listing never renders broken/empty cards. Applied before sorting and
+    // pagination so totalFiltered and totalPages stay accurate.
+    allProducts = allProducts.filter(
+      (p: any) => typeof p?.firstVariantImageUrl === "string" && p.firstVariantImageUrl.trim().length > 0,
     );
 
     // Apply price sorting if requested
@@ -661,19 +754,23 @@ async function processProductsWithBatchedPricing(
 
   const gstValue = toNumberRobust(mergedDefaults.gstValue);
 
-  // STEP 1: Collect all unique pricing sequences from ALL results
+  // STEP 1: Collect all unique pricing sequences from EVERY variant of
+  // every product (not just firstVariant). We need this so the per-variant
+  // price computation below can look up any sequence in one pass.
   const allSequences = new Set<string>();
 
   for (const row of allResults) {
-    const variant = row.firstVariant;
-    const stonePricingArr: any[] = Array.isArray(variant.stonePricing)
-      ? variant.stonePricing
-      : [];
+    const variantsForSeq: any[] = Array.isArray(row.allVariants) && row.allVariants.length > 0
+      ? row.allVariants
+      : (row.firstVariant ? [row.firstVariant] : []);
 
-    for (const stone of stonePricingArr) {
-      const seq = stone?.pricingSequence;
-      if (seq) {
-        allSequences.add(seq);
+    for (const v of variantsForSeq) {
+      const stonePricingArr: any[] = Array.isArray(v?.stonePricing) ? v.stonePricing : [];
+      for (const stone of stonePricingArr) {
+        const seq = stone?.pricingSequence;
+        if (seq) {
+          allSequences.add(seq);
+        }
       }
     }
   }
@@ -781,125 +878,139 @@ async function processProductsWithBatchedPricing(
       priceIncomplete: true,
     };
 
-    // Calculate price using cached pricing data
-    try {
-      const stonePricingArr: any[] = Array.isArray(variant.stonePricing)
-        ? variant.stonePricing
-        : [];
+    // Per-variant pricing. Returns null sellingPrice if incomplete.
+    const computeVariantPrice = (
+      v: any,
+    ): { sellingPrice: number | null; incomplete: boolean } => {
+      try {
+        const stonePricingArr: any[] = Array.isArray(v?.stonePricing)
+          ? v.stonePricing
+          : [];
 
-      let diamondCost = 0;
-      let diamondIncomplete = false;
+        let diamondCost = 0;
+        let diamondIncomplete = false;
 
-      // Calculate diamond cost from stonePricing array
-      for (const stone of stonePricingArr) {
-        const seq = stone?.pricingSequence;
-        const cts = toNumberRobust(stone?.cts);
+        for (const stone of stonePricingArr) {
+          const seq = stone?.pricingSequence;
+          const cts = toNumberRobust(stone?.cts);
 
-        if (!seq || Number.isNaN(cts)) {
-          diamondIncomplete = true;
-          continue;
+          if (!seq || Number.isNaN(cts)) {
+            diamondIncomplete = true;
+            continue;
+          }
+          const pricingData = pricingMap.get(seq);
+          const pricePerCt = pricingData?.price ?? NaN;
+
+          if (Number.isNaN(pricePerCt)) {
+            diamondIncomplete = true;
+            continue;
+          }
+
+          diamondCost += pricePerCt * cts;
+          diamondCost = Math.round(diamondCost);
         }
-        const pricingData = pricingMap.get(seq);
-        const pricePerCt = pricingData?.price ?? NaN;
 
-        if (Number.isNaN(pricePerCt)) {
-          diamondIncomplete = true;
-          continue;
-        }
+        const metalType = (v?.metalType || "GOLD").toString().toUpperCase();
+        const karatStr = v?.metalKt || "18KT";
+        const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
+        const metalWeightGrams = toNumberRobust(v?.netWeightInGrams);
 
-        diamondCost += pricePerCt * cts;
-        diamondCost = Math.round(diamondCost);
-      }
-
-      // NOTE: variant.expense is considered "old" and is being replaced by 
-      // the metal-specific expenses from defaultvalues (goldExpense, silverExpense, etc.)
-      /*
-      const variantExpense = toNumberRobust(variant.expense);
-      if (!Number.isNaN(variantExpense)) {
-        diamondCost += variantExpense;
-      }
-      */
-
-      const metalType = (variant.metalType || "GOLD").toString().toUpperCase();
-
-      let karatStr = variant.metalKt || "18KT";
-      const karatNum = Number(String(karatStr).match(/\d+/)?.[0] || 18);
-
-      let metalWeightGrams = toNumberRobust(variant.netWeightInGrams);
-
-      let metalPricePerGram = NaN;
-      if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
-        const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
-        metalPricePerGram = goldValue24 * factor;
-      } else if (metalType === "SILVER") {
-        metalPricePerGram = silverPricePerGram;
-      } else if (metalType === "PLATINUM") {
-        metalPricePerGram = platinumPricePerGram;
-      } else if (metalType === "TITANIUM") {
-        metalPricePerGram = titaniumPricePerGram;
-      }
-
-      let metalCost = 0;
-      let labourCost = 0;
-      let additionalExpense = 0;
-      let metalIncomplete = false;
-
-      if (!Number.isNaN(metalWeightGrams) && !Number.isNaN(metalPricePerGram)) {
-        // metalCost = metalPricePerGram * metalWeightGrams;
-        metalCost = Math.round(metalPricePerGram * metalWeightGrams);
-
-        // Get labour cost based on metal type
-        if (metalType === "GOLD") {
-          labourCost = !Number.isNaN(labourCostGold)
-            ? labourCostGold * metalWeightGrams
-            : 0;
-          labourCost = Math.round(labourCost);
-          additionalExpense = !Number.isNaN(goldExpense) ? goldExpense : 0;
+        let metalPricePerGram = NaN;
+        if (metalType === "GOLD" && !Number.isNaN(goldValue24)) {
+          const factor = KARAT_FACTOR[String(karatNum)] ?? KARAT_FACTOR["18"];
+          metalPricePerGram = goldValue24 * factor;
         } else if (metalType === "SILVER") {
-          labourCost = !Number.isNaN(labourCostSilver) ? labourCostSilver * metalWeightGrams : 0;
-          labourCost = Math.round(labourCost);
-          additionalExpense = !Number.isNaN(silverExpense) ? silverExpense : 0;
+          metalPricePerGram = silverPricePerGram;
         } else if (metalType === "PLATINUM") {
-          labourCost = !Number.isNaN(labourCostPlatinum)
-            ? labourCostPlatinum * metalWeightGrams
-            : 0;
-          labourCost = Math.round(labourCost);
-          additionalExpense = !Number.isNaN(platinumExpense)
-            ? platinumExpense
-            : 0;
+          metalPricePerGram = platinumPricePerGram;
         } else if (metalType === "TITANIUM") {
-          labourCost = !Number.isNaN(labourCostTitanium)
-            ? labourCostTitanium * metalWeightGrams
-            : 0;
-          labourCost = Math.round(labourCost);
-          additionalExpense = !Number.isNaN(titaniumExpense)
-            ? titaniumExpense
-            : 0;
+          metalPricePerGram = titaniumPricePerGram;
         }
-      } else {
-        metalIncomplete = true;
-      }
 
-      // Calculate final selling price with GST
-      const basePrice =
-        Math.round(
-          metalCost + diamondCost + labourCost + additionalExpense
+        let metalCost = 0;
+        let labourCost = 0;
+        let additionalExpense = 0;
+        let metalIncomplete = false;
+
+        if (
+          !Number.isNaN(metalWeightGrams) &&
+          !Number.isNaN(metalPricePerGram)
+        ) {
+          metalCost = Math.round(metalPricePerGram * metalWeightGrams);
+
+          if (metalType === "GOLD") {
+            labourCost = !Number.isNaN(labourCostGold)
+              ? Math.round(labourCostGold * metalWeightGrams)
+              : 0;
+            additionalExpense = !Number.isNaN(goldExpense) ? goldExpense : 0;
+          } else if (metalType === "SILVER") {
+            labourCost = !Number.isNaN(labourCostSilver)
+              ? Math.round(labourCostSilver * metalWeightGrams)
+              : 0;
+            additionalExpense = !Number.isNaN(silverExpense) ? silverExpense : 0;
+          } else if (metalType === "PLATINUM") {
+            labourCost = !Number.isNaN(labourCostPlatinum)
+              ? Math.round(labourCostPlatinum * metalWeightGrams)
+              : 0;
+            additionalExpense = !Number.isNaN(platinumExpense)
+              ? platinumExpense
+              : 0;
+          } else if (metalType === "TITANIUM") {
+            labourCost = !Number.isNaN(labourCostTitanium)
+              ? Math.round(labourCostTitanium * metalWeightGrams)
+              : 0;
+            additionalExpense = !Number.isNaN(titaniumExpense)
+              ? titaniumExpense
+              : 0;
+          }
+        } else {
+          metalIncomplete = true;
+        }
+
+        const basePrice = Math.round(
+          metalCost + diamondCost + labourCost + additionalExpense,
         );
+        const gstMultiplier = !Number.isNaN(gstValue) ? 1 + gstValue / 100 : 1;
+        const sellingPrice = Math.round(basePrice * gstMultiplier);
 
-      const gstMultiplier = !Number.isNaN(gstValue) ? 1 + gstValue / 100 : 1;
-      const sellingPrice = Math.round(basePrice * gstMultiplier);
+        const incomplete = metalIncomplete || diamondIncomplete;
+        return {
+          sellingPrice:
+            !Number.isNaN(sellingPrice) && sellingPrice > 0 ? sellingPrice : null,
+          incomplete,
+        };
+      } catch {
+        return { sellingPrice: null, incomplete: true };
+      }
+    };
 
-      baseOut.sellingPrice =
-        !Number.isNaN(sellingPrice) && sellingPrice > 0
-          ? Math.round(sellingPrice)
-          : null;
-      baseOut.priceIncomplete = metalIncomplete || diamondIncomplete;
-    } catch (err) {
-      baseOut.sellingPrice = null;
-      baseOut.priceIncomplete = true;
+    // Compute price across EVERY variant of this product, then advertise
+    // the minimum as "Starting at …". Image/firstVariantSku still come from
+    // the canonical (Yellow Gold) firstVariant chosen above.
+    const variantsToPrice: any[] = Array.isArray(row.allVariants) && row.allVariants.length > 0
+      ? row.allVariants
+      : [variant];
+
+    let minSellingPrice: number | null = null;
+    let cheapestVariantSku: string | null = null;
+    let anyComplete = false;
+
+    for (const v of variantsToPrice) {
+      const { sellingPrice, incomplete } = computeVariantPrice(v);
+      if (sellingPrice == null) continue;
+      if (!incomplete) anyComplete = true;
+      if (minSellingPrice == null || sellingPrice < minSellingPrice) {
+        minSellingPrice = sellingPrice;
+        cheapestVariantSku = v?.variantSku || null;
+      }
     }
 
-    // Price filter
+    baseOut.sellingPrice = minSellingPrice;
+    // Only flag the product as incomplete if no variant produced a usable price.
+    baseOut.priceIncomplete = !anyComplete;
+    baseOut.cheapestVariantSku = cheapestVariantSku;
+
+    // Price filter is evaluated against the advertised "Starting at" price.
     if (
       !Number.isNaN(minPrice) &&
       (baseOut.sellingPrice === null || baseOut.sellingPrice < minPrice)
@@ -2377,7 +2488,44 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
           variantSku: 1,
           parentSku: { $toUpper: "$attributes.PARENT SKU" },
           images: 1,
-          // Filter for YG images first, then GP, then FV
+          // Priority: YG+GP (yellow gold ground pose) → any GP → YG → FV → any
+          ygGpImages: {
+            $filter: {
+              input: { $ifNull: ["$images", []] },
+              as: "img",
+              cond: {
+                $and: [
+                  {
+                    $regexMatch: {
+                      input: { $toString: { $ifNull: ["$$img.url", ""] } },
+                      regex: "YG",
+                      options: "i"
+                    }
+                  },
+                  {
+                    $regexMatch: {
+                      input: { $toString: { $ifNull: ["$$img.url", ""] } },
+                      regex: "-GP\\.",
+                      options: "i"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          gpImages: {
+            $filter: {
+              input: { $ifNull: ["$images", []] },
+              as: "img",
+              cond: {
+                $regexMatch: {
+                  input: { $toString: { $ifNull: ["$$img.url", ""] } },
+                  regex: "-GP\\.",
+                  options: "i"
+                }
+              }
+            }
+          },
           ygImages: {
             $filter: {
               input: { $ifNull: ["$images", []] },
@@ -2391,19 +2539,6 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
               }
             }
           },
-          gpImages: {
-            $filter: {
-              input: { $ifNull: ["$images", []] },
-              as: "img",
-              cond: {
-                $regexMatch: {
-                  input: { $toString: { $ifNull: ["$$img.url", ""] } },
-                  regex: "GP",
-                  options: "i"
-                }
-              }
-            }
-          },
           fvImages: {
             $filter: {
               input: { $ifNull: ["$images", []] },
@@ -2411,7 +2546,7 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
               cond: {
                 $regexMatch: {
                   input: { $toString: { $ifNull: ["$$img.url", ""] } },
-                  regex: "FV",
+                  regex: "-FV\\.",
                   options: "i"
                 }
               }
@@ -2420,22 +2555,28 @@ export const getBuilderVariants = async (req: Request, res: Response) => {
         }
       },
 
-      // Step 3: Pick the best image with YG priority
+      // Step 3: Pick the best image with GP priority (ground pose)
       {
         $addFields: {
           primaryImage: {
             $cond: {
-              if: { $gt: [{ $size: "$ygImages" }, 0] },
-              then: { $arrayElemAt: ["$ygImages", 0] },
+              if: { $gt: [{ $size: "$ygGpImages" }, 0] },
+              then: { $arrayElemAt: ["$ygGpImages", 0] },
               else: {
                 $cond: {
                   if: { $gt: [{ $size: "$gpImages" }, 0] },
                   then: { $arrayElemAt: ["$gpImages", 0] },
                   else: {
                     $cond: {
-                      if: { $gt: [{ $size: "$fvImages" }, 0] },
-                      then: { $arrayElemAt: ["$fvImages", 0] },
-                      else: { $arrayElemAt: [{ $ifNull: ["$images", []] }, 0] }
+                      if: { $gt: [{ $size: "$ygImages" }, 0] },
+                      then: { $arrayElemAt: ["$ygImages", 0] },
+                      else: {
+                        $cond: {
+                          if: { $gt: [{ $size: "$fvImages" }, 0] },
+                          then: { $arrayElemAt: ["$fvImages", 0] },
+                          else: { $arrayElemAt: [{ $ifNull: ["$images", []] }, 0] }
+                        }
+                      }
                     }
                   }
                 }
