@@ -1,150 +1,118 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import banner from "/image.png";
+import { Link } from "react-router-dom";
 
 const SaleSection: React.FC = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [timeLeft, setTimeLeft] = useState({
-    hours: 2,
-    minutes: 40,
-    seconds: 5,
-  });
 
   const slides = [
     {
-      image:
-        "/marketing/menstud.png",
-      title: "Sparkle Like Never Before! Limited-Time Diamond Offer",
-      subtitle: "Your Moment of Elegance Awaits",
-      discount: "20%",
+      image: "/marketing/menstud.png",
+      title: "Diamonds That Define You",
+      subtitle: "Discover our handpicked diamond earring collection — each piece a story of brilliance",
+      cta: { label: "Explore Earrings", link: "/earrings" },
     },
     {
-      image:
-        "/marketing/bracelelt.png",
-      title: "Exclusive Ring Collection Sale",
-      subtitle: "Timeless Beauty at Unbeatable Prices",
-      discount: "25%",
+      image: "/marketing/bracelelt.png",
+      title: "Rings for Every Chapter",
+      subtitle: "From engagement to everyday elegance — find the ring that speaks your heart",
+      cta: { label: "Shop Rings", link: "/rings" },
     },
     {
-      image:
-        "/marketing/earring.jpeg",
-      title: "Premium Jewelry Flash Sale",
-      subtitle: "Luxury Craftsmanship for Less",
-      discount: "30%",
+      image: "/marketing/earring.jpeg",
+      title: "Crafted for the Ones You Love",
+      subtitle: "Timeless jewellery gifted with intention — explore our finest collections",
+      cta: { label: "Shop All Jewellery", link: "/earrings" },
     },
   ];
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % slides.length);
-  };
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % slides.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
-  };
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        }
-        return prev;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // Auto-slide functionality
   useEffect(() => {
     const interval = setInterval(nextSlide, 6000);
     return () => clearInterval(interval);
   }, []);
 
-  const formatTime = (time: number) => time.toString().padStart(2, "0");
-
   return (
-    <section className="py-8 pb-2 sm:py-12 px-4 md:px-8 lg:px-16 bg-white">
-      <div
-  className="relative overflow-hidden group rounded-lg shadow-lg 
-             h-[300px] sm:h-[350px] md:h-[420px] lg:h-[465px]"
->
-        {/* Background Image Slider */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 ease-in-out"
-          style={{
-            backgroundImage: `url(${slides[currentSlide].image})`,
-          }}
-        >
-          <div className=""></div>
+    <section className="py-8 sm:py-12 bg-white">
+      <div className="relative overflow-hidden group rounded-lg shadow-lg mx-4 md:mx-8 lg:mx-16 h-[300px] sm:h-[350px] md:h-[420px] lg:h-[465px]">
+
+        {/* Images with real crossfade — same pattern as hero videos */}
+        <div className="absolute inset-0">
+          {slides.map((slide, index) => (
+            <img
+              key={index}
+              src={slide.image}
+              alt={slide.title}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ease-in-out ${
+                currentSlide === index ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          ))}
         </div>
 
         {/* Navigation Arrows */}
         <button
           onClick={prevSlide}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-20"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors duration-300 opacity-0 group-hover:opacity-100 z-20 p-2"
+          aria-label="Previous slide"
         >
-          <ChevronLeft className="w-6 h-6" />
+          <ChevronLeft className="w-7 h-7" strokeWidth={1.5} />
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-3 rounded-full transition-all duration-300 opacity-0 group-hover:opacity-100 z-20"
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors duration-300 opacity-0 group-hover:opacity-100 z-20 p-2"
+          aria-label="Next slide"
         >
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-7 h-7" strokeWidth={1.5} />
         </button>
 
+        {/* Gradient overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/30 to-transparent z-10 pointer-events-none" />
+
         {/* Content */}
-        <div className="container mx-auto px-4 relative z-10 h-full">
-          <div className="flex flex-col lg:flex-row items-center justify-between h-full">
-            <div className="lg:w-1/2 mb-8 lg:mb-0 text-white">
-              {/* <h3 className="text-2xl md:text-4xl font-light mb-4">
-                {slides[currentSlide].title}
-              </h3> */}
-              {/* <button className="border border-white bg-transparent text-white px-8 py-3 hover:bg-white hover:text-blue-900 transition-all duration-300 mb-4 rounded">
-                Buy Now
-              </button> */}
-              {/* <p className="text-sm opacity-90 mb-4">
-                {slides[currentSlide].subtitle}
-              </p> */}
-              {/* <div className="bg-black bg-opacity-30 inline-block px-4 py-2 rounded">
-                <p className="text-lg font-semibold">
-                  Only{" "}
-                  <span className="text-yellow-400">
-                    {formatTime(timeLeft.hours)}:{formatTime(timeLeft.minutes)}:
-                    {formatTime(timeLeft.seconds)}
-                  </span>{" "}
-                  Left
-                </p>
-              </div> */}
-            </div>
-            {/* <div className="lg:w-1/2 flex justify-center lg:justify-end relative">
-              <div className="relative">
-                <div className="absolute -top-4 -right-4 bg-white text-orange-600 rounded-full w-20 h-20 flex flex-col items-center justify-center shadow-lg z-10">
-                  <span className="text-xs font-bold">SALE</span>
-                  <span className="text-lg font-bold">
-                    {slides[currentSlide].discount}
-                  </span>
-                  <span className="text-xs">OFF</span>
-                </div>
-              </div>
-            </div> */}
+        <div className="container mx-auto px-8 md:px-12 relative z-20 h-full">
+          <div className="flex flex-col justify-center h-full max-w-lg">
+
+            {/* Limited time badge */}
+            <span className="inline-block mb-4 px-3 py-1 bg-white/15 border border-white/40 text-white text-xs tracking-widest uppercase backdrop-blur-sm w-fit">
+              ✦ Limited Time Offer ✦
+            </span>
+
+            <h3 className="text-2xl md:text-3xl font-light text-white mb-2 leading-snug">
+              {slides[currentSlide].title}
+            </h3>
+            <p className="text-sm text-white/80 mb-6 font-light">
+              {slides[currentSlide].subtitle}
+            </p>
+
+            <Link
+              to={slides[currentSlide].cta.link}
+              className="inline-block w-fit bg-white text-gray-800 px-8 py-3 text-sm font-medium tracking-wide hover:bg-[#68C5C0] hover:text-white transition-colors duration-200 shadow-lg"
+            >
+              {slides[currentSlide].cta.label} →
+            </Link>
           </div>
         </div>
 
-        {/* Slide Indicators */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-3">
+        {/* Thin line slide indicators */}
+        <div className="absolute bottom-5 left-8 md:left-12 flex items-center gap-2 z-20">
           {slides.map((_, index) => (
             <button
               key={index}
-              className={`w-3 h-3 rounded-full transition-colors duration-300 ${
-                currentSlide === index ? "bg-white" : "bg-white bg-opacity-50"
-              }`}
               onClick={() => setCurrentSlide(index)}
-            ></button>
+              aria-label={`Go to slide ${index + 1}`}
+              className="relative h-[2px] flex-shrink-0 overflow-hidden transition-all duration-500"
+              style={{ width: currentSlide === index ? "40px" : "20px" }}
+            >
+              <span className="absolute inset-0 bg-white/35" />
+              <span
+                className={`absolute inset-0 bg-white origin-left transition-transform duration-500 ${
+                  currentSlide === index ? "scale-x-100" : "scale-x-0"
+                }`}
+              />
+            </button>
           ))}
         </div>
       </div>

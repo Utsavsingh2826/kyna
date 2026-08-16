@@ -1,0 +1,305 @@
+/* ── Root & layout ───────────────────────────── */
+.bld-root { background: #faf9f7; min-height: 100vh; }
+
+.bld-wrap {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ── Section divider groups ──────────────────── */
+.bld-section {
+  padding: 1.1rem 0;
+  border-bottom: 1px solid #ebebeb;
+}
+.bld-section:last-of-type { border-bottom: none; }
+
+/* ── Option labels ───────────────────────────── */
+.bld-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+/* ── Style category tabs ─────────────────────── */
+.bld-tab {
+  padding: 6px 14px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid #ddd;
+  border-radius: 2px;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  white-space: nowrap;
+}
+.bld-tab:hover { border-color: #328F94; color: #328F94; }
+.bld-tab.active {
+  border-color: #328F94;
+  background: #328F94;
+  color: #fff;
+}
+
+/* ── Price display ───────────────────────────── */
+.bld-price {
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  color: #1a1a1a;
+}
+.bld-price-label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+/* ── CTA buttons ─────────────────────────────── */
+.bld-btn-primary {
+  width: 100%;
+  background: #328F94;
+  color: #fff;
+  border: 1px solid #328F94;
+  padding: 14px 20px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.25s, color 0.25s;
+  display: inline-block;
+  text-align: center;
+}
+.bld-btn-primary:hover:not(:disabled) { background: #1e6e72; border-color: #1e6e72; }
+.bld-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.bld-btn-outline {
+  width: 100%;
+  background: transparent;
+  color: #328F94;
+  border: 1px solid #328F94;
+  padding: 14px 20px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.25s, color 0.25s;
+  display: inline-block;
+  text-align: center;
+}
+.bld-btn-outline:hover:not(:disabled) { background: #328F94; color: #fff; }
+.bld-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Step indicator (Upload Your Design) ─────── */
+.bld-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2.5rem;
+  gap: 0;
+}
+.bld-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.bld-step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #aaa;
+  background: #fff;
+  transition: border-color 0.3s, background 0.3s, color 0.3s;
+}
+.bld-step-dot.active { border-color: #328F94; background: #328F94; color: #fff; }
+.bld-step-dot.done { border-color: #328F94; background: #328F94; color: #fff; }
+.bld-step-title {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #aaa;
+  margin-top: 6px;
+  text-align: center;
+  max-width: 80px;
+}
+.bld-step-title.active { color: #328F94; }
+.bld-step-connector {
+  width: 64px;
+  height: 1px;
+  background: #ddd;
+  margin: 0 8px 20px;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+.bld-step-connector.done { background: #328F94; }
+
+/* ── Upload zone ─────────────────────────────── */
+.bld-upload-zone {
+  border: 1px solid #ddd;
+  background: #faf9f7;
+  border-radius: 2px;
+  padding: 3rem 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.bld-upload-zone:hover,
+.bld-upload-zone.dragging {
+  border-color: #328F94;
+  background: rgba(50, 143, 148, 0.03);
+}
+.bld-upload-title {
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #444;
+  margin-top: 12px;
+}
+.bld-upload-hint {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 4px;
+  letter-spacing: 0.05em;
+}
+
+/* ── Image thumbnail strip ───────────────────── */
+.bld-thumb-strip {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.bld-thumb {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+.bld-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+/* ── Segmented toggle (Diamond Origin) ──────── */
+.bld-toggle {
+  display: flex;
+  border: 1px solid #ddd;
+  overflow: hidden;
+  background: #fff;
+}
+.bld-toggle-btn {
+  flex: 1;
+  padding: 11px 10px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: transparent;
+  color: #888;
+  border: none;
+  transition: background 0.2s, color 0.2s;
+  border-right: 1px solid #ddd;
+}
+.bld-toggle-btn:last-child { border-right: none; }
+.bld-toggle-btn.active { background: #328F94; color: #fff; }
+.bld-toggle-btn:not(.active):hover { background: #f5f5f5; color: #444; }
+
+/* ── Underline style tabs (Style categories) ─── */
+.bld-style-tabs {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.bld-style-tabs::-webkit-scrollbar { display: none; }
+.bld-style-tab {
+  padding: 10px 14px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #bbb;
+  cursor: pointer;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.2s, border-color 0.2s;
+  margin-bottom: -1px;
+}
+.bld-style-tab.active { color: #328F94; border-bottom-color: #328F94; }
+.bld-style-tab:not(.active):hover { color: #555; }
+
+/* ── Chip buttons (Metal type, Karat) ────────── */
+.bld-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.bld-chip {
+  padding: 8px 14px;
+  border: 1px solid #ddd;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background: #fff;
+  color: #666;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.bld-chip.active { border-color: #328F94; color: #328F94; background: rgba(50,143,148,0.04); }
+.bld-chip:not(.active):hover { border-color: #aaa; color: #333; }
+
+/* ── Diamond shape tile with visible name ────── */
+.bld-shape {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+.bld-shape-btn {
+  width: 52px;
+  height: 52px;
+  border: 1px solid #e0e0e0;
+  background: #faf9f7;
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.bld-shape-btn.active {
+  border-color: #328F94;
+  box-shadow: 0 0 0 1px rgba(50,143,148,0.5);
+}
+.bld-shape-btn:not(.active):hover { border-color: #aaa; }
+.bld-shape-name {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #bbb;
+  text-align: center;
+  line-height: 1.2;
+}
+.bld-shape-name.active { color: #328F94; }
+
+/* ── Breadcrumb ──────────────────────────────── */
+.bld-breadcrumb {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #aaa;
+  padding: 12px 0;
+}
+.bld-breadcrumb a { color: inherit; text-decoration: none; }
+.bld-breadcrumb a:hover { color: #328F94; }

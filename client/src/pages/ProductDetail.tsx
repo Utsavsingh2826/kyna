@@ -48,7 +48,8 @@ import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
 import RingSizeGuidePopup from "@/components/RingSizeGuidePopup";
 import BraceletSizeGuidePopup from "@/components/BraceletSizeGuidePopup";
 import { ShareEmailModal } from "@/components/ShareEmailModal";
-import "@/styles/image-loading.css"; // Ensure CSS for blur/skeleton is included
+import "@/styles/image-loading.css";
+import "./builder-luxury.css";
 import { trackEvent } from "@/utils/pixel";
 
 // Product interface for API data
@@ -2402,7 +2403,7 @@ const ProductDetail = () => {
                               );
                             }}
                             onLoad={() => {
-                              console.error(
+                              console.log(
                                 `Loaded desktop thumbnail ${index + 1}`,
                               );
                             }}
@@ -2597,7 +2598,7 @@ const ProductDetail = () => {
             rightColumn={
               <div className="">
                 <div>
-                  <h1 className="text-2xl my-6 mb-2">{productData.title}</h1>
+                  <h1 className="text-2xl my-6 mb-2" style={{ fontWeight: 300, letterSpacing: "0.01em", lineHeight: 1.3 }}>{productData.title}</h1>
                   <div className="flex items-center gap-2 mb-4">
                   {/*  <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -2611,7 +2612,7 @@ const ProductDetail = () => {
                     {productData.description}
                   </p>
                   <div className="flex items-end gap-4">
-                    <div className="text-2xl mb-1">
+                    <div className="bld-price">
                       ₹{productData.sellingPrice.toLocaleString()}
                     </div>
                     {/* <div className=" text-sm mb-2 text-[#328F94] ">
@@ -2647,7 +2648,7 @@ const ProductDetail = () => {
 
                 {/* Diamond Origin */}
                 <div className="mb-6">
-                  <h3 className="flex items-center gap-3 mb-3 text-sm">
+                  <p className="bld-label flex items-center gap-3">
                     Diamond Origin{" "}
                     <button
                       type="button"
@@ -2676,12 +2677,13 @@ const ProductDetail = () => {
                     <button
                       onClick={() => setIsPdfPopupOpen(true)}
                       className="text-[#328F94] underline"
+                      style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "none" }}
                     >
                       Stone Guide
                     </button>
-                  </h3>
+                  </p>
 
-                  <div className="flex gap-2">
+                  <div className="bld-toggle">
                     {["Natural Diamond", "Lab Grown Diamond"].map((origin) => {
                       const isDisabled =
                         origin === "Natural Diamond" &&
@@ -2691,17 +2693,9 @@ const ProductDetail = () => {
                           key={origin}
                           onClick={() => handleDiamondOriginSelect(origin)}
                           disabled={isDisabled}
-                          className={`px-3 py-2 rounded-full border text-xs font-medium transition-all ${isDisabled
-                              ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-60"
-                              : selectedDiamondOrigin === origin
-                                ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
-                                : "border-neutral-600 text-neutral-600 hover:border-[#328F94] hover:text-[#328F94]"
-                            }`}
+                          className={`bld-toggle-btn${selectedDiamondOrigin === origin ? " active" : ""}${isDisabled ? " opacity-40 cursor-not-allowed" : ""}`}
                         >
                           {origin}
-                          {isDisabled && (
-                            <span className="ml-1 text-[10px]">❌</span>
-                          )}
                         </button>
                       );
                     })}
@@ -2718,15 +2712,15 @@ const ProductDetail = () => {
                 {/* Diamond Shape - Only show if diamond shapes are available */}
                 {productData.diamondShape &&
                   productData.diamondShape.length > 1 && (
-                    <div>
-                      <h3 className="mb-3 text-sm">
+                    <div className="mb-6">
+                      <p className="bld-label">
                         Diamond Shape:{" "}
-                        <span className="text-[#8D8A91]">
+                        <span style={{ color: "#328F94" }}>
                           {selectedDiamondShape.charAt(0) +
                             selectedDiamondShape.slice(1).toLowerCase()}
                         </span>
-                      </h3>
-                      <div className="flex flex-wrap gap-2 overflow-x-auto overflow-hidden no-scrollbar py-2">
+                      </p>
+                      <div className="flex flex-wrap gap-3 py-1">
                         {sampleProduct.diamondShapes
                           .filter((shape) =>
                             productData.diamondShape.includes(
@@ -2741,28 +2735,19 @@ const ProductDetail = () => {
                                 setSelectedDiamondShape(newShape);
                                 scrollToImageOnMobile();
                               }}
-                              className={`group relative w-[50px] h-[50px] border rounded-lg p-1 
-          ${selectedDiamondShape === shape.name.toUpperCase()
-                                  ? "border-primary bg-primary/5"
-                                  : "border-neutral-300"
-                                }`}
+                              className="bld-shape"
+                              style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
                             >
-                              {/* FIXED: remove full flex-center, add controlled padding */}
-                              <div className="w-full h-full flex items-end justify-center">
+                              <div className={`bld-shape-btn${selectedDiamondShape === shape.name.toUpperCase() ? " active" : ""}`}>
                                 <img
                                   src={shape.img}
                                   alt={shape.name}
-                                  className="max-h-[85%] max-w-[85%] pb-1 object-contain"
+                                  style={{ width: 28, height: 28, objectFit: "contain" }}
                                 />
                               </div>
-
-                              {/* Tooltip */}
-                              <span
-                                className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-50"
-                                style={{ zIndex: 10 }}
-                              >
-                                <p className="text-xs">{shape.name}</p>
-                              </span>
+                              <p className={`bld-shape-name${selectedDiamondShape === shape.name.toUpperCase() ? " active" : ""}`}>
+                                {shape.name}
+                              </p>
                             </button>
                           ))}
                       </div>
@@ -2776,9 +2761,9 @@ const ProductDetail = () => {
                       getDiamondSizes()[0] === "0"
                     ) && (
                       <div>
-                        <label className="block text-xs mb-2">
-                          Diamond Size {productData.category === "RINGS" || productData.category === "PENDANTS" || productData.category === "EARRINGS" ? (<span>(Center Stone)</span>) : productData.category === "BRACELETS" ? (<span>(Per Stone)</span>) : null}:{" "}
-                        </label>
+                        <p className="bld-label">
+                          Diamond Size {productData.category === "RINGS" || productData.category === "PENDANTS" || productData.category === "EARRINGS" ? "(Center Stone)" : productData.category === "BRACELETS" ? "(Per Stone)" : null}
+                        </p>
                         <Select
                           value={selectedDiamondSize}
                           onValueChange={(value) => {
@@ -2817,9 +2802,9 @@ const ProductDetail = () => {
 
                     return availableClarityOptions.length > 0 ? (
                       <div>
-                        <label className="block text-xs mb-2">
-                          Color & Clarity:{" "}<span className="text-xs text-[#8D8A91]">{selectedColorClarity}</span>
-                        </label>
+                        <p className="bld-label">
+                          Color & Clarity: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedColorClarity}</span>
+                        </p>
                         <Select
                           value={selectedColorClarity}
                           onValueChange={(value) => {
@@ -2846,7 +2831,7 @@ const ProductDetail = () => {
                 {/* Metal Type */}
                 <div className="my-6 grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs mb-2">Metal Type:{" "}<span className="text-xs text-[#8D8A91]">{selectedMetalType}</span></label>
+                    <p className="bld-label">Metal Type: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedMetalType}</span></p>
                     <Select
                       value={selectedMetalType}
                       onValueChange={(value) => {
@@ -2893,7 +2878,7 @@ const ProductDetail = () => {
                   </div>
                   {selectedMetalType && getAvailableKarats().length > 0 && (
                     <div>
-                      <h3 className="mb-1 text-sm">{getKaratSectionTitle()}:{" "}<span className="text-xs text-[#8D8A91]">{selectedGoldKarat}</span></h3>
+                      <p className="bld-label">{getKaratSectionTitle()}: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedGoldKarat}</span></p>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={scrollMetalTypesLeft}
@@ -2913,11 +2898,7 @@ const ProductDetail = () => {
                                 const newKarat = normalizeKarat(karat);
                                 setSelectedGoldKarat(newKarat);
                               }}
-                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap ${normalizeKarat(selectedGoldKarat) ===
-                                  normalizeKarat(karat)
-                                  ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                                  : "border-neutral-600 text-neutral-600"
-                                }`}
+                              className={`bld-chip${normalizeKarat(selectedGoldKarat) === normalizeKarat(karat) ? " active" : ""}`}
                             >
                               {getKaratDisplayLabel(karat)}
                             </button>
@@ -2937,9 +2918,9 @@ const ProductDetail = () => {
 
                 {/* Metal Color */}
                 <div className="my-6">
-                  <h3 className="mb-3 text-sm">
-                    Metal Color: {selectedMetalColor}
-                  </h3>
+                  <p className="bld-label">
+                    Metal Color: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedMetalColor}</span>
+                  </p>
 
                   <div className="flex gap-3 flex-wrap">
                     {productData?.availableColors?.map((code) => {
@@ -3235,26 +3216,25 @@ const ProductDetail = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="my-6 grid grid-cols-2 gap-4">
-                  <Button
+                <div className="my-6" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <button
                     onClick={handleBuyNow}
                     disabled={cartLoading || isUploadingEngraving}
-                    className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3"
+                    className="bld-btn-primary"
                   >
                     {isUploadingEngraving
                       ? "Uploading Engraving..."
                       : cartLoading
                         ? "Processing..."
                         : "Buy Now"}
-                  </Button>
-                  <Button
+                  </button>
+                  <button
                     onClick={handleAddToCart}
                     disabled={cartLoading}
-                    variant="outline"
-                    className="w-full border-[#328F94] text-[#328F94] py-3"
+                    className="bld-btn-outline"
                   >
                     {cartLoading ? "Adding..." : "Add To Cart"}
-                  </Button>
+                  </button>
                 </div>
 
                 {/* Certification Logos */}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import "../builder-luxury.css";
 import {
   ChevronUp,
   ChevronDown,
@@ -2251,56 +2252,38 @@ const ProductDetail = () => {
                     </span>
                   </h3>
 
-                  {/* Style Category Selection - Enhanced Mobile Responsiveness */}
-                  <div className="mb-6 w-full">
-                    <div className="flex items-center gap-2 md:gap-3 w-full">
-                      <button
-                        onClick={scrollStyleCategoryLeft}
-                        aria-label="Scroll style categories left"
-                        className="p-1.5 md:p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
-                      >
-                        <ChevronLeft className="w-3 h-3 md:w-4 md:h-4 text-[#8D8A91]" />
-                      </button>
-                      <div
-                        ref={styleCategoryRef}
-                        className="flex gap-2 md:gap-3 overflow-x-hidden scroll-smooth flex-1 w-[200px] md:w-full"
-                      >
-                        {styleAndDesign.map((category, index) => (
-                          <button
-                            key={`${category.name}-${index}`}
-                            onClick={() => {
-                              setSelectedStyleCategory(category.name);
-
-                              // Load category data if not loaded
-                              if (!category.isLoaded) {
-                                fetchCategoryData(category.name);
-                              } else {
-                                // If already loaded, select first substyle
-                                if (category.substyles.length > 0) {
-                                  setSelectedParentSku(
-                                    category.substyles[0].parentSku || "",
-                                  );
-                                }
+                  {/* Style Category Selection */}
+                  <div className="mb-4 w-full flex items-center gap-1">
+                    <button onClick={scrollStyleCategoryLeft} aria-label="Scroll left" className="p-1 flex-shrink-0 text-gray-400 hover:text-gray-600">
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <div ref={styleCategoryRef} className="flex gap-1.5 overflow-x-hidden scroll-smooth flex-1">
+                      {styleAndDesign.map((category, index) => (
+                        <button
+                          key={`${category.name}-${index}`}
+                          onClick={() => {
+                            setSelectedStyleCategory(category.name);
+                            if (!category.isLoaded) {
+                              fetchCategoryData(category.name);
+                            } else {
+                              if (category.substyles.length > 0) {
+                                setSelectedParentSku(category.substyles[0].parentSku || "");
                               }
-                            }}
-                            className={`px-3 md:px-4 py-2 md:py-2.5 rounded-lg border text-xs md:text-sm font-medium min-w-max whitespace-nowrap transition-all capitalize flex-shrink-0 ${
-                              selectedStyleCategory === category.name
-                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94] shadow-sm"
-                                : "border-neutral-300 text-neutral-600 hover:border-neutral-400 hover:bg-gray-50"
-                            }`}
-                          >
-                            {category.name}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        onClick={scrollStyleCategoryRight}
-                        aria-label="Scroll style categories right"
-                        className="p-1.5 md:p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
-                      >
-                        <ChevronRight className="w-3 h-3 md:w-4 md:h-4 text-[#8D8A91]" />
-                      </button>
+                            }
+                          }}
+                          className={`flex-shrink-0 px-3 py-1.5 text-[10px] tracking-[0.1em] uppercase whitespace-nowrap border transition-all duration-200 ${
+                            selectedStyleCategory === category.name
+                              ? "border-[#328F94] bg-[#328F94] text-white"
+                              : "border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700 bg-white"
+                          }`}
+                        >
+                          {category.name}
+                        </button>
+                      ))}
                     </div>
+                    <button onClick={scrollStyleCategoryRight} aria-label="Scroll right" className="p-1 flex-shrink-0 text-gray-400 hover:text-gray-600">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
 
                   {/* Ring Design Selection - Enhanced Mobile Layout */}
@@ -2426,32 +2409,23 @@ const ProductDetail = () => {
                     </button>
                   </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {(isLabGrownVariant
-                      ? ["Natural Diamond","Lab Grown Diamond"]
-                      : ["Natural Diamond", "Lab Grown Diamond"]
-                    ).map((origin) => (
-                      <button
-                        key={origin}
-                        onClick={() => {
-                            setSelectedDiamondOrigin(origin);
-                        }}
-                        className={`px-3 py-2 rounded-full border text-xs md:text-sm font-medium text-center ${
-                          selectedDiamondOrigin === origin
-                            ? "border-[#328F94] text-[#328F94] bg-[#328F94]/5"
-                            : "border-neutral-600 text-neutral-600"
-                        }`}
-                      >
-                        {origin}
-                      </button>
-                    ))}
-                  </div>
+                <div className="bld-toggle">
+                  {["Natural Diamond", "Lab Grown Diamond"].map((origin) => (
+                    <button
+                      key={origin}
+                      onClick={() => setSelectedDiamondOrigin(origin)}
+                      className={`bld-toggle-btn ${selectedDiamondOrigin === origin ? "active" : ""}`}
+                    >
+                      {origin}
+                    </button>
+                  ))}
+                </div>
                 </div>
 
                 {/* Diamond Shape - Mobile Grid Adjustment */}
                 {/* Diamond Shape */}
                {getAvailableDiamondShapes().length > 1 && ( <div className="mb-6">
-                  <h3 className="mb-3 text-sm md:text-base">
+                  <h3 className="bld-label">
                     Diamond Shape:{" "}
                     <span className="text-[#8D8A91]">
                       {selectedDiamondShape.charAt(0) +
@@ -2461,32 +2435,18 @@ const ProductDetail = () => {
 
                   <div className="flex flex-wrap gap-3">
                     {getAvailableDiamondShapes().map((shape) => (
-                      <div key={shape.name} className="relative group">
+                      <div key={shape.name} className="bld-shape">
                         <button
                           onClick={() => {
                             setSelectedDiamondShape(shape.name);
                             scrollToImageOnMobile();
                           }}
-                          className={`w-14 h-14 md:w-16 md:h-16 border rounded-lg overflow-hidden grid place-items-center p-1 transition-all
-            ${
-              selectedDiamondShape === shape.name
-                ? "border-[#328F94] ring-2 ring-[#328F94]/20"
-                : "border-neutral-300 hover:border-neutral-400"
-            }`}
+                          className={`bld-shape-btn ${selectedDiamondShape === shape.name ? "active" : ""}`}
                         >
-                          <img
-                            src={shape.img}
-                            alt={shape.name}
-                            className="h-12"
-                          />
+                          <img src={shape.img} alt={shape.name} className="w-9 h-9 object-contain" />
                         </button>
-
-                        {/* Tooltip */}
-                        <span
-                          className="absolute bottom-[-16px] right-[-32px] px-3 py-2 rounded bg-black text-white text-base opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 z-50"
-                          style={{ zIndex: 10 }}
-                        >
-                          <p className="text-xs">{shape.name}</p>
+                        <span className={`bld-shape-name ${selectedDiamondShape === shape.name ? "active" : ""}`}>
+                          {shape.name}
                         </span>
                       </div>
                     ))}
@@ -2532,7 +2492,7 @@ const ProductDetail = () => {
                 {getAvailableDiamondSizes().length > 0 && (
                   <div className="w-full">
                     <div className="mb-6 w-1/2">
-                      <h3 className="mb-3 text-sm md:text-base">
+                      <h3 className="bld-label">
                         Diamond Size (Center Stone){" "}
                         {/* <span className="text-[#8D8A91]">
                           {selectedDiamondSize || getAvailableDiamondSizes()[0]}{" "}
@@ -2575,7 +2535,7 @@ const ProductDetail = () => {
                 {/* Diamond Color & Clarity Section */}
                 {getAvailableColorClarity().length > 0 && (
                     <div className="w-1/2 mb-6">
-                      <h3 className="mb-3 text-sm md:text-base">
+                      <h3 className="bld-label">
                         Diamond Color & Clarity:{" "}
                         <span className="text-[#8D8A91]">
                           {selectedColorClarity ||
@@ -2640,7 +2600,7 @@ const ProductDetail = () => {
                     </Select>
                   </div>
                   <div className="w-full">
-                    <h3 className="mb-3 text-sm md:text-base">
+                    <h3 className="bld-label">
                       {selectedMetalType === "GOLD"
                         ? "Select Gold Karat"
                         : selectedMetalType === "SILVER"
@@ -2685,11 +2645,7 @@ const ProductDetail = () => {
                               onClick={() => {
                                 setSelectedGoldKarat(karat);
                               }}
-                              className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                                selectedGoldKarat === karat
-                                  ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                                  : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
-                              }`}
+                              className={`bld-chip ${selectedGoldKarat === karat ? "active" : ""}`}
                             >
                               {karat}
                             </button>
@@ -2697,22 +2653,14 @@ const ProductDetail = () => {
                         ) : selectedMetalType === "SILVER" ? (
                           <button
                             onClick={() => setSelectedGoldKarat("SLV")}
-                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                              selectedGoldKarat === "SLV"
-                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                                : "border-neutral-600 text-neutral-600 hover:bg-gray-50"
-                            }`}
+                            className={`bld-chip ${selectedGoldKarat === "SLV" ? "active" : ""}`}
                           >
                             925
                           </button>
                         ) : selectedMetalType === "PLATINUM" ? (
                           <button
                             onClick={() => setSelectedGoldKarat("PLT")}
-                            className={`px-3 py-1.5 rounded-full border text-xs min-w-max whitespace-nowrap transition-all ${
-                              selectedGoldKarat === "PLT"
-                                ? "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                                : "border-[#328F94] bg-[#328F94]/10 text-[#328F94]"
-                            }`}
+                            className="bld-chip active"
                           >
                             950
                           </button>
@@ -2738,7 +2686,7 @@ const ProductDetail = () => {
 
                 {/* Metal Color - Same responsive pattern as ProductDetail */}
                 <div className="w-full">
-                  <h3 className="mb-3 text-sm md:text-base">
+                  <h3 className="bld-label">
                     Metal Color:{" "}
                     <span className="text-[#8D8A91]">{selectedMetalColor}</span>
                   </h3>
@@ -2868,7 +2816,7 @@ const ProductDetail = () => {
                       {(selectedStyleData?.productDetails?.bandwidth?.length ??
                         0) > 0 && (
                         <div>
-                          <label className="block text-sm mb-2">
+                          <label className="bld-label">
                             Band Width (mm)
                           </label>
                           <Select
@@ -2898,7 +2846,7 @@ const ProductDetail = () => {
                       {(selectedStyleData?.productDetails?.finishing?.length ??
                         0) > 0 && (
                         <div>
-                          <label className="block text-sm mb-2">
+                          <label className="bld-label">
                             Finish Type
                           </label>
                           <Select
@@ -2933,7 +2881,7 @@ const ProductDetail = () => {
                 {/* Ring Size - Full width on mobile */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm mb-2">Ring Size</label>
+                    <label className="bld-label">Ring Size</label>
                     <Select
                       value={selectedSize}
                       onValueChange={(value) => {
@@ -3097,7 +3045,7 @@ const ProductDetail = () => {
                   <Button
                     onClick={handleBuyNow}
                     disabled={cartLoading || isUploadingEngraving}
-                    className="w-full bg-[#328F94] hover:bg-[#328F94]/90 text-white py-3"
+                    className="w-full bg-[#328F94] text-white py-4 text-[11px] tracking-[0.2em] uppercase rounded-none hover:bg-[#1e6e72] transition-colors disabled:opacity-50"
                   >
                     Buy Now
                   </Button>
@@ -3105,7 +3053,7 @@ const ProductDetail = () => {
                     onClick={handleAddToCart}
                     disabled={cartLoading || isUploadingEngraving}
                     variant="outline"
-                    className="w-full border-[#328F94] text-[#328F94] py-3"
+                    className="w-full border-[#328F94] text-[#328F94] py-4 text-[11px] tracking-[0.2em] uppercase rounded-none hover:bg-[#328F94] hover:text-white transition-colors disabled:opacity-50"
                   >
                     Add To Cart
                   </Button>

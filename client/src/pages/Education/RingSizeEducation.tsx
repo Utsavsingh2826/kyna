@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 const RingSizeGuidePage: React.FC = () => {
   return (
     <>
-      <div className="flex justify-center min-h-screen bg-gray-50 py-8">
+      <div className="flex justify-center min-h-screen bg-[#faf9f7] py-8">
         <div className="container ">
           {/* Breadcrumb */}
           <div className="bg-white">
@@ -21,8 +21,8 @@ const RingSizeGuidePage: React.FC = () => {
           </div>
 
           {/* Main Title Section */}
-          <div className="bg-white rounded-lg shadow-sm p-8 mb-8 text-center">
-            <h1 className="text-4xl font-bold mb-4 text-gray-800">
+          <div className="bg-white border border-gray-100 p-8 mb-8 text-center">
+            <h1 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800 mb-4">
               Find Your Perfect Ring Size
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
@@ -31,12 +31,12 @@ const RingSizeGuidePage: React.FC = () => {
           </div>
 
           {/* Three Methods Section */}
-          <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
+          <div className="bg-white border border-gray-100 p-8 mb-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
               {/* Method 1: Measure with String */}
               <div className="text-center">
-                <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Ruler className="w-8 h-8 text-teal-600" />
+                <div className="w-16 h-16 bg-[#328F94]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Ruler className="w-8 h-8 text-[#328F94]" />
                 </div>
                 <h3 className="text-xl font-medium mb-4 text-gray-800">
                   Measure with a String
@@ -49,8 +49,8 @@ const RingSizeGuidePage: React.FC = () => {
 
               {/* Method 2: Ring Sizer Tool */}
               <div className="text-center">
-                <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Radius className="w-8 h-8 text-teal-600" />
+                <div className="w-16 h-16 bg-[#328F94]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Radius className="w-8 h-8 text-[#328F94]" />
                 </div>
                 <h3 className="text-xl font-medium mb-4 text-gray-800">
                   Ring Sizer Tool
@@ -63,8 +63,8 @@ const RingSizeGuidePage: React.FC = () => {
 
               {/* Method 3: Compare with Existing Ring */}
               <div className="text-center">
-                <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Grid className="w-8 h-8 text-teal-600" />
+                <div className="w-16 h-16 bg-[#328F94]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Grid className="w-8 h-8 text-[#328F94]" />
                 </div>
                 <h3 className="text-xl font-medium mb-4 text-gray-800">
                   Compare with Existing Ring
@@ -76,7 +76,7 @@ const RingSizeGuidePage: React.FC = () => {
             </div>
 
             {/* Inner Diameter Measurement Section */}
-            <div className="bg-gray-50 rounded-lg p-8 mb-8">
+            <div className="bg-[#faf9f7] border border-gray-100 p-8 mb-8">
               <div className="flex flex-col lg:flex-row items-center justify-center gap-12">
                 <div className="text-center">
                   <h3 className="text-2xl font-medium mb-4 text-gray-800">
@@ -89,8 +89,8 @@ const RingSizeGuidePage: React.FC = () => {
             </div>
           </div>
           {/* Ring Size Chart */}
-          <div className="bg-gray-50 rounded-lg p-6 mb-8">
-            <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">
+          <div className="bg-[#faf9f7] border border-gray-100 p-6 mb-8">
+            <h2 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800 mb-6 text-center">
               Indian Ring Size Chart
             </h2>
             <div className="grid grid-cols-2 gap-4 max-w-5xl mx-auto">
@@ -166,7 +166,7 @@ const RingSizeGuidePage: React.FC = () => {
           {/* Size Recommendations */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* For Women */}
-            <div className="bg-pink-50 rounded-lg p-6">
+            <div className="border border-gray-100 p-6">
               <h3 className="text-xl font-medium mb-3 text-gray-800">
                 For Women
               </h3>
@@ -174,7 +174,7 @@ const RingSizeGuidePage: React.FC = () => {
             </div>
 
             {/* For Men */}
-            <div className="bg-blue-50 rounded-lg p-6">
+            <div className="border border-gray-100 p-6">
               <h3 className="text-xl font-medium mb-3 text-gray-800">
                 For Men
               </h3>
@@ -184,7 +184,7 @@ const RingSizeGuidePage: React.FC = () => {
         </div>
       </div>
       {/* Expert Help Section */}
-      <div className="bg-[#67C3BE] text-white rounded-lg p-8 text-center">
+      <div className="bg-[#328F94] text-white p-8 text-center">
         <h2 className="text-3xl font-light mb-4">
           Need Help Finding a Diamond?
         </h2>
@@ -194,7 +194,7 @@ const RingSizeGuidePage: React.FC = () => {
           experts guide you through your diamond journey.
         </p>
         <Link to="/customer-service">
-          <button className="bg-white text-teal-600 px-8 py-3 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+          <button className="bg-white text-[#328F94] text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 font-medium hover:bg-gray-100 transition-colors">
             Contact Our Experts
           </button>
         </Link>

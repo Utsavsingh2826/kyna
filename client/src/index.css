@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Brand fonts ────────────────────────────────────────── */
+@font-face {
+  font-family: 'Arsenal';
+  src: url('/fonts/Arsenal-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Arsenal';
+  src: url('/fonts/Arsenal-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Arsenal';
+  src: url('/fonts/Arsenal-Italic.ttf') format('truetype');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PinyonScript';
+  src: url('/fonts/PinyonScript-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Brand color tokens ─────────────────────────────────── */
+:root {
+  --brand: #68C5C0;
+  --brand-hover: #328F94;
+  --brand-deep: #2a7579;
+  --brand-light: hsl(177 42% 94%);
+  --warm-white: hsl(40 30% 98%);
+}
+
 @layer base {
   html {
     @apply font-sans;
@@ -11,10 +50,11 @@
 /* Prevent horizontal overflow */
 html,
 body {
-  overflow-x: hidden;
   width: 100%;
-  height: 100%;
   font-family: "Poppins", sans-serif;
+}
+body {
+  overflow-x: clip;
 }
 
 /* Ensure sticky positioning works properly */
@@ -52,3 +92,5 @@ html {
 [data-sonner-toast] [data-button]:hover {
   background-color: #2a7579 !important;
 }
+
+@media (prefers-reduced-motion: reduce) { * { transition-duration: 1ms !important; } }

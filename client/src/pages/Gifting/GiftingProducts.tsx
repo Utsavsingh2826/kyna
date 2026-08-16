@@ -22,6 +22,7 @@ interface APIProduct {
   price: number;
   rating: number;
   image: string;
+  hoverImageUrl?: string | null;
   category: string;
   subCategory: string;
   modelSku: string;
@@ -1041,6 +1042,7 @@ export default function JewelleryPage({
         title: p.name || "Product",
         price: `₹${Math.round(p.price || 0)}`,
         img: p.image || "/product_detail/display.png",
+        hoverImageUrl: p.hoverImageUrl || null,
         availableColors: ["white", "gold", "rosegold"] as ColorOption[],
         category: categoryLower.includes("ring")
           ? "rings"
@@ -1051,7 +1053,7 @@ export default function JewelleryPage({
         modelSku: p.modelSku,
         variantSku: p.variantSku,
         categoryRaw: p.category,
-      } as Product & { modelSku: string; variantSku: string; categoryRaw: string };
+      } as Product & { modelSku: string; variantSku: string; categoryRaw: string; hoverImageUrl?: string | null };
     }),
   ];
 
@@ -1227,9 +1229,10 @@ export default function JewelleryPage({
                 // Detect metal color from image URL - defaults to YG (Yellow Gold)
                 const metalColor = getMetalColorFromImage(p.img);
 
+                const pHover = p as Product & { hoverImageUrl?: string | null };
                 return (
                   <article
-                    className="eng-card"
+                    className="eng-card group"
                     key={`jewellery-${p.id}`}
                     aria-label={p.title}
                   >
@@ -1239,12 +1242,23 @@ export default function JewelleryPage({
                     <Link to={pWithMeta.modelSku && pWithMeta.variantSku && pWithMeta.categoryRaw
                       ? `/product/${pWithMeta.categoryRaw.toLowerCase()}/${pWithMeta.modelSku}?variantId=${encodeURIComponent(pWithMeta.variantSku)}&metalColor=${metalColor}`
                       : `/product/${p.id}`}>
-                      <img
-                        src={p.img}
-                        alt={`${p.title} product image`}
-                        loading="lazy"
-                        className="eng-card-img"
-                      />
+                      <div className="eng-card-img-wrap">
+                        <img
+                          src={p.img}
+                          alt={`${p.title} product image`}
+                          loading="lazy"
+                          className="eng-card-img"
+                        />
+                        {pHover.hoverImageUrl && (
+                          <img
+                            src={pHover.hoverImageUrl}
+                            alt=""
+                            aria-hidden="true"
+                            loading="lazy"
+                            className="eng-card-img absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-in-out"
+                          />
+                        )}
+                      </div>
                     </Link>
                     {/* Available colors */}
                     {/* {p.availableColors && p.availableColors.length > 0 && (

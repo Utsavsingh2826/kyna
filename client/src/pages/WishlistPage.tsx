@@ -126,9 +126,9 @@ const WishlistPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#328F94] mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading your wishlist...</p>
         </div>
       </div>
@@ -138,7 +138,7 @@ const WishlistPage = () => {
   // Show login message if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
         <div className="text-center">
           <Heart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -148,7 +148,7 @@ const WishlistPage = () => {
             Sign in to access your saved items
           </p>
           <Link to="/login">
-            <Button className="bg-teal-600 hover:bg-teal-700">Login</Button>
+            <Button className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200">Login</Button>
           </Link>
         </div>
       </div>
@@ -157,12 +157,12 @@ const WishlistPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#faf9f7] flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <Button
             onClick={() => dispatch(fetchWishlist())}
-            className="bg-teal-600 hover:bg-teal-700"
+            className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200"
           >
             Try Again
           </Button>
@@ -172,7 +172,7 @@ const WishlistPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#faf9f7]">
       <ShareEmailModal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
@@ -183,10 +183,10 @@ const WishlistPage = () => {
         {/* Header */}
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800 mb-2">
               {user?.firstName || "User"}'s Wish List
             </h1>
-            <p className="text-gray-600">
+            <p className="text-[10px] tracking-[0.1em] uppercase text-gray-400">
               {wishlist.length} item{wishlist.length !== 1 ? "s" : ""} in your
               wishlist
             </p>
@@ -196,7 +196,7 @@ const WishlistPage = () => {
           <div className="flex gap-3">
             <button
               onClick={handleWhatsAppShare}
-              className="flex items-center gap-2 px-4 py-2 border border-teal-500 text-teal-600 rounded-md hover:bg-teal-50 transition"
+              className="flex items-center gap-2 border border-[#328F94] text-[#328F94] hover:bg-[#328F94] hover:text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200"
             >
               Share Wish List
               <img src="/Jan/Vector.png" alt="WhatsApp" className="w-5 h-5" />
@@ -204,7 +204,7 @@ const WishlistPage = () => {
 
             <button
               onClick={handleEmailShare}
-              className="flex items-center gap-2 px-4 py-2 border border-teal-500 text-teal-600 rounded-md hover:bg-teal-50 transition"
+              className="flex items-center gap-2 border border-[#328F94] text-[#328F94] hover:bg-[#328F94] hover:text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200"
             >
               {/* <img src="/icons/mail.svg" alt="Email" className="w-5 h-5" /> */}
               Share Wish List
@@ -220,8 +220,8 @@ const WishlistPage = () => {
               <button
                 key={category}
                 onClick={() => setActiveTab(category)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === category
-                  ? "border-teal-500 text-teal-600"
+                className={`py-2 px-1 border-b-2 text-[10px] tracking-[0.15em] uppercase ${activeTab === category
+                  ? "border-[#328F94] text-[#328F94]"
                   : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }`}
               >
@@ -246,7 +246,7 @@ const WishlistPage = () => {
                 : `Try browsing other categories or add some ${activeTab.toLowerCase()} items`}
             </p>
             <Link to="/">
-              <Button className="bg-teal-600 text-white hover:bg-teal-700">
+              <Button className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200">
                 Continue Shopping
               </Button>
             </Link>
@@ -256,32 +256,32 @@ const WishlistPage = () => {
             {filteredWishlist.map((item) => (
               <div
                 key={item._id}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow flex flex-col h-full"
+                className="bg-white border border-gray-100 hover:border-[#328F94]/20 hover:shadow-sm transition-shadow flex flex-col h-full"
               >
                 <div className="relative">
                   <img
                     src={item.image || "/placeholder.png"}
                     alt={item.title}
-                    className="w-full h-64 object-cover rounded-t-lg"
+                    className="w-full h-64 object-cover"
                   />
                   <button
                     onClick={() =>
                       handleRemoveFromWishlist(item._id, item.title)
                     }
-                    className="absolute top-3 right-3 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors"
+                    className="absolute top-3 right-3 p-2 bg-white text-gray-300 hover:text-red-400 transition-colors"
                   >
                     <Heart className="w-5 h-5 text-red-500 fill-current" />
                   </button>
                 </div>
 
                 <div className="p-4 flex flex-col flex-grow">
-                  <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 min-h-[3rem]">
+                  <h3 className="text-[11px] tracking-[0.06em] text-gray-700 mb-2 line-clamp-2 min-h-[3rem]">
                     {item.title}
                   </h3>
 
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-gray-900">
+                      <span className="text-sm font-light text-gray-800">
                         {typeof item.price === "number"
                           ? `₹${item.price.toLocaleString("en-IN")}`
                           : "Price on request"}
@@ -299,7 +299,7 @@ const WishlistPage = () => {
                   <div className="mt-auto">
                     <div className="flex gap-2 mb-2">
                       <Link to={buildProductUrl(item)} className="flex-1">
-                        <Button className="w-full text-white bg-teal-600 hover:bg-teal-700">
+                        <Button className="w-full bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200">
                           Show Details
                         </Button>
                       </Link>
@@ -309,7 +309,7 @@ const WishlistPage = () => {
                       onClick={() =>
                         handleRemoveFromWishlist(item._id, item.title)
                       }
-                      className="w-full text-sm text-gray-500 hover:text-red-600 transition-colors"
+                      className="w-full text-sm text-gray-300 hover:text-red-400 transition-colors"
                     >
                       Remove
                     </button>

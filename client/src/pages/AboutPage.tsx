@@ -29,7 +29,7 @@ const openCalendly = () => {
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b text-[#1A141F] from-purple-50 to-white font-poppins">
+    <div className="min-h-screen bg-[#faf9f7] text-[#1A141F] font-poppins">
       {/* Hero Section */}
 
       <div className="bg-white border-b">
@@ -59,7 +59,7 @@ export default function AboutPage() {
           className="z-10"
         >
           <motion.h1
-            className="text-4xl md:text-5xl  mb-6"
+            className="text-2xl font-light tracking-[0.12em] uppercase text-white mb-6"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.8 }}
@@ -94,7 +94,7 @@ export default function AboutPage() {
           <div className="grid lg:grid-cols-2 gap-16 items-top">
             {/* Text Content */}
             <div className="space-y-8">
-              <h2 className="text-4xl md:text-5xl text-foreground leading-tight">
+              <h2 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium leading-tight">
                 Celebrating Meaningful Moments
               </h2>
               <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -109,7 +109,7 @@ export default function AboutPage() {
               <img
                 src="/about/1.jpg"
                 alt="Jewellery Moment"
-                className="rounded-3xl w-full max-w-md object-cover mb-6"
+                className="rounded-none w-full max-w-md object-cover mb-6"
               />
               {/* Quote below image */}
               <p className="text-center text-muted-foreground text-md md:text-lg italic mb-2">
@@ -137,7 +137,7 @@ export default function AboutPage() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
+                <h2 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium leading-tight">
                   Personalized Guidance with Kyna Mentors{" "}
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -153,7 +153,7 @@ export default function AboutPage() {
                 <img
                   src="/about/2.jpg"
                   alt="Jewellery Moment"
-                  className="rounded-3xl w-full max-w-3xl object-cover mb-6"
+                  className="rounded-none w-full max-w-3xl object-cover mb-6"
                 />
               </div>
             </div>
@@ -169,12 +169,12 @@ export default function AboutPage() {
                 <img
                   src="/about/3.jpeg"
                   alt="Jewellery Moment"
-                  className="rounded-3xl w-full max-w-3xl object-cover mb-6"
+                  className="rounded-none w-full max-w-3xl object-cover mb-6"
                 />
               </div>
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
+                <h2 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium leading-tight">
                   Community Engagement with Kyna Ambassadors
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -188,7 +188,7 @@ export default function AboutPage() {
                 <img
                   src="/about/3.png"
                   alt="Jewellery Moment"
-                  className="rounded-3xl w-full max-w-3xl object-cover mb-6"
+                  className="rounded-none w-full max-w-3xl object-cover mb-6"
                 />
               </div>
             </div>
@@ -200,7 +200,7 @@ export default function AboutPage() {
             <div className="grid lg:grid-cols-2 gap-16 items-center">
               {/* Text Content */}
               <div className="space-y-8">
-                <h2 className="text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
+                <h2 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium leading-tight">
                   Timeless Pieces for Your Cherished Memories{" "}
                 </h2>
                 <p className="text-muted-foreground text-lg md:text-xl leading-relaxed">
@@ -218,7 +218,7 @@ export default function AboutPage() {
                 <img
                   src="/about/4.jpeg"
                   alt="Jewellery Moment"
-                  className="rounded-3xl w-full max-w-3xl object-cover mb-6"
+                  className="rounded-none w-full max-w-3xl object-cover mb-6"
                 />
               </div>
             </div>
@@ -234,16 +234,16 @@ export default function AboutPage() {
                 <img
                   src="/about/book.jpeg"
                   alt="Jewellery Moment"
-                  className="rounded-3xl w-full max-w-3xl object-cover mb-6"
+                  className="rounded-none w-full max-w-3xl object-cover mb-6"
                 />
               </div>
               <div className="space-y-8 lg:order-2">
-                <h2 className="text-3xl text-[#1A141F] md:text-4xl font-semibold ">
+                <h2 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium">
                   WE'RE HERE FOR YOU
                 </h2>
 
                 <div className="space-y-6">
-                  <h3 className="text-1xl text-foreground">
+                  <h3 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium">
                     Virtual Appointment
                   </h3>
                   <p className="text-[#1A1A1A99] text-sm leading-relaxed">
@@ -262,7 +262,7 @@ export default function AboutPage() {
 
                 <Button
                   onClick={openCalendly}
-                  className="bg-[#328F94] text-white hover:text-[#328F94] hover:bg-white hover:border-[#328F94] hover:border-2 w-64"
+                  className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors w-64"
                 >
                   Book Virtual Appointment
                 </Button>
@@ -272,7 +272,7 @@ export default function AboutPage() {
                 <img
                   src="/about/5.jpg"
                   alt="Jewellery Moment"
-                  className="rounded-3xl w-full max-w-3xl object-cover mb-6"
+                  className="rounded-none w-full max-w-3xl object-cover mb-6"
                 />
               </div>
             </div>

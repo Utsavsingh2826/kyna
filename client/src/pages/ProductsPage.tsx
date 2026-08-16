@@ -35,6 +35,7 @@ interface Product {
   variantCount: number;
   firstVariantSku: string;
   firstVariantImageUrl: string;
+  hoverImageUrl?: string | null;
   sellingPrice: number;
   priceIncomplete: boolean;
 }
@@ -77,7 +78,6 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [usingCache, setUsingCache] = useState(false);
   const [pagination, setPagination] = useState({
     totalPages: 1,
     currentPage: 1,
@@ -213,13 +213,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             }
             setAppliedFilters(cachedData.appliedFilters || null);
             setLoading(false);
-            setUsingCache(true);
             return;
           }
         }
 
         // console.log("🌐 Fetching fresh products from API");
-        setUsingCache(false);
 
         // Cancel any previous request
         if (abortControllerRef.current) {
@@ -3024,18 +3022,9 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             )} */}
           </div>
           <div className="flex items-center gap-3">
-            {usingCache && (
-              <button
-                onClick={() => fetchProducts(1, 20, true)}
-                className="text-sm text-teal-600 hover:text-teal-800 font-medium"
-                title="Refresh data"
-              >
-                Refresh
-              </button>
-            )}
             <div className="">
-              <label>
-                Sort by:{" "}
+              <label className="flex items-center gap-2 text-[10px] tracking-[0.15em] text-gray-400 uppercase">
+                Sort
                 <select
                   className="eng-sort"
                   aria-label="Sort products"
@@ -3052,6 +3041,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </div>
           </div>
         </nav>
+
 
 
         {/* API Applied Filters Display */}
@@ -3132,7 +3122,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
         </div>
 
         <section
-          className={category === "bracelets" ? "mt-5" : "eng-layout mt-5"}
+          className={category === "bracelets" ? "mt-3" : "eng-layout mt-3"}
         >
           {/*hide sidebar if category is braceclets*/}
           {category !== "bracelets" && (
@@ -3154,7 +3144,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             </aside>
           )}
 
-          <section aria-label="Products" className="eng-grid">
+          <section aria-label="Products" className="eng-grid xl:grid-cols-4 xl:gap-5">
             {/* Display active filters summary - removed to avoid confusion */}
 
             {/* Loading State */}
@@ -3256,63 +3246,54 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                     className="block"
                   >
                     <article
-                      className="eng-card hover:shadow-lg transition-shadow duration-200"
+                      className="eng-card group"
                       aria-label={p.title}
                     >
+                      {/* Wishlist */}
                       <button
-                        className={`eng-wishlist ${isWishlisted ? "text-red-500" : ""
-                          } ${wishlistLoading ? "opacity-70" : ""}`}
+                        className={`eng-wishlist ${isWishlisted ? "text-red-500" : "text-gray-400"} ${wishlistLoading ? "opacity-70" : ""}`}
                         aria-label="Add to wishlist"
                         aria-pressed={Boolean(isWishlisted)}
                         onClick={(e) => handleWishlistToggle(e, p)}
                         disabled={wishlistLoading}
                       >
-                        <Heart
-                          size={16}
-                          className={isWishlisted ? "fill-current" : ""}
-                        />
+                        <Heart size={14} className={isWishlisted ? "fill-current" : ""} />
                       </button>
-                      <img
-                        src={p.firstVariantImageUrl}
-                        alt={`${p.title} product image`}
-                        loading="lazy"
-                        className="eng-card-img"
-                      />
-                      {/* {p.metalTypes && p.metalTypes.length > 0 && (
-                        <div
-                          className="eng-color-row"
-                          aria-label="Available metals"
-                        >
-                          {p.metalTypes.slice(0, 3).map((metal) => (
-                            <div
-                              key={`${p.modelSku}-${metal}`}
-                              className="text-xs px-2 py-1 bg-gray-100 rounded-full"
-                            >
-                              <img
-                                src={
-                                  metal === "GOLD"
-                                    ? "/colors/gold.png"
-                                    : metal === "SILVER"
-                                      ? "/colors/white.png"
-                                      : metal === "PLATINUM"
-                                        ? "/colors/white.png"
-                                        : metal === "ROSE GOLD"
-                                          ? "/colors/rose-gold.png"
-                                          : metal === "WHITE GOLD"
-                                            ? "/colors/white-gold.png"
-                                            : "/colors/default.png"
-                                }
-                                className="h-6 w-6"
-                                alt=""
-                              />
-                            </div>
-                          ))}
+
+                      {/* Image wrapper — isolates zoom so it doesn't overflow card body */}
+                      <div className="eng-card-img-wrap">
+                        <img
+                          src={p.firstVariantImageUrl}
+                          alt={p.title}
+                          loading="lazy"
+                          className="eng-card-img"
+                        />
+                        {/* Hover image: crossfades over main on card hover */}
+                        {p.hoverImageUrl && (
+                          <img
+                            src={p.hoverImageUrl}
+                            alt=""
+                            aria-hidden="true"
+                            loading="lazy"
+                            className="eng-card-img absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ease-in-out"
+                          />
+                        )}
+                        {/* View Details slides up from bottom of image on hover */}
+                        <div className="absolute inset-x-0 bottom-0 flex justify-center pb-3 pt-10 bg-gradient-to-t from-black/25 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out z-10">
+                          <span className="bg-white text-gray-800 text-[10px] tracking-[0.15em] uppercase px-5 py-2 shadow-sm">
+                            View Details
+                          </span>
                         </div>
-                      )} */}
+                      </div>
+
+                      {/* Card body */}
                       <div className="eng-card-body">
                         <h3 className="eng-card-title">{p.title}</h3>
-                        <div className="text-xs text-black mt-1">
-                          Starting at Rs.{p.sellingPrice.toLocaleString()}
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                          <span className="text-[10px] text-gray-400 tracking-wide">Starting at</span>
+                          <span className="text-xs font-medium text-gray-700">
+                            ₹{p.sellingPrice.toLocaleString()}
+                          </span>
                         </div>
                       </div>
                     </article>
@@ -3333,7 +3314,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           return null;
         })()}
         {!loading && !error && pagination.totalPages > 1 && (
-          <div className="flex justify-center items-center mt-8 space-x-2">
+          <div className="flex justify-center items-center mt-10 gap-4">
             <button
               onClick={() => {
                 const newPage = pagination.currentPage - 1;
@@ -3342,12 +3323,12 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 setSearchParams(currentParams);
               }}
               disabled={pagination.currentPage === 1}
-              className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="px-6 py-2 border border-gray-200 text-[10px] tracking-[0.15em] uppercase hover:border-[#68C5C0] hover:text-[#68C5C0] transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Previous
             </button>
 
-            <span className="px-4 py-2 text-sm text-gray-700">
+            <span className="text-[11px] tracking-[0.08em] text-gray-400 uppercase">
               Page {pagination.currentPage} of {pagination.totalPages}
             </span>
 
@@ -3359,7 +3340,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                 setSearchParams(currentParams);
               }}
               disabled={pagination.currentPage === pagination.totalPages}
-              className="px-3 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              className="px-6 py-2 border border-gray-200 text-[10px] tracking-[0.15em] uppercase hover:border-[#68C5C0] hover:text-[#68C5C0] transition-colors duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               Next
             </button>

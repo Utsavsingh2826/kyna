@@ -52,11 +52,10 @@ export default {
   			}
   		},
   		fontFamily: {
-  			sans: [
-  				'Poppins',
-  				'sans-serif'
-  			],
+  			sans: ['Poppins', 'sans-serif'],
   			poppins: ['Poppins', 'sans-serif'],
+  			display: ['Arsenal', 'serif'],
+  			script: ['PinyonScript', 'cursive'],
   		},
   		keyframes: {
   			'accordion-down': {

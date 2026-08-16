@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 
 const EducationPage: React.FC = () => {
   return (
-    <div className="min-h-screen flex justify-center py-8">
+    <div className="min-h-screen bg-[#faf9f7] flex justify-center py-8">
       <div className="container ">
         {/* Breadcrumb */}
         <div className="bg-white">
@@ -20,8 +20,8 @@ const EducationPage: React.FC = () => {
         </div>
 
         {/* Round Bangle Size Guide */}
-        <div className=" bg-white rounded-lg shadow-sm p-8 mb-8">
-          <h1 className="text-4xl font-semibold mb-12 text-gray-800">
+        <div className="bg-white border border-gray-100 p-8 mb-8">
+          <h1 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800 mb-12">
             Round Bangle Size Guide
           </h1>
 
@@ -33,8 +33,8 @@ const EducationPage: React.FC = () => {
               </h2>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-teal-400 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
-                    <Ruler className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 bg-[#328F94]/10 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
+                    <Ruler className="w-5 h-5 text-[#328F94]" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-800">
@@ -46,8 +46,8 @@ const EducationPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-teal-400 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
-                    <Ruler className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 bg-[#328F94]/10 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
+                    <Ruler className="w-5 h-5 text-[#328F94]" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-800">
@@ -68,8 +68,8 @@ const EducationPage: React.FC = () => {
               </h2>
               <div className="space-y-4">
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-teal-400 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
-                    <Hand className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 bg-[#328F94]/10 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
+                    <Hand className="w-5 h-5 text-[#328F94]" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-800">
@@ -81,7 +81,7 @@ const EducationPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-teal-400 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
+                  <div className="w-8 h-8 bg-[#328F94]/10 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -92,7 +92,7 @@ const EducationPage: React.FC = () => {
                       stroke-width="2"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                      className="text-white lucide lucide-ruler-dimension-line-icon lucide-ruler-dimension-line"
+                      className="text-[#328F94] lucide lucide-ruler-dimension-line-icon lucide-ruler-dimension-line"
                     >
                       <path d="M12 15v-3.014" />
                       <path d="M16 15v-3.014" />
@@ -132,7 +132,7 @@ const EducationPage: React.FC = () => {
             </div>
 
             {/* Size Chart */}
-            <div className="bg-gray-50 rounded-lg p-6">
+            <div className="border border-gray-100 p-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="font-medium h-20 sm:h-7 flex items-center justify-center text-gray-800 mb-2 text-center">
@@ -176,8 +176,8 @@ const EducationPage: React.FC = () => {
         </div>
 
         {/* Bracelet Size Guide */}
-        <div className="bg-white md:ml-40 rounded-lg shadow-sm p-8">
-          <h1 className="text-3xl font-semibold mb-12 text-gray-800">
+        <div className="bg-white md:ml-40 border border-gray-100 p-8">
+          <h1 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800 mb-12">
             Bracelet Size Guide
           </h1>
 
@@ -189,7 +189,7 @@ const EducationPage: React.FC = () => {
               </h2>
               <div className="space-y-4 mb-8">
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-teal-400 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
+                  <div className="w-8 h-8 bg-[#328F94]/10 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -200,7 +200,7 @@ const EducationPage: React.FC = () => {
                       stroke-width="2"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                      className="text-white lucide lucide-ruler-dimension-line-icon lucide-ruler-dimension-line"
+                      className="text-[#328F94] lucide lucide-ruler-dimension-line-icon lucide-ruler-dimension-line"
                     >
                       <path d="M12 15v-3.014" />
                       <path d="M16 15v-3.014" />
@@ -221,8 +221,8 @@ const EducationPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-teal-400 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
-                    <Ruler className="w-5 h-5 text-white" />
+                  <div className="w-8 h-8 bg-[#328F94]/10 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
+                    <Ruler className="w-5 h-5 text-[#328F94]" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-800">
@@ -247,7 +247,7 @@ const EducationPage: React.FC = () => {
               </h2>
               <div className="space-y-4 mb-8">
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-teal-400 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
+                  <div className="w-8 h-8 bg-[#328F94]/10 rounded-full flex-shrink-0 mt-1 flex items-center justify-center">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
@@ -258,7 +258,7 @@ const EducationPage: React.FC = () => {
                       stroke-width="2"
                       stroke-linecap="round"
                       stroke-linejoin="round"
-                      className="text-white lucide lucide-ruler-dimension-line-icon lucide-ruler-dimension-line"
+                      className="text-[#328F94] lucide lucide-ruler-dimension-line-icon lucide-ruler-dimension-line"
                     >
                       <path d="M12 15v-3.014" />
                       <path d="M16 15v-3.014" />
@@ -355,7 +355,7 @@ const EducationPage: React.FC = () => {
         </div>
 
         {/* Tips for Best Fit */}
-        <div className="bg-blue-50 rounded-xl p-6">
+        <div className="border border-gray-100 p-6">
           <h3 className="text-xl font-medium mb-10  text-gray-800">
             Tips for the Best Fit
           </h3>

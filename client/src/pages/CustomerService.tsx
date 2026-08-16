@@ -107,11 +107,11 @@ export default function CustomerService() {
         description="Get help with your questions about our jewellery, promo codes, and referral program. Contact our customer service team."
         canonical="/customer-service"
       />
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-[#faf9f7]">
         <div className="container mx-auto px-4 pt-12 max-w-4xl">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-3xl font-normal mb-4">
+            <h1 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800 mb-4">
               What can we assist you with today?
             </h1>
           </div>
@@ -136,11 +136,11 @@ export default function CustomerService() {
           </div>
         </div>
         {/* Contact Section */}
-        <div className="pb-16 bg-[#68C5C01A]/10  flex flex-col items-center text-center">
+        <div className="pb-16 bg-[#328F94]/5 flex flex-col items-center text-center">
           <div className="bg-[#328F94] border rounded my-4 px-3 py-2 text-white w-fit">
             CONTACT US
           </div>
-          <h2 className="text-xl font-semibold mb-4">
+          <h2 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium mb-4">
             Don't find your answer?
           </h2>
           <p className="text-muted-foreground mb-8">Contact with us</p>

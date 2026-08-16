@@ -235,9 +235,9 @@ const OrderHistoryPage: React.FC = () => {
         title="Order History | Kyna Jewels"
         description="View your delivered orders from Kyna Jewels"
       />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-[#faf9f7]">
         {/* Breadcrumb */}
-        <div className="bg-white border-b">
+        <div className="bg-[#faf9f7] border-b border-gray-100">
           <div className="container mx-auto px-4 py-3">
             <nav className="text-sm text-gray-600">
               <Link to="/" className="hover:text-teal-600">
@@ -257,7 +257,7 @@ const OrderHistoryPage: React.FC = () => {
           <div className="max-w-6xl mx-auto">
             {/* Header */}
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800 mb-2">
                 Order History
               </h1>
               <p className="text-gray-600">
@@ -268,7 +268,7 @@ const OrderHistoryPage: React.FC = () => {
             {/* Loading State */}
             {loading && (
               <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-teal-600 mb-4" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#328F94] mb-4" />
                 <p className="text-gray-600">Loading your orders...</p>
               </div>
             )}
@@ -279,7 +279,7 @@ const OrderHistoryPage: React.FC = () => {
                 <p className="text-red-600 font-medium mb-4">{error}</p>
                 <button
                   onClick={fetchDeliveredOrders}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
+                  className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200"
                 >
                   Try Again
                 </button>
@@ -288,7 +288,7 @@ const OrderHistoryPage: React.FC = () => {
 
             {/* Empty State */}
             {!loading && !error && orders.length === 0 && (
-              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+              <div className="bg-white border border-gray-100 p-12 text-center">
                 <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   No Delivered Orders Yet
@@ -298,7 +298,7 @@ const OrderHistoryPage: React.FC = () => {
                 </p>
                 <Link
                   to="/"
-                  className="inline-block px-6 py-3 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors"
+                  className="inline-block bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200"
                 >
                   Continue Shopping
                 </Link>
@@ -311,25 +311,25 @@ const OrderHistoryPage: React.FC = () => {
                 {orders.map((order) => (
                   <div
                     key={order._id}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                    className="bg-white border border-gray-100 overflow-hidden"
                   >
                     {/* Order Header */}
-                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                    <div className="bg-white px-6 py-4 border-b border-gray-100">
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2">
                             <CheckCircle className="w-5 h-5 text-green-600" />
-                            <span className="font-semibold text-gray-900">
+                            <span className="text-[10px] tracking-[0.15em] uppercase font-semibold text-gray-900">
                               Order #{order.orderNumber}
                             </span>
                           </div>
-                          <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                          <span className="bg-green-50 text-green-700 text-[9px] tracking-[0.1em] uppercase px-2 py-1">
                             Delivered
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Calendar className="w-4 h-4" />
-                          <span>
+                          <span className="text-[10px] tracking-[0.1em] uppercase text-gray-400">
                             Delivered on {formatDate(order.createdAt || order.orderedAt)}
                           </span>
                         </div>
@@ -375,7 +375,7 @@ const OrderHistoryPage: React.FC = () => {
                                 {order.items.map((item, idx) => (
                                   <div
                                     key={idx}
-                                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                                    className="flex items-center gap-3 p-3 bg-[#faf9f7] border border-gray-100"
                                   >
                                     {/* Item Image */}
                                     {getItemImage(item) ? (
@@ -416,7 +416,7 @@ const OrderHistoryPage: React.FC = () => {
 
                           {/* Shipping Address */}
                           {order.shippingAddress && (
-                            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                            <div className="mb-4 p-4 bg-[#faf9f7] border border-gray-100">
                               <div className="flex items-start gap-2 mb-2">
                                 <Truck className="w-4 h-4 text-gray-600 mt-0.5" />
                                 <span className="text-sm font-semibold text-gray-900">
@@ -460,11 +460,11 @@ const OrderHistoryPage: React.FC = () => {
                           )}
 
                           {/* Order Total */}
-                          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                            <span className="text-lg font-semibold text-gray-900">
+                          <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                            <span className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
                               Total Amount
                             </span>
-                            <span className="text-xl font-bold text-teal-600">
+                            <span className="text-xl text-[#328F94] font-light">
                               {formatCurrency(order.totalAmount)}
                             </span>
                           </div>
@@ -475,7 +475,7 @@ const OrderHistoryPage: React.FC = () => {
                       <div className="mt-6 flex gap-3">
                         <Link
                           to={`/track-order?orderNumber=${order.orderNumber}`}
-                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
+                          className="border border-gray-200 text-gray-500 hover:border-[#328F94] hover:text-[#328F94] text-[10px] tracking-[0.15em] uppercase rounded-none py-2 px-4 transition-colors duration-200"
                         >
                           Track Order
                         </Link>
@@ -485,7 +485,7 @@ const OrderHistoryPage: React.FC = () => {
                             navigator.clipboard.writeText(order.orderNumber);
                             toast.success("Order number copied to clipboard");
                           }}
-                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
+                          className="border border-gray-200 text-gray-500 hover:border-[#328F94] hover:text-[#328F94] text-[10px] tracking-[0.15em] uppercase rounded-none py-2 px-4 transition-colors duration-200"
                         >
                           Copy Order Number
                         </button>

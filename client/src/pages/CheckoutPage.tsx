@@ -869,25 +869,25 @@ const CheckoutPage = () => {
       !formData.region ||
       !formData.zipCode
     ) {
-      alert("Please fill in all billing address fields before proceeding");
+      toast.error("Please fill in all billing address fields before proceeding");
       return;
     }
 
     // Check if billing zip code is valid
     if (formData.zipCode.length !== 6 || !/^\d{6}$/.test(formData.zipCode)) {
-      alert("Please enter a valid 6-digit pincode for billing address.");
+      toast.error("Please enter a valid 6-digit pincode for billing address.");
       return;
     }
 
     // Check if billing serviceability has been verified
     if (billingServiceabilityStatus !== "serviceable") {
       if (billingServiceabilityStatus === "not-serviceable") {
-        alert(
+        toast.error(
           "❌ Sorry, we cannot process orders to your billing address area as it is not serviceable. Please contact customer support for more information."
         );
         return;
       } else if (billingServiceabilityStatus === "checking") {
-        alert(
+        toast.error(
           "Please wait while we check if your billing area is serviceable."
         );
         return;
@@ -903,7 +903,7 @@ const CheckoutPage = () => {
         );
 
         if (!isBillingServiceable) {
-          alert(
+          toast.error(
             "❌ Sorry, we cannot process orders to your billing address area as it is not serviceable. Please contact customer support for more information."
           );
           return;
@@ -917,18 +917,18 @@ const CheckoutPage = () => {
         formData.shippingZipCode.length !== 6 ||
         !/^\d{6}$/.test(formData.shippingZipCode)
       ) {
-        alert("Please enter a valid 6-digit pincode for shipping address.");
+        toast.error("Please enter a valid 6-digit pincode for shipping address.");
         return;
       }
 
       if (shippingServiceabilityStatus !== "serviceable") {
         if (shippingServiceabilityStatus === "not-serviceable") {
-          alert(
+          toast.error(
             "❌ Sorry, we cannot process orders to your shipping address area as it is not serviceable. Please contact customer support for more information."
           );
           return;
         } else if (shippingServiceabilityStatus === "checking") {
-          alert(
+          toast.error(
             "Please wait while we check if your shipping area is serviceable."
           );
           return;
@@ -943,7 +943,7 @@ const CheckoutPage = () => {
           );
 
           if (!isShippingServiceable) {
-            alert(
+            toast.error(
               "❌ Sorry, we cannot process orders to your shipping address area as it is not serviceable. Please contact customer support for more information."
             );
             return;
@@ -964,26 +964,26 @@ const CheckoutPage = () => {
         !formData.shippingRegion ||
         !formData.shippingZipCode
       ) {
-        alert("Please fill in all shipping address fields before proceeding");
+        toast.error("Please fill in all shipping address fields before proceeding");
         return;
       }
     }
 
     // Check if payment method is selected
     if (!selectedPaymentMethod) {
-      alert("Please select a payment method");
+      toast.error("Please select a payment method");
       return;
     }
 
     // Check if cart has items
     if (!cart || !cart.items || cart.items.length === 0) {
-      alert("Your cart is empty. Please add items to proceed.");
+      toast.error("Your cart is empty. Please add items to proceed.");
       return;
     }
 
     // Check if user is logged in
     if (!isAuthenticated || !user || (!user._id && !user.id)) {
-      alert("Please log in to proceed with payment.");
+      toast.error("Please log in to proceed with payment.");
       return;
     }
 
@@ -997,7 +997,7 @@ const CheckoutPage = () => {
 
       // Validate amount
       if (finalAmount <= 0) {
-        alert("Invalid order amount. Please try again.");
+        toast.error("Invalid order amount. Please try again.");
         return;
       }
 
@@ -1018,7 +1018,7 @@ const CheckoutPage = () => {
         !billingAddressData.state ||
         !billingAddressData.zipCode
       ) {
-        alert(
+        toast.error(
           "Please fill in all billing address fields (street, city, state, zip code)"
         );
         return;
@@ -1047,7 +1047,7 @@ const CheckoutPage = () => {
 
       // Use persistent order ID instead of generating new one
       if (!persistentOrderId) {
-        alert("Order initialization failed. Please refresh and try again.");
+        toast.error("Order initialization failed. Please refresh and try again.");
         return;
       }
 
@@ -1185,7 +1185,7 @@ const CheckoutPage = () => {
                     },
                   });
                 } else {
-                  alert(
+                  toast.error(
                     "Order created but payment verification failed. Please contact support."
                   );
                 }
@@ -1194,12 +1194,12 @@ const CheckoutPage = () => {
               }
             } catch (verifyError) {
               console.error("Payment verification error:", verifyError);
-              alert("Payment verification failed. Please contact support.");
+              toast.error("Payment verification failed. Please contact support.");
             }
           },
           (paymentError) => {
             console.error("Payment error:", paymentError);
-            alert(
+            toast.error(
               "Payment failed. Please try again or use another payment method."
             );
           }
@@ -1300,14 +1300,14 @@ const CheckoutPage = () => {
                       }
                     } catch (verifyError) {
                       console.error("Payment verification error:", verifyError);
-                      alert(
+                      toast.error(
                         "Payment verification failed. Please contact support."
                       );
                     }
                   },
                   (paymentError) => {
                     console.error("Payment error:", paymentError);
-                    alert(
+                    toast.error(
                       "Payment failed. Please try again or use another payment method."
                     );
                   }
@@ -1351,7 +1351,7 @@ const CheckoutPage = () => {
         }
       }
 
-      alert(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsCreatingOrder(false);
     }
@@ -1516,7 +1516,7 @@ const CheckoutPage = () => {
                       !formData.region ||
                       !formData.zipCode
                     }
-                    className="bg-[#3AAFA9] hover:bg-[#2a8a85] text-white px-6 py-2 disabled:opacity-50"
+                    className="bg-[#68C5C0] hover:bg-[#328F94] text-white px-6 py-2 disabled:opacity-50"
                   >
                     {isSavingBilling || isSavingShipping
                       ? "Saving Both Addresses..."
@@ -1536,7 +1536,7 @@ const CheckoutPage = () => {
                     !formData.region ||
                     !formData.zipCode
                   }
-                  className="bg-[#3AAFA9] hover:bg-[#2a8a85] text-white px-6 py-2 disabled:opacity-50"
+                  className="bg-[#68C5C0] hover:bg-[#328F94] text-white px-6 py-2 disabled:opacity-50"
                 >
                   {isSavingBilling
                     ? "Saving..."
@@ -1688,7 +1688,7 @@ const CheckoutPage = () => {
                     !formData.shippingRegion ||
                     !formData.shippingZipCode
                   }
-                  className="bg-[#3AAFA9] hover:bg-[#2a8a85] text-white px-6 py-2 disabled:opacity-50"
+                  className="bg-[#68C5C0] hover:bg-[#328F94] text-white px-6 py-2 disabled:opacity-50"
                 >
                   {isSavingShipping
                     ? "Saving..."
@@ -1713,7 +1713,7 @@ const CheckoutPage = () => {
                   <div
                     key={method.id}
                     className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${selectedPaymentMethod === method.id
-                      ? "border-[#3AAFA9] bg-[#3AAFA9]/5"
+                      ? "border-[#68C5C0] bg-[#68C5C0]/5"
                       : "border-gray-200 hover:border-gray-300"
                       }`}
                     onClick={() => handlePaymentMethodChange(method.id)}
@@ -1721,7 +1721,7 @@ const CheckoutPage = () => {
                     <div className="flex items-center space-x-3">
                       <div
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPaymentMethod === method.id
-                          ? "border-[#3AAFA9] bg-[#3AAFA9]"
+                          ? "border-[#68C5C0] bg-[#68C5C0]"
                           : "border-gray-300"
                           }`}
                       >
@@ -1828,7 +1828,7 @@ const CheckoutPage = () => {
                 <Button
                   onClick={handleProceedToCheckout}
                   disabled={isCreatingOrder}
-                  className="bg-[#3AAFA9] hover:bg-[#2a8a85] text-white px-8 py-3 flex items-center space-x-2 disabled:opacity-50"
+                  className="bg-[#68C5C0] hover:bg-[#328F94] text-white px-8 py-3 flex items-center space-x-2 disabled:opacity-50"
                 >
                   <span>
                     {isCreatingOrder

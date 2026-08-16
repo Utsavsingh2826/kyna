@@ -462,14 +462,14 @@ export default function TrackOrderPage() {
         description="Track your jewelry order in real-time with Kyna Jewels. Get instant updates on your package delivery status."
       />
 
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-[#faf9f7] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800 mb-2">
               Track Your Order Details
             </h1>
-            <p className="text-gray-600 text-sm">
+            <p className="text-[11px] tracking-[0.05em] text-gray-400">
               Enter your order details to get real-time tracking updates
             </p>
           </div>
@@ -477,7 +477,7 @@ export default function TrackOrderPage() {
           {/* User's Orders Cards */}
           {testOrders.length > 0 && (
             <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              <h3 className="text-[10px] tracking-[0.1em] uppercase text-gray-400 mb-4">
                 Your Orders
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -502,7 +502,7 @@ export default function TrackOrderPage() {
                   return (
                     <div
                       key={order.orderNumber}
-                      className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      className="bg-white border border-gray-100 p-4 hover:shadow-sm transition-shadow cursor-pointer"
                       onClick={() => {
                         setOrderNumber(order.orderNumber);
                         setEmail(order.email);
@@ -521,7 +521,7 @@ export default function TrackOrderPage() {
                           className={`px-2 py-1 ${order.orderType === "normal"
                               ? "bg-green-100 text-green-800"
                               : "bg-purple-100 text-purple-800"
-                            } text-xs font-medium rounded`}
+                            } text-[9px] tracking-[0.1em] uppercase font-medium`}
                         >
                           {order.orderType === "normal"
                             ? "Normal"
@@ -552,7 +552,7 @@ export default function TrackOrderPage() {
 
           {/* Tracking Form */}
           {!trackingData && (
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-100">
+            <div className="bg-white border border-gray-100 p-6 mb-6">
               <form onSubmit={handleTrackOrder} className="space-y-5">
                 <div>
                   <label
@@ -573,7 +573,7 @@ export default function TrackOrderPage() {
                         setOrderNumber(e.target.value.toUpperCase())
                       }
                       placeholder="e.g., ORD123456"
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#126180] focus:border-transparent transition-all"
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-none focus:ring-0 focus:border-[#328F94] transition-all"
                       required
                     />
                   </div>
@@ -596,14 +596,14 @@ export default function TrackOrderPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value.toLowerCase())}
                       placeholder="your.email@example.com"
-                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#126180] focus:border-transparent transition-all"
+                      className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-none focus:ring-0 focus:border-[#328F94] transition-all"
                       required
                     />
                   </div>
                 </div>
 
                 {error && (
-                  <div className="flex items-start space-x-2 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-start space-x-2 p-4 bg-red-50 border border-red-200 rounded-none">
                     <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-red-800">{error}</p>
                   </div>
@@ -612,7 +612,7 @@ export default function TrackOrderPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-[#126180] hover:bg-[#0f4f6b] text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center">
@@ -631,14 +631,14 @@ export default function TrackOrderPage() {
           {trackingData && (
             <div className="space-y-4">
               {/* Order Info Header */}
-              <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+              <div className="bg-white border border-gray-100 p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">
+                    <h2 className="text-2xl font-light tracking-[0.12em] uppercase text-gray-800">
                       Order #{trackingData.orderNumber}
                     </h2>
                     {trackingData.docketNumber && (
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-[10px] tracking-[0.1em] uppercase text-gray-400 mt-1">
                         Tracking ID: {trackingData.docketNumber}
                       </p>
                     )}
@@ -650,7 +650,7 @@ export default function TrackOrderPage() {
                       setEmail("");
                       setError("");
                     }}
-                    className="text-sm text-[#126180] hover:underline font-medium"
+                    className="text-[10px] tracking-[0.1em] uppercase text-[#328F94] hover:text-[#1e6e72] transition-colors duration-200"
                   >
                     Track Another Order
                   </button>
@@ -665,7 +665,7 @@ export default function TrackOrderPage() {
                       {new Date(trackingData.updatedAt).toLocaleString()}
                     </div>
                     {getCancellationMessage() && (
-                      <div className="text-xs text-teal-600 font-medium ml-6">
+                      <div className="text-xs text-[#328F94] font-medium ml-6">
                         {getCancellationMessage()}
                       </div>
                     )}
@@ -674,7 +674,7 @@ export default function TrackOrderPage() {
                     <button
                       onClick={handleRefresh}
                       disabled={isRefreshing}
-                      className="flex items-center text-[#126180] hover:text-[#0f4f6b] font-medium disabled:opacity-50"
+                      className="flex items-center border border-[#328F94] text-[#328F94] hover:bg-[#328F94] hover:text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-4 transition-colors duration-200 disabled:opacity-50"
                     >
                       <RefreshCw
                         className={`w-4 h-4 mr-1 ${isRefreshing ? "animate-spin" : ""
@@ -685,7 +685,7 @@ export default function TrackOrderPage() {
                     {canCancelOrder() && (
                       <button
                         onClick={() => setShowCancelDialog(true)}
-                        className="flex items-center text-red-600 hover:text-red-700 font-medium"
+                        className="flex items-center border border-red-400 text-red-600 hover:bg-red-600 hover:text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-4 transition-colors duration-200"
                       >
                         <XCircle className="w-4 h-4 mr-1" />
                         Cancel Order
@@ -696,7 +696,7 @@ export default function TrackOrderPage() {
                         <button
                           onClick={handleDownloadPOD}
                           disabled={isDownloadingPOD}
-                          className="flex items-center text-teal-600 hover:text-teal-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center border border-[#328F94] text-[#328F94] hover:bg-[#328F94] hover:text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-4 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isDownloadingPOD ? (
                             <>
@@ -713,7 +713,7 @@ export default function TrackOrderPage() {
                         {!trackingData.returnRequest?.requested && (
                           <button
                             onClick={() => setShowReturnDialog(true)}
-                            className="flex items-center text-orange-600 hover:text-orange-700 font-medium"
+                            className="flex items-center border border-orange-400 text-orange-600 hover:bg-orange-600 hover:text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-4 transition-colors duration-200"
                           >
                             <Package className="w-4 h-4 mr-1" />
                             Return Order
@@ -730,7 +730,7 @@ export default function TrackOrderPage() {
 
               {/* Return Request Notice */}
               {trackingData.returnRequest?.requested && (
-                <div className="bg-orange-50 border-l-4 border-orange-400 p-4 rounded-lg mb-4">
+                <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-4">
                   <div className="flex items-start">
                     <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 mr-3 flex-shrink-0" />
                     <div className="flex-1">
@@ -784,7 +784,7 @@ export default function TrackOrderPage() {
           {/* Empty State */}
           {!trackingData && !loading && (
             <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-4">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 mb-4">
                 <Package className="w-10 h-10 text-gray-400" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -799,9 +799,9 @@ export default function TrackOrderPage() {
           {/* Cancel Order Dialog */}
           {showCancelDialog && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <div className="bg-white rounded-none shadow-xl max-w-md w-full p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-light tracking-[0.12em] uppercase text-gray-800">
                     Cancel Order
                   </h3>
                   <button
@@ -823,7 +823,7 @@ export default function TrackOrderPage() {
                   </p>
 
                   {trackingData && (
-                    <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
+                    <div className="bg-gray-50 border border-gray-100 p-3 mb-4 text-sm">
                       <p className="font-medium text-gray-900">
                         Order: {trackingData.orderNumber}
                       </p>
@@ -875,14 +875,14 @@ export default function TrackOrderPage() {
                     value={cancelReason}
                     onChange={(e) => setCancelReason(e.target.value)}
                     placeholder="Please provide a reason (e.g., Changed my mind, Ordered by mistake, etc.)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-none focus:ring-0 focus:border-[#328F94] resize-none"
                     rows={3}
                     required
                   />
                 </div>
 
                 {error && (
-                  <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                  <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-none mb-4">
                     <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-red-800">{error}</p>
                   </div>
@@ -896,14 +896,14 @@ export default function TrackOrderPage() {
                       setError("");
                     }}
                     disabled={isCancelling}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    className="flex-1 border border-[#328F94] text-[#328F94] hover:bg-[#328F94] hover:text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-4 transition-colors duration-200 disabled:opacity-50"
                   >
                     Keep Order
                   </button>
                   <button
                     onClick={handleCancelShipment}
                     disabled={isCancelling || !cancelReason.trim()}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isCancelling ? (
                       <span className="flex items-center justify-center">
@@ -922,9 +922,9 @@ export default function TrackOrderPage() {
           {/* Return Order Dialog */}
           {showReturnDialog && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-[90vh] flex flex-col">
+              <div className="bg-white rounded-none shadow-xl max-w-md w-full p-6 max-h-[90vh] flex flex-col">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-xl font-light tracking-[0.12em] uppercase text-gray-800">
                     Return Order
                   </h3>
                   <button
@@ -948,7 +948,7 @@ export default function TrackOrderPage() {
                     </p>
 
                     {trackingData && (
-                      <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm">
+                      <div className="bg-gray-50 border border-gray-100 p-3 mb-4 text-sm">
                         <p className="font-medium text-gray-900">
                           Order: {trackingData.orderNumber}
                         </p>
@@ -1008,7 +1008,7 @@ export default function TrackOrderPage() {
                           onChange={(e) =>
                             setHasManufacturerFault(e.target.checked)
                           }
-                          className="mt-1 w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                          className="mt-1 w-4 h-4 text-[#328F94] border-gray-300 rounded focus:ring-[#328F94]"
                         />
                         <span className="text-sm text-gray-700">
                           This is a manufacturer's fault (defect, damage, wrong
@@ -1028,14 +1028,14 @@ export default function TrackOrderPage() {
                       value={returnReason}
                       onChange={(e) => setReturnReason(e.target.value)}
                       placeholder="Please describe why you want to return this order (e.g., Size issue, Quality concern, Manufacturer defect, etc.)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-none focus:ring-0 focus:border-[#328F94] resize-none"
                       rows={4}
                       required
                     />
                   </div>
 
                   {error && (
-                    <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+                    <div className="flex items-start space-x-2 p-3 bg-red-50 border border-red-200 rounded-none mb-4">
                       <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
                       <p className="text-sm text-red-800">{error}</p>
                     </div>
@@ -1051,14 +1051,14 @@ export default function TrackOrderPage() {
                       setError("");
                     }}
                     disabled={isReturning}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    className="flex-1 border border-[#328F94] text-[#328F94] hover:bg-[#328F94] hover:text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-4 transition-colors duration-200 disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleReturnOrder}
                     disabled={isReturning || !returnReason.trim()}
-                    className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none py-3 px-6 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isReturning ? (
                       <span className="flex items-center justify-center">

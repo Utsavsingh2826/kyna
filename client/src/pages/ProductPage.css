@@ -6,16 +6,17 @@
   --text: hsl(210 20% 15%);
   --subtle: hsl(210 12% 40%);
   color: var(--text);
+  background: #faf9f7;
 }
 .eng-wrap {
-  max-width: 1200px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.25rem 1.25rem;
 }
 .eng-breadcrumb {
   font-size: 12px;
   color: var(--subtle);
-  margin: 0.5rem 0 1rem;
+  margin: 0.25rem 0 0.5rem;
 }
 .eng-breadcrumb a {
   color: inherit;
@@ -24,16 +25,12 @@
 
 .eng-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 0;
+  padding: 1.25rem 0 1rem;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-}
-.eng-title {
-  font-size: 20px;
-  font-weight: 600;
 }
 .eng-sub {
   margin: 1rem 0;
@@ -46,10 +43,13 @@
 }
 .eng-sort {
   border: 1px solid var(--border);
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 10px;
+  background: transparent;
+  border-radius: 0;
+  padding: 5px 10px;
+  font-size: 11px;
+  letter-spacing: 0.05em;
   color: var(--text);
+  cursor: pointer;
 }
 
 .eng-layout {
@@ -58,9 +58,8 @@
   gap: 1rem;
 }
 .eng-filters {
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: transparent;
+  border: none;
 }
 .eng-filters-header {
   display: flex;
@@ -68,8 +67,11 @@
   justify-content: space-between;
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
-  font-weight: 600;
-  font-size: 14px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--subtle);
 }
 @media (max-width: 1023px) {
   .eng-filters {
@@ -78,7 +80,7 @@
 }
 @media (min-width: 1024px) {
   .eng-layout {
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 220px 1fr;
     align-items: start;
   }
 }
@@ -92,9 +94,9 @@ details.eng-group > summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px;
-  font-weight: 600;
-  font-size: 14px;
+  padding: 10px 12px;
+  font-weight: 500;
+  font-size: 13px;
 }
 details.eng-group > summary::-webkit-details-marker {
   display: none;
@@ -154,7 +156,7 @@ details.eng-group[open] > summary .chevron-right {
 .eng-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 20px;
 }
 @media (min-width: 640px) {
   .eng-grid {
@@ -163,31 +165,53 @@ details.eng-group[open] > summary .chevron-right {
 }
 @media (min-width: 1024px) {
   .eng-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+}
+@media (min-width: 1280px) {
+  .eng-grid {
     grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
   }
 }
 
 .eng-card {
   background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 1px solid transparent;
+  border-radius: 2px;
   overflow: hidden;
   position: relative;
+  transition: border-color 0.35s ease, box-shadow 0.35s ease;
+}
+.eng-card:hover {
+  border-color: rgba(104, 197, 192, 0.28);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+.eng-card-img-wrap {
+  position: relative;
+  overflow: hidden;
 }
 .eng-card-img {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 5;
   object-fit: cover;
   display: block;
-  background: #fafafa;
+  background: #f8f6f3;
+  transition: transform 0.55s ease;
+}
+.eng-card:hover .eng-card-img {
+  transform: scale(1.05);
 }
 .eng-card-body {
-  padding: 10px 12px 14px;
+  padding: 12px 14px 16px;
 }
 .eng-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+  margin: 0 0 4px;
+  color: hsl(210 15% 22%);
 }
 .eng-card-prices {
   display: flex;
@@ -206,13 +230,19 @@ details.eng-group[open] > summary .chevron-right {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: #fff;
-  border: 1px solid var(--border);
-  width: 34px;
-  height: 34px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(6px);
+  border: none;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   display: grid;
   place-items: center;
+  transition: background 0.2s;
+  z-index: 10;
+}
+.eng-wishlist:hover {
+  background: #fff;
 }
 .eng-badge {
   position: absolute;
@@ -285,5 +315,170 @@ details.eng-group[open] > summary .chevron-right {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 8px 0;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Two-column layout ───────────────────────── */
+.eng-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  padding: 1.5rem 0;
+}
+@media (min-width: 1024px) {
+  .eng-container {
+    grid-template-columns: 220px 1fr;
+    align-items: start;
+  }
+  .eng-sidebar {
+    position: sticky;
+    top: 100px;
+  }
+}
+.eng-products { min-width: 0; }
+
+/* ── State messages ──────────────────────────── */
+.eng-loading,
+.eng-error,
+.eng-no-products {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #aaa;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* ── Pagination ──────────────────────────────── */
+.eng-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 2.5rem 0 1rem;
+  border-top: 1px solid #ebebeb;
+  margin-top: 2rem;
+}
+.eng-page-btn {
+  padding: 10px 28px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid #328F94;
+  color: #328F94;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s;
+  border-radius: 2px;
+}
+.eng-page-btn:hover:not(:disabled) { background: #328F94; color: #fff; }
+.eng-page-btn:disabled { opacity: 0.35; cursor: not-allowed; border-color: #ccc; color: #ccc; }
+.eng-page-info {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #aaa;
+}
+
+/* ── Retry button ────────────────────────────── */
+.eng-retry-btn {
+  padding: 10px 28px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  border: 1px solid #328F94;
+  color: #328F94;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s;
+  border-radius: 2px;
+  margin-top: 1rem;
+}
+.eng-retry-btn:hover { background: #328F94; color: #fff; }
+
+/* ── Card info classes ───────────────────────── */
+.eng-card-variants {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #bbb;
+  margin: 0 0 4px;
+}
+.eng-card-price {
+  font-size: 13px;
+  font-weight: 400;
+  color: #1a1a1a;
+  letter-spacing: 0.02em;
+  margin: 6px 0 8px;
+}
+.eng-card-onwards {
+  color: #aaa;
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+/* ── Metal type chips ────────────────────────── */
+.eng-metals {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.eng-metal {
+  padding: 3px 7px;
+  border: 1px solid #e0e0e0;
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #888;
+  background: #faf9f7;
+}
+
+/* ── Filter section heading ──────────────────── */
+.eng-filter-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+/* ── Filter clear button ─────────────────────── */
+.eng-clear-btn {
+  width: 100%;
+  background: transparent;
+  color: #328F94;
+  border: 1px solid #328F94;
+  padding: 10px 20px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.25s, color 0.25s;
+}
+.eng-clear-btn:hover { background: #328F94; color: #fff; }
+
+/* ── Header collection label ─────────────────── */
+.eng-collection-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #328F94;
+  margin-bottom: 4px;
+}
+.eng-title {
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+}
+.eng-count {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #aaa;
+  margin-top: 2px;
 }

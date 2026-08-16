@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { X, Heart } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Heart } from "lucide-react";
+import { Link } from "react-router-dom";
 import { FilterGroup, PriceRangeSlider } from "@/components/Engravings";
 import "./ProductPage.css";
 import "./EarringFilters.css";
+import "./builder-luxury.css";
 
 type MainCategory = "rings" | "earrings" | "pendants" | "bracelets";
 
@@ -44,8 +45,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(50000);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [products, setProducts] = useState<Product[]>([]);
+const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
@@ -308,19 +308,21 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
         return (
           <div className="eng-filter-section">
-            <p className="eng-label-muted">EARRING TYPE</p>
-            <div className="eng-filter-grid">
+            <p className="eng-filter-label">Earring Type</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               {categories.map((cat) => (
-                <label key={cat.value} className="eng-suboption">
-                  <input
-                    type="radio"
-                    name="earringCategory"
-                    value={cat.value}
-                    checked={earringFilters.category1 === cat.value}
-                    onChange={(e) => updateEarringCategory(e.target.value)}
-                  />
-                  <span>{cat.label}</span>
-                </label>
+                <button
+                  key={cat.value}
+                  className={`bld-chip${earringFilters.category1 === cat.value ? " active" : ""}`}
+                  style={{ textAlign: "left" }}
+                  onClick={() =>
+                    updateEarringCategory(
+                      earringFilters.category1 === cat.value ? "" : cat.value
+                    )
+                  }
+                >
+                  {cat.label}
+                </button>
               ))}
             </div>
           </div>
@@ -329,85 +331,36 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
       const DiamondShapeSelector = () => {
         const shapes = [
-          "round",
-          "oval",
-          "princess",
-          "emerald",
-          "cushion",
-          "marquise",
-          "pear",
-          "heart",
+          "round", "oval", "princess", "emerald",
+          "cushion", "marquise", "pear", "heart",
         ];
 
         return (
-          <div className="eng-filter-section">
-            <p className="eng-label-muted">DIAMOND SHAPE</p>
-            <div
-              className="diamond-shape-grid"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
-                gap: "8px",
-              }}
-            >
+          <div className="eng-filter-section" style={{ marginTop: "1.25rem" }}>
+            <p className="eng-filter-label">Diamond Shape</p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px" }}>
               {shapes.map((shape) => (
-                <label
+                <button
                   key={shape}
-                  className="diamond-shape-option"
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    padding: "8px",
-                    cursor: "pointer",
-                    border:
-                      earringFilters.centerStoneShape === shape
-                        ? "2px solid #14b8a6"
-                        : "1px solid #d1d5db",
-                    borderRadius: "6px",
-                    backgroundColor:
-                      earringFilters.centerStoneShape === shape
-                        ? "#f0fdfa"
-                        : "transparent",
-                  }}
+                  onClick={() =>
+                    updateDiamondShape(
+                      earringFilters.centerStoneShape === shape ? "" : shape
+                    )
+                  }
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
                 >
-                  <input
-                    type="radio"
-                    name="diamondShape"
-                    value={shape}
-                    checked={earringFilters.centerStoneShape === shape}
-                    onChange={(e) => updateDiamondShape(e.target.value)}
-                    style={{ marginBottom: "4px" }}
-                  />
-                  <img
-                    src={`/DIAMOND_SHAPES_WEBP/${shape}.png`}
-                    alt={shape}
-                    className="h-8 w-8 mb-1"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                      const placeholder = document.createElement("div");
-                      placeholder.style.cssText =
-                        "width: 32px; height: 32px; background: #e5e7eb; border-radius: 50%; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #6b7280;";
-                      placeholder.textContent = shape.charAt(0).toUpperCase();
-                      e.currentTarget.parentNode?.insertBefore(
-                        placeholder,
-                        e.currentTarget
-                      );
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      textAlign: "center",
-                      fontWeight:
-                        earringFilters.centerStoneShape === shape
-                          ? "600"
-                          : "400",
-                    }}
-                  >
-                    {shape.charAt(0).toUpperCase() + shape.slice(1)}
-                  </span>
-                </label>
+                  <div className={`bld-shape-btn${earringFilters.centerStoneShape === shape ? " active" : ""}`}>
+                    <img
+                      src={`/DIAMOND_SHAPES_WEBP/${shape}.png`}
+                      alt={shape}
+                      style={{ width: 28, height: 28, objectFit: "contain" }}
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                  </div>
+                  <p className={`bld-shape-name${earringFilters.centerStoneShape === shape ? " active" : ""}`}>
+                    {shape}
+                  </p>
+                </button>
               ))}
             </div>
           </div>
@@ -419,36 +372,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           <EarringCategorySelector />
           <DiamondShapeSelector />
 
-          <div className="eng-filter-section">
-            <p className="eng-label-muted">CURRENT FILTERS</p>
-            <div className="eng-current-filters">
-              {earringFilters.category1 && (
-                <span className="eng-filter-tag">
-                  Type: {earringFilters.category1}
-                  <button
-                    onClick={() => updateEarringCategory("")}
-                    className="eng-filter-remove"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-              {earringFilters.centerStoneShape && (
-                <span className="eng-filter-tag">
-                  Shape: {earringFilters.centerStoneShape}
-                  <button
-                    onClick={() => updateDiamondShape("")}
-                    className="eng-filter-remove"
-                  >
-                    ×
-                  </button>
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="eng-filter-section">
-            <p className="eng-label-muted">PRICE</p>
+          <div className="eng-filter-section" style={{ marginTop: "1.25rem" }}>
+            <p className="eng-filter-label">Price</p>
             <PriceRangeSlider
               minPrice={minPrice}
               maxPrice={maxPrice}
@@ -457,11 +382,8 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
             />
           </div>
 
-          <div className="eng-filter-section">
-            <button
-              onClick={clearAllFilters}
-              className="w-full p-2 bg-red-500 text-white rounded hover:bg-red-600"
-            >
+          <div className="eng-filter-section" style={{ marginTop: "1.25rem" }}>
+            <button onClick={clearAllFilters} className="eng-clear-btn">
               Clear All Filters
             </button>
           </div>
@@ -472,46 +394,43 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
     // Legacy filter rendering for other categories
     return (
       <FilterGroup title={titleMap[category]} defaultOpen={true}>
-        <p className="eng-label-muted">PRICE</p>
-        <PriceRangeSlider
-          minPrice={minPrice}
-          maxPrice={maxPrice}
-          onMinChange={handleMinChange}
-          onMaxChange={handleMaxChange}
-        />
+        <div className="eng-filter-section">
+          <p className="eng-filter-label">Price</p>
+          <PriceRangeSlider
+            minPrice={minPrice}
+            maxPrice={maxPrice}
+            onMinChange={handleMinChange}
+            onMaxChange={handleMaxChange}
+          />
+        </div>
+        <div className="eng-filter-section" style={{ marginTop: "1rem" }}>
+          <button onClick={clearAllFilters} className="eng-clear-btn">
+            Clear All Filters
+          </button>
+        </div>
       </FilterGroup>
     );
   };
 
   return (
-    <main aria-labelledby="products-heading" className="eng-root">
+    <main aria-labelledby="products-heading" className="eng-root" style={{ fontFamily: "Poppins, sans-serif" }}>
       <div className="eng-wrap">
-        <nav aria-label="Breadcrumb" className="eng-breadcrumb">
-          <Link to="/">Home</Link> <span> - </span>{" "}
+        <nav aria-label="Breadcrumb" className="bld-breadcrumb">
+          <Link to="/">Home</Link>
+          <span style={{ margin: "0 6px", color: "#ccc" }}>›</span>
           <span>{titleMap[category]}</span>
         </nav>
 
         <div className="eng-header">
-          <h2 id="products-heading" className="eng-title">
-            {titleMap[category]} Products ({loading ? "..." : pagination.total})
-          </h2>
-          {category === "earrings" && (
-            <div className="eng-current-url">
-              <p
-                style={{
-                  fontSize: "12px",
-                  color: "#6b7280",
-                  wordBreak: "break-all",
-                }}
-              >
-                API: /api/products/category/earrings?page=
-                {earringFilters.page}&limit={earringFilters.limit}&category1=
-                {earringFilters.category1}&category2={earringFilters.category2}
-                &category3={earringFilters.category3}&centerStoneShape=
-                {earringFilters.centerStoneShape}
-              </p>
-            </div>
-          )}
+          <div>
+            <p className="eng-collection-label">Collection</p>
+            <h2 id="products-heading" className="eng-title">
+              {titleMap[category]}
+            </h2>
+            <p className="eng-count">
+              {loading ? "Loading…" : `${pagination.total} pieces`}
+            </p>
+          </div>
         </div>
 
         <div className="eng-container">
@@ -521,18 +440,13 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
           {/* Products Grid */}
           <section className="eng-products">
             {loading && (
-              <div className="eng-loading">
-                <p>Loading products...</p>
-              </div>
+              <div className="eng-loading">Loading…</div>
             )}
 
             {error && (
               <div className="eng-error">
-                <p>Error: {error}</p>
-                <button
-                  onClick={() => fetchProducts()}
-                  className="eng-retry-btn"
-                >
+                <p>Unable to load products.</p>
+                <button onClick={() => fetchProducts()} className="eng-retry-btn">
                   Retry
                 </button>
               </div>
@@ -540,7 +454,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
 
             {!loading && !error && products.length === 0 && (
               <div className="eng-no-products">
-                <p>No products found. Try adjusting your filters.</p>
+                No pieces found — try adjusting your filters.
               </div>
             )}
 
@@ -548,40 +462,48 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
               <>
                 <div className="eng-grid">
                   {products.map((product) => (
-                    <div key={product.modelSku} className="eng-card">
-                      <div className="eng-image-container">
+                    <Link
+                      key={product.modelSku}
+                      to={`/product/${product.slug}/${product.firstVariantSku}`}
+                      className="eng-card"
+                      style={{ textDecoration: "none", color: "inherit", display: "block" }}
+                    >
+                      <div className="eng-card-img-wrap">
                         <img
                           src={product.firstVariantImageUrl}
                           alt={product.title}
-                          className="eng-image"
+                          className="eng-card-img"
                           loading="lazy"
                         />
-                        <button className="eng-heart">
+                        <button
+                          className="eng-wishlist"
+                          onClick={(e) => e.preventDefault()}
+                          aria-label="Add to wishlist"
+                        >
                           <Heart className="h-4 w-4" />
                         </button>
                       </div>
-                      <div className="eng-info">
-                        <h3 className="eng-name">{product.title}</h3>
-                        <p className="eng-variants">
-                          {product.variantCount} variants
+                      <div className="eng-card-body">
+                        <p className="eng-card-variants">
+                          {product.variantCount} variant{product.variantCount !== 1 ? "s" : ""}
                         </p>
-                        <p className="eng-price">
+                        <h3 className="eng-card-title">{product.title}</h3>
+                        <p className="eng-card-price">
                           ₹{product.sellingPrice.toLocaleString()}
-                          {product.priceIncomplete && " onwards"}
+                          {product.priceIncomplete && (
+                            <span className="eng-card-onwards"> onwards</span>
+                          )}
                         </p>
                         <div className="eng-metals">
                           {product.metalTypes.map((metal) => (
-                            <span key={metal} className="eng-metal">
-                              {metal}
-                            </span>
+                            <span key={metal} className="eng-metal">{metal}</span>
                           ))}
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
 
-                {/* Pagination */}
                 {pagination.totalPages > 1 && (
                   <div className="eng-pagination">
                     <button
@@ -593,11 +515,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       disabled={pagination.currentPage <= 1}
                       className="eng-page-btn"
                     >
-                      Previous
+                      ← Previous
                     </button>
 
                     <span className="eng-page-info">
-                      Page {pagination.currentPage} of {pagination.totalPages}
+                      {pagination.currentPage} / {pagination.totalPages}
                     </span>
 
                     <button
@@ -609,7 +531,7 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       disabled={pagination.currentPage >= pagination.totalPages}
                       className="eng-page-btn"
                     >
-                      Next
+                      Next →
                     </button>
                   </div>
                 )}

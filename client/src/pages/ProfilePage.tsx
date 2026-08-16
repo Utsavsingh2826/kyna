@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   User,
   // Wallet,
@@ -24,7 +24,7 @@ import type { RootState } from "@/store";
 import { Country, State, City } from "country-state-city";
 import apiService from "@/services/api";
 import TrackOrderPage from "./TrackOrderPage";
-import WidhlistPage from "./WishlistPage";
+import WishlistPage from "./WishlistPage";
 
 interface UserData {
   firstName: string;
@@ -56,6 +56,7 @@ interface AddressData {
 
 const ProfilePage: React.FC = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
 
   const [activeSection, setActiveSection] = useState("User Account");
@@ -414,8 +415,7 @@ const ProfilePage: React.FC = () => {
     dispatch(logoutSucceeded());
     dispatch(clearCart());
 
-    // Redirect to home page or login page
-    window.location.href = "/";
+    navigate("/");
   };
 
   useEffect(() => {
@@ -624,7 +624,7 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#faf9f7]">
       {/* Breadcrumb */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-3">
@@ -642,17 +642,17 @@ const ProfilePage: React.FC = () => {
         <div className="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto">
           {/* Sidebar */}
           <div className="lg:w-1/4">
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div className="bg-white border border-gray-100 overflow-hidden">
               {sidebarItems.map((item, index) => (
                 <button
                   key={index}
                   onClick={() => {
                     if (item.label === "Track Order") {
-                      window.location.href = "/track-order";
+                      navigate("/track-order");
                       return;
                     }
                     if (item.label === "Order History") {
-                      window.location.href = "/order-history";
+                      navigate("/order-history");
                       return;
                     }
                     setActiveSection(item.label);
@@ -663,7 +663,7 @@ const ProfilePage: React.FC = () => {
                     }`}
                 >
                   <item.icon className="w-5 h-5 mr-3" />
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <span className="text-[11px] tracking-[0.12em] uppercase font-medium">{item.label}</span>
                 </button>
               ))}
             </div>
@@ -671,8 +671,8 @@ const ProfilePage: React.FC = () => {
 
           {/* Main Content */}
           <div className="lg:w-3/4">
-            <div className="bg-white rounded-lg shadow-sm p-6 md:p-8">
-              <h1 className="text-2xl font-semibold text-gray-800 mb-8">
+            <div className="bg-white border border-gray-100 p-6 md:p-8">
+              <h1 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium mb-8">
                 {activeSection === "Signout"
                   ? "ACCOUNT ACTIONS"
                   : "ACCOUNT SETTING"}
@@ -699,7 +699,7 @@ const ProfilePage: React.FC = () => {
                     </p>
                     <Button
                       onClick={() => window.location.reload()}
-                      className="bg-[#328F94] hover:bg-[#328F94]/90 text-white"
+                      className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none px-6 py-3 transition-colors duration-200"
                     >
                       Refresh Page
                     </Button>
@@ -711,7 +711,7 @@ const ProfilePage: React.FC = () => {
                   {/* Profile Image Section - Keep unchanged */}
                   <div className="lg:w-1/3 flex flex-col items-center">
                     <div className="relative mb-4">
-                      <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden">
+                      <div className="w-32 h-32 bg-[#328F94] rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden">
                         {profileData.profileImage ? (
                           <img
                             src={URL.createObjectURL(profileData.profileImage)}
@@ -756,7 +756,7 @@ const ProfilePage: React.FC = () => {
                         <div className="mt-4">
                           <Button
                             onClick={handleLogout}
-                            className="w-full bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-md font-medium transition-colors"
+                            className="w-full border border-gray-300 text-gray-500 hover:border-[#328F94] hover:text-[#328F94] bg-transparent rounded-none text-[10px] tracking-[0.15em] uppercase px-6 py-3 transition-colors"
                           >
                             Log Out
                           </Button>
@@ -773,7 +773,7 @@ const ProfilePage: React.FC = () => {
                 // ></iframe>
                 <TrackOrderPage />
               ) : activeSection === "Wishlist" ? (
-                <WidhlistPage />
+                <WishlistPage />
               ) : (
                 /* Regular Account Settings Section */
                 <>
@@ -781,7 +781,7 @@ const ProfilePage: React.FC = () => {
                     {/* Profile Image Section */}
                     <div className="lg:w-1/3 flex flex-col items-center">
                       <div className="relative mb-4">
-                        <div className="w-32 h-32 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden">
+                        <div className="w-32 h-32 bg-[#328F94] rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-lg overflow-hidden">
                           {profileData.profileImage ? (
                             <img
                               src={URL.createObjectURL(
@@ -824,7 +824,7 @@ const ProfilePage: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* First Name */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             First Name <span className="text-red-500">*</span>
                           </label>
                           <Input
@@ -840,7 +840,7 @@ const ProfilePage: React.FC = () => {
 
                         {/* Last Name */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Last Name
                           </label>
                           <Input
@@ -856,7 +856,7 @@ const ProfilePage: React.FC = () => {
 
                         {/* Email */}
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Email <span className="text-red-500">*</span>
                           </label>
                           <Input
@@ -871,7 +871,7 @@ const ProfilePage: React.FC = () => {
 
                         {/* Secondary Email */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Secondary Email
                           </label>
                           <Input
@@ -889,7 +889,7 @@ const ProfilePage: React.FC = () => {
 
                         {/* Phone Number */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Phone Number
                           </label>
                           <Input
@@ -904,7 +904,7 @@ const ProfilePage: React.FC = () => {
 
                         {/* Country/Region */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Country/Region
                           </label>
                           <div className="relative">
@@ -922,7 +922,7 @@ const ProfilePage: React.FC = () => {
                                   handleInputChange("city", "");
                                 }
                               }}
-                              className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none"
+                              className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none"
                             >
                               <option value="">Select Country</option>
                               {allCountries.map((country) => (
@@ -940,7 +940,7 @@ const ProfilePage: React.FC = () => {
 
                         {/* City */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             City
                           </label>
                           <div className="relative">
@@ -950,7 +950,7 @@ const ProfilePage: React.FC = () => {
                                 handleInputChange("city", e.target.value)
                               }
                               disabled={!profileStateIso}
-                              className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                             >
                               <option value="">
                                 {profileStateIso
@@ -971,7 +971,7 @@ const ProfilePage: React.FC = () => {
                         <div className="flex gap-3">
                           {/* States */}
                           <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               States
                             </label>
                             <div className="relative">
@@ -988,7 +988,7 @@ const ProfilePage: React.FC = () => {
                                   }
                                 }}
                                 disabled={!profileCountryIso}
-                                className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                               >
                                 <option value="">
                                   {profileCountryIso
@@ -1010,7 +1010,7 @@ const ProfilePage: React.FC = () => {
 
                           {/* Zip Code */}
                           <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               Zip Code
                             </label>
                             <Input
@@ -1029,7 +1029,7 @@ const ProfilePage: React.FC = () => {
                       <div className="mt-8">
                         <Button
                           onClick={handleSaveChanges}
-                          className="bg-[#328F94] hover:text-[#328F94] hover:border-[#328F94] border-2 text-white px-8 py-3 rounded-md font-medium transition-colors"
+                          className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none px-6 py-3 transition-colors duration-200"
                         >
                           Save Changes
                         </Button>
@@ -1040,14 +1040,14 @@ const ProfilePage: React.FC = () => {
                   <div className="mt-8 pt-8 border-t border-gray-200">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                       {/* Billing Address */}
-                      <div className="bg-white rounded-lg border border-gray-200 p-6">
-                        <h2 className="text-sm font-semibold text-gray-800 mb-6 tracking-wide">
+                      <div className="bg-white border border-gray-100 p-6">
+                        <h2 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium mb-6">
                           BILLING ADDRESS
                         </h2>
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               First Name
                             </label>
                             <Input
@@ -1061,7 +1061,7 @@ const ProfilePage: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               Last Name
                             </label>
                             <Input
@@ -1077,7 +1077,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Company Name{" "}
                             <span className="text-gray-400">(Optional)</span>
                           </label>
@@ -1093,7 +1093,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Address
                           </label>
                           <Input
@@ -1108,7 +1108,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Country
                           </label>
                           <div className="relative">
@@ -1129,7 +1129,7 @@ const ProfilePage: React.FC = () => {
                                   handleBillingChange("city", "");
                                 }
                               }}
-                              className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none"
+                              className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none"
                             >
                               <option value="">Select Country</option>
                               {allCountries.map((country) => (
@@ -1146,7 +1146,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Region/State
                           </label>
                           <div className="relative">
@@ -1166,7 +1166,7 @@ const ProfilePage: React.FC = () => {
                                 }
                               }}
                               disabled={!billingCountryIso}
-                              className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                             >
                               <option value="">
                                 {billingCountryIso
@@ -1185,7 +1185,7 @@ const ProfilePage: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               City
                             </label>
                             <div className="relative">
@@ -1195,7 +1195,7 @@ const ProfilePage: React.FC = () => {
                                   handleBillingChange("city", e.target.value)
                                 }
                                 disabled={!billingStateIso}
-                                className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                               >
                                 <option value="">
                                   {billingStateIso
@@ -1212,7 +1212,7 @@ const ProfilePage: React.FC = () => {
                             </div>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               Zip Code
                             </label>
                             <Input
@@ -1228,7 +1228,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Email
                           </label>
                           <Input
@@ -1243,7 +1243,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Phone Number
                           </label>
                           <Input
@@ -1260,14 +1260,14 @@ const ProfilePage: React.FC = () => {
                         <div className="flex justify-between gap-4">
                           <Button
                             onClick={handleSaveAddresses}
-                            className="bg-[#328F94] hover:text-[#328F94] hover:border-[#328F94] border-2 text-white px-8 py-3 rounded-md font-medium transition-colors"
+                            className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none px-6 py-3 transition-colors duration-200"
                           >
                             Save Changes
                           </Button>
                           <Button
                             onClick={handleClearBillingAddress}
                             variant="outline"
-                            className="text-red-500 hover:bg-red-50 px-4 py-3 rounded-md font-medium transition-colors"
+                            className="border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400 rounded-none px-4 py-3 transition-colors"
                           >
                             <Trash2 className="h-5 w-5" />
                           </Button>
@@ -1275,9 +1275,9 @@ const ProfilePage: React.FC = () => {
                       </div>
 
                       {/* Shipping Address */}
-                      <div className="bg-white rounded-lg border border-gray-200 p-6">
+                      <div className="bg-white border border-gray-100 p-6">
                         <div className="flex justify-between items-center mb-6">
-                          <h2 className="text-sm font-semibold text-gray-800 tracking-wide">
+                          <h2 className="text-[10px] tracking-[0.22em] uppercase text-[#328F94] font-medium">
                             SHIPPING ADDRESS
                           </h2>
                           <button
@@ -1290,7 +1290,7 @@ const ProfilePage: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               First Name
                             </label>
                             <Input
@@ -1307,7 +1307,7 @@ const ProfilePage: React.FC = () => {
                             />
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               Last Name
                             </label>
                             <Input
@@ -1323,7 +1323,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Company Name{" "}
                             <span className="text-gray-400">(Optional)</span>
                           </label>
@@ -1342,7 +1342,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Address
                           </label>
                           <Input
@@ -1357,7 +1357,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Country
                           </label>
                           <div className="relative">
@@ -1380,7 +1380,7 @@ const ProfilePage: React.FC = () => {
                                   handleShippingChange("city", "");
                                 }
                               }}
-                              className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none"
+                              className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none"
                             >
                               <option value="">Select Country</option>
                               {allCountries.map((country) => (
@@ -1397,7 +1397,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Region/State
                           </label>
                           <div className="relative">
@@ -1417,7 +1417,7 @@ const ProfilePage: React.FC = () => {
                                 }
                               }}
                               disabled={!shippingCountryIso}
-                              className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                              className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                             >
                               <option value="">
                                 {shippingCountryIso
@@ -1436,7 +1436,7 @@ const ProfilePage: React.FC = () => {
 
                         <div className="grid grid-cols-2 gap-4 mb-4">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               City
                             </label>
                             <div className="relative">
@@ -1446,7 +1446,7 @@ const ProfilePage: React.FC = () => {
                                   handleShippingChange("city", e.target.value)
                                 }
                                 disabled={!shippingStateIso}
-                                className="w-full h-10 px-3 py-2 border border-gray-300 rounded-md bg-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                className="w-full h-10 px-3 py-2 border border-gray-200 rounded-none bg-white text-sm focus:outline-none focus:ring-0 focus:border-[#328F94] appearance-none disabled:bg-gray-100 disabled:cursor-not-allowed"
                               >
                                 <option value="">
                                   {shippingStateIso
@@ -1463,7 +1463,7 @@ const ProfilePage: React.FC = () => {
                             </div>
                           </div>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                               Zip Code
                             </label>
                             <Input
@@ -1479,7 +1479,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Email
                           </label>
                           <Input
@@ -1494,7 +1494,7 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="mb-6">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400 font-medium mb-2 block">
                             Phone Number
                           </label>
                           <Input
@@ -1514,14 +1514,14 @@ const ProfilePage: React.FC = () => {
                         <div className="flex justify-between gap-4">
                           <Button
                             onClick={handleSaveAddresses}
-                            className="bg-[#328F94] hover:text-[#328F94] hover:border-[#328F94] border-2 text-white px-8 py-3 rounded-md font-medium transition-colors"
+                            className="bg-[#328F94] hover:bg-[#1e6e72] text-white text-[10px] tracking-[0.2em] uppercase rounded-none px-6 py-3 transition-colors duration-200"
                           >
                             Save Changes
                           </Button>
                           <Button
                             onClick={handleClearShippingAddress}
                             variant="outline"
-                            className="text-red-500 hover:bg-red-50 px-4 py-3 rounded-md font-medium transition-colors"
+                            className="border border-gray-200 text-gray-400 hover:border-red-300 hover:text-red-400 rounded-none px-4 py-3 transition-colors"
                           >
                             <Trash2 className="h-5 w-5" />
                           </Button>

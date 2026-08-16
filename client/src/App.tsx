@@ -121,11 +121,11 @@ function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-white text-black">
       {!hideLayout && (
-        <>
+        <div style={{ position: "sticky", top: 0, left: 0, width: "100%", zIndex: 50 }}>
           <PromotionalBanner />
           <Header />
           <Navigation />
-        </>
+        </div>
       )}
 
       {children}

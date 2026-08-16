@@ -344,6 +344,7 @@ async function processProductsWithPricing(
     // Get image - use SAME logic as productController (product listing page)
     // Priority: YG+GP > YG+FV > dual-YG+GP > dual-YG+FV > triple-tone+GP > triple-tone+FV > any YG
     let imageUrl: string | null = null;
+    let hoverImageUrl: string | null = null;
     if (Array.isArray(variant.images) && variant.images.length > 0) {
       const upperImages = variant.images.map((i: any) => ({
         raw: i,
@@ -372,6 +373,34 @@ async function processProductsWithPricing(
         null;
 
       imageUrl = img?.raw?.url || img?.raw?.filename || null;
+
+      // Hover image: pick a different-angle image in the same metal color
+      if (img && upperImages.length > 1) {
+        const mainRaw = (imageUrl || "").toUpperCase();
+        const metalFilter = mainRaw.includes("YG") ? "YG"
+          : mainRaw.includes("WG") ? "WG"
+          : mainRaw.includes("RG") ? "RG"
+          : null;
+        const hoverViewCodes: Record<string, string[]> = {
+          RINGS:     ["FV", "SV", "BV", "TRV", "NBV"],
+          EARRINGS:  ["SIDE", "BACK", "AV", "BV", "BCV", "FV", "SV"],
+          PENDANTS:  ["NBV", "TRV", "BV", "SV", "45", "FV"],
+          BRACELETS: ["FV", "TRV", "TLV", "SV", "BV"],
+        };
+        const productCategory = (variant.category || "").toUpperCase();
+        const viewCodesToTry = hoverViewCodes[productCategory] || ["FV", "SV", "BV", "TRV", "NBV"];
+        for (const viewCode of viewCodesToTry) {
+          const candidate = upperImages.find(
+            (i: any) => i.url.includes(viewCode)
+              && (!metalFilter || i.url.includes(metalFilter))
+              && (i.raw?.url || i.raw?.filename) !== imageUrl
+          );
+          if (candidate) {
+            hoverImageUrl = candidate.raw?.url || candidate.raw?.filename || null;
+            break;
+          }
+        }
+      }
     }
 
     // Calculate price
@@ -523,8 +552,9 @@ async function processProductsWithPricing(
       title: variant.title || product.title || null,
       price: sellingPrice,
       image: imageUrl,
+      hoverImageUrl: hoverImageUrl,
       category: variant.category,
-      subCategory: variant.category, // Use category as subCategory for now
+      subCategory: variant.category,
       priceIncomplete,
     });
   }

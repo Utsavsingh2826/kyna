@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import "../builder-luxury.css";
 import { Link, useNavigate } from "react-router-dom";
 import { Country, State, City } from "country-state-city";
 import { Button } from "@/components/ui/button";
@@ -906,11 +907,7 @@ export default function RingBuilder() {
 
             {/* File Upload Area with Drag and Drop */}
             <div
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 cursor-pointer ${
-                isDragging
-                  ? "border-[#328F94] bg-[#328F94]/5 scale-[1.02]"
-                  : "border-[#ABA7AF] hover:border-[#328F94] hover:bg-[#328F94]/5"
-              }`}
+              className={`bld-upload-zone ${isDragging ? "dragging" : ""}`}
               onDragEnter={handleDragEnter}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -2317,35 +2314,19 @@ export default function RingBuilder() {
   );
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center mb-8">
+    <div className="bld-steps">
       {steps.map((step, index) => (
         <div key={step.number} className="flex items-center">
-          <div className="flex flex-col items-center">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step.number <= currentStep
-                  ? "bg-[#328F94] text-white"
-                  : "bg-muted text-muted-foreground"
-              }`}
-            >
+          <div className="bld-step-item">
+            <div className={`bld-step-dot ${step.number < currentStep ? "done" : step.number === currentStep ? "active" : ""}`}>
               {step.number}
             </div>
-            <span
-              className={`text-xs mt-2 text-center max-w-20 ${
-                step.number <= currentStep
-                  ? "text-[#328F94] font-medium"
-                  : "text-muted-foreground"
-              }`}
-            >
+            <span className={`bld-step-title ${step.number <= currentStep ? "active" : ""}`}>
               {step.title}
             </span>
           </div>
           {index < steps.length - 1 && (
-            <div
-              className={`w-16 h-1 mb-6 mx-4 ${
-                step.number < currentStep ? "bg-[#328F94]" : "bg-gray-300"
-              }`}
-            />
+            <div className={`bld-step-connector ${step.number < currentStep ? "done" : ""}`} />
           )}
         </div>
       ))}
@@ -3007,7 +2988,7 @@ export default function RingBuilder() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bld-root">
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 py-4">
         <nav className="text-sm text-gray-600">

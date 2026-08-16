@@ -107,7 +107,7 @@ export default function Navbar() {
     navigate("/");
   };
   return (
-    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Brand and quick actions */}
       <div className="border-b bg-[#68C5C0] text-cta-foreground">
         <div className="mx-auto max-w-10xl px-4 md:px-6">
@@ -123,12 +123,12 @@ export default function Navbar() {
                 </a>
                 <button
                   onClick={openCalendly}
-                  className="inline ld:px-4 hover:underline ml-2 text-white hover:text-gray-100"
+                  className="inline hover:underline ml-2 text-white hover:text-gray-100"
                 >
                   <CalendarCheck className="w-5 h-5 inline-block mr-1" />
-                  <p className="hidden md:inline"> Book Virtual Appointment</p>
+                  <span className="hidden md:inline">Book Virtual Appointment</span>
+                  <span className="inline md:hidden text-sm">Book Appt</span>
                 </button>
-                <span className="sm:hidden"> Book Appointment</span>
               </div>
               {/* Brand */}
               <Link
@@ -156,7 +156,7 @@ export default function Navbar() {
                     <User className="h-5 w-5 text-white" />
                   </button>
                   {isUserMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-52 rounded-md border bg-white shadow-lg z-50">
+                    <div className="absolute right-0 mt-2 w-52 rounded-md bg-white shadow-xl z-50 border-t-2 border-[#68C5C0]">
                       <div className="py-1">
                         {isAuthenticated ? (
                           <>
@@ -222,7 +222,7 @@ export default function Navbar() {
                 >
                   <ShoppingCart className="h-5 w-5 text-white" />
                   {cartItemCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full shadow-md border-2 border-[#68C5C0]">
+                    <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-[#2a7579] rounded-full shadow-md">
                       {cartItemCount}
                     </span>
                   )}

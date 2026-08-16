@@ -840,6 +840,33 @@ async function processProductsWithBatchedPricing(
 
     imageUrl = img?.raw?.url || img?.raw?.filename || null;
 
+    // Hover image: pick a different-angle image in the same metal color
+    let hoverImageUrl: string | null = null;
+    if (img && upperImages.length > 1) {
+      const mainRaw = (imageUrl || "").toUpperCase();
+      const metalFilter = mainRaw.includes("YG") ? "YG"
+        : mainRaw.includes("WG") ? "WG"
+        : mainRaw.includes("RG") ? "RG"
+        : null;
+      const hoverViewCodes: Record<string, string[]> = {
+        RINGS:     ["FV", "SV", "BV", "TRV", "NBV"],
+        EARRINGS:  ["SIDE", "BACK", "AV", "BV", "BCV", "FV", "SV"],
+        PENDANTS:  ["NBV", "TRV", "BV", "SV", "45", "FV"],
+        BRACELETS: ["FV", "TRV", "TLV", "SV", "BV"],
+      };
+      const viewCodesToTry = hoverViewCodes[category] || ["FV", "SV", "BV", "TRV", "NBV"];
+      for (const viewCode of viewCodesToTry) {
+        const candidate = upperImages.find(
+          (i: any) => i.url.includes(viewCode)
+            && (!metalFilter || i.url.includes(metalFilter))
+            && (i.raw?.url || i.raw?.filename) !== imageUrl
+        );
+        if (candidate) {
+          hoverImageUrl = candidate.raw?.url || candidate.raw?.filename || null;
+          break;
+        }
+      }
+    }
 
     // Get engraving from VARIANT attributes
     const engravingEnabled = variant.attributes?.ENGRAVABLE === "YES";
@@ -866,6 +893,7 @@ async function processProductsWithBatchedPricing(
         : 0,
       firstVariantSku: variant.variantSku,
       firstVariantImageUrl: imageUrl,
+      hoverImageUrl: hoverImageUrl,
       attributesCategory1: variant.attributes?.["CATEGORY-1"] ?? null,
       attributesCategory2: variant.attributes?.["CATEGORY-2"] ?? null,
       attributesCategory3: variant.attributes?.["CATEGORY-3"] ?? null,
