@@ -4,25 +4,33 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
+const TEXT_CYCLE_MS = 5000;
+
 export default function HomeHero3D() {
-  const spacerRef = useRef<HTMLDivElement>(null);
-  const canvasWrapRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef<HTMLDivElement>(null);
-  const overlay1Ref = useRef<HTMLDivElement>(null);
-  const overlay2Ref = useRef<HTMLDivElement>(null);
-  const scrollCueRef = useRef<HTMLDivElement>(null);
   const modelRef = useRef<THREE.Group | null>(null);
   const animationRef = useRef<number | null>(null);
-  const scrollYRef = useRef(0);
+  const isDraggingRef = useRef(false);
 
   const [loaded, setLoaded] = useState(false);
+  const [textPhase, setTextPhase] = useState(0);
+
+  // Alternate the two hero texts on a timer (was scroll-driven before)
+  useEffect(() => {
+    const id = setInterval(
+      () => setTextPhase((p) => (p === 0 ? 1 : 0)),
+      TEXT_CYCLE_MS,
+    );
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (!mountRef.current) return;
     const mount = mountRef.current;
 
-    const W = window.innerWidth;
-    const H = window.innerHeight;
+    const W = mount.clientWidth || window.innerWidth;
+    const H = mount.clientHeight || window.innerHeight;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xfaf9f7);
@@ -112,54 +120,58 @@ export default function HomeHero3D() {
       (err) => { console.error("HomeHero3D load error:", err); dracoLoader.dispose(); }
     );
 
-    const onScroll = () => {
-      scrollYRef.current = window.scrollY || document.documentElement.scrollTop || 0;
+    // Mouse / touch drag rotation, like the product page viewer. Wheel is left
+    // alone so the page scrolls normally down to the banner.
+    let prev = { x: 0, y: 0 };
+
+    const startDrag = (x: number, y: number) => {
+      isDraggingRef.current = true;
+      prev = { x, y };
+      mount.style.cursor = "grabbing";
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    document.addEventListener("scroll", onScroll, { passive: true });
+    const moveDrag = (x: number, y: number) => {
+      if (!isDraggingRef.current || !modelRef.current) return;
+      const dx = x - prev.x;
+      const dy = y - prev.y;
+      modelRef.current.rotation.y += dx * 0.01;
+      modelRef.current.rotation.x += dy * 0.01;
+      modelRef.current.rotation.x = Math.max(
+        -Math.PI / 2,
+        Math.min(Math.PI / 2, modelRef.current.rotation.x),
+      );
+      prev = { x, y };
+    };
+    const endDrag = () => {
+      isDraggingRef.current = false;
+      mount.style.cursor = "grab";
+    };
+
+    const onMouseDown = (e: MouseEvent) => startDrag(e.clientX, e.clientY);
+    const onMouseMove = (e: MouseEvent) => moveDrag(e.clientX, e.clientY);
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 1)
+        startDrag(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1)
+        moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+    };
+
+    mount.style.cursor = "grab";
+    mount.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", endDrag);
+    mount.addEventListener("mouseleave", endDrag);
+    mount.addEventListener("touchstart", onTouchStart, { passive: true });
+    mount.addEventListener("touchmove", onTouchMove, { passive: true });
+    mount.addEventListener("touchend", endDrag);
 
     const animate = () => {
       animationRef.current = requestAnimationFrame(animate);
 
-      const spacer = spacerRef.current;
-      const wrap   = canvasWrapRef.current;
-
-      if (spacer && wrap) {
-        // offsetTop = absolute Y from document top, unaffected by sticky nav
-        const spacerTop   = spacer.offsetTop;
-        const spacerH     = spacer.offsetHeight;
-        const vph         = window.innerHeight;
-        const totalScroll = spacerH - vph;
-        const scrollY     = window.scrollY || document.documentElement.scrollTop || scrollYRef.current;
-        const relScroll   = scrollY - spacerTop;
-
-        const inSection = relScroll > -vph && relScroll < spacerH;
-        wrap.style.display = inSection ? "block" : "none";
-
-        if (inSection && totalScroll > 0) {
-          const progress = Math.max(0, Math.min(1, relScroll / totalScroll));
-
-          if (modelRef.current) {
-            modelRef.current.rotation.y = progress * Math.PI;
-          }
-
-          if (overlay1Ref.current) {
-            const op1 = progress < 0.5 ? Math.max(0, 1 - progress * 2) : 0;
-            overlay1Ref.current.style.opacity = String(op1);
-            overlay1Ref.current.style.transform = `translateX(${progress * 80}px)`;
-          }
-
-          if (overlay2Ref.current) {
-            const op2 = progress < 0.5 ? 0 : Math.min(1, (progress - 0.5) * 6);
-            const tx2 = progress < 0.5 ? 40 : Math.max(0, 40 - (progress - 0.5) * 80);
-            overlay2Ref.current.style.opacity = String(op2);
-            overlay2Ref.current.style.transform = `translateX(${tx2}px)`;
-          }
-
-          if (scrollCueRef.current) {
-            scrollCueRef.current.style.opacity = String(Math.max(0, 1 - progress * 10));
-          }
-        }
+      // Slow auto-rotate while the user is not dragging
+      if (modelRef.current && !isDraggingRef.current) {
+        modelRef.current.rotation.y += 0.004;
       }
 
       renderer.render(scene, camera);
@@ -167,8 +179,8 @@ export default function HomeHero3D() {
     animate();
 
     const handleResize = () => {
-      const nW = window.innerWidth;
-      const nH = window.innerHeight;
+      const nW = mount.clientWidth || window.innerWidth;
+      const nH = mount.clientHeight || window.innerHeight;
       camera.aspect = nW / nH;
       camera.updateProjectionMatrix();
       renderer.setSize(nW, nH);
@@ -176,9 +188,14 @@ export default function HomeHero3D() {
     window.addEventListener("resize", handleResize);
 
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      document.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", endDrag);
+      mount.removeEventListener("mousedown", onMouseDown);
+      mount.removeEventListener("mouseleave", endDrag);
+      mount.removeEventListener("touchstart", onTouchStart);
+      mount.removeEventListener("touchmove", onTouchMove);
+      mount.removeEventListener("touchend", endDrag);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       renderer.dispose();
       scene.clear();
@@ -187,80 +204,74 @@ export default function HomeHero3D() {
   }, []);
 
   return (
-    <>
-      <div ref={spacerRef} style={{ height: "300vh" }} />
+    <div
+      ref={sectionRef}
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "100vh",
+        background: "#faf9f7",
+        overflow: "hidden",
+      }}
+    >
+      <div ref={mountRef} className="w-full h-full" />
 
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-8 h-8 border-2 border-[#328F94] border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Phase 1 — left; the two texts alternate on a timer */}
       <div
-        ref={canvasWrapRef}
+        className="absolute inset-0 flex flex-col justify-center pl-16 md:pl-24 pb-20 pointer-events-none transition-all duration-1000 ease-in-out"
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100vh",
-          zIndex: 10,
-          background: "#faf9f7",
-          pointerEvents: "none",
+          opacity: textPhase === 0 ? 1 : 0,
+          transform: textPhase === 0 ? "translateX(0)" : "translateX(-40px)",
         }}
       >
-        <div ref={mountRef} className="w-full h-full" />
-
-        {!loaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-[#328F94] border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-
-        {/* Phase 1 — left, fades out at 90° */}
-        <div
-          ref={overlay1Ref}
-          className="absolute inset-0 flex flex-col justify-center pl-16 md:pl-24 pb-20"
-          style={{ transformOrigin: "left center" }}
-        >
-          <p className="text-[9px] tracking-[0.45em] uppercase text-[#328F94] mb-5">
-            Kyna Jewels
-          </p>
-          <h1 className="text-5xl md:text-7xl font-light tracking-[0.18em] uppercase text-gray-800 leading-none">
-            Crafted
-          </h1>
-          <h1 className="text-5xl md:text-7xl font-light tracking-[0.18em] uppercase text-gray-700 leading-none mt-2">
-            with Love
-          </h1>
-        </div>
-
-        {/* Phase 2 — right, appears at 90° */}
-        <div
-          ref={overlay2Ref}
-          className="absolute inset-0 flex flex-col justify-center items-end pr-16 md:pr-24 pb-20"
-          style={{ opacity: 0, transform: "translateX(40px)", transformOrigin: "right center" }}
-        >
-          <p className="text-[9px] tracking-[0.45em] uppercase text-[#328F94] mb-5">
-            Kyna Jewels
-          </p>
-          <h1 className="text-5xl md:text-7xl font-light tracking-[0.18em] uppercase text-gray-800 leading-none text-right">
-            Love in Every
-          </h1>
-          <h1 className="text-5xl md:text-7xl font-light tracking-[0.18em] uppercase text-gray-700 leading-none mt-2 text-right">
-            Milestone
-          </h1>
-        </div>
-
-        <div
-          ref={scrollCueRef}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
-        >
-          <p className="text-[9px] tracking-[0.3em] uppercase text-gray-400">
-            Scroll to explore
-          </p>
-          <div className="w-px h-8 bg-gray-300 animate-pulse" />
-        </div>
-
-        {loaded && (
-          <div className="absolute top-6 right-6 text-[9px] tracking-[0.2em] uppercase text-[#328F94] border border-[#328F94]/40 px-3 py-1.5">
-            180°
-          </div>
-        )}
+        <p className="text-[9px] tracking-[0.45em] uppercase text-[#328F94] mb-5">
+          Kyna Jewels
+        </p>
+        <h1 className="text-5xl md:text-7xl font-light tracking-[0.18em] uppercase text-gray-800 leading-none">
+          Crafted
+        </h1>
+        <h1 className="text-5xl md:text-7xl font-light tracking-[0.18em] uppercase text-gray-700 leading-none mt-2">
+          with Love
+        </h1>
       </div>
-    </>
+
+      {/* Phase 2 — right */}
+      <div
+        className="absolute inset-0 flex flex-col justify-center items-end pr-16 md:pr-24 pb-20 pointer-events-none transition-all duration-1000 ease-in-out"
+        style={{
+          opacity: textPhase === 1 ? 1 : 0,
+          transform: textPhase === 1 ? "translateX(0)" : "translateX(40px)",
+        }}
+      >
+        <p className="text-[9px] tracking-[0.45em] uppercase text-[#328F94] mb-5">
+          Kyna Jewels
+        </p>
+        <h1 className="text-5xl md:text-7xl font-light tracking-[0.18em] uppercase text-gray-800 leading-none text-right">
+          Love in Every
+        </h1>
+        <h1 className="text-5xl md:text-7xl font-light tracking-[0.18em] uppercase text-gray-700 leading-none mt-2 text-right">
+          Milestone
+        </h1>
+      </div>
+
+      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+        <p className="text-[9px] tracking-[0.3em] uppercase text-gray-400">
+          Scroll to explore
+        </p>
+        <div className="w-px h-8 bg-gray-300 animate-pulse" />
+      </div>
+
+      {loaded && (
+        <div className="absolute top-6 right-6 text-[9px] tracking-[0.2em] uppercase text-[#328F94] border border-[#328F94]/40 px-3 py-1.5 pointer-events-none">
+          360°
+        </div>
+      )}
+    </div>
   );
 }
