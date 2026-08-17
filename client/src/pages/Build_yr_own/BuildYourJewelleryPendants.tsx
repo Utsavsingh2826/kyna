@@ -760,6 +760,7 @@ if (data.deliveryDays) {
 
   // Separate refs for different scroll containers
   const thumbnailsRef = useRef<HTMLDivElement>(null);
+  const clarityScrollRef = useRef<HTMLDivElement>(null);
   const styleCategoryRef = useRef<HTMLDivElement>(null);
   const ringStylesRef = useRef<HTMLDivElement>(null);
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1990,26 +1991,50 @@ if (data.deliveryDays) {
                         </span>
                       </h3>
 
-                      <Select
-                        value={selectedColorClarity}
-                        onValueChange={(value) => {
-                        // Ensure the selected value is always without spaces
-                        const normalizedValue = value.replace(/\s+/g, '');
-                        setSelectedColorClarity(normalizedValue);
-                      }}
-                      >
-                        <SelectTrigger className="w-full text-sm border-neutral-300">
-                          <SelectValue placeholder={selectedColorClarity || getAvailableColorClarities()[0]} />
-                        </SelectTrigger>
-
-                        <SelectContent className="bg-white">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() =>
+                            clarityScrollRef.current?.scrollBy({
+                              left: -120,
+                              behavior: "smooth",
+                            })
+                          }
+                          aria-label="Scroll clarity left"
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
+                          <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
+                        </button>
+                        <div
+                          ref={clarityScrollRef}
+                          className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
+                        >
                           {getAvailableColorClarities().map((clarity) => (
-                              <SelectItem key={clarity} value={clarity}>
-                                {clarity}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                            <button
+                              key={clarity}
+                              onClick={() => {
+                                // Ensure the selected value is always without spaces
+                                const normalizedValue = clarity.replace(/\s+/g, '');
+                                setSelectedColorClarity(normalizedValue);
+                              }}
+                              className={`bld-chip ${selectedColorClarity === clarity ? "active" : ""}`}
+                            >
+                              {clarity}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          onClick={() =>
+                            clarityScrollRef.current?.scrollBy({
+                              left: 120,
+                              behavior: "smooth",
+                            })
+                          }
+                          aria-label="Scroll clarity right"
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
+                          <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
+                        </button>
+                      </div>
                     </div>
                   )}
                </div>
@@ -2020,35 +2045,31 @@ if (data.deliveryDays) {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="bld-label">Metal Type</label>
-                    <Select
-                      value={selectedMetalType}
-                      onValueChange={(value) => {
-                        const normalized = normalizeMetalType(value);
-                        setSelectedMetalType(normalized);
+                    <div className="bld-chips">
+                      {getAvailableMetalTypes().map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => {
+                            const normalized = normalizeMetalType(type);
+                            setSelectedMetalType(normalized);
 
-                        const newKarats =
-                          normalized === "SILVER"
-                            ? ["925"]
-                            : normalized === "PLATINUM"
-                              ? ["950"]
-                              : selectedStyleData?.productDetails
-                                  ?.goldKarats || ["18kt", "14kt", "9kt"];
+                            const newKarats =
+                              normalized === "SILVER"
+                                ? ["925"]
+                                : normalized === "PLATINUM"
+                                  ? ["950"]
+                                  : selectedStyleData?.productDetails
+                                      ?.goldKarats || ["18kt", "14kt", "9kt"];
 
-                        setSelectedGoldKarat(newKarats[0]);
-                        scrollToImageOnMobile();
-                      }}
-                    >
-                      <SelectTrigger className="text-sm border-neutral-300">
-                        <SelectValue placeholder="Select Metal Type" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {getAvailableMetalTypes().map((type, index) => (
-                          <SelectItem key={index} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                            setSelectedGoldKarat(newKarats[0]);
+                            scrollToImageOnMobile();
+                          }}
+                          className={`bld-chip ${selectedMetalType === normalizeMetalType(type) ? "active" : ""}`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div className="w-full">
                     <h3 className="bld-label">

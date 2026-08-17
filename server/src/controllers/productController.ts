@@ -1021,6 +1021,7 @@ async function processProductsWithBatchedPricing(
 
     let minSellingPrice: number | null = null;
     let cheapestVariantSku: string | null = null;
+    let cheapestVariant: any = null;
     let anyComplete = false;
 
     for (const v of variantsToPrice) {
@@ -1030,6 +1031,7 @@ async function processProductsWithBatchedPricing(
       if (minSellingPrice == null || sellingPrice < minSellingPrice) {
         minSellingPrice = sellingPrice;
         cheapestVariantSku = v?.variantSku || null;
+        cheapestVariant = v;
       }
     }
 
@@ -1037,6 +1039,31 @@ async function processProductsWithBatchedPricing(
     // Only flag the product as incomplete if no variant produced a usable price.
     baseOut.priceIncomplete = !anyComplete;
     baseOut.cheapestVariantSku = cheapestVariantSku;
+
+    // Human-readable label for the cheapest variant, e.g. "Silver Lab Grown
+    // Diamond" or "9kt Gold Natural Diamond", shown after "Starting at ₹…".
+    baseOut.startingAtLabel = null;
+    if (cheapestVariant) {
+      const mt = String(cheapestVariant?.metalType || "").toUpperCase();
+      let metalLabel: string | null = null;
+      if (mt === "SILVER") metalLabel = "Silver";
+      else if (mt === "PLATINUM") metalLabel = "Platinum";
+      else if (mt === "TITANIUM") metalLabel = "Titanium";
+      else if (mt === "GOLD") {
+        const kt = String(cheapestVariant?.metalKt || "").match(/\d+/)?.[0];
+        metalLabel = kt ? `${kt}kt Gold` : "Gold";
+      }
+      const originMatch = String(cheapestVariantSku || "")
+        .toUpperCase()
+        .match(/(?:^|-)(LG|ND)[A-Z]{2,10}(?:-|$)/);
+      const originLabel = originMatch
+        ? originMatch[1] === "LG"
+          ? "Lab Grown Diamond"
+          : "Natural Diamond"
+        : null;
+      const label = [metalLabel, originLabel].filter(Boolean).join(" ");
+      baseOut.startingAtLabel = label || null;
+    }
 
     // Price filter is evaluated against the advertised "Starting at" price.
     if (

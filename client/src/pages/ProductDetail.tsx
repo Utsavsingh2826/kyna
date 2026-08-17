@@ -397,6 +397,7 @@ const ProductDetail = () => {
   const thumbnailsDesktopRef = useRef<HTMLDivElement>(null);
   const thumbnailsMobileRef = useRef<HTMLDivElement>(null);
   const metalTypesRef = useRef<HTMLDivElement>(null);
+  const clarityScrollRef = useRef<HTMLDivElement>(null);
   const mainViewerRef = useRef<HTMLDivElement | null>(null);
   const imageContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -2611,17 +2612,11 @@ const ProductDetail = () => {
                   <p className="text-muted-foreground text-sm mb-4">
                     {productData.description}
                   </p>
-                  <div className="flex items-end gap-4">
-                    <div className="bld-price">
+                  <div className="flex flex-col">
+                    <p className="text-sm text-[#328F94] mb-1">Price</p>
+                    <div className="text-xl md:text-2xl font-bold text-[#328F94]">
                       ₹{productData.sellingPrice.toLocaleString()}
                     </div>
-                    {/* <div className=" text-sm mb-2 text-[#328F94] ">
-                      Starting at ₹
-                      {Math.round(
-                        productData.sellingPrice / 12
-                      ).toLocaleString()}
-                      /mo
-                    </div> */}
                   </div>
 
                   {/* Chain Information for Pendants */}
@@ -2805,24 +2800,46 @@ const ProductDetail = () => {
                         <p className="bld-label">
                           Color & Clarity: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedColorClarity}</span>
                         </p>
-                        <Select
-                          value={selectedColorClarity}
-                          onValueChange={(value) => {
-                            setSelectedColorClarity(value);
-                          }}
-                        >
-                          <SelectTrigger className="text-sm border-neutral-300">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-
-                          <SelectContent className="bg-white">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              clarityScrollRef.current?.scrollBy({
+                                left: -120,
+                                behavior: "smooth",
+                              })
+                            }
+                            aria-label="Scroll clarity left"
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
+                          </button>
+                          <div
+                            ref={clarityScrollRef}
+                            className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
+                          >
                             {availableClarityOptions.map((cc, index) => (
-                              <SelectItem key={index} value={cc}>
+                              <button
+                                key={index}
+                                onClick={() => setSelectedColorClarity(cc)}
+                                className={`bld-chip${selectedColorClarity === cc ? " active" : ""}`}
+                              >
                                 {cc}
-                              </SelectItem>
+                              </button>
                             ))}
-                          </SelectContent>
-                        </Select>
+                          </div>
+                          <button
+                            onClick={() =>
+                              clarityScrollRef.current?.scrollBy({
+                                left: 120,
+                                behavior: "smooth",
+                              })
+                            }
+                            aria-label="Scroll clarity right"
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
+                          </button>
+                        </div>
                       </div>
                     ) : null;
                   })()}
@@ -2832,49 +2849,45 @@ const ProductDetail = () => {
                 <div className="my-6 grid grid-cols-2 gap-4">
                   <div>
                     <p className="bld-label">Metal Type: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedMetalType}</span></p>
-                    <Select
-                      value={selectedMetalType}
-                      onValueChange={(value) => {
-                        setSelectedMetalType(value);
-                        // Set appropriate karat/purity based on metal type
-                        let newKarat = "";
-                        if (value === "SILVER") {
-                          newKarat = "925";
-                        } else if (value === "PLATINUM") {
-                          newKarat = "950";
-                        } else {
-                          // For GOLD, filter and get first available gold karat
-                          const availableGoldKarats = (productData?.goldKarats || [])
-                            .filter((k) => normalizeKarat(k).includes("kt"))
-                            .sort((a, b) => {
-                              const numA = parseInt(normalizeKarat(a));
-                              const numB = parseInt(normalizeKarat(b));
-                              return numB - numA; // Descending order
-                            });
-                          newKarat = availableGoldKarats.length > 0 ? normalizeKarat(availableGoldKarats[0]) : "18kt";
-                        }
-                        setSelectedGoldKarat(newKarat);
+                    <div className="bld-chips">
+                      {productData.metalTypes.map((type, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setSelectedMetalType(type);
+                            // Set appropriate karat/purity based on metal type
+                            let newKarat = "";
+                            if (type === "SILVER") {
+                              newKarat = "925";
+                            } else if (type === "PLATINUM") {
+                              newKarat = "950";
+                            } else {
+                              // For GOLD, filter and get first available gold karat
+                              const availableGoldKarats = (productData?.goldKarats || [])
+                                .filter((k) => normalizeKarat(k).includes("kt"))
+                                .sort((a, b) => {
+                                  const numA = parseInt(normalizeKarat(a));
+                                  const numB = parseInt(normalizeKarat(b));
+                                  return numB - numA; // Descending order
+                                });
+                              newKarat = availableGoldKarats.length > 0 ? normalizeKarat(availableGoldKarats[0]) : "18kt";
+                            }
+                            setSelectedGoldKarat(newKarat);
 
-                        // Auto-switch to Lab Grown Diamond if Silver is selected and Natural Diamond is currently selected
-                        if (
-                          value === "SILVER" &&
-                          selectedDiamondOrigin === "Natural Diamond"
-                        ) {
-                          setSelectedDiamondOrigin("Lab Grown Diamond");
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="text-sm border-neutral-300">
-                        <SelectValue placeholder="Select" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {productData.metalTypes.map((type, index) => (
-                          <SelectItem key={index} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                            // Auto-switch to Lab Grown Diamond if Silver is selected and Natural Diamond is currently selected
+                            if (
+                              type === "SILVER" &&
+                              selectedDiamondOrigin === "Natural Diamond"
+                            ) {
+                              setSelectedDiamondOrigin("Lab Grown Diamond");
+                            }
+                          }}
+                          className={`bld-chip${selectedMetalType === type ? " active" : ""}`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   {selectedMetalType && getAvailableKarats().length > 0 && (
                     <div>

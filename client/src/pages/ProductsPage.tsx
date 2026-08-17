@@ -38,6 +38,7 @@ interface Product {
   hoverImageUrl?: string | null;
   sellingPrice: number;
   priceIncomplete: boolean;
+  startingAtLabel?: string | null;
 }
 
 interface ApiResponse {
@@ -3289,11 +3290,16 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
                       {/* Card body */}
                       <div className="eng-card-body">
                         <h3 className="eng-card-title">{p.title}</h3>
-                        <div className="flex items-baseline gap-1.5 mt-1">
+                        <div className="flex items-baseline gap-1.5 mt-1 flex-wrap">
                           <span className="text-[10px] text-gray-400 tracking-wide">Starting at</span>
                           <span className="text-xs font-medium text-gray-700">
                             ₹{p.sellingPrice.toLocaleString()}
                           </span>
+                          {p.startingAtLabel && (
+                            <span className="text-[10px] text-gray-400 tracking-wide">
+                              in {p.startingAtLabel}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </article>

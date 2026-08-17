@@ -1477,6 +1477,7 @@ if (data.deliveryDays) {
 
   // Ref for metal types scroll container
   const metalTypesRef = useRef<HTMLDivElement>(null);
+  const clarityScrollRef = useRef<HTMLDivElement>(null);
 
   // Function to get available karats based on selected metal type
   const getAvailableKarats = useCallback(() => {
@@ -2142,24 +2143,46 @@ if (data.deliveryDays) {
                       </span> */}
                     </h3>
 
-                    <Select
-                      value={selectedColorClarity}
-                      onValueChange={(value) => {
-                        setSelectedColorClarity(value);
-                      }}
-                    >
-                      <SelectTrigger className="w-full text-sm border-neutral-300">
-                        <SelectValue placeholder="Select Color & Clarity" />
-                      </SelectTrigger>
-
-                      <SelectContent className="bg-white">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          clarityScrollRef.current?.scrollBy({
+                            left: -120,
+                            behavior: "smooth",
+                          })
+                        }
+                        aria-label="Scroll clarity left"
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
+                      </button>
+                      <div
+                        ref={clarityScrollRef}
+                        className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
+                      >
                         {filteredColorClarity.map((clarity) => (
-                          <SelectItem key={clarity} value={clarity}>
+                          <button
+                            key={clarity}
+                            onClick={() => setSelectedColorClarity(clarity)}
+                            className={`bld-chip ${selectedColorClarity === clarity ? "active" : ""}`}
+                          >
                             {clarity}
-                          </SelectItem>
+                          </button>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                      <button
+                        onClick={() =>
+                          clarityScrollRef.current?.scrollBy({
+                            left: 120,
+                            behavior: "smooth",
+                          })
+                        }
+                        aria-label="Scroll clarity right"
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
+                      </button>
+                    </div>
                   </div>
                 )}
                 </div>
@@ -2169,35 +2192,31 @@ if (data.deliveryDays) {
                 {/* Metal Type */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs mb-2">Metal Type</label>
-                    <Select
-                      value={selectedMetalType}
-                      onValueChange={(value) => {
-                        setSelectedMetalType(value);
-                        // Reset karat selection when metal type changes
-                        const newKarats =
-                          value === "SILVER"
-                            ? ["SLV"]
-                            : value === "PLATINUM"
-                              ? ["PT"]
-                              : selectedStyleData?.productDetails?.goldKarats?.filter(
-                                  (k) => !["925", "950"].includes(k),
-                                ) || ["18kt", "14kt", "9kt"];
-                        setSelectedGoldKarat(newKarats[0] || "");
-                        scrollToImageOnMobile();
-                      }}
-                    >
-                      <SelectTrigger className="text-sm border-neutral-300">
-                        <SelectValue placeholder="Select Metal Type" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {getAvailableMetalTypes().map((type, index) => (
-                          <SelectItem key={index} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <label className="bld-label">Metal Type</label>
+                    <div className="bld-chips">
+                      {getAvailableMetalTypes().map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => {
+                            setSelectedMetalType(type);
+                            // Reset karat selection when metal type changes
+                            const newKarats =
+                              type === "SILVER"
+                                ? ["SLV"]
+                                : type === "PLATINUM"
+                                  ? ["PT"]
+                                  : selectedStyleData?.productDetails?.goldKarats?.filter(
+                                      (k) => !["925", "950"].includes(k),
+                                    ) || ["18kt", "14kt", "9kt"];
+                            setSelectedGoldKarat(newKarats[0] || "");
+                            scrollToImageOnMobile();
+                          }}
+                          className={`bld-chip ${selectedMetalType === type ? "active" : ""}`}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                   <div className="w-full">
                     <h3 className="bld-label">

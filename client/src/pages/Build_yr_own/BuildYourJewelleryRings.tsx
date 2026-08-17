@@ -1916,6 +1916,7 @@ const ProductDetail = () => {
 
   // Ref for metal types scroll container
   const metalTypesRef = useRef<HTMLDivElement>(null);
+  const clarityScrollRef = useRef<HTMLDivElement>(null);
 
   // Function to get available karats based on selected metal type
   const getAvailableKarats = useCallback(() => {
@@ -2575,24 +2576,22 @@ const ProductDetail = () => {
                         </span>
                       </h3>
 
-                      <Select
-                        value={selectedColorClarity}
-                        onValueChange={(value) => {
-                          setSelectedColorClarity(value);
-                        }}
-                      >
-                        <SelectTrigger className="w-full text-sm border-neutral-300">
-                          <SelectValue placeholder="Select Color & Clarity" />
-                        </SelectTrigger>
-
-                        <SelectContent className="bg-white">
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => clarityScrollRef.current?.scrollBy({ left: -120, behavior: "smooth" })} aria-label="Scroll clarity left" className="p-1 hover:bg-gray-100 rounded">
+                          <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
+                        </button>
+                        <div ref={clarityScrollRef} className="flex gap-2 overflow-x-hidden scroll-smooth flex-1">
                           {availableClarityOptions.map((clarity) => (
-                            <SelectItem key={clarity} value={clarity}>
+                            <button key={clarity} onClick={() => setSelectedColorClarity(clarity)}
+                              className={`bld-chip ${selectedColorClarity === clarity ? "active" : ""}`}>
                               {clarity}
-                            </SelectItem>
+                            </button>
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                        <button onClick={() => clarityScrollRef.current?.scrollBy({ left: 120, behavior: "smooth" })} aria-label="Scroll clarity right" className="p-1 hover:bg-gray-100 rounded">
+                          <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
+                        </button>
+                      </div>
                     </div>
                   ) : null;
                 })()}
