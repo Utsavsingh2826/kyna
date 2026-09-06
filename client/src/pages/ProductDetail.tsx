@@ -985,6 +985,31 @@ const ProductDetail = () => {
     }
   }, [selectedMetalType, selectedDiamondOrigin, productData, getAvailableClarityOptions]);
 
+  // ---------- iJewel watermark hider ----------
+  useEffect(() => {
+    const scrub = () => {
+      document.body.querySelectorAll("*").forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const t = (htmlEl.textContent || "").toLowerCase();
+        if (t.includes("evaluation") || t.includes("ijewel") || t.includes("jewelo")) {
+          if ((htmlEl.textContent || "").trim().length < 100) {
+            htmlEl.style.setProperty("display", "none", "important");
+          }
+        }
+      });
+    };
+
+    scrub();
+    const obs = new MutationObserver(scrub);
+    obs.observe(document.body, { childList: true, subtree: true, characterData: true });
+    const timers = [500, 1000, 2000, 3500, 5000].map((ms) => setTimeout(scrub, ms));
+
+    return () => {
+      obs.disconnect();
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
   // ---------- iJewel Preload (Silent) ----------
   useEffect(() => {
     if (!productData) return;
@@ -2856,45 +2881,16 @@ const ProductDetail = () => {
                         <p className="bld-label">
                           Color & Clarity: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedColorClarity}</span>
                         </p>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() =>
-                              clarityScrollRef.current?.scrollBy({
-                                left: -120,
-                                behavior: "smooth",
-                              })
-                            }
-                            aria-label="Scroll clarity left"
-                            className="p-1 hover:bg-gray-100 rounded"
-                          >
-                            <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
-                          </button>
-                          <div
-                            ref={clarityScrollRef}
-                            className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
-                          >
-                            {availableClarityOptions.map((cc, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setSelectedColorClarity(cc)}
-                                className={`bld-chip${selectedColorClarity === cc ? " active" : ""}`}
-                              >
-                                {cc}
-                              </button>
-                            ))}
-                          </div>
-                          <button
-                            onClick={() =>
-                              clarityScrollRef.current?.scrollBy({
-                                left: 120,
-                                behavior: "smooth",
-                              })
-                            }
-                            aria-label="Scroll clarity right"
-                            className="p-1 hover:bg-gray-100 rounded"
-                          >
-                            <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
-                          </button>
+                        <div className="bld-chips">
+                          {availableClarityOptions.map((cc, index) => (
+                            <button
+                              key={index}
+                              onClick={() => setSelectedColorClarity(cc)}
+                              className={`bld-chip${selectedColorClarity === cc ? " active" : ""}`}
+                            >
+                              {cc}
+                            </button>
+                          ))}
                         </div>
                       </div>
                     ) : null;
@@ -2948,38 +2944,16 @@ const ProductDetail = () => {
                   {selectedMetalType && getAvailableKarats().length > 0 && (
                     <div>
                       <p className="bld-label">{getKaratSectionTitle()}: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedGoldKarat}</span></p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={scrollMetalTypesLeft}
-                          aria-label="Scroll metal types left"
-                          className="p-1 hover:bg-gray-100 rounded"
-                        >
-                          <ChevronLeft className="w-5 h-5 text-[#8D8A91]" />
-                        </button>
-                        <div
-                          ref={metalTypesRef}
-                          className="flex gap-2 overflow-x-hidden scroll-smooth flex-1"
-                        >
-                          {getAvailableKarats().map((karat, index) => (
-                            <button
-                              key={index}
-                              onClick={() => {
-                                const newKarat = normalizeKarat(karat);
-                                setSelectedGoldKarat(newKarat);
-                              }}
-                              className={`bld-chip${normalizeKarat(selectedGoldKarat) === normalizeKarat(karat) ? " active" : ""}`}
-                            >
-                              {getKaratDisplayLabel(karat)}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          onClick={scrollMetalTypesRight}
-                          aria-label="Scroll metal types right"
-                          className="p-1 hover:bg-gray-100 rounded"
-                        >
-                          <ChevronRight className="w-5 h-5 text-[#8D8A91]" />
-                        </button>
+                      <div className="bld-chips">
+                        {getAvailableKarats().map((karat, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setSelectedGoldKarat(normalizeKarat(karat))}
+                            className={`bld-chip${normalizeKarat(selectedGoldKarat) === normalizeKarat(karat) ? " active" : ""}`}
+                          >
+                            {getKaratDisplayLabel(karat)}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -2991,7 +2965,7 @@ const ProductDetail = () => {
                     Metal Color: <span style={{ color: "#328F94", textTransform: "none" }}>{selectedMetalColor}</span>
                   </p>
 
-                  <div className="flex gap-3 flex-wrap">
+                  <div className="flex gap-2 flex-wrap items-center">
                     {productData?.availableColors?.map((code) => {
                       // Use the centralized color display info function
                       const colorInfo = getColorDisplayInfo(code);
@@ -3048,70 +3022,37 @@ const ProductDetail = () => {
                       >
                         {/* Bandwidth Selection */}
                         {(productData?.bandwidth?.length ?? 0) > 0 && (
-                          <div className=" ">
-                            <label className="block text-sm mb-2">
-                              Band Width (mm)
-                            </label>
-                            <Select
-                              value={selectedBandwidth}
-                              onValueChange={(value) => {
-                                setSelectedBandwidth(value);
-                                scrollToImageOnMobile();
-                              }}
-                            >
-                              <SelectTrigger
-                                className={`text-sm border-neutral-300 ${(productData?.bandwidth?.length ?? 0) > 0 &&
-                                    (productData?.finishing?.length ?? 0) > 0
-                                    ? "w-full"
-                                    : "w-1/2"
-                                  }`}
-                              >
-                                <SelectValue placeholder="Select Width" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white">
-                                {productData.bandwidth?.map((width) => (
-                                  <SelectItem key={width} value={width}>
-                                    {width}mm
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                          <div>
+                            <p className="bld-label">Band Width (mm): <span style={{ color: "#328F94", textTransform: "none" }}>{selectedBandwidth}mm</span></p>
+                            <div className="bld-chips flex-wrap">
+                              {productData.bandwidth?.map((width) => (
+                                <button
+                                  key={width}
+                                  onClick={() => { setSelectedBandwidth(width); scrollToImageOnMobile(); }}
+                                  className={`bld-chip${selectedBandwidth === width ? " active" : ""}`}
+                                >
+                                  {width}mm
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         )}
 
                         {/* Finishing Selection */}
                         {(productData?.finishing?.length ?? 0) > 0 && (
                           <div>
-                            <label className="block text-sm mb-2">
-                              Finish Type
-                            </label>
-                            <Select
-                              value={selectedFinishing}
-                              onValueChange={(value) => {
-                                setSelectedFinishing(value);
-                                scrollToImageOnMobile();
-                              }}
-                            >
-                              <SelectTrigger
-                                className={`${(productData?.bandwidth?.length ?? 0) > 0 &&
-                                    (productData?.finishing?.length ?? 0) > 0
-                                    ? "w-full"
-                                    : "w-1/2"
-                                  } border-neutral-300`}
-                              >
-                                <SelectValue placeholder="Select Finish" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-white">
-                                {productData.finishing?.map((finish) => (
-                                  <SelectItem
-                                    key={finish.code}
-                                    value={finish.code}
-                                  >
-                                    {finish.type}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <p className="bld-label">Finish Type: <span style={{ color: "#328F94", textTransform: "none" }}>{productData.finishing?.find(f => f.code === selectedFinishing)?.type ?? selectedFinishing}</span></p>
+                            <div className="bld-chips flex-wrap">
+                              {productData.finishing?.map((finish) => (
+                                <button
+                                  key={finish.code}
+                                  onClick={() => { setSelectedFinishing(finish.code); scrollToImageOnMobile(); }}
+                                  className={`bld-chip${selectedFinishing === finish.code ? " active" : ""}`}
+                                >
+                                  {finish.type}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -3120,33 +3061,24 @@ const ProductDetail = () => {
 
                 {category === "rings" && (
                   <div className="my-6 space-y-2">
-                    {" "}
                     {/* Ring Size */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm mb-2">
-                          Ring Size
-                          <span className="text-xs text-gray-500 font-normal ml-1">
-                            Indian size (dimensions in mm)
-                          </span>
-                        </label>
-                        <Select
-                          value={selectedSize}
-                          onValueChange={(value) => {
-                            setSelectedSize(value);
-                          }}
-                        >
-                          <SelectTrigger className="text-sm border-neutral-300">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {ringSizes.map((size) => (
-                              <SelectItem key={size} value={size}>
-                                Size {size}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    <div>
+                      <p className="bld-label">
+                        Ring Size
+                        <span style={{ fontWeight: 400, textTransform: "none", fontSize: "0.7rem", color: "#aaa", letterSpacing: 0, marginLeft: "6px" }}>
+                          Indian size (dimensions in mm)
+                        </span>
+                      </p>
+                      <div className="bld-chips flex-wrap">
+                        {ringSizes.map((size) => (
+                          <button
+                            key={size}
+                            onClick={() => setSelectedSize(size)}
+                            className={`bld-chip${selectedSize === size ? " active" : ""}`}
+                          >
+                            {size}
+                          </button>
+                        ))}
                       </div>
                     </div>
                     {/* Ring Size Guide */}

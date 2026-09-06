@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Hide iJewel evaluation watermark ───────────────────── */
+#ijewel-preload { display: none !important; }
+[class*="ijewel-watermark"],
+[class*="evaluation-watermark"],
+[id*="ijewel-watermark"] { display: none !important; }
+
 /* ── Brand fonts ────────────────────────────────────────── */
 @font-face {
   font-family: 'Arsenal';
