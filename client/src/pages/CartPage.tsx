@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
@@ -14,6 +14,12 @@ import {
 // import { updateUser } from "@/store/slices/authSlice";
 import apiService from "@/services/api";
 import { toast } from "sonner";
+import SEO from "@/components/SEO";
+import {
+  cartItemToGa4Item,
+  ga4RemoveFromCart,
+  ga4ViewCart,
+} from "@/utils/analytics";
 // import { Item } from "@radix-ui/react-accordion";
 
 const CartPage = () => {
@@ -28,6 +34,7 @@ const CartPage = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [showTermsError, setShowTermsError] = useState(false);
+  const trackedCartRef = useRef<string>("");
   const formattedDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 25);
@@ -51,6 +58,19 @@ const CartPage = () => {
       dispatch(fetchCart());
     }
   }, [dispatch, isAuthenticated]);
+
+  useEffect(() => {
+    if (!cart?.items?.length) return;
+
+    const cartKey = cart.items
+      .map((item) => `${item.variantSku}:${item.quantity}`)
+      .join(",");
+    if (trackedCartRef.current === cartKey) return;
+    trackedCartRef.current = cartKey;
+
+    const items = cart.items.map((item) => cartItemToGa4Item(item));
+    ga4ViewCart(items, cart.totalAmount);
+  }, [cart]);
 
   // Handle Add Address click - redirect to profile page
   // const handleAddAddress = () => {
@@ -104,6 +124,16 @@ const CartPage = () => {
     variantSku?: string,
     variantConfig?: any,
   ) => {
+    const cartItem = cart?.items?.find(
+      (item) =>
+        item.product?._id === productId &&
+        (variantSku ? item.variantSku === variantSku : true),
+    );
+    if (cartItem) {
+      const ga4Item = cartItemToGa4Item(cartItem);
+      ga4RemoveFromCart(ga4Item, ga4Item.price * ga4Item.quantity);
+    }
+
     dispatch(
       removeFromCart(productId, {
         variantSku,
@@ -287,6 +317,12 @@ const CartPage = () => {
 
   return (
     <div className="min-h-screen bg-[#faf9f7]">
+      <SEO
+        title="Shopping Cart | Kyna Jewels"
+        description="Review your shopping cart at Kyna Jewels."
+        canonical="/cart"
+        noindex
+      />
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Assistance Header */}
         <div className="text-right text-sm text-gray-600 mb-6">

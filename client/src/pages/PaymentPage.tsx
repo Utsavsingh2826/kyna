@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate, useLocation } from "react-router-dom";
 import { fetchCart } from "@/store/slices/cartSlice";
@@ -10,6 +10,12 @@ import type { RootState, AppDispatch } from "@/store";
 import { toast } from "sonner";
 import apiService from "@/services/api";
 import { updateUser } from "@/store/slices/authSlice";
+import SEO from "@/components/SEO";
+import {
+  cartItemToGa4Item,
+  ga4AddPaymentInfo,
+  productToGa4Item,
+} from "@/utils/analytics";
 
 interface PromoApiResponse {
   code: string;
@@ -60,6 +66,7 @@ const PaymentPage = () => {
   const [persistentOrderId, setPersistentOrderId] = useState<string | null>(
     null,
   );
+  const paymentTrackedRef = useRef(false);
 
   // Get direct purchase data from navigation state
   const directPurchaseData = location.state?.directPurchase
@@ -233,6 +240,32 @@ const PaymentPage = () => {
     totalAmount - promoDiscount - walletDiscount - (appliedGiftCard?.amount || 0),
     0,
   );
+
+  useEffect(() => {
+    if (paymentTrackedRef.current || !itemsData?.length) return;
+    paymentTrackedRef.current = true;
+
+    const ga4Items = isDirectPurchase
+      ? itemsData.map((item: any) =>
+          productToGa4Item(
+            {
+              title: item.product?.title || "Product",
+              modelSku: item.product?.sku || item.product?.variantSku,
+              category: item.product?.category,
+              sellingPrice: item.product?.price || item.price || 0,
+            },
+            item.product?.variantSku || item.variantSku,
+          ),
+        )
+      : itemsData.map((item: any) => cartItemToGa4Item(item));
+
+    ga4AddPaymentInfo(ga4Items, subtotalAfterDiscounts || totalAmount);
+  }, [
+    itemsData,
+    isDirectPurchase,
+    subtotalAfterDiscounts,
+    totalAmount,
+  ]);
   const payableAmount = subtotalAfterDiscounts;
 
   // Get user info from Redux auth state
@@ -516,6 +549,12 @@ const PaymentPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO
+        title="Payment | Kyna Jewels"
+        description="Complete your payment at Kyna Jewels."
+        canonical="/payment"
+        noindex
+      />
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header with back button */}
         <div className="mb-8">

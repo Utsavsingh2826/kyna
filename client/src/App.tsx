@@ -1,9 +1,3 @@
-declare global {
-  interface Window {
-    gtag?: (command: string, id: string, config: Record<string, any>) => void;
-  }
-}
-
 import {
   BrowserRouter as Router,
   Routes,
@@ -76,7 +70,8 @@ import Giftings from "./pages/Gifting/Giftings";
 import CustomerReviewsPage from "./pages/CustomerReviewsPage";
 import OrderHistoryPage from "./pages/OrderHistoryPage";
 
-import { initPixel, trackPageView } from "./utils/pixel";
+import { initPixel } from "./utils/pixel";
+import RouteAnalytics from "./components/RouteAnalytics";
 
 function PrivateRoute({ children }: { children: JSX.Element }) {
   const isAuthenticated = useSelector(
@@ -149,15 +144,6 @@ function App() {
   }, []);
 
   useEffect(() => {
-    trackPageView();
-    if (window.gtag) {
-      window.gtag("config", "G-J7JKTG3NQN", {
-        page_path: location.pathname,
-      });
-    }
-  }, [location]);
-  
-  useEffect(() => {
     // Initialize auth state from localStorage on app start
     dispatch(initializeAuth());
   }, [dispatch]);
@@ -186,6 +172,7 @@ function App() {
 
   return (
     <Router>
+      <RouteAnalytics />
       <ScrollToTop />
       <MainLayout>
         <Routes>

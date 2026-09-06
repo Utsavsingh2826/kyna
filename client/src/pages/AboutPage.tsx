@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import logo from "/logo.png";
 import { Link } from "react-router-dom";
+import SEO from "@/components/SEO";
 
 const benefits = [
   {
@@ -30,6 +31,11 @@ const openCalendly = () => {
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-[#faf9f7] text-[#1A141F] font-poppins">
+      <SEO
+        title="About Us | Kyna Jewels"
+        description="Learn about Kyna Jewels — fine jewellery crafted to celebrate your meaningful moments, milestones, and love."
+        canonical="/about"
+      />
       {/* Hero Section */}
 
       <div className="bg-white border-b">

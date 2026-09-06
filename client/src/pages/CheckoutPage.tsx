@@ -10,6 +10,12 @@ import { CreditCard, DollarSign, ArrowRight, ChevronDown } from "lucide-react";
 import apiService from "@/services/api";
 import { paymentService } from "@/services/paymentService";
 import { trackEvent } from "@/utils/pixel";
+import SEO from "@/components/SEO";
+import {
+  cartItemToGa4Item,
+  ga4BeginCheckout,
+  storePendingPurchase,
+} from "@/utils/analytics";
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
@@ -1064,6 +1070,14 @@ const CheckoutPage = () => {
         num_items: cart.items.length,
       }, eventId);
 
+      const ga4Items = cart.items.map((item: any) => cartItemToGa4Item(item));
+      ga4BeginCheckout(ga4Items, finalAmount);
+      storePendingPurchase({
+        transactionId: orderId,
+        value: finalAmount,
+        items: ga4Items,
+      });
+
       // Prepare payment data for Razorpay
       const paymentData = {
         orderId: orderId,
@@ -1359,6 +1373,12 @@ const CheckoutPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEO
+        title="Checkout | Kyna Jewels"
+        description="Complete your jewellery purchase at Kyna Jewels."
+        canonical="/checkout"
+        noindex
+      />
       <div className="max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">
           Billing Information and Payment Option

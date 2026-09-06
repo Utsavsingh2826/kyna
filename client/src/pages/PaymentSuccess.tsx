@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { CheckCircle, Package, Download, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -6,6 +6,11 @@ import { paymentService } from "../services/paymentService";
 import { useDispatch } from "react-redux";
 import { clearCartItems } from "../store/slices/cartSlice";
 import { trackEvent } from "../utils/pixel";
+import SEO from "../components/SEO";
+import {
+  consumePendingPurchase,
+  ga4Purchase,
+} from "../utils/analytics";
 
 const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -13,6 +18,7 @@ const PaymentSuccess: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const [cartCleared, setCartCleared] = useState(false);
+  const purchaseTrackedRef = useRef(false);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -55,6 +61,16 @@ const PaymentSuccess: React.FC = () => {
               currency: "INR",
               order_id: response.data.orderId,
             }, response.data.metaEventId); // CAPI will use the same ID for deduplication
+
+            if (!purchaseTrackedRef.current) {
+              purchaseTrackedRef.current = true;
+              const pending = consumePendingPurchase();
+              ga4Purchase(
+                response.data.orderId,
+                response.data.amount,
+                pending?.items || [],
+              );
+            }
           } catch (clearError) {
             console.error("❌ Error clearing cart:", clearError);
             // Don't set error state as this is not critical for user experience
@@ -112,6 +128,12 @@ const PaymentSuccess: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+      <SEO
+        title="Payment Successful | Kyna Jewels"
+        description="Your Kyna Jewels order has been confirmed."
+        canonical="/payment-success"
+        noindex
+      />
       <div className="max-w-3xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           {/* Header */}

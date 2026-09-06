@@ -51,6 +51,14 @@ import { ShareEmailModal } from "@/components/ShareEmailModal";
 import "@/styles/image-loading.css";
 import "./builder-luxury.css";
 import { trackEvent } from "@/utils/pixel";
+import {
+  ga4ViewItem,
+  ga4AddToCart,
+  ga4BeginCheckout,
+  productToGa4Item,
+  storePendingPurchase,
+} from "@/utils/analytics";
+import JsonLd from "@/components/JsonLd";
 
 // Product interface for API data
 interface ProductData {
@@ -833,6 +841,10 @@ const ProductDetail = () => {
           value: data.sellingPrice,
           currency: "INR",
         });
+        ga4ViewItem(
+          productToGa4Item(data, data.modelSku, currentCategorySlug),
+          data.sellingPrice,
+        );
         // If metal type is still empty, set default
         if (!selectedMetalType) {
           if (data.metalTypes.includes("GOLD")) {
@@ -1846,6 +1858,14 @@ const ProductDetail = () => {
         value: productData.sellingPrice,
         currency: "INR",
       });
+      ga4AddToCart(
+        productToGa4Item(
+          productData,
+          currentVariantSku,
+          currentCategorySlug,
+        ),
+        productData.sellingPrice,
+      );
 
       toast.success("Product added to cart successfully!");
     } catch (error) {
@@ -2071,6 +2091,18 @@ const ProductDetail = () => {
       value: productData.sellingPrice,
       currency: "INR",
     }, eventId);
+
+    const ga4Item = productToGa4Item(
+      productData,
+      currentVariantSku,
+      currentCategorySlug,
+    );
+    ga4BeginCheckout([ga4Item], productData.sellingPrice);
+    storePendingPurchase({
+      transactionId: orderData.orderId,
+      value: productData.sellingPrice,
+      items: [ga4Item],
+    });
 
     // Navigate to payment page with product data
     navigate("/payment", {
@@ -2300,11 +2332,35 @@ const ProductDetail = () => {
       <SEO
         title={`${productData.title} - Premium Jewelry Collection`}
         description={productData.description}
-        canonical={`/product/${id}`}
+        canonical={`/product/${currentCategorySlug}/${id}`}
+        type="product"
         image={
           productData?.variantImages?.[0] ||
           "https://cdn.kynajewels.com/RENDERING%20PHOTOS/SRAER/ENG1-10/ENG1-CUS-100-WG-GP.web"
         }
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: productData.title,
+          description: productData.description,
+          sku: productData.modelSku || id,
+          image:
+            productData?.variantImages?.[0] ||
+            "https://kynajewels.com/logo.png",
+          brand: {
+            "@type": "Brand",
+            name: "Kyna Jewels",
+          },
+          offers: {
+            "@type": "Offer",
+            url: `https://kynajewels.com/product/${currentCategorySlug}/${id}`,
+            priceCurrency: "INR",
+            price: productData.sellingPrice,
+            availability: "https://schema.org/InStock",
+          },
+        }}
       />
       <ShareEmailModal
         isOpen={shareModalOpen}

@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "https://api.kynajewels.com/sitemap.xml"
+    },
+    {
       "source": "/((?!api|_next|_static|favicon.ico|public).*)",
       "destination": "/index.html"
     }

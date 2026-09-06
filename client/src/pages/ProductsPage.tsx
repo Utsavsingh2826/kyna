@@ -23,6 +23,11 @@ import {
   saveCategoryProducts,
 } from "@/store/slices/productsCacheSlice";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
+import SEO from "@/components/SEO";
+import {
+  ga4ViewItemList,
+  listingProductToGa4Item,
+} from "@/utils/analytics";
 
 type MainCategory = "rings" | "earrings" | "pendants" | "bracelets";
 
@@ -1143,6 +1148,22 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
   const pageTitle = isEngravingsPage
     ? "Engravable Ring Products"
     : titleMap[category];
+
+  const trackedListRef = useRef<string>("");
+
+  useEffect(() => {
+    if (loading || products.length === 0) return;
+
+    const listKey = `${category}:${products.map((p) => p.modelSku).join(",")}`;
+    if (trackedListRef.current === listKey) return;
+    trackedListRef.current = listKey;
+
+    ga4ViewItemList(
+      products.map((p) => listingProductToGa4Item(p, category)),
+      pageTitle,
+      category,
+    );
+  }, [products, loading, category, pageTitle]);
 
   // Helper to determine if a filter group should be open based on URL params
   const shouldGroupBeOpen = (
@@ -3009,6 +3030,11 @@ export default function ProductsPage({ category }: { category: MainCategory }) {
       aria-labelledby="products-heading"
       className="eng-root"
     >
+      <SEO
+        title={`${pageTitle} | Kyna Jewels`}
+        description={`Shop ${pageTitle.toLowerCase()} at Kyna Jewels. Discover fine diamond jewellery with free shipping and easy returns.`}
+        canonical={isEngravingsPage ? "/engravings" : `/${category}`}
+      />
       <div className="eng-wrap">
         <nav
           aria-label="Breadcrumb"

@@ -40,6 +40,7 @@ import uploadRoutes from "./routes/upload";
 import imageProxy from "./routes/imageProxy";
 import marketingRoutes from "./routes/marketing";
 import wishlistShareRoutes from "./routes/wishlistShare";
+import { generateSitemap } from "./controllers/sitemapController";
 // import testEmailRoutes from "./routes/test-email";
 
 // Import tracking services
@@ -270,6 +271,10 @@ const validateStartup = () => {
 
 // Run startup validation
 validateStartup();
+
+// Sitemap (served at root for crawlers)
+app.get("/sitemap.xml", generateSitemap);
+app.get("/api/sitemap", generateSitemap);
 
 // Test route to verify API is working
 app.get("/api/test", (req: Request, res: Response) => {

@@ -75,6 +75,8 @@ const BlogPost = () => {
         title={`${blog.title} | KYNA Blog`}
         description={blog.notes.slice(0, 150)}
         canonical={`/blog/${id}`}
+        type="article"
+        image={blog.displayImage}
       />
 
       <main
