@@ -504,15 +504,15 @@ process.on("SIGTERM", async () => {
 mongoose
   .connect(process.env.MONGO_URI || "mongodb://localhost:27017/kyna-jewels", {
     dbName: process.env.MONGO_DB_NAME || "catalog",
-    maxPoolSize: 10,
-    minPoolSize: 2,
+    maxPoolSize: 50,
+    minPoolSize: 5,
     retryWrites: true,
     retryReads: true,
     serverSelectionTimeoutMS: 30000,
-    socketTimeoutMS: 45000,
+    socketTimeoutMS: 60000,
     connectTimeoutMS: 30000,
-    maxIdleTimeMS: 45000,
-    waitQueueTimeoutMS: 10000,
+    maxIdleTimeMS: 60000,
+    waitQueueTimeoutMS: 30000,
     heartbeatFrequencyMS: 10000,
     keepAlive: true,
   })
