@@ -5,9 +5,6 @@ import { Toaster } from 'sonner';
 import App from './App.tsx';
 import './index.css';
 import { store } from './store';
-import { initGTM } from './utils/gtm';
-
-initGTM();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
